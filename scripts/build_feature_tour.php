@@ -19,18 +19,29 @@ $languages = [
     'rm' => ['token' => 'slideforge-tour-rm', 'title' => 'SlideForge – Turn da funcziuns'],
 ];
 
+function langLinksMd(): string
+{
+    $demoBase = 'https://slideforge.service7.ch';
+    $tourUrl = static fn (string $token): string => $demoBase . '/view.php?token=' . $token;
+
+    return '[**DE**](' . $tourUrl('slideforge-tour-de') . ') · [**EN**](' . $tourUrl('slideforge-tour') . ') · [**FR**](' . $tourUrl('slideforge-tour-fr') . ') · [**IT**](' . $tourUrl('slideforge-tour-it') . ') · [**RM**](' . $tourUrl('slideforge-tour-rm') . ')';
+}
+
 /** @return array<string, array<string, string>> */
 function tourStrings(): array
 {
+    $langLinksMd = langLinksMd();
+    $repoLinkMd = '[github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge)';
+    $demoLinkMd = '[slideforge.service7.ch](https://slideforge.service7.ch/)';
+
     return [
         'de' => [
             'nav_title' => 'Navigation',
-            'nav_body' => "**Weiter:** Pfeiltaste rechts, Leertaste oder Klick\n**Zurück:** Pfeiltaste links\n**Übersicht:** Esc · **Vollbild:** F\n\nAnimierte Folien: erneut klicken für jeden Schritt",
+            'nav_body' => "**Weiter:** Pfeiltaste → oder Leertaste\n**Zurück:** Pfeiltaste ←\n**Übersicht:** Esc · **Vollbild:** F\n\nAnimierte Folien: Leertaste oder → für jeden Schritt",
             'title' => 'SlideForge',
             'subtitle' => 'Self-hosted Editor für reveal.js-Präsentationen',
-            'hint' => 'Pfeiltasten oder Klick zum Weitern →',
             'hosting_title' => 'Einfaches Hosting',
-            'hosting_body' => "**Keine Datenbank** — alles in JSON unter `data/`.\n\nLäuft auf **nginx + PHP 8.2+**, ohne Composer.\n\nBackup = Ordner kopieren.",
+            'hosting_body' => "**Keine Datenbank** — alles in JSON unter `data/`.\n\nLäuft mit **PHP 8.2+** auf nginx, Apache oder IIS — ohne Composer.\n\nBackup = Ordner kopieren.",
             'dash_title' => 'Dashboard',
             'dash_caption' => 'Eigene und geteilte Präsentationen auf einen Blick',
             'share_title' => 'Multi-User & Teilen',
@@ -49,23 +60,21 @@ function tourStrings(): array
             'present_body' => "Echtes **reveal.js** — nicht nur Screenshots.\n\nLive-Sync, Laserpointer, Notizen, Timer.",
             'present_caption' => 'Vollbild-Präsentation wie beim Vortrag',
             'export_title' => 'Export',
-            'export_body' => "- **Offline-HTML** (Einzeldatei)\n- **PDF** · **PPTX / ODP**\n- Öffentlicher **View-Link**",
+            'export_body' => "- **Offline-HTML** (Einzeldatei)\n- **PDF**\n- **PPTX / ODP** *(mit Einschränkungen — Layout und Animationen werden vereinfacht)*\n- Öffentlicher **View-Link**",
             'oss_title' => 'Open Source · MIT',
-            'oss_body' => 'github.com/uwunderli/slideforge',
+            'oss_body' => $repoLinkMd,
             'langs_title' => 'Weitere Sprachen',
-            'langs_body' => "Diese Tour gibt es auch in:\n\n**DE** · **EN** · **FR** · **IT** · **RM**\n\nToken: `slideforge-tour-de`, `-en`, `-fr`, `-it`, `-rm`",
             'try_title' => 'SlideForge ausprobieren',
-            'try_body' => "**Demo** (Reset alle 12h)\nslideforge.service7.ch\n\n**admin** / **admin** · **editor** / **editor**",
+            'try_body' => "**Demo** (Reset alle 12h)\n{$demoLinkMd}\n\n**admin** / **admin** · **editor** / **editor**",
             'try_end' => 'Danke fürs Durchklicken!',
         ],
         'en' => [
             'nav_title' => 'Navigation',
-            'nav_body' => "**Next:** Right arrow, Space or click\n**Previous:** Left arrow\n**Overview:** Esc · **Fullscreen:** F\n\nAnimated slides: click again for each step",
+            'nav_body' => "**Next:** Right arrow or Space\n**Previous:** Left arrow\n**Overview:** Esc · **Fullscreen:** F\n\nAnimated slides: Space or → for each step",
             'title' => 'SlideForge',
             'subtitle' => 'Self-hosted editor for reveal.js presentations',
-            'hint' => 'Use arrow keys or click to continue →',
             'hosting_title' => 'Simple hosting',
-            'hosting_body' => "**No database** — JSON files under `data/`.\n\nRuns on **nginx + PHP 8.2+**, no Composer.\n\nBackup = copy a folder.",
+            'hosting_body' => "**No database** — JSON files under `data/`.\n\nRuns on **PHP 8.2+** with nginx, Apache, or IIS — no Composer.\n\nBackup = copy a folder.",
             'dash_title' => 'Dashboard',
             'dash_caption' => 'Your decks and shared presentations at a glance',
             'share_title' => 'Multi-user & sharing',
@@ -84,23 +93,21 @@ function tourStrings(): array
             'present_body' => "Real **reveal.js** output — not screenshots.\n\nLive sync, laser pointer, notes, timer.",
             'present_caption' => 'Fullscreen presentation view',
             'export_title' => 'Export anywhere',
-            'export_body' => "- **Offline HTML** (single file)\n- **PDF** · **PPTX / ODP**\n- Public **view link**",
+            'export_body' => "- **Offline HTML** (single file)\n- **PDF**\n- **PPTX / ODP** *(with limitations — layout and animations are simplified)*\n- Public **view link**",
             'oss_title' => 'Open source · MIT',
-            'oss_body' => 'github.com/uwunderli/slideforge',
+            'oss_body' => $repoLinkMd,
             'langs_title' => 'Other languages',
-            'langs_body' => "This tour is also available in:\n\n**DE** · **EN** · **FR** · **IT** · **RM**\n\nTokens: `slideforge-tour-de`, `-en`, `-fr`, `-it`, `-rm`",
             'try_title' => 'Try SlideForge',
-            'try_body' => "**Live demo** (resets every 12h)\nslideforge.service7.ch\n\n**admin** / **admin** · **editor** / **editor**",
+            'try_body' => "**Live demo** (resets every 12h)\n{$demoLinkMd}\n\n**admin** / **admin** · **editor** / **editor**",
             'try_end' => 'Thanks for watching this tour!',
         ],
         'fr' => [
             'nav_title' => 'Navigation',
-            'nav_body' => "**Suivant :** Flèche droite, Espace ou clic\n**Précédent :** Flèche gauche\n**Aperçu :** Échap · **Plein écran :** F\n\nDiapos animées : recliquez pour chaque étape",
+            'nav_body' => "**Suivant :** Flèche droite ou Espace\n**Précédent :** Flèche gauche\n**Aperçu :** Échap · **Plein écran :** F\n\nDiapos animées : Espace ou → pour chaque étape",
             'title' => 'SlideForge',
             'subtitle' => 'Éditeur auto-hébergé pour présentations reveal.js',
-            'hint' => 'Flèches ou clic pour continuer →',
             'hosting_title' => 'Hébergement simple',
-            'hosting_body' => "**Sans base de données** — fichiers JSON dans `data/`.\n\n**nginx + PHP 8.2+**, sans Composer.\n\nSauvegarde = copier un dossier.",
+            'hosting_body' => "**Sans base de données** — fichiers JSON dans `data/`.\n\n**PHP 8.2+** sur nginx, Apache ou IIS — sans Composer.\n\nSauvegarde = copier un dossier.",
             'dash_title' => 'Tableau de bord',
             'dash_caption' => 'Vos présentations et celles partagées',
             'share_title' => 'Multi-utilisateur & partage',
@@ -119,23 +126,21 @@ function tourStrings(): array
             'present_body' => "Vrai **reveal.js** — pas une capture d’écran.\n\nSync live, pointeur laser, notes, minuterie.",
             'present_caption' => 'Présentation plein écran',
             'export_title' => 'Export',
-            'export_body' => "- **HTML hors ligne** · **PDF** · **PPTX / ODP**\n- Lien public **view**",
+            'export_body' => "- **HTML hors ligne** · **PDF**\n- **PPTX / ODP** *(avec limitations — mise en page et animations simplifiées)*\n- Lien public **view**",
             'oss_title' => 'Open source · MIT',
-            'oss_body' => 'github.com/uwunderli/slideforge',
+            'oss_body' => $repoLinkMd,
             'langs_title' => 'Autres langues',
-            'langs_body' => "Visite aussi en :\n\n**DE** · **EN** · **FR** · **IT** · **RM**",
             'try_title' => 'Essayer SlideForge',
-            'try_body' => "**Démo** (reset 12h)\nslideforge.service7.ch\n\n**admin** / **admin**",
+            'try_body' => "**Démo** (reset 12h)\n{$demoLinkMd}\n\n**admin** / **admin**",
             'try_end' => 'Merci d’avoir suivi cette visite !',
         ],
         'it' => [
             'nav_title' => 'Navigazione',
-            'nav_body' => "**Avanti:** Freccia destra, Spazio o clic\n**Indietro:** Freccia sinistra\n**Panoramica:** Esc · **Schermo intero:** F\n\nDiapositive animate: clic per ogni passo",
+            'nav_body' => "**Avanti:** Freccia destra o Spazio\n**Indietro:** Freccia sinistra\n**Panoramica:** Esc · **Schermo intero:** F\n\nDiapositive animate: Spazio o → per ogni passo",
             'title' => 'SlideForge',
             'subtitle' => 'Editor self-hosted per presentazioni reveal.js',
-            'hint' => 'Frecce o clic per continuare →',
             'hosting_title' => 'Hosting semplice',
-            'hosting_body' => "**Nessun database** — JSON in `data/`.\n\n**nginx + PHP 8.2+**, senza Composer.\n\nBackup = copiare una cartella.",
+            'hosting_body' => "**Nessun database** — JSON in `data/`.\n\n**PHP 8.2+** con nginx, Apache o IIS — senza Composer.\n\nBackup = copiare una cartella.",
             'dash_title' => 'Dashboard',
             'dash_caption' => 'Presentazioni proprie e condivise',
             'share_title' => 'Multi-utente & condivisione',
@@ -154,23 +159,21 @@ function tourStrings(): array
             'present_body' => "Vero **reveal.js** — non screenshot.\n\nSync live, puntatore laser, note.",
             'present_caption' => 'Presentazione a schermo intero',
             'export_title' => 'Export',
-            'export_body' => "- **HTML offline** · **PDF** · **PPTX / ODP**\n- Link pubblico",
+            'export_body' => "- **HTML offline** · **PDF**\n- **PPTX / ODP** *(con limitazioni — layout e animazioni semplificati)*\n- Link pubblico",
             'oss_title' => 'Open source · MIT',
-            'oss_body' => 'github.com/uwunderli/slideforge',
+            'oss_body' => $repoLinkMd,
             'langs_title' => 'Altre lingue',
-            'langs_body' => "Tour anche in:\n\n**DE** · **EN** · **FR** · **IT** · **RM**",
             'try_title' => 'Prova SlideForge',
-            'try_body' => "**Demo** (reset 12h)\nslideforge.service7.ch\n\n**admin** / **admin**",
+            'try_body' => "**Demo** (reset 12h)\n{$demoLinkMd}\n\n**admin** / **admin**",
             'try_end' => 'Grazie per aver seguito il tour!',
         ],
         'rm' => [
             'nav_title' => 'Navigaziun',
-            'nav_body' => "**Enavos:** Fritga a dretga, Space u clic\n**En'ur:** Fritga a sanestra\n**Survista:** Esc · **Maletg entir:** F\n\nAnimaziuns: clic per mintga pass",
+            'nav_body' => "**Enavos:** Fritga a dretga u Space\n**En'ur:** Fritga a sanestra\n**Survista:** Esc · **Maletg entir:** F\n\nAnimaziuns: Space u → per mintga pass",
             'title' => 'SlideForge',
             'subtitle' => 'Editur self-hosted per presentaziuns reveal.js',
-            'hint' => 'Fritgas u clic per cuntinuar →',
             'hosting_title' => 'Hosting simpel',
-            'hosting_body' => "**Nagina banca da datas** — JSON sut `data/`.\n\n**nginx + PHP 8.2+**, senza Composer.",
+            'hosting_body' => "**Nagina banca da datas** — JSON sut `data/`.\n\n**PHP 8.2+** cun nginx, Apache u IIS — senza Composer.",
             'dash_title' => 'Dashboard',
             'dash_caption' => 'Preschentaziuns proprias e divididas',
             'share_title' => 'Multi-user & divider',
@@ -189,13 +192,12 @@ function tourStrings(): array
             'present_body' => "Ver **reveal.js** — betg mo screenshots.\n\nSync live, laser, notas.",
             'present_caption' => 'Presentaziun a plen maletg',
             'export_title' => 'Export',
-            'export_body' => "- **HTML offline** · **PDF** · **PPTX / ODP**",
+            'export_body' => "- **HTML offline** · **PDF**\n- **PPTX / ODP** *(cun limitaziuns — layout e animaziuns simplifitgadas)*",
             'oss_title' => 'Open source · MIT',
-            'oss_body' => 'github.com/uwunderli/slideforge',
+            'oss_body' => $repoLinkMd,
             'langs_title' => 'Autras linguas',
-            'langs_body' => "Tour era en:\n\n**DE** · **EN** · **FR** · **IT** · **RM**",
             'try_title' => 'Emprovar SlideForge',
-            'try_body' => "**Demo** (reset 12h)\nslideforge.service7.ch",
+            'try_body' => "**Demo** (reset 12h)\n{$demoLinkMd}",
             'try_end' => 'Grazia per quest turn!',
         ],
     ];
@@ -243,6 +245,21 @@ function bodyText(string $id, string $text, int $y = 180, bool $perLine = true):
         'animOrder' => 2,
         'animDuration' => 1000,
         'animPerLine' => $perLine,
+    ]);
+}
+
+/** Sofort sichtbar — für Navigationsfolie ohne Fragment-Animation. */
+function staticHeading(string $id, string $text, int $y = 60): array
+{
+    return textObj($id, 100, $y, 1720, 80, $text, [
+        'fontSize' => 56, 'fontWeight' => 'bold',
+    ]);
+}
+
+function staticBody(string $id, string $text, int $y = 180): array
+{
+    return textObj($id, 100, $y, 900, 500, $text, [
+        'fontSize' => 34, 'animPerLine' => false,
     ]);
 }
 
@@ -295,8 +312,16 @@ function buildSlides(string $lang, array $s): array
         'autoAdvance' => 0,
         'notes' => '',
         'objects' => [
-            heading('navh', $s['nav_title'], 120),
-            bodyText('navb', $s['nav_body'], 260, true),
+            staticHeading('navh', $s['nav_title'], 100),
+            textObj('navb', 100, 180, 820, 420, $s['nav_body'], [
+                'fontSize' => 34, 'animPerLine' => false,
+            ]),
+            textObj('navlt', 960, 140, 860, 60, $s['langs_title'], [
+                'fontSize' => 44, 'fontWeight' => 'bold', 'align' => 'center',
+            ]),
+            textObj('navll', 960, 230, 860, 120, langLinksMd(), [
+                'fontSize' => 36, 'align' => 'center', 'color' => '#61a8e0',
+            ]),
         ],
     ];
 
@@ -314,10 +339,6 @@ function buildSlides(string $lang, array $s): array
             textObj('t2', 120, 480, 1680, 80, $s['subtitle'], [
                 'fontSize' => 42, 'color' => '#61a8e0', 'align' => 'center',
                 'animType' => 'fade-up', 'animOrder' => 2, 'animDuration' => 1000,
-            ]),
-            textObj('t3', 120, 600, 1680, 50, $s['hint'], [
-                'fontSize' => 26, 'italic' => true, 'color' => '#8b92a3', 'align' => 'center',
-                'animType' => 'fade-up', 'animOrder' => 3,
             ]),
         ],
     ];
@@ -430,15 +451,6 @@ function buildSlides(string $lang, array $s): array
     ];
 
     $slides[] = [
-        'id' => 'langs',
-        'background' => ['type' => 'color', 'value' => '#111318'],
-        'transition' => 'slide',
-        'autoAdvance' => 0,
-        'notes' => '',
-        'objects' => [heading('lg1', $s['langs_title']), bodyText('lg1b', $s['langs_body'], 200, true)],
-    ];
-
-    $slides[] = [
         'id' => 'try',
         'background' => ['type' => 'color', 'value' => '#0c0e12'],
         'transition' => 'slide',
@@ -486,6 +498,8 @@ foreach ($languages as $code => $cfg) {
         'height' => 1080,
         'seed_asset_id' => $seedAssetId,
         'lang' => $code,
+        'show_progress' => true,
+        'show_controls' => true,
         'public_link' => ['enabled' => true, 'token' => $cfg['token']],
     ];
     file_put_contents(

@@ -48,6 +48,16 @@ switch ($action) {
         user_json_ok(['layout' => $layout]);
         break;
 
+    case 'set_spellcheck_before_present':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        $beforePresent = !empty($body['before_present']);
+        Auth::setSpellcheckBeforePresent($me['id'], $beforePresent);
+        user_json_ok(['before_present' => $beforePresent]);
+        break;
+
     default:
         user_json_fail('Unbekannte Aktion.', 400);
 }
