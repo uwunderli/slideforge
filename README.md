@@ -44,7 +44,7 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Eigenschaften-Panel** in Tabs **Format**, **Form**, **Position**, **Effekt** – inkl. Füllfarbe/Verlauf, Rahmen, Schrift, Teilformatierung, Animationen
 - **Hintergründe:** Volltonfarbe (Marken-Palette), Farbverlauf, Bild-/Video-Upload – Medien liegen ausserhalb des Web-Roots und werden über `asset.php` ausgeliefert
 - **Medien-Tab** und optional **Pixabay-Suche** (lizenzfreie Bilder/Videos direkt als Hintergrund oder Objekt übernehmen)
-- **Markdown** in Textobjekten (`**fett`**, Listen, Links usw.) – in Vorschau und Export gerendert
+- **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
 - **Vorlagen:** editierbare Markenfarben, Textvorlagen, Folienvorlagen (privat oder für alle freigegeben)
 - **Rechtschreibung & Grammatik** über LanguageTool (Admin konfiguriert den Server), optional automatische Prüfung vor dem Präsentieren
