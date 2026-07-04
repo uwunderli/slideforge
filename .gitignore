@@ -1,5 +1,6 @@
 # Deployment credentials (never commit)
 .deploy/ssh.env
+.deploy/ssh.env.demo
 
 # Runtime data (created on first run via config.php)
 data/

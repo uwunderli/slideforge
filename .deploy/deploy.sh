@@ -1,21 +1,38 @@
 #!/usr/bin/env bash
 # SlideForge – Dateien per SFTP auf den Webspace hochladen.
-# Nutzt curl (Port 22). sshpass/sftp scheitert bei manchen SFTPGo-Setups an der Auth.
+# Nutzt curl (SFTP). Port über SSH_PORT oder SFTP_REMOTE in der env-Datei.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=/dev/null
-source "$SCRIPT_DIR/ssh.env"
 
+ENV_FILE="${DEPLOY_ENV:-$SCRIPT_DIR/ssh.env}"
+if [[ "${1:-}" == --env ]]; then
+  ENV_FILE="$2"
+  shift 2
+fi
+
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+
+if [[ -n "${SSH_PORT:-}" && -z "${SFTP_REMOTE:-}" ]]; then
+  SFTP_REMOTE="sftp://${SSH_HOST}:${SSH_PORT}"
+fi
 REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}}"
 AUTH="${SSH_USER}:${SSH_PASS}"
 
 MAX_RETRIES=3
 RETRY_DELAY=5
+CONFIG_UPLOAD="$ROOT/config.php"
+if [[ "${DEPLOY_DEMO_MODE:-0}" == "1" ]]; then
+  CONFIG_UPLOAD="$(mktemp)"
+  trap 'rm -f "$CONFIG_UPLOAD"' EXIT
+  sed 's/define('\''DEMO_MODE'\'', false)/define('\''DEMO_MODE'\'', true)/' "$ROOT/config.php" > "$CONFIG_UPLOAD"
+fi
 
 curl_sftp() {
-  curl -sS --ftp-method nocwd --user "$AUTH" "$@"
+  # Ohne Agent: sonst versucht curl zuerst Public-Key und bricht ab (Login denied).
+  SSH_AUTH_SOCK= curl -sS --ftp-method nocwd --ftp-create-dirs --user "$AUTH" "$@"
 }
 
 with_retry() {
@@ -39,11 +56,13 @@ with_retry() {
 upload_batch() {
   local -a args=()
   local files=(config.php README.md)
-  local dirs=(src lang seed docker public_html)
+  local dirs=(src lang seed docker public_html scripts)
 
   for f in "${files[@]}"; do
     [[ -f "$ROOT/$f" ]] || continue
-    args+=(-T "$ROOT/$f" "${REMOTE}/$f")
+    local src="$ROOT/$f"
+    [[ "$f" == "config.php" ]] && src="$CONFIG_UPLOAD"
+    args+=(-T "$src" "${REMOTE}/$f")
   done
 
   for dir in "${dirs[@]}"; do
@@ -58,10 +77,11 @@ upload_batch() {
 }
 
 cmd="${1:-status}"
+label="${SSH_HOST}${SSH_PORT:+:$SSH_PORT}"
 
 case "$cmd" in
   status)
-    echo "Remote-Inhalt (${SSH_HOST}):"
+    echo "Remote-Inhalt (${label}):"
     curl_sftp --list-only "${REMOTE}/"
     ;;
   upload-file)
@@ -69,9 +89,12 @@ case "$cmd" in
     echo "OK: $2 -> $3"
     ;;
   sync-code)
-    echo "Lade Code-Dateien hoch (curl/SFTP, ohne data/ und uploads/) …"
+    echo "Lade Code-Dateien hoch (${label}, ohne data/ und uploads/) …"
+    if [[ "${DEPLOY_DEMO_MODE:-0}" == "1" ]]; then
+      echo "  Demo-Modus: DEMO_MODE=true in config.php"
+    fi
     file_count=$((
-      $(find "$ROOT"/src "$ROOT"/lang "$ROOT"/seed "$ROOT"/docker "$ROOT"/public_html -type f 2>/dev/null | wc -l) +
+      $(find "$ROOT"/src "$ROOT"/lang "$ROOT"/seed "$ROOT"/docker "$ROOT"/public_html "$ROOT"/scripts -type f 2>/dev/null | wc -l) +
       $( [[ -f "$ROOT/config.php" ]] && echo 1 || echo 0 ) +
       $( [[ -f "$ROOT/README.md" ]] && echo 1 || echo 0 )
     ))
@@ -80,7 +103,7 @@ case "$cmd" in
     echo "Fertig."
     ;;
   *)
-    echo "Usage: $0 {status|upload-file <local> <remote>|sync-code}" >&2
+    echo "Usage: $0 [--env <file>] {status|upload-file <local> <remote>|sync-code}" >&2
     exit 1
     ;;
 esac

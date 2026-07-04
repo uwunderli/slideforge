@@ -89,7 +89,7 @@ git log --oneline -5
 
 ## Phase 3 – Demo & Sichtbarkeit
 
-- [ ] Demo auf Subdomain (bestehendes Deployment nutzen oder separate Instanz) — siehe [docs/DEMO.md](DEMO.md)
+- [x] Demo auf Subdomain → [slideforge.service7.ch](https://slideforge.service7.ch/) (Deploy: `.deploy/deploy-demo.sh`)
 - [x] Hinweis auf Demo-Seite: `DEMO_MODE` in `config.php` + Banner (DE/EN/FR)
 - [x] Reset-Skript: `scripts/reset-demo-data.sh` (für Cron)
 - [ ] **Screenshots** ins Repo (`docs/screenshots/`):
