@@ -3,11 +3,11 @@
 [License: MIT](LICENSE)
 [PHP](https://www.php.net/)
 
-**SlideForge** is a self-hosted, file-based multi-user editor for [reveal.js](https://revealjs.com) presentations. It runs on any nginx + PHP host with **no database** and no Composer dependency. You get a full canvas editor, presentation mode with live sync, offline HTML export, templates, and PPTX/ODP/PDF export. Data is stored as JSON files under `data/`, so backup and migration stay simple.
+**SlideForge** is a self-hosted, file-based multi-user editor for [reveal.js](https://revealjs.com) presentations. It runs on any nginx + PHP host with **no database** and no Composer dependency. You get a full canvas editor, presentation mode with live sync, **mobile remote control** (installable as PWA), offline HTML export, templates, and PPTX/ODP/PDF export. Data is stored as JSON files under `data/`, so backup and migration stay simple.
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.4](https://github.com/uwunderli/slideforge/releases/tag/v1.0.4)
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v2.0.2](https://github.com/uwunderli/slideforge/releases/tag/v2.0.2)
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
@@ -64,12 +64,22 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 
 - **Präsentationsmodus** mit grosser aktueller Folie, Vorschau der nächsten Folie, Filmstreifen und Notizen
 - **Live-Sync:** Vorschau-Link und öffentlicher Link folgen der Steuerung aus dem Präsentationsmodus (Polling über `live.php`)
-- **Mobile Fernsteuerung (v2.0.0):** Auf Smartphones reduziertes Dashboard und `present_remote.php` — Folien vor/zurück, Vorschau, Uhr, Timer, Laser und Fortschrittsbalken am Handy steuern bzw. spiegeln den Desktop-Präsentationsmodus über HTTPS (kein WLAN nötig). QR-Code im Present-Menü für schnellen Remote-Zugang. Editor auf Handys gesperrt; Tablets/iPads behalten die Desktop-Oberfläche.
 - **Laserpointer** mit Farbe, Grösse und Schweif – sichtbar im Hauptfenster und in der Live-Ansicht
 - Uhr (Digital/Analog), Timer und farbige Zeitleiste mit konfigurierbaren Stufen
 - Touch-taugliche Vor-/Zurück-Steuerung, responsives Layout für Tablets
 - Echte **reveal.js**-Ausgabe in Vorschau (`preview.php`), öffentlichem Link (`view.php`) und Export
 - Audio-/Video-Wiedergabe: manuell, bei Klick oder automatisch nach Verzögerung; optional Dauerschleife
+
+
+
+### Mobile (Smartphone)
+
+- **Reduziertes Dashboard** auf Smartphones (ab v2.0.0): Präsentation auswählen und **Fernsteuern** — der Editor ist auf schmalen Handys gesperrt; Tablets/iPads (≥768 px) behalten die Desktop-Oberfläche
+- **`present_remote.php`:** Folien vor/zurück, Folien-Vorschau, Uhr (analog), Timer (Studiouhr), Laser und Fortschrittsbalken am Handy — spiegelt den Desktop-Präsentationsmodus über **HTTPS** (kein gemeinsames WLAN nötig)
+- **QR-Code** im Present-Menü („Präsentieren“) und kopierbarer Remote-Link für schnellen Zugang vom Handy
+- **Laser vom Handy:** Touch-Fläche steuert den Laserpointer am Beamer/Laptop
+- Anzeige **„Handy verbunden“** im Präsentationsmodus, wenn eine Remote-Session aktiv ist
+- **PWA (v2.0.2):** Als App auf den Home-Bildschirm installierbar (Android/iOS) — `manifest.php`, Service Worker, Vollbild-Modus (`standalone`); Start auf dem Dashboard
 
 
 
