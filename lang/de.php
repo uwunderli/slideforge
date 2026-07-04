@@ -9,7 +9,15 @@ return [
     'nav.theme_to_light' => '☀️ Helles Design',
     'nav.language' => 'Sprache',
 
-    'demo.banner' => 'Testinstanz – Daten werden regelmässig gelöscht. Nicht für produktive Inhalte verwenden.',
+    'demo.banner' => 'Testinstanz – Daten werden alle 12 Stunden zurückgesetzt. Nicht für produktive Inhalte verwenden.',
+    'demo.next_reset' => 'Nächste Zurücksetzung in',
+    'demo.login_accounts' => 'Demo-Zugang',
+    'demo.col_username' => 'Benutzername',
+    'demo.col_email' => 'E-Mail',
+    'demo.col_password' => 'Passwort',
+    'demo.col_role' => 'Berechtigung',
+    'demo.registration_closed' => 'In der Demo sind nur die untenstehenden Testkonten verfügbar. Die Registrierung ist deaktiviert.',
+    'demo.smtp_locked' => 'SMTP ist in der Demo-Instanz deaktiviert (kein Mailversand, keine Speicherung).',
 
     'header.context_edit' => 'Bearbeiten:',
     'header.context_present' => 'Präsentieren',

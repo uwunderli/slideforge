@@ -8,7 +8,15 @@ return [
     'nav.theme_to_light' => '☀️ Thème clair',
     'nav.language' => 'Langue',
 
-    'demo.banner' => 'Instance de démonstration – les données sont régulièrement effacées. Ne pas utiliser pour du contenu de production.',
+    'demo.banner' => 'Instance de démonstration – les données sont réinitialisées toutes les 12 heures. Ne pas utiliser pour du contenu de production.',
+    'demo.next_reset' => 'Prochaine réinitialisation dans',
+    'demo.login_accounts' => 'Accès démo',
+    'demo.col_username' => 'Nom d\'utilisateur',
+    'demo.col_email' => 'E-mail',
+    'demo.col_password' => 'Mot de passe',
+    'demo.col_role' => 'Rôle',
+    'demo.registration_closed' => 'Seuls les comptes de test ci-dessous sont disponibles dans la démo. L\'inscription est désactivée.',
+    'demo.smtp_locked' => 'SMTP est désactivé sur l\'instance démo (aucun envoi, paramètres non enregistrés).',
 
     'header.context_edit' => 'Modifier :',
     'header.context_present' => 'Présenter',

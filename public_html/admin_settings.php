@@ -55,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'save_smtp') {
+        if (Demo::smtpLocked()) {
+            $error = t('demo.smtp_locked');
+        } else {
         Config::update(['smtp' => [
             'host' => trim($_POST['smtp_host'] ?? ''),
             'port' => (int)($_POST['smtp_port'] ?? 587),
@@ -65,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'from_name' => trim($_POST['smtp_from_name'] ?? APP_NAME),
         ]]);
         $msg = t('admin.smtp_saved');
+        }
     }
 
     if ($action === 'save_languagetool') {
@@ -93,7 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.invite_created');
 
         if ($inviteEmail !== '') {
-            if (!filter_var($inviteEmail, FILTER_VALIDATE_EMAIL)) {
+            if (Demo::smtpLocked()) {
+                $error = t('demo.smtp_locked');
+            } elseif (!filter_var($inviteEmail, FILTER_VALIDATE_EMAIL)) {
                 $error = t('admin.invite_invalid_email');
             } else {
                 $smtp = Config::smtp();
@@ -160,6 +166,7 @@ $languagetool = Config::languageTool();
 $pixabay = Config::pixabay();
 $invites = InviteToken::listAll();
 $users = Auth::listAll();
+$smtpDemoLocked = Demo::smtpLocked();
 $scheme = current_scheme();
 $host = $_SERVER['HTTP_HOST'];
 $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
@@ -251,21 +258,25 @@ require __DIR__ . '/includes/header.php';
     </ul>
 
     <div class="section-header"><h2><?= h(t('admin.smtp_heading')) ?></h2></div>
+    <?php if ($smtpDemoLocked): ?>
+      <p class="demo-smtp-notice"><?= h(t('demo.smtp_locked')) ?></p>
+    <?php endif; ?>
+    <fieldset class="demo-fieldset-lock<?= $smtpDemoLocked ? ' is-locked' : '' ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="save_smtp">
       <div class="row">
         <div style="flex:2;">
           <label for="smtp_host"><?= h(t('admin.smtp_host')) ?></label>
-          <input type="text" id="smtp_host" name="smtp_host" value="<?= h($smtp['host'] ?? '') ?>" placeholder="smtp.example.com">
+          <input type="text" id="smtp_host" name="smtp_host" value="<?= h($smtp['host'] ?? '') ?>" placeholder="smtp.example.com"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
         <div>
           <label for="smtp_port"><?= h(t('admin.smtp_port')) ?></label>
-          <input type="number" id="smtp_port" name="smtp_port" value="<?= (int)($smtp['port'] ?? 587) ?>">
+          <input type="number" id="smtp_port" name="smtp_port" value="<?= (int)($smtp['port'] ?? 587) ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
       </div>
       <label for="smtp_encryption"><?= h(t('admin.smtp_encryption')) ?></label>
-      <select id="smtp_encryption" name="smtp_encryption">
+      <select id="smtp_encryption" name="smtp_encryption"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         <option value="tls" <?= ($smtp['encryption'] ?? 'tls') === 'tls' ? 'selected' : '' ?>><?= h(t('admin.smtp_enc_tls')) ?></option>
         <option value="ssl" <?= ($smtp['encryption'] ?? '') === 'ssl' ? 'selected' : '' ?>><?= h(t('admin.smtp_enc_ssl')) ?></option>
         <option value="none" <?= ($smtp['encryption'] ?? '') === 'none' ? 'selected' : '' ?>><?= h(t('admin.smtp_enc_none')) ?></option>
@@ -273,32 +284,33 @@ require __DIR__ . '/includes/header.php';
       <div class="row">
         <div>
           <label for="smtp_username"><?= h(t('admin.smtp_username')) ?></label>
-          <input type="text" id="smtp_username" name="smtp_username" value="<?= h($smtp['username'] ?? '') ?>">
+          <input type="text" id="smtp_username" name="smtp_username" value="<?= h($smtp['username'] ?? '') ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
         <div>
           <label for="smtp_password"><?= h(t('admin.smtp_password')) ?></label>
-          <input type="password" id="smtp_password" name="smtp_password" placeholder="<?= !empty($smtp['password']) ? h(t('admin.smtp_password_unchanged')) : '' ?>">
+          <input type="password" id="smtp_password" name="smtp_password" placeholder="<?= !empty($smtp['password']) ? h(t('admin.smtp_password_unchanged')) : '' ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
       </div>
       <div class="row">
         <div>
           <label for="smtp_from_email"><?= h(t('admin.smtp_from_email')) ?></label>
-          <input type="email" id="smtp_from_email" name="smtp_from_email" value="<?= h($smtp['from_email'] ?? '') ?>">
+          <input type="email" id="smtp_from_email" name="smtp_from_email" value="<?= h($smtp['from_email'] ?? '') ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
         <div>
           <label for="smtp_from_name"><?= h(t('admin.smtp_from_name')) ?></label>
-          <input type="text" id="smtp_from_name" name="smtp_from_name" value="<?= h($smtp['from_name'] ?? APP_NAME) ?>">
+          <input type="text" id="smtp_from_name" name="smtp_from_name" value="<?= h($smtp['from_name'] ?? APP_NAME) ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
       </div>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('admin.smtp_save_btn')) ?></button>
+      <button type="submit" class="button button-sm" style="margin-top:14px;"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.smtp_save_btn')) ?></button>
     </form>
 
     <div class="options-subtitle" style="margin-top:20px;"><?= h(t('admin.send_test_mail')) ?></div>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <input type="email" id="testMailTo" placeholder="empfänger@example.com" style="flex:1; min-width:220px;">
-      <button type="button" id="testMailBtn" class="button button-ghost button-sm"><?= h(t('admin.send_test_mail')) ?></button>
+      <input type="email" id="testMailTo" placeholder="empfänger@example.com" style="flex:1; min-width:220px;"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
+      <button type="button" id="testMailBtn" class="button button-ghost button-sm"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.send_test_mail')) ?></button>
     </div>
     <div id="testMailResult" style="margin-top:10px; font-size:0.85rem;"></div>
+    </fieldset>
 
     <div class="section-header"><h2><?= h(t('admin.languagetool_heading')) ?></h2></div>
     <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.languagetool_intro') ?></p>

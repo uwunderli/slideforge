@@ -40,7 +40,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '226');
+define('ASSET_VERSION', '227');
 
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
@@ -320,5 +320,10 @@ if (!empty($_SESSION['user_id'])) {
 } elseif (!empty($_COOKIE['sf_lang'])) {
     $__lang = $_COOKIE['sf_lang'];
 }
+
+if (Demo::isActive()) {
+    Demo::maybeReset();
+}
+
 I18n::init($__lang);
 unset($__lang, $__u);

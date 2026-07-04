@@ -27,6 +27,10 @@ if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
 $action = $body['action'] ?? '';
 
 if ($action === 'test_mail') {
+    if (Demo::smtpLocked()) {
+        echo json_encode(['ok' => false, 'error' => t('demo.smtp_locked')]);
+        exit;
+    }
     $to = trim($body['to'] ?? '');
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
         echo json_encode(['ok' => false, 'error' => 'Ungültige E-Mail-Adresse.']);

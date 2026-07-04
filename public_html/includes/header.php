@@ -23,7 +23,14 @@ $currentLang = I18n::currentLang();
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?>>
 <?php if (Config::demoMode()): ?>
-<div class="demo-banner" role="status"><?= h(t('demo.banner')) ?></div>
+<div class="demo-banner" role="status">
+  <div><?= h(t('demo.banner')) ?></div>
+  <div class="demo-banner-meta">
+    <?= h(t('demo.next_reset')) ?>:
+    <span id="demoResetCountdown" data-reset-at="<?= (int)Demo::nextResetAt() ?>">--:--:--</span>
+  </div>
+</div>
+<script src="assets/js/demo.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <?php if ($currentUser): ?>
 <header class="topbar">

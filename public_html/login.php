@@ -46,6 +46,32 @@ require __DIR__ . '/includes/header.php';
     <h1><?= h(t('auth.welcome_back')) ?></h1>
     <p class="subtitle"><?= h(t('auth.login_subtitle')) ?></p>
 
+    <?php if (Config::demoMode()): ?>
+    <div class="demo-login-accounts">
+      <h2 class="demo-login-accounts-title"><?= h(t('demo.login_accounts')) ?></h2>
+      <table class="demo-login-table">
+        <thead>
+          <tr>
+            <th><?= h(t('demo.col_username')) ?></th>
+            <th><?= h(t('demo.col_email')) ?></th>
+            <th><?= h(t('demo.col_password')) ?></th>
+            <th><?= h(t('demo.col_role')) ?></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach (Demo::accountRows() as $acc): ?>
+          <tr>
+            <td><code><?= h($acc['username']) ?></code></td>
+            <td><code><?= h($acc['email']) ?></code></td>
+            <td><code><?= h($acc['password']) ?></code></td>
+            <td><?= h($acc['role_label']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($success)): ?><div class="alert alert-success"><?= h($success) ?></div><?php endif; ?>
     <?php if ($error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
     <?php if ($resendEmail !== ''): ?>

@@ -8,7 +8,15 @@ return [
     'nav.theme_to_light' => '☀️ Light theme',
     'nav.language' => 'Language',
 
-    'demo.banner' => 'Demo instance – data is reset regularly. Do not use for production content.',
+    'demo.banner' => 'Demo instance – data is reset every 12 hours. Do not use for production content.',
+    'demo.next_reset' => 'Next reset in',
+    'demo.login_accounts' => 'Demo access',
+    'demo.col_username' => 'Username',
+    'demo.col_email' => 'Email',
+    'demo.col_password' => 'Password',
+    'demo.col_role' => 'Role',
+    'demo.registration_closed' => 'Only the test accounts below are available in the demo. Registration is disabled.',
+    'demo.smtp_locked' => 'SMTP is disabled on the demo instance (no mail sending, settings are not saved).',
 
     'header.context_edit' => 'Edit:',
     'header.context_present' => 'Present',

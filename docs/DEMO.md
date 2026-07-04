@@ -20,9 +20,16 @@ Der gelbe Hinweis erscheint auf Login, Dashboard, Editor und allen Seiten mit `h
 ## 3. Regelmässiger Reset (optional)
 
 ```bash
-# Täglich um 4:00 Uhr (Beispiel crontab)
-0 4 * * * /pfad/zu/slideforge/scripts/reset-demo-data.sh >> /var/log/slideforge-demo-reset.log 2>&1
+# Alle 12 Stunden (zusätzlich prüft die App bei jedem Request das Intervall)
+0 */12 * * * /pfad/zu/slideforge/scripts/reset-demo-data.sh >> /var/log/slideforge-demo-reset.log 2>&1
 ```
+
+Standardkonten nach jedem Reset:
+
+| Benutzername | E-Mail | Passwort | Rolle |
+|--------------|--------|----------|--------|
+| admin | admin@service7.ch | admin | Administrator |
+| editor | edit@service7.ch | editor | Editor |
 
 Das Skript löscht Benutzer, Präsentationen, Uploads und Cache. `data/config.json` (Titel, SMTP, …) bleibt erhalten.
 

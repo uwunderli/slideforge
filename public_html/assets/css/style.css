@@ -130,6 +130,53 @@ a:hover { text-decoration: underline; }
   background: linear-gradient(90deg, #f5d565, #f0b429);
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
 }
+.demo-banner-meta {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.demo-login-accounts {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+.demo-login-accounts-title {
+  font-size: 0.95rem;
+  margin: 0 0 10px;
+  text-transform: none;
+}
+.demo-login-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.demo-login-table th,
+.demo-login-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.demo-login-table code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.demo-fieldset-lock {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.demo-fieldset-lock.is-locked {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.demo-smtp-notice {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0 0 10px;
+}
 
 /* ---------- Topbar ---------- */
 .topbar {

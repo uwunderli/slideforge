@@ -9,7 +9,7 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.0](https://github.com/uwunderli/slideforge/releases/tag/v1.0.0)
 
-**Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(Testinstanz – Daten werden regelmässig gelöscht)*
+**Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(Testinstanz – Reset alle 12h; Zugangsdaten auf der Login-Seite)*
 
 ## Screenshots
 

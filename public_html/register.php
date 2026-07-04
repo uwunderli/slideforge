@@ -11,7 +11,7 @@ $hasValidInvite = $invite !== null && !$invite['used'];
 // Registrierung ist möglich, wenn generell offen ODER ein gültiger Einladungslink vorliegt.
 // Der allererste User im System darf sich immer registrieren (Bootstrap).
 $userCount = count(Storage::read(USERS_FILE, []));
-$canRegister = $userCount === 0 || Config::registrationEnabled() || $hasValidInvite;
+$canRegister = !Config::demoMode() && ($userCount === 0 || Config::registrationEnabled() || $hasValidInvite);
 
 $error = '';
 $success = '';
@@ -54,8 +54,12 @@ require __DIR__ . '/includes/header.php';
     <h1><?= h(t('auth.create_account')) ?></h1>
 
     <?php if (!$canRegister): ?>
-      <p class="subtitle"><?= h(t('auth.registration_disabled')) ?></p>
+      <p class="subtitle"><?= h(Config::demoMode() ? t('demo.registration_closed') : t('auth.registration_disabled')) ?></p>
+      <?php if (Config::demoMode()): ?>
+      <p class="subtitle"><a href="login.php"><?= h(t('auth.to_login')) ?></a></p>
+      <?php else: ?>
       <div class="switch"><?= h(t('auth.already_account')) ?> <a href="login.php"><?= h(t('auth.to_login')) ?></a></div>
+      <?php endif; ?>
     <?php else: ?>
       <p class="subtitle">
         <?= $hasValidInvite ? h(t('auth.invited_subtitle')) : h(t('auth.register_subtitle')) ?>

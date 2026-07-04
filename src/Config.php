@@ -48,6 +48,11 @@ class Config
         return $result;
     }
 
+    public static function clearCache(): void
+    {
+        self::$cache = null;
+    }
+
     public static function siteTitle(): string
     {
         $t = trim((string)self::get('site_title', APP_NAME));
@@ -70,7 +75,7 @@ class Config
 
     public static function demoMode(): bool
     {
-        return defined('DEMO_MODE') && DEMO_MODE;
+        return Demo::isActive();
     }
 
     public static function smtp(): array
