@@ -499,6 +499,13 @@ require __DIR__ . '/includes/header.php';
           <label for="edDuration"><?= h(t('editor.duration_label')) ?></label>
           <input type="number" id="edDuration" name="presentation_duration" form="metaSettingsForm" min="1" value="<?= (int)($meta['presentation_duration'] ?? 30) ?>">
           <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.duration_hint')) ?></div>
+          <?php if (Config::languageToolEnabled()): ?>
+          <label class="present-config-check" style="margin-top:14px;">
+            <input type="checkbox" id="spellcheckBeforePresentToggle" style="width:auto;" <?= Auth::spellcheckBeforePresent($me) ? 'checked' : '' ?>>
+            <span><?= h(t('editor.spellcheck_before_present')) ?></span>
+          </label>
+          <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.spellcheck_before_present_hint')) ?></div>
+          <?php endif; ?>
         </div>
         <div class="present-config-panel-footer">
           <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>

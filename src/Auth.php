@@ -577,4 +577,16 @@ class Auth
             return $users;
         }, []);
     }
+
+    public static function setSpellcheckBeforePresent(string $userId, bool $beforePresent): void
+    {
+        Storage::update(USERS_FILE, function ($users) use ($userId, $beforePresent) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['spellcheck_before_present'] = $beforePresent;
+                }
+            }
+            return $users;
+        }, []);
+    }
 }

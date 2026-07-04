@@ -3666,6 +3666,29 @@
       if (allow) window.location.href = href;
     });
 
+    (function initSpellcheckBeforePresentToggle() {
+      const cb = document.getElementById('spellcheckBeforePresentToggle');
+      if (!cb || !SF.spellConfig?.enabled) return;
+      cb.addEventListener('change', async () => {
+        const enabled = cb.checked;
+        try {
+          const res = await fetch('user_api.php?action=set_spellcheck_before_present', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csrf_token: SF.csrfToken, before_present: enabled }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            cb.checked = !enabled;
+            return;
+          }
+          SF.spellConfig.beforePresent = !!data.before_present;
+        } catch (err) {
+          cb.checked = !enabled;
+        }
+      });
+    })();
+
     if (SF.presentConfig?.enabled && window.SlideForgePresentConfig) {
       SF.presentConfigApi = window.SlideForgePresentConfig.init({
         id: SF.id,

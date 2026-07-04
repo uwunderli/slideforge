@@ -5,10 +5,12 @@ $me = Auth::currentUser();
 
 $msg = '';
 $error = '';
+$postAction = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $action = $_POST['action'] ?? '';
+    $postAction = $action;
 
     // ---- Tab "Allgemeine Einstellungen" ----
     if ($action === 'save_general') {
@@ -91,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.pixabay_saved');
     }
 
+    // ---- Tab "Benutzerverwaltung" ----
     if ($action === 'create_invite') {
         $inviteEmail = trim($_POST['invite_email'] ?? '');
         $invite = InviteToken::create($me['id'], $inviteEmail);
@@ -132,7 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.invite_deleted');
     }
 
-    // ---- Tab "Benutzerverwaltung" ----
     if ($action === 'set_role') {
         $targetId = $_POST['user_id'] ?? '';
         if ($targetId === $me['id'] && ($_POST['role'] ?? '') !== 'admin') {
@@ -158,7 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$activeTab = ($_GET['tab'] ?? 'general') === 'users' ? 'users' : 'general';
+$userTabActions = ['create_invite', 'delete_invite', 'set_role', 'delete_user'];
+$activeTab = in_array($postAction, $userTabActions, true) || (($_GET['tab'] ?? '') === 'users')
+    ? 'users'
+    : 'general';
 
 $cfg = Config::all();
 $smtp = $cfg['smtp'] ?? [];
@@ -220,42 +225,6 @@ require __DIR__ . '/includes/header.php';
         <button type="submit" class="button button-ghost button-sm"><?= h(t('bg.remove')) ?> Logo</button>
       </form>
     <?php endif; ?>
-
-    <div class="section-header"><h2><?= h(t('admin.invites_heading')) ?></h2></div>
-    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="action" value="create_invite">
-      <div style="flex:1; min-width:200px;">
-        <label for="invite_email" style="margin-top:0;">E-Mail (optional &ndash; wenn ausgefüllt und SMTP eingerichtet ist, wird die Einladung direkt per Mail verschickt)</label>
-        <input type="email" id="invite_email" name="invite_email" placeholder="max.muster@example.com">
-      </div>
-      <button type="submit" class="button button-sm"><?= h(t('admin.create_invite_btn')) ?></button>
-    </form>
-
-    <ul class="share-list" style="margin-top:16px;">
-      <?php if (empty($invites)): ?>
-        <li style="color:var(--text-muted); background:none; border:none;"><?= h(t('admin.no_invites_yet')) ?></li>
-      <?php endif; ?>
-      <?php foreach ($invites as $inv): ?>
-        <li style="align-items:flex-start; flex-direction:column; gap:6px;">
-          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <span>
-              <?= $inv['email'] ? h($inv['email']) : '<span style="color:var(--text-muted)">' . h(t('admin.no_email_note')) . '</span>' ?>
-              <span class="perm-tag <?= $inv['used'] ? 'view' : 'edit' ?>"><?= $inv['used'] ? h(t('admin.invite_used')) : h(t('admin.invite_open')) ?></span>
-            </span>
-            <form method="post" class="inline-form">
-              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="delete_invite">
-              <input type="hidden" name="token" value="<?= h($inv['token']) ?>">
-              <button type="submit" class="button button-ghost button-sm"><?= h(t('common.delete')) ?></button>
-            </form>
-          </div>
-          <?php if (!$inv['used']): ?>
-            <input type="text" readonly value="<?= h("$scheme://$host$base/register.php?invite=" . $inv['token']) ?>" onclick="this.select()" style="font-family:var(--font-mono); font-size:0.78rem;">
-          <?php endif; ?>
-        </li>
-      <?php endforeach; ?>
-    </ul>
 
     <div class="section-header"><h2><?= h(t('admin.smtp_heading')) ?></h2></div>
     <?php if ($smtpDemoLocked): ?>
@@ -360,7 +329,43 @@ require __DIR__ . '/includes/header.php';
 
   <?php else: /* Tab: Benutzerverwaltung */ ?>
 
-    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.users_heading')) ?></h2></div>
+    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.invites_heading')) ?></h2></div>
+    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="create_invite">
+      <div style="flex:1; min-width:200px;">
+        <label for="invite_email" style="margin-top:0;"><?= h(t('admin.invite_email_label')) ?></label>
+        <input type="email" id="invite_email" name="invite_email" placeholder="max.muster@example.com">
+      </div>
+      <button type="submit" class="button button-sm"><?= h(t('admin.create_invite_btn')) ?></button>
+    </form>
+
+    <ul class="share-list" style="margin-top:16px;">
+      <?php if (empty($invites)): ?>
+        <li style="color:var(--text-muted); background:none; border:none;"><?= h(t('admin.no_invites_yet')) ?></li>
+      <?php endif; ?>
+      <?php foreach ($invites as $inv): ?>
+        <li style="align-items:flex-start; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <span>
+              <?= $inv['email'] ? h($inv['email']) : '<span style="color:var(--text-muted)">' . h(t('admin.no_email_note')) . '</span>' ?>
+              <span class="perm-tag <?= $inv['used'] ? 'view' : 'edit' ?>"><?= $inv['used'] ? h(t('admin.invite_used')) : h(t('admin.invite_open')) ?></span>
+            </span>
+            <form method="post" class="inline-form">
+              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+              <input type="hidden" name="action" value="delete_invite">
+              <input type="hidden" name="token" value="<?= h($inv['token']) ?>">
+              <button type="submit" class="button button-ghost button-sm"><?= h(t('common.delete')) ?></button>
+            </form>
+          </div>
+          <?php if (!$inv['used']): ?>
+            <input type="text" readonly value="<?= h("$scheme://$host$base/register.php?invite=" . $inv['token']) ?>" onclick="this.select()" style="font-family:var(--font-mono); font-size:0.78rem;">
+          <?php endif; ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+
+    <div class="section-header"><h2><?= h(t('admin.users_heading')) ?></h2></div>
     <ul class="share-list">
       <?php foreach ($users as $u): ?>
         <li style="align-items:center;">

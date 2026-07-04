@@ -26,7 +26,7 @@ class SpellCheckPlain
             if (preg_match('/^(#{1,6})(\s*)(.*)$/u', $lineText, $m)) {
                 $contentStartChar += mb_strlen($m[1]) + mb_strlen($m[2]);
                 $content = $m[3];
-            } elseif (preg_match('/^(\s*[-*]\s+)(.*)$/u', $lineText, $m)) {
+            } elseif (preg_match('/^(\s*(?:[-*]|\d+\.)\s+)(.*)$/u', $lineText, $m)) {
                 $contentStartChar += mb_strlen($m[1]);
                 $content = $m[2];
             }
@@ -35,13 +35,29 @@ class SpellCheckPlain
 
             $charPos += $lineCharLen;
             if ($lineIdx < count($lines) - 1) {
-                $plain .= "\n";
+                $nextLine = $lines[$lineIdx + 1];
+                $paragraphBreak = self::isListLine($lineText) || self::isListLine($nextLine)
+                    || self::isHeadingLine($lineText) || self::isHeadingLine($nextLine);
+                $plain .= $paragraphBreak ? "\n\n" : "\n";
                 $map[] = $charPos;
+                if ($paragraphBreak) {
+                    $map[] = $charPos;
+                }
                 $charPos += 1;
             }
         }
 
         return ['plain' => $plain, 'map' => $map];
+    }
+
+    public static function isListLine(string $lineText): bool
+    {
+        return (bool)preg_match('/^\s*(?:[-*]|\d+\.)\s+/u', $lineText);
+    }
+
+    public static function isHeadingLine(string $lineText): bool
+    {
+        return (bool)preg_match('/^\s*#{1,6}\s+/u', $lineText);
     }
 
     private static function appendPlainMapped(string $line, int $baseCharOffset, string &$plain, array &$map): void

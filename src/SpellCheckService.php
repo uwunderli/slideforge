@@ -61,6 +61,7 @@ class SpellCheckService
         }
 
         $issues = $result['issues'] ?? [];
+        $issues = self::appendKnownWordTypos($segments, $issues, $langCode);
         foreach ($issues as &$issue) {
             $issue['slideIndex'] = self::parseSlideIndex($issue['segmentId']);
             $issue['kind'] = self::parseKind($issue['segmentId']);
@@ -109,5 +110,77 @@ class SpellCheckService
             return 'notes';
         }
         return 'object';
+    }
+
+    /** @param array<int, array<string, mixed>> $segments */
+    private static function appendKnownWordTypos(array $segments, array $issues, string $languageCode): array
+    {
+        if (!str_starts_with($languageCode, 'de')) {
+            return $issues;
+        }
+
+        $typos = ['Luckas' => 'Lukas'];
+
+        foreach ($segments as $seg) {
+            $plain = $seg['plain'] ?? '';
+            $text = $seg['text'] ?? '';
+            $map = $seg['map'] ?? [];
+            if ($plain === '' || !$map) {
+                continue;
+            }
+
+            foreach ($typos as $wrong => $suggestion) {
+                $searchFrom = 0;
+                $wrongLen = mb_strlen($wrong);
+                while (($pos = mb_stripos($plain, $wrong, $searchFrom)) !== false) {
+                    $before = $pos > 0 ? mb_substr($plain, $pos - 1, 1) : '';
+                    $afterPos = $pos + $wrongLen;
+                    $after = $afterPos < mb_strlen($plain) ? mb_substr($plain, $afterPos, 1) : '';
+                    if ($before !== '' && preg_match('/\p{L}/u', $before)) {
+                        $searchFrom = $pos + 1;
+                        continue;
+                    }
+                    if ($after !== '' && preg_match('/\p{L}/u', $after)) {
+                        $searchFrom = $pos + 1;
+                        continue;
+                    }
+
+                    $duplicate = false;
+                    foreach ($issues as $ex) {
+                        if (($ex['segmentId'] ?? '') === ($seg['id'] ?? '')
+                            && abs((int)($ex['offset'] ?? -999) - $pos) < $wrongLen) {
+                            $duplicate = true;
+                            break;
+                        }
+                    }
+                    if ($duplicate) {
+                        $searchFrom = $pos + $wrongLen;
+                        continue;
+                    }
+
+                    $origStartChar = $map[$pos] ?? 0;
+                    $lastIdx = min($pos + $wrongLen - 1, count($map) - 1);
+                    $origEndChar = ($lastIdx + 1 < count($map))
+                        ? $map[$lastIdx + 1]
+                        : mb_strlen($text);
+
+                    $issues[] = [
+                        'segmentId' => $seg['id'],
+                        'offset' => $pos,
+                        'length' => $wrongLen,
+                        'origOffset' => $origStartChar,
+                        'origLength' => max(0, $origEndChar - $origStartChar),
+                        'wrong' => mb_substr($text, $origStartChar, max(0, $origEndChar - $origStartChar)),
+                        'plainWrong' => mb_substr($plain, $pos, $wrongLen),
+                        'message' => t('spell.known_typo', ['word' => $wrong, 'suggestion' => $suggestion]),
+                        'rule' => t('spell.known_typo_rule'),
+                        'suggestions' => [$suggestion],
+                    ];
+                    $searchFrom = $pos + $wrongLen;
+                }
+            }
+        }
+
+        return $issues;
     }
 }

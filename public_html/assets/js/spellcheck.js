@@ -4,6 +4,7 @@
   let api = null;
   let issues = [];
   let panelOpen = false;
+  let checking = false;
   let pendingPresentUrl = null;
   let pendingPresentResolve = null;
 
@@ -71,11 +72,37 @@
     return t('kindObject', { n: (issue.slideIndex ?? 0) + 1 });
   }
 
+  function renderChecking() {
+    const box = $('spellResults');
+    if (!box) return;
+    box.innerHTML = '<p class="spell-empty spell-checking">' + escapeHtml(t('checking')) + '</p>';
+    setStatus(t('checking'));
+    setProceedVisible(false);
+  }
+
+  function spellFooterHtml() {
+    return '<div class="spell-panel-footer">' +
+      '<button type="button" class="button button-sm spell-rerun-btn">' + escapeHtml(t('run')) + '</button>' +
+      '</div>';
+  }
+
+  function bindSpellFooter(box) {
+    box.querySelectorAll('.spell-rerun-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        clearPendingPresent();
+        runCheck();
+      });
+    });
+  }
+
   function renderIssues() {
+    if (checking) return;
     const box = $('spellResults');
     if (!box) return;
     if (!issues.length) {
-      box.innerHTML = '<p class="spell-empty">' + escapeHtml(t('noIssues')) + '</p>';
+      box.innerHTML = '<p class="spell-empty">' + escapeHtml(t('noIssues')) + '</p>' +
+        spellFooterHtml();
+      bindSpellFooter(box);
       setStatus(t('noIssuesShort'));
       setProceedVisible(false);
       if (pendingPresentResolve && pendingPresentUrl) {
@@ -106,8 +133,9 @@
           '</div>' +
         '</article>'
       );
-    }).join('');
+    }).join('') + spellFooterHtml();
 
+    bindSpellFooter(box);
     box.querySelectorAll('.spell-apply-btn').forEach((btn) => {
       btn.addEventListener('click', () => { applyFix(parseInt(btn.dataset.issueIndex, 10)); });
     });
@@ -126,9 +154,9 @@
     if (!api) return { ok: false, issueCount: 0 };
     const btn = $('spellRunBtn');
     if (btn) btn.disabled = true;
-    setStatus(t('checking'));
+    checking = true;
     issues = [];
-    renderIssues();
+    renderChecking();
 
     try {
       await api.syncCurrentSlide();
@@ -148,6 +176,7 @@
         return { ok: false, issueCount: 0, error: data.error };
       }
       issues = data.issues || [];
+      checking = false;
       renderIssues();
       return { ok: true, issueCount: issues.length };
     } catch (e) {
@@ -155,6 +184,7 @@
       setStatus(t('errorGeneric'), true);
       return { ok: false, issueCount: 0 };
     } finally {
+      checking = false;
       if (btn) btn.disabled = false;
     }
   }
@@ -206,7 +236,7 @@
     $('spellcheckBtn')?.addEventListener('click', () => {
       clearPendingPresent();
       openPanel();
-      if (!issues.length) runCheck();
+      runCheck();
     });
     $('spellPanelClose')?.addEventListener('click', closePanel);
     $('spellRunBtn')?.addEventListener('click', () => {

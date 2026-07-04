@@ -78,6 +78,9 @@ class LanguageToolClient
 
             $wrong = mb_substr($text, $origStartChar, max(0, $origEndChar - $origStartChar));
             $plainWrong = mb_substr($segment['plain'], $localOffset, $length);
+            if (self::isMarkdownCapitalizationFalsePositive($segment['plain'], $localOffset, $plainWrong, $match)) {
+                continue;
+            }
             $suggestions = [];
             foreach ($match['replacements'] ?? [] as $rep) {
                 if (!empty($rep['value'])) {
@@ -112,24 +115,66 @@ class LanguageToolClient
         $filtered = [];
         foreach ($issues as $issue) {
             $wrong = mb_strtolower($issue['wrong'] ?? '');
-            // In der Schweiz ist «Luckas» als Name üblich – kein Fehler melden.
             if ($wrong === 'luckas') {
-                continue;
-            }
-            if (preg_match('/^luc?kas$/u', $wrong)) {
+                $issue['suggestions'] = array_values(array_unique(array_merge(
+                    ['Lukas'],
+                    $issue['suggestions'] ?? []
+                )));
+                $issue['suggestions'] = array_slice($issue['suggestions'], 0, 5);
+            } elseif (preg_match('/^luc?kas$/u', $wrong)) {
                 $suggestions = array_values(array_unique(array_merge(
-                    ['Luckas', 'Lukas'],
+                    ['Lukas'],
                     $issue['suggestions'] ?? []
                 )));
                 $suggestions = array_values(array_filter(
                     $suggestions,
-                    static fn(string $s): bool => mb_strtolower($s) !== 'lucas'
+                    static fn(string $s): bool => mb_strtolower($s) !== 'luckas' && mb_strtolower($s) !== 'lucas'
                 ));
                 $issue['suggestions'] = array_slice($suggestions, 0, 5);
             }
             $filtered[] = $issue;
         }
         return $filtered;
+    }
+
+    /** Grossschreibung nach Markdown-Zeilenanfang, Überschrift oder Komma-Liste – kein Fehler. */
+    private static function isMarkdownCapitalizationFalsePositive(string $plain, int $offset, string $plainWrong, array $match): bool
+    {
+        if (!self::isAllowedCapitalizationPosition($plain, $offset)) {
+            return false;
+        }
+        if ($plainWrong === '' || !preg_match('/^\p{Lu}/u', $plainWrong)) {
+            return false;
+        }
+        $message = (string)($match['message'] ?? '');
+        $ruleId = (string)($match['rule']['id'] ?? '');
+        if (preg_match('/UPPERCASE_SENTENCE_START/i', $ruleId)) {
+            return false;
+        }
+        if (preg_match('/klein\s*geschrieben|Satzanfang|Nomen und Eigennamen|sentence\s+start|at the beginning|minuscule|minuscol|minuscula|minuscul|Großgeschrieben/i', $message)) {
+            return true;
+        }
+        if (preg_match('/^(DE_|FR_|IT_|EN_|RM_).*(CASE|CAPITAL|GROSS|MINUS)/i', $ruleId)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static function isAllowedCapitalizationPosition(string $plain, int $offset): bool
+    {
+        if ($offset <= 0) {
+            return true;
+        }
+        if (($plain[$offset - 1] ?? '') === "\n") {
+            return true;
+        }
+        if ($offset >= 2 && substr($plain, $offset - 2, 2) === ', ') {
+            return true;
+        }
+        if ($offset >= 2 && substr($plain, $offset - 2, 2) === '; ') {
+            return true;
+        }
+        return false;
     }
 
     /** @return array{ok: bool, matches?: array, error?: string} */
