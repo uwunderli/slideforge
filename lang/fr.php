@@ -333,6 +333,7 @@ return [
     'props.fill_none' => 'Aucune',
     'props.fill_none_hint' => "Pas de couleur de remplissage &ndash; seule la bordure est visible. Réglez la couleur/largeur de bordure ci-dessous.",
     'props.border_color' => 'Couleur de bordure',
+    'props.icon_color' => 'Couleur de l\'icône',
     'props.border_width' => 'Épaisseur de bordure',
     'props.star_points' => 'Nombre de branches',
     'props.arrow_style' => 'Orientation de la flèche',

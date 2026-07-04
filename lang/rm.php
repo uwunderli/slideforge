@@ -325,6 +325,7 @@ return [
     'props.fill_none' => 'Nagin',
     'props.fill_none_hint' => 'Nagina colur da reempliment – mo la cuntrada è visibla. Defina colur/grosdezza da la cuntrada sutvart.',
     'props.border_color' => 'Colur da la cuntrada',
+    'props.icon_color' => 'Colur da l\'icon',
     'props.border_width' => 'Grosdezza da la cuntrada',
     'props.star_points' => 'Dumber da puncts',
     'props.arrow_style' => 'Direcziun da la flecha',

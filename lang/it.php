@@ -325,6 +325,7 @@ return [
     'props.fill_none' => 'Nessuno',
     'props.fill_none_hint' => 'Nessun colore di riempimento &ndash; visibile solo il bordo. Imposta colore/spessore bordo sotto.',
     'props.border_color' => 'Colore bordo',
+    'props.icon_color' => 'Colore icona',
     'props.border_width' => 'Spessore bordo',
     'props.star_points' => 'Numero di punte',
     'props.arrow_style' => 'Direzione freccia',

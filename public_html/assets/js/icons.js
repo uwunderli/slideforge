@@ -195,7 +195,7 @@
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || t('errorGeneric'));
-      await api.applyIconify(json.url);
+      await api.applyIconify(json.url, json.iconId);
       if (typeof api.refreshMediaLibrary === 'function') {
         api.refreshMediaLibrary();
       }

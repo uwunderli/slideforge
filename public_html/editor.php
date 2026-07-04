@@ -117,6 +117,7 @@ $bootstrap = [
         'fillNone' => t('props.fill_none'),
         'fillNoneHint' => t('props.fill_none_hint'),
         'borderColor' => t('props.border_color'),
+        'iconColor' => t('props.icon_color'),
         'borderWidth' => t('props.border_width'),
         'starPoints' => t('props.star_points'),
         'arrowStyle' => t('props.arrow_style'),

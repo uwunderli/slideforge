@@ -333,6 +333,7 @@ return [
     'props.fill_none' => 'None',
     'props.fill_none_hint' => 'No fill color - only the border is visible. Set border color/width below.',
     'props.border_color' => 'Border color',
+    'props.icon_color' => 'Icon color',
     'props.border_width' => 'Border width',
     'props.star_points' => 'Number of points',
     'props.arrow_style' => 'Arrow direction',

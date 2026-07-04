@@ -338,6 +338,7 @@ return [
     'props.fill_none' => 'Keine',
     'props.fill_none_hint' => 'Keine Füllfarbe – nur der Rahmen ist sichtbar. Rahmenfarbe/-breite weiter unten einstellen.',
     'props.border_color' => 'Rahmenfarbe',
+    'props.icon_color' => 'Iconfarbe',
     'props.border_width' => 'Rahmenbreite',
     'props.star_points' => 'Anzahl Zacken',
     'props.arrow_style' => 'Pfeil-Ausrichtung',

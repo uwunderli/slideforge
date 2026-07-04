@@ -45,6 +45,16 @@ $mimeMap = [
 ];
 $mime = $mimeMap[$ext] ?? 'application/octet-stream';
 
+$tintColor = SvgHelper::normalizeHex((string)($_GET['color'] ?? ''));
+if ($ext === 'svg' && $tintColor !== null) {
+    $body = SvgHelper::tintSvg((string)file_get_contents($realPath), $tintColor);
+    header('Content-Type: image/svg+xml');
+    header('Content-Length: ' . strlen($body));
+    header('Cache-Control: private, max-age=86400');
+    echo $body;
+    exit;
+}
+
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($realPath));
 header('Cache-Control: private, max-age=86400');
