@@ -35,13 +35,13 @@ Das Skript löscht Benutzer, Präsentationen, Uploads und Cache, legt danach die
 
 **Feature-Touren (Marketing, öffentlich)** — Seed in `seed/feature-tour/{de,en,fr,it,rm}/`, gemeinsame UI-Bilder in `seed/feature-tour/assets/`:
 
-| Sprache | Link |
-|---------|------|
-| EN | https://slideforge.service7.ch/view.php?token=slideforge-tour |
-| DE | https://slideforge.service7.ch/view.php?token=slideforge-tour-de |
-| FR | https://slideforge.service7.ch/view.php?token=slideforge-tour-fr |
-| IT | https://slideforge.service7.ch/view.php?token=slideforge-tour-it |
-| RM | https://slideforge.service7.ch/view.php?token=slideforge-tour-rm |
+| Sprache | Token / Link | Auf Demo (Stand jetzt) |
+|---------|----------------|-------------------------|
+| EN | https://slideforge.service7.ch/view.php?token=slideforge-tour | **live** |
+| DE | `slideforge-tour-de` | nach `sync-demo` + Reset |
+| FR | `slideforge-tour-fr` | nach `sync-demo` + Reset |
+| IT | `slideforge-tour-it` | nach `sync-demo` + Reset |
+| RM | `slideforge-tour-rm` | nach `sync-demo` + Reset |
 
 Neu erzeugen: `php scripts/build_feature_tour.php` · Import: `php scripts/import_feature_tour.php`
 

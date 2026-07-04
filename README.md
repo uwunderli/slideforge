@@ -11,7 +11,9 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
-**Feature tour** *(no login)* — [EN](https://slideforge.service7.ch/view.php?token=slideforge-tour) · [DE](https://slideforge.service7.ch/view.php?token=slideforge-tour-de) · [FR](https://slideforge.service7.ch/view.php?token=slideforge-tour-fr) · [IT](https://slideforge.service7.ch/view.php?token=slideforge-tour-it) · [RM](https://slideforge.service7.ch/view.php?token=slideforge-tour-rm)
+**Feature tour:** [slideforge.service7.ch/view.php?token=slideforge-tour](https://slideforge.service7.ch/view.php?token=slideforge-tour) *(English, no login)*
+
+Weitere Sprachversionen liegen im Seed (`seed/feature-tour/de`, `fr`, `it`, `rm`) und erscheinen auf der Demo nach `./.deploy/deploy-demo.sh sync-demo`.
 
 ## Screenshots
 
