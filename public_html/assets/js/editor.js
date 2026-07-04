@@ -32,6 +32,7 @@
     pixabayConfig: boot.pixabay || null,
     iconifyConfig: boot.iconify || null,
     openclipartConfig: boot.openclipart || null,
+    webdav: boot.webdav || null,
     i18n: boot.i18n || {},
   };
 
@@ -451,6 +452,7 @@
     initPixabayPanel();
     initIconifyPanel();
     initOpenclipartPanel();
+    initWebdavPanel();
     initMediaSearchButtons();
     initMediaLibraryPanel();
     bindZoomUI();
@@ -1196,7 +1198,75 @@
     return src + (src.includes('?') ? '&' : '?') + 'color=' + encodeURIComponent(iconColor);
   }
 
-  function loadImageAsync(node, src, iconColor) {
+  function measureImageNaturalSize(src) {
+    return new Promise((resolve, reject) => {
+      if (!src) {
+        reject(new Error('no src'));
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth || img.width || 0;
+        const h = img.naturalHeight || img.height || 0;
+        if (w > 0 && h > 0) resolve({ w, h, image: img });
+        else reject(new Error('no dimensions'));
+      };
+      img.onerror = () => reject(new Error('load failed'));
+      img.src = src;
+    });
+  }
+
+  function fitImageInsertSize(naturalW, naturalH, opts = {}) {
+    const maxW = opts.maxW ?? 480;
+    const maxH = opts.maxH ?? 480;
+    const minLongest = opts.minLongest ?? 80;
+    const fallback = opts.fallback ?? { w: 400, h: 240 };
+    if (!naturalW || !naturalH) return { ...fallback };
+
+    let w = naturalW;
+    let h = naturalH;
+    const down = Math.min(maxW / w, maxH / h, 1);
+    w = Math.round(w * down);
+    h = Math.round(h * down);
+    const longest = Math.max(w, h);
+    if (longest > 0 && longest < minLongest) {
+      const up = minLongest / longest;
+      w = Math.round(w * up);
+      h = Math.round(h * up);
+    }
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+  }
+
+  async function insertImageObjectAtCenter(url, extra = {}) {
+    const sizeOpts = extra.sizeOptions || {};
+    let size = fitImageInsertSize(0, 0, sizeOpts);
+    let preloaded = null;
+    try {
+      const measured = await measureImageNaturalSize(url);
+      size = fitImageInsertSize(measured.w, measured.h, sizeOpts);
+      preloaded = measured.image;
+    } catch (_) { /* fallback size */ }
+
+    const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
+    const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
+    const id = 'o' + Math.random().toString(16).slice(2, 10);
+    const obj = Object.assign({
+      id, type: 'image', x: centerX, y: centerY, w: size.w, h: size.h,
+      rotation: 0, opacity: 1, src: url, deferImageLoad: true,
+    }, extra.objProps || {});
+    const node = createNode(obj);
+    node.setAttr('aspectRatio', size.w / size.h);
+    insertNode(node);
+    loadImageAsync(node, url, obj.iconColor, preloaded);
+    return node;
+  }
+
+  function loadImageAsync(node, src, iconColor, preloaded) {
+    if (preloaded) {
+      node.image(preloaded);
+      if (SF.layer) SF.layer.batchDraw();
+      return;
+    }
     const baseSrc = src || node.getAttr('src') || '';
     const color = iconColor ?? node.getAttr('iconColor');
     const displaySrc = (node.getAttr('iconId') || isIconSrc(baseSrc)) && color
@@ -1313,7 +1383,7 @@
       node.setAttr('src', obj.src || '');
       if (obj.iconId) node.setAttr('iconId', obj.iconId);
       if (obj.iconColor) node.setAttr('iconColor', obj.iconColor);
-      loadImageAsync(node, obj.src, obj.iconColor);
+      if (!obj.deferImageLoad) loadImageAsync(node, obj.src, obj.iconColor);
       return node;
     }
     if (obj.type === 'video') {
@@ -3355,6 +3425,10 @@
       const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
       const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
       const id = 'o' + Math.random().toString(16).slice(2, 10);
+      if (kind === 'image') {
+        await insertImageObjectAtCenter(json.url);
+        return;
+      }
       const obj = { id, type: kind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: json.url };
       insertNode(createNode(obj));
     } catch (e) {
@@ -3380,14 +3454,16 @@
       }
 
       const objKind = kind === 'video' ? 'video' : 'image';
+      if (objKind === 'image') {
+        await insertImageObjectAtCenter(url);
+        return;
+      }
       const defaultSize = { w: 400, h: 240 };
       const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
       const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
       const id = 'o' + Math.random().toString(16).slice(2, 10);
       const obj = { id, type: objKind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: url };
-      const node = createNode(obj);
-      insertNode(node);
-      if (objKind === 'image') loadImageAsync(node, url);
+      insertNode(createNode(obj));
     }
 
     window.SlideForgePixabay.init({
@@ -3437,17 +3513,9 @@
     if (!cfg.enabled) return;
 
     async function applyOpenclipartAsset(url) {
-      const defaultSize = { w: 256, h: 256 };
-      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
-      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
-      const id = 'o' + Math.random().toString(16).slice(2, 10);
-      const obj = {
-        id, type: 'image', x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
-        rotation: 0, opacity: 1, src: url,
-      };
-      const node = createNode(obj);
-      insertNode(node);
-      loadImageAsync(node, url);
+      await insertImageObjectAtCenter(url, {
+        sizeOptions: { maxW: 480, maxH: 480, minLongest: 128, fallback: { w: 256, h: 256 } },
+      });
     }
 
     window.SlideForgeOpenclipart.init({
@@ -3456,6 +3524,51 @@
       openclipartConfig: cfg,
       defaultIconColor: defaultIconColor(),
       applyOpenclipart: applyOpenclipartAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initWebdavPanel() {
+    if (!window.SlideForgeWebdav) return;
+
+    const cfg = SF.webdav || { enabled: false, drives: [], i18n: {} };
+    if (!cfg.enabled) return;
+
+    async function applyWebdavAsset(mode, url, kind) {
+      const mediaKind = kind || 'image';
+      const isBg = mode === 'background-image' || mode === 'background-video';
+      if (isBg) {
+        const bgKind = mode === 'background-video' ? 'video' : 'image';
+        setBgType(bgKind);
+        SF.currentBackground = { type: bgKind, value: url };
+        applyBackgroundVisual(SF.currentBackground);
+        populateBackgroundControls(SF.currentBackground);
+        updateCurrentTabSwatch();
+        scheduleSave();
+        return;
+      }
+
+      if (mediaKind === 'image') {
+        await insertImageObjectAtCenter(url);
+        return;
+      }
+
+      const defaultSize = mediaKind === 'audio' ? { w: 280, h: 56 } : { w: 400, h: 240 };
+      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
+      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
+      const id = 'o' + Math.random().toString(16).slice(2, 10);
+      const obj = {
+        id, type: mediaKind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
+        rotation: 0, opacity: 1, src: url,
+      };
+      insertNode(createNode(obj));
+    }
+
+    window.SlideForgeWebdav.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      webdavConfig: cfg,
+      applyWebdav: applyWebdavAsset,
       refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
     });
   }
@@ -3494,6 +3607,7 @@
         document.getElementById('openclipartQuery')?.focus();
       }
     });
+
   }
 
   function initMediaLibraryPanel() {
@@ -3522,29 +3636,30 @@
       return cfg.kindImage;
     }
 
-    function insertMediaAsset(url, kind) {
+    async function insertMediaAsset(url, kind) {
       if (!SF.canEdit || !url) return;
-      let size;
-      if (kind === 'audio') size = { w: 280, h: 56 };
-      else if (kind === 'video') size = { w: 400, h: 260 };
-      else size = { w: 400, h: 240 };
-      const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
-      const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
-      const id = 'o' + Math.random().toString(16).slice(2, 10);
-      const obj = {
-        id,
-        type: kind === 'video' ? 'video' : (kind === 'audio' ? 'audio' : 'image'),
-        x: centerX,
-        y: centerY,
-        w: size.w,
-        h: size.h,
-        rotation: 0,
-        opacity: 1,
-        src: url,
-      };
-      const node = createNode(obj);
-      insertNode(node);
-      if (obj.type === 'image') loadImageAsync(node, url);
+      if (kind === 'image') {
+        await insertImageObjectAtCenter(url);
+      } else {
+        let size;
+        if (kind === 'audio') size = { w: 280, h: 56 };
+        else size = { w: 400, h: 260 };
+        const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
+        const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
+        const id = 'o' + Math.random().toString(16).slice(2, 10);
+        const obj = {
+          id,
+          type: kind === 'video' ? 'video' : 'audio',
+          x: centerX,
+          y: centerY,
+          w: size.w,
+          h: size.h,
+          rotation: 0,
+          opacity: 1,
+          src: url,
+        };
+        insertNode(createNode(obj));
+      }
       scheduleSave();
       statusEl.textContent = cfg.inserted || '';
       setTimeout(() => {

@@ -52,6 +52,8 @@ if (!isset($meta['safe_margin'])) {
     $meta['safe_margin'] = 100; // ältere Präsentationen (von vor dieser Funktion) haben das Feld noch nicht gespeichert
 }
 
+$webdavDrives = Auth::listWebdavDrivesPublic($me);
+
 $bootstrap = [
     'id' => $id,
     'meta' => $meta,
@@ -355,6 +357,29 @@ $bootstrap = [
             'next' => t('openclipart.next'),
             'previewHint' => t('openclipart.preview_hint'),
             'targetObject' => t('openclipart.target_object'),
+        ],
+    ],
+    'webdav' => [
+        'enabled' => $canEdit && count($webdavDrives) > 0,
+        'drives' => $webdavDrives,
+        'i18n' => [
+            'title' => t('webdav.title'),
+            'loading' => t('webdav.loading'),
+            'importing' => t('webdav.importing'),
+            'importDone' => t('webdav.import_done'),
+            'emptyFolder' => t('webdav.empty_folder'),
+            'errorGeneric' => t('webdav.error_generic'),
+            'useObject' => t('webdav.use_object'),
+            'useBackground' => t('pixabay.use_background'),
+            'previewHint' => t('pixabay.preview_hint'),
+            'kindVideo' => t('media_lib.kind_video'),
+            'kindAudio' => t('media_lib.kind_audio'),
+            'targetObject' => t('webdav.target_object'),
+            'up' => t('webdav.up'),
+            'root' => t('webdav.root'),
+            'folder' => t('webdav.folder'),
+            'file' => t('webdav.file'),
+            'openFolder' => t('webdav.open_folder'),
         ],
     ],
     'mediaLibrary' => [
@@ -765,6 +790,12 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <?php if ($canEdit && Config::openclipartEnabled()): ?>
       <button type="button" class="tool-btn-block" id="openclipartOpenBtn">✂️ <?= h(t('openclipart.open_from_media')) ?></button>
       <?php endif; ?>
+      <?php if ($canEdit && count($webdavDrives) > 0): ?>
+      <div class="media-source-divider" role="separator" aria-hidden="true"></div>
+      <?php foreach ($webdavDrives as $wdDrive): ?>
+      <button type="button" class="tool-btn-block webdav-drive-btn" data-drive-id="<?= h($wdDrive['id']) ?>" data-drive-label="<?= h($wdDrive['label']) ?>">☁ <?= h($wdDrive['label']) ?></button>
+      <?php endforeach; ?>
+      <?php endif; ?>
       </div>
       <div class="media-sub-panel" data-mediasub="library" id="mediaLibraryPanel" hidden>
         <div class="media-library-header">
@@ -1112,6 +1143,41 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </div>
 <?php endif; ?>
 
+<?php if ($canEdit && count($webdavDrives) > 0): ?>
+<div class="modal-backdrop" id="webdavModal" aria-hidden="true">
+  <div class="modal pixabay-modal webdav-modal" role="dialog" aria-modal="true" aria-labelledby="webdavModalTitle">
+    <div class="pixabay-modal-header">
+      <div>
+        <h2 id="webdavModalTitle" class="pixabay-modal-title"><?= h(t('webdav.title')) ?></h2>
+        <p class="pixabay-target-hint"><?= h(t('webdav.target_object')) ?></p>
+      </div>
+      <button type="button" class="button button-ghost button-sm" id="webdavModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    </div>
+    <div class="pixabay-modal-toolbar webdav-modal-toolbar">
+      <nav class="webdav-breadcrumb" id="webdavBreadcrumb" aria-label="<?= h(t('webdav.breadcrumb')) ?>"></nav>
+    </div>
+    <div class="pixabay-modal-meta">
+      <div class="pixabay-status" id="webdavStatus"></div>
+    </div>
+    <div class="pixabay-modal-body">
+      <div class="webdav-folder-bar" id="webdavFolderBar" hidden></div>
+      <div class="pixabay-grid" id="webdavGrid"></div>
+    </div>
+  </div>
+  <div class="pixabay-lightbox" id="webdavLightbox" aria-hidden="true">
+    <button type="button" class="pixabay-lightbox-close" id="webdavLightboxClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="pixabay-lightbox-backdrop" id="webdavLightboxBackdrop" aria-hidden="true"></div>
+    <div class="pixabay-lightbox-panel" role="dialog" aria-modal="true">
+      <div class="pixabay-lightbox-media" id="webdavLightboxMedia"></div>
+      <div class="pixabay-lightbox-footer">
+        <div class="pixabay-lightbox-meta" id="webdavLightboxMeta"></div>
+        <div class="pixabay-lightbox-actions" id="webdavLightboxActions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 </script>
@@ -1125,6 +1191,9 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php endif; ?>
 <?php if ($canEdit && Config::openclipartEnabled()): ?>
 <script src="assets/js/clipart.js?v=<?= ASSET_VERSION ?>"></script>
+<?php endif; ?>
+<?php if ($canEdit && count($webdavDrives) > 0): ?>
+<script src="assets/js/webdav.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>

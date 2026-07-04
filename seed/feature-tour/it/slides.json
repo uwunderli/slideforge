@@ -803,7 +803,7 @@
                     "y": 180,
                     "w": 900,
                     "h": 500,
-                    "text": "- **Modelli di diapositive** e stili testo\n- **Colori brand** modificabili\n- **Pixabay** (opzionale)\n- Icone **Iconify** e clipart **Openclipart** (senza API key)\n- **Rimuovi sfondo** dalle immagini",
+                    "text": "- **Modelli di diapositive** e stili testo\n- **Colori brand** modificabili\n- **Pixabay** (opzionale)\n- Icone **Iconify** e clipart **Openclipart** (senza API key)\n- **WebDAV** — cloud/NAS dal profilo\n- **Rimuovi sfondo** dalle immagini",
                     "fontFamily": "Open Sans",
                     "fontSize": 34,
                     "fontWeight": "normal",

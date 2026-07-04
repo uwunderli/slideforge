@@ -174,10 +174,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$userTabActions = ['create_invite', 'delete_invite', 'set_role', 'delete_user'];
-$activeTab = in_array($postAction, $userTabActions, true) || (($_GET['tab'] ?? '') === 'users')
-    ? 'users'
-    : 'general';
+$allowedTabs = ['general', 'smtp', 'spellcheck', 'media', 'users'];
+$tabFromAction = [
+    'save_general' => 'general',
+    'upload_logo' => 'general',
+    'remove_logo' => 'general',
+    'save_smtp' => 'smtp',
+    'save_languagetool' => 'spellcheck',
+    'save_pixabay' => 'media',
+    'save_iconify' => 'media',
+    'save_openclipart' => 'media',
+    'create_invite' => 'users',
+    'delete_invite' => 'users',
+    'set_role' => 'users',
+    'delete_user' => 'users',
+];
+$activeTab = $_GET['tab'] ?? 'general';
+if ($postAction !== '' && isset($tabFromAction[$postAction])) {
+    $activeTab = $tabFromAction[$postAction];
+}
+if (!in_array($activeTab, $allowedTabs, true)) {
+    $activeTab = 'general';
+}
 
 $cfg = Config::all();
 $smtp = $cfg['smtp'] ?? [];
@@ -199,17 +217,19 @@ require __DIR__ . '/includes/header.php';
   <a href="index.php" class="back-link">&larr; <?= h(t('profile.back_to_dashboard')) ?></a>
   <h1 style="margin-top:14px;"><?= h(t('admin.heading')) ?></h1>
 
-  <div class="page-tabs">
+  <div class="page-tabs profile-tabs admin-settings-tabs">
     <a href="?tab=general" class="page-tab-btn<?= $activeTab === 'general' ? ' active' : '' ?>"><?= h(t('admin.tab_general')) ?></a>
+    <a href="?tab=smtp" class="page-tab-btn<?= $activeTab === 'smtp' ? ' active' : '' ?>"><?= h(t('admin.tab_smtp')) ?></a>
+    <a href="?tab=spellcheck" class="page-tab-btn<?= $activeTab === 'spellcheck' ? ' active' : '' ?>"><?= h(t('admin.tab_spellcheck')) ?></a>
+    <a href="?tab=media" class="page-tab-btn<?= $activeTab === 'media' ? ' active' : '' ?>"><?= h(t('admin.tab_media')) ?></a>
     <a href="?tab=users" class="page-tab-btn<?= $activeTab === 'users' ? ' active' : '' ?>"><?= h(t('admin.tab_users')) ?></a>
   </div>
 
-  <?php if ($error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
-  <?php if ($msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
+  <div class="profile-tab-panel"<?= $activeTab !== 'general' ? ' hidden' : '' ?> data-admin-tab="general">
+    <?php if ($activeTab === 'general' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($activeTab === 'general' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
 
-  <?php if ($activeTab === 'general'): ?>
-
-    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.general_heading')) ?></h2></div>
+    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.general_heading')) ?></h2></div>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="save_general">
@@ -242,7 +262,13 @@ require __DIR__ . '/includes/header.php';
       </form>
     <?php endif; ?>
 
-    <div class="section-header"><h2><?= h(t('admin.smtp_heading')) ?></h2></div>
+  </div>
+
+  <div class="profile-tab-panel"<?= $activeTab !== 'smtp' ? ' hidden' : '' ?> data-admin-tab="smtp">
+    <?php if ($activeTab === 'smtp' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($activeTab === 'smtp' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
+
+    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.smtp_heading')) ?></h2></div>
     <?php if ($smtpDemoLocked): ?>
       <p class="demo-smtp-notice"><?= h(t('demo.smtp_locked')) ?></p>
     <?php endif; ?>
@@ -297,7 +323,13 @@ require __DIR__ . '/includes/header.php';
     <div id="testMailResult" style="margin-top:10px; font-size:0.85rem;"></div>
     </fieldset>
 
-    <div class="section-header"><h2><?= h(t('admin.languagetool_heading')) ?></h2></div>
+  </div>
+
+  <div class="profile-tab-panel"<?= $activeTab !== 'spellcheck' ? ' hidden' : '' ?> data-admin-tab="spellcheck">
+    <?php if ($activeTab === 'spellcheck' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($activeTab === 'spellcheck' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
+
+    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.languagetool_heading')) ?></h2></div>
     <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.languagetool_intro') ?></p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -321,7 +353,13 @@ require __DIR__ . '/includes/header.php';
       <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('admin.languagetool_save_btn')) ?></button>
     </form>
 
-    <div class="section-header"><h2><?= h(t('admin.pixabay_heading')) ?></h2></div>
+  </div>
+
+  <div class="profile-tab-panel"<?= $activeTab !== 'media' ? ' hidden' : '' ?> data-admin-tab="media">
+    <?php if ($activeTab === 'media' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($activeTab === 'media' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
+
+    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.pixabay_heading')) ?></h2></div>
     <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.pixabay_intro') ?></p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -367,9 +405,13 @@ require __DIR__ . '/includes/header.php';
       <button type="submit" class="button button-sm"><?= h(t('admin.openclipart_save_btn')) ?></button>
     </form>
 
-  <?php else: /* Tab: Benutzerverwaltung */ ?>
+  </div>
 
-    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.invites_heading')) ?></h2></div>
+  <div class="profile-tab-panel"<?= $activeTab !== 'users' ? ' hidden' : '' ?> data-admin-tab="users">
+    <?php if ($activeTab === 'users' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
+    <?php if ($activeTab === 'users' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
+
+    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.invites_heading')) ?></h2></div>
     <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="create_invite">
@@ -440,7 +482,7 @@ require __DIR__ . '/includes/header.php';
       <?php endforeach; ?>
     </ul>
 
-  <?php endif; ?>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="pixabayHelpModal" aria-hidden="true">

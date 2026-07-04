@@ -589,4 +589,188 @@ class Auth
             return $users;
         }, []);
     }
+
+    /** @return list<array{id:string,label:string,url:string,username:string,root_path:string}> */
+    public static function listWebdavDrivesPublic(array $user): array
+    {
+        $out = [];
+        foreach ($user['webdav_drives'] ?? [] as $drive) {
+            if (empty($drive['id']) || empty($drive['label']) || empty($drive['url'])) {
+                continue;
+            }
+            $out[] = [
+                'id' => (string)$drive['id'],
+                'label' => (string)$drive['label'],
+                'url' => (string)$drive['url'],
+                'username' => (string)($drive['username'] ?? ''),
+                'root_path' => (string)($drive['root_path'] ?? ''),
+            ];
+        }
+        return $out;
+    }
+
+    /** @return array{url:string,username:string,password:string,root_path:string}|null */
+    public static function getWebdavDriveCredentials(string $userId, string $driveId): ?array
+    {
+        $users = Storage::read(USERS_FILE, []);
+        foreach ($users as $u) {
+            if ($u['id'] !== $userId) {
+                continue;
+            }
+            foreach ($u['webdav_drives'] ?? [] as $drive) {
+                if (($drive['id'] ?? '') !== $driveId) {
+                    continue;
+                }
+                $password = CryptoHelper::decrypt((string)($drive['password_enc'] ?? ''));
+                if ($password === null) {
+                    return null;
+                }
+                return [
+                    'url' => trim((string)($drive['url'] ?? '')),
+                    'username' => trim((string)($drive['username'] ?? '')),
+                    'password' => $password,
+                    'root_path' => WebdavClient::normalizeBrowsePath((string)($drive['root_path'] ?? '')),
+                ];
+            }
+        }
+        return null;
+    }
+
+    /** @return array{ok:bool,error?:string,drive?:array} */
+    public static function saveWebdavDrive(string $userId, array $input): array
+    {
+        $label = trim((string)($input['label'] ?? ''));
+        $url = trim((string)($input['url'] ?? ''));
+        $username = trim((string)($input['username'] ?? ''));
+        $password = (string)($input['password'] ?? '');
+        $rootPath = WebdavClient::normalizeBrowsePath((string)($input['root_path'] ?? ''));
+        $driveId = trim((string)($input['id'] ?? ''));
+
+        if ($label === '' || mb_strlen($label) > 80) {
+            return ['ok' => false, 'error' => 'invalid_label'];
+        }
+        if (!self::isValidWebdavBaseUrl($url)) {
+            return ['ok' => false, 'error' => 'invalid_url'];
+        }
+        if (parse_url($url, PHP_URL_SCHEME) !== 'https') {
+            return ['ok' => false, 'error' => 'https_required'];
+        }
+        if ($username === '' || mb_strlen($username) > 200) {
+            return ['ok' => false, 'error' => 'invalid_username'];
+        }
+
+        $saved = null;
+        Storage::update(USERS_FILE, function ($users) use ($userId, $driveId, $label, $url, $username, $password, $rootPath, &$saved) {
+            foreach ($users as &$u) {
+                if ($u['id'] !== $userId) {
+                    continue;
+                }
+                if (!isset($u['webdav_drives']) || !is_array($u['webdav_drives'])) {
+                    $u['webdav_drives'] = [];
+                }
+                $drives = &$u['webdav_drives'];
+                $existingIdx = null;
+                foreach ($drives as $idx => $drive) {
+                    if (($drive['id'] ?? '') === $driveId && $driveId !== '') {
+                        $existingIdx = $idx;
+                        break;
+                    }
+                }
+                if ($existingIdx === null && count($drives) >= 10) {
+                    return $users;
+                }
+
+                if ($existingIdx !== null) {
+                    $entry = $drives[$existingIdx];
+                    $entry['label'] = $label;
+                    $entry['url'] = $url;
+                    $entry['username'] = $username;
+                    $entry['root_path'] = $rootPath;
+                    if ($password !== '') {
+                        $entry['password_enc'] = CryptoHelper::encrypt($password);
+                    }
+                    $entry['updated_at'] = date('c');
+                    $drives[$existingIdx] = $entry;
+                    $saved = self::publicWebdavDrive($entry);
+                } else {
+                    if ($password === '') {
+                        return $users;
+                    }
+                    $entry = [
+                        'id' => 'wd_' . Storage::generateId(10),
+                        'label' => $label,
+                        'url' => $url,
+                        'username' => $username,
+                        'password_enc' => CryptoHelper::encrypt($password),
+                        'root_path' => $rootPath,
+                        'created_at' => date('c'),
+                    ];
+                    $drives[] = $entry;
+                    $saved = self::publicWebdavDrive($entry);
+                }
+            }
+            return $users;
+        }, []);
+
+        if ($saved === null) {
+            if ($driveId === '' && $password === '') {
+                return ['ok' => false, 'error' => 'password_required'];
+            }
+            return ['ok' => false, 'error' => 'save_failed'];
+        }
+        return ['ok' => true, 'drive' => $saved];
+    }
+
+    /** @return array{ok:bool,error?:string} */
+    public static function deleteWebdavDrive(string $userId, string $driveId): array
+    {
+        if ($driveId === '') {
+            return ['ok' => false, 'error' => 'invalid_drive'];
+        }
+        $deleted = false;
+        Storage::update(USERS_FILE, function ($users) use ($userId, $driveId, &$deleted) {
+            foreach ($users as &$u) {
+                if ($u['id'] !== $userId) {
+                    continue;
+                }
+                $before = count($u['webdav_drives'] ?? []);
+                $u['webdav_drives'] = array_values(array_filter(
+                    $u['webdav_drives'] ?? [],
+                    static fn($d) => ($d['id'] ?? '') !== $driveId
+                ));
+                $deleted = count($u['webdav_drives']) < $before;
+            }
+            return $users;
+        }, []);
+        return $deleted ? ['ok' => true] : ['ok' => false, 'error' => 'not_found'];
+    }
+
+    /** @param array<string,mixed> $drive */
+    private static function publicWebdavDrive(array $drive): array
+    {
+        return [
+            'id' => (string)($drive['id'] ?? ''),
+            'label' => (string)($drive['label'] ?? ''),
+            'url' => (string)($drive['url'] ?? ''),
+            'username' => (string)($drive['username'] ?? ''),
+            'root_path' => (string)($drive['root_path'] ?? ''),
+        ];
+    }
+
+    public static function isValidWebdavBaseUrl(string $url): bool
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return false;
+        }
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
+            return false;
+        }
+        if (strtolower((string)$parts['scheme']) !== 'https') {
+            return false;
+        }
+        $host = (string)$parts['host'];
+        return $host !== '' && !str_contains($host, ' ');
+    }
 }

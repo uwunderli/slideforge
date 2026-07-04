@@ -459,6 +459,10 @@ return [
     'profile.avatar_removed' => 'Immagine del profilo rimossa.',
     'profile.passwords_mismatch' => 'Le nuove password non corrispondono.',
     'profile.title' => 'Il mio profilo',
+    'profile.tab_account' => 'Account',
+    'profile.tab_spellcheck' => 'Ortografia',
+    'profile.tab_webdav' => 'WebDAV',
+    'profile.tab_password' => 'Password',
     'profile.back_to_dashboard' => 'Torna alla dashboard',
     'profile.role' => 'Ruolo',
     'profile.role_admin' => 'Amministratore',
@@ -605,8 +609,11 @@ return [
     'admin.cannot_delete_self' => 'Non puoi eliminare te stesso.',
     'admin.user_deleted' => 'Utente eliminato.',
     'admin.heading' => 'Impostazioni',
-    'admin.tab_general' => 'Impostazioni generali',
-    'admin.tab_users' => 'Gestione utenti',
+    'admin.tab_general' => 'Generale',
+    'admin.tab_smtp' => 'SMTP',
+    'admin.tab_spellcheck' => 'Correttore',
+    'admin.tab_media' => 'Media',
+    'admin.tab_users' => 'Utenti',
     'admin.general_heading' => 'Generale',
     'admin.site_title' => 'Titolo del sito',
     'admin.open_registration' => 'Consenti registrazione aperta (altrimenti solo link d\'invito)',
@@ -834,6 +841,84 @@ return [
     'openclipart.prev' => 'Precedente',
     'openclipart.next' => 'Successivo',
     'openclipart.preview_hint' => 'Clicca per ingrandire',
+
+    'webdav.title' => 'WebDAV',
+    'webdav.loading' => 'Caricamento cartella…',
+    'webdav.importing' => 'Importazione file…',
+    'webdav.import_done' => 'Aggiunto alla diapositiva.',
+    'webdav.empty_folder' => 'Nessun media o sottocartella in questa cartella.',
+    'webdav.error_generic' => 'Richiesta WebDAV non riuscita.',
+    'webdav.error_auth' => 'Non connesso.',
+    'webdav.error_not_found' => 'Presentazione non trovata.',
+    'webdav.error_forbidden' => 'Accesso negato.',
+    'webdav.error_edit' => 'Nessun permesso di modifica.',
+    'webdav.error_csrf' => 'Token di sessione non valido. Ricarica la pagina.',
+    'webdav.error_unknown_action' => 'Azione sconosciuta.',
+    'webdav.error_drive_not_found' => 'Unità WebDAV non trovata.',
+    'webdav.error_invalid_path' => 'Percorso non valido.',
+    'webdav.error_invalid_url' => 'URL WebDAV non valido (solo HTTPS).',
+    'webdav.error_https_required' => 'Sono consentiti solo URL HTTPS.',
+    'webdav.error_blocked_host' => 'Questo indirizzo non è consentito per motivi di sicurezza.',
+    'webdav.error_auth_failed' => 'Accesso non riuscito — controlla nome utente o password.',
+    'webdav.error_connection' => 'Impossibile connettersi al server WebDAV.',
+    'webdav.error_download' => 'Download non riuscito.',
+    'webdav.error_too_large' => 'File troppo grande.',
+    'webdav.error_type' => 'Sono supportati solo immagini, SVG, video (MP4/WebM) e audio (MP3/WAV/OGG/M4A).',
+    'webdav.error_save' => 'Salvataggio non riuscito.',
+    'webdav.error_invalid_label' => 'Inserisci un nome visualizzato (max. 80 caratteri).',
+    'webdav.error_invalid_username' => 'Inserisci un nome utente.',
+    'webdav.error_password_required' => 'Password obbligatoria.',
+    'webdav.use_object' => 'Sulla diapositiva',
+    'webdav.target_object' => 'Sfoglia le cartelle e aggiungi media alla diapositiva',
+    'webdav.up' => 'Su',
+    'webdav.root' => 'Radice',
+    'webdav.folder' => 'Cartella',
+    'webdav.file' => 'File',
+    'webdav.open_folder' => 'Apri cartella',
+    'webdav.breadcrumb' => 'Percorso',
+
+    'profile.webdav_heading' => 'Unità WebDAV',
+    'profile.webdav_intro' => 'Collega archivio cloud (Nextcloud, ownCloud, Synology …) via WebDAV. Le unità configurate compaiono sotto Media nell\'editor.',
+    'profile.webdav_label' => 'Nome visualizzato',
+    'profile.webdav_label_placeholder' => 'es. Cloud aziendale',
+    'profile.webdav_url' => 'URL WebDAV',
+    'profile.webdav_username' => 'Nome utente',
+    'profile.webdav_password' => 'Password',
+    'profile.webdav_password_keep' => 'Lascia vuoto per mantenere',
+    'profile.webdav_root' => 'Cartella iniziale (opzionale)',
+    'profile.webdav_root_placeholder' => 'es. Foto/Presentazioni',
+    'profile.webdav_add' => 'Nuova unità',
+    'profile.webdav_add_btn' => 'Aggiungi unità',
+    'profile.webdav_test' => 'Test connessione',
+    'profile.webdav_test_ok' => 'Connessione riuscita.',
+    'profile.webdav_test_fail' => 'Connessione non riuscita',
+    'profile.webdav_delete' => 'Rimuovi unità',
+    'profile.webdav_delete_confirm' => 'Rimuovere questa unità WebDAV?',
+    'profile.webdav_saved' => 'Unità WebDAV salvata.',
+    'profile.webdav_deleted' => 'Unità WebDAV rimossa.',
+    'profile.webdav_help_btn' => 'Aiuto: configurare WebDAV',
+    'profile.webdav_help_title' => 'WebDAV — collegare i provider comuni',
+    'profile.webdav_help_body' => '<p>Collega archivio cloud a SlideForge via WebDAV. Le credenziali sono <strong>cifrate</strong> e usate solo dal server. Ogni unità compare sotto <strong>Media</strong> nell’editor.</p>'
+        . '<h3>Campi profilo</h3>'
+        . '<ul>'
+        . '<li><strong>Nome visualizzato</strong> — etichetta libera.</li>'
+        . '<li><strong>URL WebDAV</strong> — indirizzo HTTPS fino alla radice WebDAV.</li>'
+        . '<li><strong>Utente / password</strong> — come il login cloud.</li>'
+        . '<li><strong>Cartella iniziale</strong> — sottocartella opzionale, senza <code>/</code> iniziale.</li>'
+        . '</ul>'
+        . '<h3>GroupOffice</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://server.tld/webdav/</code></li>'
+        . '<li><strong>Cartella:</strong> <code>UTENTE/sottocartella</code> — es. <code>mario.rossi/Foto/Slide</code></li></ul>'
+        . '<h3>Nextcloud / ownCloud</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://cloud.example.com/remote.php/dav/files/UTENTE/</code></li></ul>'
+        . '<h3>Synology NAS</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://nas.example.com:5006/</code></li></ul>'
+        . '<h3>Risoluzione problemi</h3>'
+        . '<ul>'
+        . '<li><strong>Accesso fallito</strong> — controllare credenziali.</li>'
+        . '<li><strong>Cartella non trovata</strong> — separare URL base e cartella iniziale.</li>'
+        . '<li>Solo HTTPS; immagini e SVG (max. 15 MB).</li>'
+        . '</ul>',
 
     'media_lib.sub_insert' => 'Inserisci',
     'media_lib.sub_overview' => 'Panoramica',

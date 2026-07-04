@@ -58,6 +58,75 @@ switch ($action) {
         user_json_ok(['before_present' => $beforePresent]);
         break;
 
+    case 'save_webdav_drive':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail(t('webdav.error_csrf'), 403);
+        }
+        $result = Auth::saveWebdavDrive($me['id'], $body);
+        if (!$result['ok']) {
+            $map = [
+                'invalid_label' => t('webdav.error_invalid_label'),
+                'invalid_url' => t('webdav.error_invalid_url'),
+                'https_required' => t('webdav.error_https_required'),
+                'invalid_username' => t('webdav.error_invalid_username'),
+                'password_required' => t('webdav.error_password_required'),
+                'save_failed' => t('webdav.error_save'),
+            ];
+            user_json_fail($map[$result['error'] ?? ''] ?? t('webdav.error_generic'), 400);
+        }
+        user_json_ok(['drive' => $result['drive']]);
+        break;
+
+    case 'delete_webdav_drive':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail(t('webdav.error_csrf'), 403);
+        }
+        $driveId = trim((string)($body['drive_id'] ?? ''));
+        $result = Auth::deleteWebdavDrive($me['id'], $driveId);
+        if (!$result['ok']) {
+            user_json_fail(t('webdav.error_drive_not_found'), 404);
+        }
+        user_json_ok();
+        break;
+
+    case 'test_webdav_drive':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail(t('webdav.error_csrf'), 403);
+        }
+        $driveId = trim((string)($body['drive_id'] ?? ''));
+        $password = (string)($body['password'] ?? '');
+        if ($driveId !== '' && $password === '') {
+            $drive = Auth::getWebdavDriveCredentials($me['id'], $driveId);
+        } else {
+            $drive = [
+                'url' => trim((string)($body['url'] ?? '')),
+                'username' => trim((string)($body['username'] ?? '')),
+                'password' => $password,
+                'root_path' => WebdavClient::normalizeBrowsePath((string)($body['root_path'] ?? '')),
+            ];
+        }
+        if (!$drive || ($drive['url'] ?? '') === '' || ($drive['username'] ?? '') === '') {
+            user_json_fail(t('webdav.error_drive_not_found'), 404);
+        }
+        $test = WebdavClient::testConnection($drive);
+        if (!$test['ok']) {
+            $map = [
+                'invalid_url' => t('webdav.error_invalid_url'),
+                'https_required' => t('webdav.error_https_required'),
+                'blocked_host' => t('webdav.error_blocked_host'),
+                'auth_failed' => t('webdav.error_auth_failed'),
+                'not_found' => t('webdav.error_not_found'),
+                'request_failed' => t('webdav.error_connection'),
+                'not_webdav' => t('webdav.error_not_webdav'),
+            ];
+            user_json_fail($map[$test['error'] ?? ''] ?? t('webdav.error_connection'), 502);
+        }
+        user_json_ok();
+        break;
+
     default:
         user_json_fail('Unbekannte Aktion.', 400);
 }

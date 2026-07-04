@@ -803,7 +803,7 @@
                     "y": 180,
                     "w": 900,
                     "h": 500,
-                    "text": "- **Modèles de diapos** et styles de texte\n- **Couleurs de marque** éditables\n- Médias **Pixabay** (optionnel)\n- Icônes **Iconify** et cliparts **Openclipart** (sans clé API)\n- **Supprimer le fond** des images",
+                    "text": "- **Modèles de diapos** et styles de texte\n- **Couleurs de marque** éditables\n- Médias **Pixabay** (optionnel)\n- Icônes **Iconify** et cliparts **Openclipart** (sans clé API)\n- **WebDAV** — vos médias cloud/NAS via le profil\n- **Supprimer le fond** des images",
                     "fontFamily": "Open Sans",
                     "fontSize": 34,
                     "fontWeight": "normal",

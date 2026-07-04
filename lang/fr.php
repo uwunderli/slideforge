@@ -467,6 +467,10 @@ return [
     'profile.avatar_removed' => 'Photo de profil supprimée.',
     'profile.passwords_mismatch' => 'Les nouveaux mots de passe ne correspondent pas.',
     'profile.title' => 'Mon profil',
+    'profile.tab_account' => 'Compte',
+    'profile.tab_spellcheck' => 'Orthographe',
+    'profile.tab_webdav' => 'WebDAV',
+    'profile.tab_password' => 'Mot de passe',
     'profile.back_to_dashboard' => 'Retour au tableau de bord',
     'profile.role' => 'Rôle',
     'profile.role_admin' => 'Administrateur',
@@ -613,8 +617,11 @@ return [
     'admin.cannot_delete_self' => 'Vous ne pouvez pas vous supprimer vous-même.',
     'admin.user_deleted' => 'Utilisateur supprimé.',
     'admin.heading' => 'Paramètres',
-    'admin.tab_general' => 'Paramètres généraux',
-    'admin.tab_users' => 'Gestion des utilisateurs',
+    'admin.tab_general' => 'Général',
+    'admin.tab_smtp' => 'SMTP',
+    'admin.tab_spellcheck' => 'Orthographe',
+    'admin.tab_media' => 'Médias',
+    'admin.tab_users' => 'Utilisateurs',
     'admin.general_heading' => 'Général',
     'admin.site_title' => 'Titre du site',
     'admin.open_registration' => "Autoriser l'inscription libre (sinon uniquement par lien d'invitation)",
@@ -842,6 +849,85 @@ return [
     'openclipart.prev' => 'Précédent',
     'openclipart.next' => 'Suivant',
     'openclipart.preview_hint' => 'Cliquer pour agrandir',
+
+    'webdav.title' => 'WebDAV',
+    'webdav.loading' => 'Chargement du dossier…',
+    'webdav.importing' => 'Import du fichier…',
+    'webdav.import_done' => 'Ajouté à la diapositive.',
+    'webdav.empty_folder' => 'Aucun média ni sous-dossier dans ce dossier.',
+    'webdav.error_generic' => 'Requête WebDAV échouée.',
+    'webdav.error_auth' => 'Non connecté.',
+    'webdav.error_not_found' => 'Présentation introuvable.',
+    'webdav.error_forbidden' => 'Accès refusé.',
+    'webdav.error_edit' => 'Pas de droit de modification.',
+    'webdav.error_csrf' => 'Jeton de session invalide. Rechargez la page.',
+    'webdav.error_unknown_action' => 'Action inconnue.',
+    'webdav.error_drive_not_found' => 'Lecteur WebDAV introuvable.',
+    'webdav.error_invalid_path' => 'Chemin invalide.',
+    'webdav.error_invalid_url' => 'URL WebDAV invalide (HTTPS uniquement).',
+    'webdav.error_https_required' => 'Seules les URL HTTPS sont autorisées.',
+    'webdav.error_blocked_host' => 'Cette adresse n\'est pas autorisée pour des raisons de sécurité.',
+    'webdav.error_auth_failed' => 'Échec de connexion — vérifiez identifiant ou mot de passe.',
+    'webdav.error_connection' => 'Impossible de joindre le serveur WebDAV.',
+    'webdav.error_download' => 'Échec du téléchargement.',
+    'webdav.error_too_large' => 'Fichier trop volumineux.',
+    'webdav.error_type' => 'Seuls images, SVG, vidéo (MP4/WebM) et audio (MP3/WAV/OGG/M4A) sont pris en charge.',
+    'webdav.error_save' => 'Échec de l\'enregistrement.',
+    'webdav.error_invalid_label' => 'Saisissez un nom d\'affichage (max. 80 caractères).',
+    'webdav.error_invalid_username' => 'Saisissez un nom d\'utilisateur.',
+    'webdav.error_password_required' => 'Mot de passe requis.',
+    'webdav.use_object' => 'Sur la diapositive',
+    'webdav.target_object' => 'Parcourir les dossiers et ajouter des médias à la diapositive',
+    'webdav.up' => 'Monter',
+    'webdav.root' => 'Racine',
+    'webdav.folder' => 'Dossier',
+    'webdav.file' => 'Fichier',
+    'webdav.open_folder' => 'Ouvrir le dossier',
+    'webdav.breadcrumb' => 'Chemin',
+
+    'profile.webdav_heading' => 'Lecteurs WebDAV',
+    'profile.webdav_intro' => 'Connectez un stockage cloud (Nextcloud, ownCloud, Synology …) via WebDAV. Les lecteurs configurés apparaissent sous Médias dans l\'éditeur.',
+    'profile.webdav_label' => 'Nom d\'affichage',
+    'profile.webdav_label_placeholder' => 'p. ex. Cloud entreprise',
+    'profile.webdav_url' => 'URL WebDAV',
+    'profile.webdav_username' => 'Nom d\'utilisateur',
+    'profile.webdav_password' => 'Mot de passe',
+    'profile.webdav_password_keep' => 'Laisser vide pour conserver',
+    'profile.webdav_root' => 'Dossier de départ (optionnel)',
+    'profile.webdav_root_placeholder' => 'p. ex. Photos/Présentations',
+    'profile.webdav_add' => 'Nouveau lecteur',
+    'profile.webdav_add_btn' => 'Ajouter le lecteur',
+    'profile.webdav_test' => 'Tester la connexion',
+    'profile.webdav_test_ok' => 'Connexion réussie.',
+    'profile.webdav_test_fail' => 'Échec de la connexion',
+    'profile.webdav_delete' => 'Supprimer le lecteur',
+    'profile.webdav_delete_confirm' => 'Supprimer ce lecteur WebDAV ?',
+    'profile.webdav_saved' => 'Lecteur WebDAV enregistré.',
+    'profile.webdav_deleted' => 'Lecteur WebDAV supprimé.',
+    'profile.webdav_help_btn' => 'Aide : configurer WebDAV',
+    'profile.webdav_help_title' => 'WebDAV — connecter les services courants',
+    'profile.webdav_help_body' => '<p>Connectez un stockage cloud à SlideForge via WebDAV. Les identifiants sont <strong>chiffrés</strong> et utilisés uniquement par le serveur. Chaque lecteur apparaît sous <strong>Médias</strong> dans l’éditeur.</p>'
+        . '<h3>Champs du profil</h3>'
+        . '<ul>'
+        . '<li><strong>Nom d’affichage</strong> — libre, p. ex. « Galerie ».</li>'
+        . '<li><strong>URL WebDAV</strong> — adresse HTTPS jusqu’à la racine WebDAV.</li>'
+        . '<li><strong>Identifiant / mot de passe</strong> — comme pour la connexion cloud.</li>'
+        . '<li><strong>Dossier de départ</strong> — sous-dossier optionnel, sans <code>/</code> initial.</li>'
+        . '</ul>'
+        . '<h3>GroupOffice</h3>'
+        . '<ul><li><strong>URL :</strong> <code>https://serveur.tld/webdav/</code></li>'
+        . '<li><strong>Dossier :</strong> <code>UTILISATEUR/sous-dossier</code> — p. ex. <code>jean.dupont/Photos/Diapos</code></li></ul>'
+        . '<h3>Nextcloud / ownCloud</h3>'
+        . '<ul><li><strong>URL :</strong> <code>https://cloud.example.com/remote.php/dav/files/UTILISATEUR/</code></li></ul>'
+        . '<h3>Synology NAS</h3>'
+        . '<ul><li><strong>URL :</strong> <code>https://nas.example.com:5006/</code></li>'
+        . '<li>Activer WebDAV dans le Panneau de configuration DSM.</li></ul>'
+        . '<h3>Dépannage</h3>'
+        . '<ul>'
+        . '<li><strong>Échec connexion</strong> — vérifier identifiants ; mot de passe d’application (Nextcloud).</li>'
+        . '<li><strong>Dossier introuvable</strong> — séparer URL de base et dossier de départ.</li>'
+        . '<li>HTTPS obligatoire ; images et SVG uniquement (max. 15 Mo).</li>'
+        . '</ul>',
 
     'media_lib.sub_insert' => 'Insérer',
     'media_lib.sub_overview' => 'Aperçu',

@@ -459,6 +459,10 @@ return [
     'profile.avatar_removed' => 'Maletg da profil allontanà.',
     'profile.passwords_mismatch' => 'Ils novs pleds-clav na correspundan betg.',
     'profile.title' => 'Mes profil',
+    'profile.tab_account' => 'Conto',
+    'profile.tab_spellcheck' => 'Ortografia',
+    'profile.tab_webdav' => 'WebDAV',
+    'profile.tab_password' => 'Pled-clav',
     'profile.back_to_dashboard' => 'Enavos al tabellier',
     'profile.role' => 'Rol',
     'profile.role_admin' => 'Administratur',
@@ -605,8 +609,11 @@ return [
     'admin.cannot_delete_self' => 'Ti na pos betg stizzar tai medem.',
     'admin.user_deleted' => 'Utilisader stizzà.',
     'admin.heading' => 'Configuraziun',
-    'admin.tab_general' => 'Configuraziun generala',
-    'admin.tab_users' => 'Administraziun d\'utilisaders',
+    'admin.tab_general' => 'General',
+    'admin.tab_smtp' => 'SMTP',
+    'admin.tab_spellcheck' => 'Correctura',
+    'admin.tab_media' => 'Medias',
+    'admin.tab_users' => 'Utilisaders',
     'admin.general_heading' => 'General',
     'admin.site_title' => 'Titel dal site',
     'admin.open_registration' => 'Permetter registraziun averta (us altrum mo cun link d\'invit)',
@@ -834,6 +841,84 @@ return [
     'openclipart.prev' => 'Enavos',
     'openclipart.next' => 'Enavant',
     'openclipart.preview_hint' => 'Clic per engrandir',
+
+    'webdav.title' => 'WebDAV',
+    'webdav.loading' => 'Chargiar il folder…',
+    'webdav.importing' => 'Importar la datoteca…',
+    'webdav.import_done' => 'Agiuntà sin la slide.',
+    'webdav.empty_folder' => 'Nagins medias u suttafolders en quest folder.',
+    'webdav.error_generic' => 'Dumonda WebDAV sbaliada.',
+    'webdav.error_auth' => 'Betg connectà.',
+    'webdav.error_not_found' => 'Preschentaziun betg chattada.',
+    'webdav.error_forbidden' => 'Nagin access.',
+    'webdav.error_edit' => 'Nagin dretg da modifitgar.',
+    'webdav.error_csrf' => 'Token da sessiun nunvalid. Rechargiar la pagina.',
+    'webdav.error_unknown_action' => 'Acziun nunenconuschenta.',
+    'webdav.error_drive_not_found' => 'Drive WebDAV betg chattà.',
+    'webdav.error_invalid_path' => 'Percurs nunvalid.',
+    'webdav.error_invalid_url' => 'URL WebDAV nunvalid (mo HTTPS).',
+    'webdav.error_https_required' => 'Mo URLs HTTPS èn permess.',
+    'webdav.error_blocked_host' => 'Questa adressa n\'è betg permessa per motivs da segirezza.',
+    'webdav.error_auth_failed' => 'Login sbalià — controlla num d\'utilisader u pled-clav.',
+    'webdav.error_connection' => 'Connexiun al server WebDAV sbaliada.',
+    'webdav.error_download' => 'Download sbalià.',
+    'webdav.error_too_large' => 'Datoteca memia gronda.',
+    'webdav.error_type' => 'Mo maletgias, SVG, video (MP4/WebM) ed audio (MP3/WAV/OGG/M4A) èn sustegnids.',
+    'webdav.error_save' => 'Salvar sbalià.',
+    'webdav.error_invalid_label' => 'Endata in num da visualisaziun (max. 80 caracters).',
+    'webdav.error_invalid_username' => 'Endata in num d\'utilisader.',
+    'webdav.error_password_required' => 'Pled-clav obligatoric.',
+    'webdav.use_object' => 'Sin la slide',
+    'webdav.target_object' => 'Navigar folders e plazzar medias sin la slide',
+    'webdav.up' => 'Si',
+    'webdav.root' => 'Radix',
+    'webdav.folder' => 'Folder',
+    'webdav.file' => 'Datoteca',
+    'webdav.open_folder' => 'Avrir folder',
+    'webdav.breadcrumb' => 'Percurs',
+
+    'profile.webdav_heading' => 'Drives WebDAV',
+    'profile.webdav_intro' => 'Connecta in archiv cloud (Nextcloud, ownCloud, Synology …) via WebDAV. Drives configurads apparean sut Medias en l\'editor.',
+    'profile.webdav_label' => 'Num da visualisaziun',
+    'profile.webdav_label_placeholder' => 'p.ex. Cloud da la firma',
+    'profile.webdav_url' => 'URL WebDAV',
+    'profile.webdav_username' => 'Num d\'utilisader',
+    'profile.webdav_password' => 'Pled-clav',
+    'profile.webdav_password_keep' => 'Vid lasciar = unchanged',
+    'profile.webdav_root' => 'Folder da partenza (opziunal)',
+    'profile.webdav_root_placeholder' => 'p.ex. Fotos/Preschentaziuns',
+    'profile.webdav_add' => 'Nov drive',
+    'profile.webdav_add_btn' => 'Agiuntar drive',
+    'profile.webdav_test' => 'Testar connexiun',
+    'profile.webdav_test_ok' => 'Connexiun reussida.',
+    'profile.webdav_test_fail' => 'Connexiun sbaliada',
+    'profile.webdav_delete' => 'Allontanar drive',
+    'profile.webdav_delete_confirm' => 'Allontanar quest drive WebDAV?',
+    'profile.webdav_saved' => 'Drive WebDAV salvà.',
+    'profile.webdav_deleted' => 'Drive WebDAV allontanà.',
+    'profile.webdav_help_btn' => 'Agid: configurar WebDAV',
+    'profile.webdav_help_title' => 'WebDAV — connectar providers usuals',
+    'profile.webdav_help_body' => '<p>Connecta in archiv cloud cun SlideForge via WebDAV. Las datas d’access èn <strong>cifradas</strong> e be utilisadas dal server. Mintga drive appare sut <strong>Medias</strong> en l’editor.</p>'
+        . '<h3>Champs profil</h3>'
+        . '<ul>'
+        . '<li><strong>Num</strong> — etichetta libera.</li>'
+        . '<li><strong>URL WebDAV</strong> — adressa HTTPS fin la radiz WebDAV.</li>'
+        . '<li><strong>Utilisader / pled-clav</strong> — sco al login cloud.</li>'
+        . '<li><strong>Folder da partenza</strong> — opziunal, senza <code>/</code> initial.</li>'
+        . '</ul>'
+        . '<h3>GroupOffice</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://server.tld/webdav/</code></li>'
+        . '<li><strong>Folder:</strong> <code>UTILISADER/suttafolder</code> — p.ex. <code>max.mustair/Fotos/Slides</code></li></ul>'
+        . '<h3>Nextcloud / ownCloud</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://cloud.example.com/remote.php/dav/files/UTILISADER/</code></li></ul>'
+        . '<h3>Synology NAS</h3>'
+        . '<ul><li><strong>URL:</strong> <code>https://nas.example.com:5006/</code></li></ul>'
+        . '<h3>Problemas</h3>'
+        . '<ul>'
+        . '<li><strong>Login sbalià</strong> — controlla datas d’access.</li>'
+        . '<li><strong>Folder betg chattà</strong> — separar URL e folder da partenza.</li>'
+        . '<li>Mo HTTPS; maletgias e SVG (max. 15 MB).</li>'
+        . '</ul>',
 
     'media_lib.sub_insert' => 'Inserir',
     'media_lib.sub_overview' => 'Survista',

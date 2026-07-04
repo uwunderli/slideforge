@@ -803,7 +803,7 @@
                     "y": 180,
                     "w": 900,
                     "h": 500,
-                    "text": "- **Folienvorlagen** und Textstile\n- **Markenfarbpalette** (editierbar)\n- **Pixabay** für Stock-Medien (optional)\n- **Iconify**-Icons und **Openclipart**-Cliparts (ohne API-Key)\n- **Hintergrund entfernen** bei Bildern",
+                    "text": "- **Folienvorlagen** und Textstile\n- **Markenfarbpalette** (editierbar)\n- **Pixabay** für Stock-Medien (optional)\n- **Iconify**-Icons und **Openclipart**-Cliparts (ohne API-Key)\n- **WebDAV** — eigene Cloud-/NAS-Medien im Profil verbinden\n- **Hintergrund entfernen** bei Bildern",
                     "fontFamily": "Open Sans",
                     "fontSize": 34,
                     "fontWeight": "normal",

@@ -803,7 +803,7 @@
                     "y": 180,
                     "w": 900,
                     "h": 500,
-                    "text": "- **Models da slides** e stils da text\n- **Colurs da marca** editabelas\n- **Pixabay** (optional)\n- Icons **Iconify** e cliparts **Openclipart** (senza clav API)\n- **Allontanar il fund** da maletgs",
+                    "text": "- **Models da slides** e stils da text\n- **Colurs da marca** editabelas\n- **Pixabay** (optional)\n- Icons **Iconify** e cliparts **Openclipart** (senza clav API)\n- **WebDAV** — medias cloud/NAS en profil\n- **Allontanar il fund** da maletgs",
                     "fontFamily": "Open Sans",
                     "fontSize": 34,
                     "fontWeight": "normal",
