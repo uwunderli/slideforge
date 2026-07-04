@@ -71,18 +71,20 @@ git log --oneline -5
 
 ## Phase 2 – GitHub (oder Codeberg) anlegen
 
-- [ ] Neues **öffentliches** Repository erstellen (ohne README, wenn lokal schon vorhanden)
-- [ ] Ersten Push durchführen
-- [ ] Repository-Beschreibung + Topics setzen, z. B.:
+- [x] Neues **öffentliches** Repository erstellen (ohne README, wenn lokal schon vorhanden)
+- [x] Ersten Push durchführen → https://github.com/uwunderli/slideforge
+- [x] Repository-Beschreibung gesetzt
+- [ ] Repository-Topics setzen, z. B.:
   `reveal-js`, `presentation`, `php`, `self-hosted`, `no-database`, `editor`
-- [ ] Default-Branch `main` bestätigen
+  (Skript: `scripts/publish-phase2-github.sh` nach `gh auth login`)
+- [x] Default-Branch `main` bestätigen
 - [ ] Branch-Schutz optional später (PRs für Contributions)
 
 **Release v1.0.0:**
 
-- [ ] Git-Tag `v1.0.0` setzen
-- [ ] GitHub Release mit Kurztext (Was ist SlideForge? Wie installieren?)
-- [ ] Source-ZIP anhängen (automatisch von GitHub oder manuell)
+- [x] Git-Tag `v1.0.0` setzen und gepusht
+- [ ] GitHub Release mit Kurztext (`.github/RELEASE_v1.0.0.md` vorbereitet)
+- [x] Source-ZIP anhängen (automatisch von GitHub sobald Release existiert)
 
 ---
 
