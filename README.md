@@ -43,7 +43,11 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Objekte:** Text, Formen (Linie, Rechteck, Dreieck, Ellipse, Pfeil, Stern, Sprechblase, Klammer), Bild, Video, Audio – verschieben, skalieren, drehen, Ebenen-Reihenfolge
 - **Eigenschaften-Panel** in Tabs **Format**, **Form**, **Position**, **Effekt** – inkl. Füllfarbe/Verlauf, Rahmen, Schrift, Teilformatierung, Animationen
 - **Hintergründe:** Volltonfarbe (Marken-Palette), Farbverlauf, Bild-/Video-Upload – Medien liegen ausserhalb des Web-Roots und werden über `asset.php` ausgeliefert
-- **Medien-Tab:** optional **Pixabay-Suche** (lizenzfreie Bilder/Videos), **Iconify-Icons** (150+ SVG-Sets, ohne API-Key — Farbe wählbar), **Openclipart-Cliparts** (SVG, Public Domain) sowie **WebDAV** (eigene Cloud-/NAS-Laufwerke pro Benutzer — Bilder, SVG, Audio, Video importieren)
+- **Medien-Tab:** Stock-Medien und eigene Quellen direkt im Editor einbinden
+- **Pixabay-Suche** (optional, Admin): lizenzfreie Bilder und Videos
+- **Iconify-Icon-Suche:** 150+ SVG-Icon-Sets durchsuchen, Farbe wählbar (Markenpalette), ohne API-Key
+- **Openclipart-Clipart-Suche:** SVG-Illustrationen (Public Domain), ohne API-Key
+- **WebDAV-Ordner:** im Profil konfigurierte Cloud-/NAS-Laufwerke erscheinen als Buttons — Ordner durchsuchen, Lightbox-Vorschau, Import von Bildern, SVG, Audio und Video auf Folie oder als Hintergrund
 - **Hintergrund entfernen** bei Bildobjekten (helle Flächen bei SVG und Fotos)
 - **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
