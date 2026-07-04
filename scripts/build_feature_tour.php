@@ -19,12 +19,18 @@ $languages = [
     'rm' => ['token' => 'slideforge-tour-rm', 'title' => 'SlideForge – Turn da funcziuns'],
 ];
 
-/** @return array<string, array<string, string>> */
-function tourStrings(): array
+function langLinksMd(): string
 {
     $demoBase = 'https://slideforge.service7.ch';
     $tourUrl = static fn (string $token): string => $demoBase . '/view.php?token=' . $token;
-    $langLinksMd = '[**DE**](' . $tourUrl('slideforge-tour-de') . ') · [**EN**](' . $tourUrl('slideforge-tour') . ') · [**FR**](' . $tourUrl('slideforge-tour-fr') . ') · [**IT**](' . $tourUrl('slideforge-tour-it') . ') · [**RM**](' . $tourUrl('slideforge-tour-rm') . ')';
+
+    return '[**DE**](' . $tourUrl('slideforge-tour-de') . ') · [**EN**](' . $tourUrl('slideforge-tour') . ') · [**FR**](' . $tourUrl('slideforge-tour-fr') . ') · [**IT**](' . $tourUrl('slideforge-tour-it') . ') · [**RM**](' . $tourUrl('slideforge-tour-rm') . ')';
+}
+
+/** @return array<string, array<string, string>> */
+function tourStrings(): array
+{
+    $langLinksMd = langLinksMd();
     $repoLinkMd = '[github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge)';
     $demoLinkMd = '[slideforge.service7.ch](https://slideforge.service7.ch/)';
 
@@ -58,7 +64,6 @@ function tourStrings(): array
             'oss_title' => 'Open Source · MIT',
             'oss_body' => $repoLinkMd,
             'langs_title' => 'Weitere Sprachen',
-            'langs_body' => "Diese Tour gibt es auch in:\n\n{$langLinksMd}",
             'try_title' => 'SlideForge ausprobieren',
             'try_body' => "**Demo** (Reset alle 12h)\n{$demoLinkMd}\n\n**admin** / **admin** · **editor** / **editor**",
             'try_end' => 'Danke fürs Durchklicken!',
@@ -92,7 +97,6 @@ function tourStrings(): array
             'oss_title' => 'Open source · MIT',
             'oss_body' => $repoLinkMd,
             'langs_title' => 'Other languages',
-            'langs_body' => "This tour is also available in:\n\n{$langLinksMd}",
             'try_title' => 'Try SlideForge',
             'try_body' => "**Live demo** (resets every 12h)\n{$demoLinkMd}\n\n**admin** / **admin** · **editor** / **editor**",
             'try_end' => 'Thanks for watching this tour!',
@@ -126,7 +130,6 @@ function tourStrings(): array
             'oss_title' => 'Open source · MIT',
             'oss_body' => $repoLinkMd,
             'langs_title' => 'Autres langues',
-            'langs_body' => "Visite aussi en :\n\n{$langLinksMd}",
             'try_title' => 'Essayer SlideForge',
             'try_body' => "**Démo** (reset 12h)\n{$demoLinkMd}\n\n**admin** / **admin**",
             'try_end' => 'Merci d’avoir suivi cette visite !',
@@ -160,7 +163,6 @@ function tourStrings(): array
             'oss_title' => 'Open source · MIT',
             'oss_body' => $repoLinkMd,
             'langs_title' => 'Altre lingue',
-            'langs_body' => "Tour anche in:\n\n{$langLinksMd}",
             'try_title' => 'Prova SlideForge',
             'try_body' => "**Demo** (reset 12h)\n{$demoLinkMd}\n\n**admin** / **admin**",
             'try_end' => 'Grazie per aver seguito il tour!',
@@ -194,7 +196,6 @@ function tourStrings(): array
             'oss_title' => 'Open source · MIT',
             'oss_body' => $repoLinkMd,
             'langs_title' => 'Autras linguas',
-            'langs_body' => "Tour era en:\n\n{$langLinksMd}",
             'try_title' => 'Emprovar SlideForge',
             'try_body' => "**Demo** (reset 12h)\n{$demoLinkMd}",
             'try_end' => 'Grazia per quest turn!',
@@ -311,8 +312,16 @@ function buildSlides(string $lang, array $s): array
         'autoAdvance' => 0,
         'notes' => '',
         'objects' => [
-            staticHeading('navh', $s['nav_title'], 120),
-            staticBody('navb', $s['nav_body'], 260),
+            staticHeading('navh', $s['nav_title'], 100),
+            textObj('navb', 100, 180, 820, 420, $s['nav_body'], [
+                'fontSize' => 34, 'animPerLine' => false,
+            ]),
+            textObj('navlt', 960, 140, 860, 60, $s['langs_title'], [
+                'fontSize' => 44, 'fontWeight' => 'bold', 'align' => 'center',
+            ]),
+            textObj('navll', 960, 230, 860, 120, langLinksMd(), [
+                'fontSize' => 36, 'align' => 'center', 'color' => '#61a8e0',
+            ]),
         ],
     ];
 
@@ -442,15 +451,6 @@ function buildSlides(string $lang, array $s): array
     ];
 
     $slides[] = [
-        'id' => 'langs',
-        'background' => ['type' => 'color', 'value' => '#111318'],
-        'transition' => 'slide',
-        'autoAdvance' => 0,
-        'notes' => '',
-        'objects' => [heading('lg1', $s['langs_title']), bodyText('lg1b', $s['langs_body'], 200, true)],
-    ];
-
-    $slides[] = [
         'id' => 'try',
         'background' => ['type' => 'color', 'value' => '#0c0e12'],
         'transition' => 'slide',
@@ -498,6 +498,8 @@ foreach ($languages as $code => $cfg) {
         'height' => 1080,
         'seed_asset_id' => $seedAssetId,
         'lang' => $code,
+        'show_progress' => true,
+        'show_controls' => true,
         'public_link' => ['enabled' => true, 'token' => $cfg['token']],
     ];
     file_put_contents(

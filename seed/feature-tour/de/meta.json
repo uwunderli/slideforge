@@ -4,6 +4,8 @@
     "height": 1080,
     "seed_asset_id": "feature0",
     "lang": "de",
+    "show_progress": true,
+    "show_controls": true,
     "public_link": {
         "enabled": true,
         "token": "slideforge-tour-de"

@@ -614,6 +614,14 @@ class Presentation
             });
         }
 
+        $displayOpts = array_filter([
+            'show_progress' => array_key_exists('show_progress', $seedMeta) ? (bool)$seedMeta['show_progress'] : null,
+            'show_controls' => array_key_exists('show_controls', $seedMeta) ? (bool)$seedMeta['show_controls'] : null,
+        ], fn ($v) => $v !== null);
+        if ($displayOpts !== []) {
+            self::updateMeta($newId, $displayOpts);
+        }
+
         return $newId;
     }
 
