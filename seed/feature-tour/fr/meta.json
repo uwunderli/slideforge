@@ -1,0 +1,11 @@
+{
+    "title": "SlideForge – Visite guidée",
+    "width": 1920,
+    "height": 1080,
+    "seed_asset_id": "feature0",
+    "lang": "fr",
+    "public_link": {
+        "enabled": true,
+        "token": "slideforge-tour-fr"
+    }
+}

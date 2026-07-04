@@ -1,10 +1,11 @@
 {
-    "title": "SlideForge Feature Tour",
+    "title": "SlideForge – Turn da funcziuns",
     "width": 1920,
     "height": 1080,
     "seed_asset_id": "feature0",
+    "lang": "rm",
     "public_link": {
         "enabled": true,
-        "token": "slideforge-tour"
+        "token": "slideforge-tour-rm"
     }
 }

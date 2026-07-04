@@ -233,11 +233,16 @@ class Demo
 
     private static function seedFeatureTour(string $adminId): void
     {
-        $seedDir = BASE_PATH . '/seed/feature-tour';
-        if (!is_dir($seedDir)) {
+        $base = BASE_PATH . '/seed/feature-tour';
+        if (!is_dir($base)) {
             return;
         }
-        Presentation::importSeedPresentation($adminId, $seedDir);
+        foreach (['de', 'en', 'fr', 'it', 'rm'] as $lang) {
+            $seedDir = $base . '/' . $lang;
+            if (is_file($seedDir . '/meta.json') && is_file($seedDir . '/slides.json')) {
+                Presentation::importSeedPresentation($adminId, $seedDir);
+            }
+        }
     }
 
     private static function applyDemoSiteConfig(): void

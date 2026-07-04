@@ -579,6 +579,12 @@ class Presentation
         );
 
         $seedAssets = $seedDir . '/assets';
+        if (!is_dir($seedAssets)) {
+            $parentAssets = dirname($seedDir) . '/assets';
+            if (is_dir($parentAssets)) {
+                $seedAssets = $parentAssets;
+            }
+        }
         $dstAssets = self::dir($newId) . '/assets';
         if (is_dir($seedAssets)) {
             foreach (glob($seedAssets . '/*') ?: [] as $file) {

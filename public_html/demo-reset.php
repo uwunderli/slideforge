@@ -25,8 +25,7 @@ foreach (Storage::read(USERS_FILE, []) as $u) {
 
 $tplCount = 0;
 $showcase = false;
-$featureTour = false;
-$tourToken = Demo::FEATURE_TOUR_TOKEN;
+$tourLinks = [];
 if ($adminId !== null) {
     [$myTpl] = Presentation::listTemplatesForUser($adminId);
     $tplCount = count($myTpl);
@@ -42,21 +41,21 @@ if ($adminId !== null) {
         if ($title === 'Element-Showcase') {
             $showcase = true;
         }
-        if ($title === 'SlideForge Feature Tour') {
-            $featureTour = true;
+        if (str_starts_with($title, 'SlideForge')) {
             $acl = Presentation::getAcl($entry);
-            if (!empty($acl['public']['token'])) {
-                $tourToken = $acl['public']['token'];
+            if (!empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
+                $tourLinks[] = $acl['public']['token'];
             }
         }
     }
 }
+sort($tourLinks);
 
 echo "Demo reset OK\n";
 echo "Folienvorlagen (Admin): $tplCount\n";
 echo "Element-Showcase: " . ($showcase ? 'ja' : 'nein') . "\n";
-echo "Feature-Tour: " . ($featureTour ? 'ja' : 'nein') . "\n";
-if ($featureTour) {
-    echo "Tour-Link: https://slideforge.service7.ch/view.php?token={$tourToken}\n";
+echo "Feature-Touren: " . count($tourLinks) . "\n";
+foreach ($tourLinks as $token) {
+    echo "  https://slideforge.service7.ch/view.php?token={$token}\n";
 }
 echo 'Nächster Reset: ' . date('c', Demo::nextResetAt()) . "\n";

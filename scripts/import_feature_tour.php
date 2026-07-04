@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * Importiert seed/feature-tour/ inkl. öffentlichem Link (einmalig oder nach manuellem Löschen).
+ * Importiert alle seed/feature-tour/{lang}/ inkl. öffentlicher Links.
  * Aufruf: php scripts/import_feature_tour.php
  */
 require __DIR__ . '/../config.php';
@@ -19,20 +19,34 @@ if ($adminId === null) {
     exit(1);
 }
 
-$seedDir = BASE_PATH . '/seed/feature-tour';
-$presId = Presentation::importSeedPresentation($adminId, $seedDir);
-if ($presId === null) {
-    fwrite(STDERR, "Import fehlgeschlagen (seed/feature-tour/ prüfen).\n");
+$base = BASE_PATH . '/seed/feature-tour';
+$scheme = 'https';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$imported = 0;
+
+foreach (['de', 'en', 'fr', 'it', 'rm'] as $lang) {
+    $seedDir = $base . '/' . $lang;
+    if (!is_file($seedDir . '/meta.json')) {
+        continue;
+    }
+    $presId = Presentation::importSeedPresentation($adminId, $seedDir);
+    if ($presId === null) {
+        fwrite(STDERR, "Import fehlgeschlagen: $lang\n");
+        continue;
+    }
+    $imported++;
+    $acl = Presentation::getAcl($presId);
+    $token = $acl['public']['token'] ?? '';
+    echo "[$lang] $presId";
+    if (!empty($acl['public']['enabled']) && $token !== '') {
+        echo " → {$scheme}://{$host}/view.php?token={$token}";
+    }
+    echo "\n";
+}
+
+if ($imported === 0) {
+    fwrite(STDERR, "Keine Touren importiert (php scripts/build_feature_tour.php ausführen?).\n");
     exit(1);
 }
 
-$acl = Presentation::getAcl($presId);
-$token = $acl['public']['token'] ?? '';
-$scheme = 'https';
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-echo "Feature-Tour importiert: $presId\n";
-if (!empty($acl['public']['enabled']) && $token !== '') {
-    echo "Öffentlicher Link: {$scheme}://{$host}/view.php?token={$token}\n";
-} else {
-    echo "Hinweis: öffentlicher Link in seed/feature-tour/meta.json aktivieren.\n";
-}
+echo "Importiert: $imported Tour(en).\n";
