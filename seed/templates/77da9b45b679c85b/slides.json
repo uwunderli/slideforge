@@ -1,0 +1,91 @@
+{
+    "slides": [
+        {
+            "id": "b595e4fa",
+            "background": {
+                "type": "color",
+                "value": "#000000"
+            },
+            "transition": "slide",
+            "objects": [
+                {
+                    "id": "o26ff33a9",
+                    "type": "text",
+                    "rotation": 0,
+                    "opacity": 1,
+                    "animType": "none",
+                    "animOrder": 1,
+                    "animAutoAdvance": 0,
+                    "animDuration": 0,
+                    "x": 100,
+                    "y": 390,
+                    "w": 1720,
+                    "h": 120,
+                    "text": "Titel",
+                    "fontFamily": "Open Sans",
+                    "fontSize": 120,
+                    "fontWeight": "bold",
+                    "italic": false,
+                    "underline": false,
+                    "strikethrough": false,
+                    "uppercase": false,
+                    "smallCaps": false,
+                    "animPerLine": false,
+                    "color": "#ffffff",
+                    "align": "center"
+                },
+                {
+                    "id": "o1ef8cc5e",
+                    "type": "text",
+                    "rotation": 0,
+                    "opacity": 1,
+                    "animType": "none",
+                    "animOrder": 1,
+                    "animAutoAdvance": 0,
+                    "animDuration": 0,
+                    "x": 100,
+                    "y": 590,
+                    "w": 1720,
+                    "h": 68,
+                    "text": "Untertitel",
+                    "fontFamily": "PT Sans",
+                    "fontSize": 68,
+                    "fontWeight": "normal",
+                    "italic": true,
+                    "underline": false,
+                    "strikethrough": false,
+                    "uppercase": false,
+                    "smallCaps": false,
+                    "animPerLine": false,
+                    "color": "#61a8e0",
+                    "align": "center"
+                },
+                {
+                    "id": "oa0d08f5b",
+                    "type": "shape",
+                    "rotation": 0,
+                    "opacity": 1,
+                    "animType": "none",
+                    "animOrder": 1,
+                    "animAutoAdvance": 0,
+                    "animDuration": 0,
+                    "x": 585,
+                    "y": 534,
+                    "w": 750,
+                    "h": 13,
+                    "shapeType": "line",
+                    "starPoints": 5,
+                    "arrowStyle": "right",
+                    "bracketStyle": "round-left",
+                    "bubbleStyle": "rect-left",
+                    "stroke": "#94c2dc",
+                    "strokeWidth": 4,
+                    "fillType": "solid",
+                    "fill": "#cccccc"
+                }
+            ],
+            "autoAdvance": 0,
+            "notes": ""
+        }
+    ]
+}

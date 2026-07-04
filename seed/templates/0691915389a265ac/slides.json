@@ -1,0 +1,42 @@
+{
+    "slides": [
+        {
+            "id": "493888a4",
+            "background": {
+                "type": "color",
+                "value": "#000000"
+            },
+            "transition": "slide",
+            "objects": [
+                {
+                    "id": "o2d011265",
+                    "type": "text",
+                    "rotation": 0,
+                    "opacity": 1,
+                    "animType": "none",
+                    "animOrder": 1,
+                    "animAutoAdvance": 0,
+                    "animDuration": 0,
+                    "x": 100,
+                    "y": 100,
+                    "w": 1720,
+                    "h": 260,
+                    "text": "## Überschrift\nText mit **fett**, *kursiv* und `Code`.\n- Punkt eins\n- Punkt zwei",
+                    "fontFamily": "Open Sans",
+                    "fontSize": 65,
+                    "fontWeight": "normal",
+                    "italic": false,
+                    "underline": false,
+                    "strikethrough": false,
+                    "uppercase": false,
+                    "smallCaps": false,
+                    "animPerLine": false,
+                    "color": "#ffffff",
+                    "align": "left"
+                }
+            ],
+            "autoAdvance": 0,
+            "notes": ""
+        }
+    ]
+}

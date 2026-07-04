@@ -1,0 +1,28 @@
+# Deployment credentials (never commit)
+.deploy/ssh.env
+
+# Runtime data (created on first run via config.php)
+data/
+
+# User uploads (keep directory structure only)
+public_html/uploads/*
+!public_html/uploads/.gitkeep
+!public_html/uploads/avatars/
+public_html/uploads/avatars/*
+!public_html/uploads/avatars/.gitkeep
+!public_html/uploads/fonts/
+public_html/uploads/fonts/*
+!public_html/uploads/fonts/.gitkeep
+
+# Local test exports in project root
+/*.html
+
+# Environment and logs
+.env
+.env.*
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
