@@ -11,18 +11,20 @@ if (!Presentation::exists($id)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Schreiben: nur mit Bearbeitungsrecht + gültigem CSRF-Token (aus dem Präsentationsmodus).
     if (!Auth::isLoggedIn()) {
         http_response_code(401);
         echo json_encode(['ok' => false, 'error' => 'Nicht angemeldet.']);
         exit;
     }
     $me = Auth::currentUser();
-    if (!Presentation::canEdit($id, $me['id'])) {
+    $canView = Presentation::canView($id, $me['id']);
+    $canEdit = Presentation::canEdit($id, $me['id']);
+    if (!$canView) {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Keine Bearbeitungsrechte.']);
+        echo json_encode(['ok' => false, 'error' => 'Kein Zugriff.']);
         exit;
     }
+
     $raw = file_get_contents('php://input');
     $body = json_decode($raw, true) ?? [];
     $token = $body['csrf_token'] ?? '';
@@ -32,13 +34,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (($body['action'] ?? '') === 'stop') {
+    $action = (string)($body['action'] ?? '');
+
+    $remoteActions = ['step', 'laser', 'remote_heartbeat', 'config'];
+    if (in_array($action, $remoteActions, true)) {
+        // View-Recht reicht für Mobile-Remote
+    } elseif ($action === 'present_heartbeat') {
+        if (!$canEdit) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Keine Present-Rechte.']);
+            exit;
+        }
+    } elseif ($action === 'stop' || $action === 'media') {
+        if (!$canEdit) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Keine Bearbeitungsrechte.']);
+            exit;
+        }
+    } elseif ($action === '') {
+        $source = (string)($body['source'] ?? 'present');
+        if ($source === 'remote') {
+            // Remote-Position (selten; Schritte bevorzugt)
+        } elseif (!$canEdit) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Keine Bearbeitungsrechte.']);
+            exit;
+        }
+    } else {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'Unbekannte Aktion.']);
+        exit;
+    }
+
+    if ($action === 'stop') {
         Presentation::clearLivePosition($id);
         echo json_encode(['ok' => true]);
         exit;
     }
 
-    if (($body['action'] ?? '') === 'media') {
+    if ($action === 'present_heartbeat') {
+        Presentation::touchLiveSession($id, 'present', $me['id']);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    if ($action === 'remote_heartbeat') {
+        Presentation::touchLiveSession($id, 'remote', $me['id']);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    if ($action === 'config') {
+        $partial = [];
+        if (array_key_exists('showTimebar', $body)) {
+            $partial['showTimebar'] = !empty($body['showTimebar']);
+        }
+        if ($partial) {
+            Presentation::setLiveConfig($id, $partial);
+        }
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    if ($action === 'step') {
+        $direction = (string)($body['direction'] ?? '');
+        if (!in_array($direction, ['next', 'prev'], true)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Ungültige Richtung.']);
+            exit;
+        }
+        Presentation::setLiveStep($id, $direction);
+        Presentation::touchLiveSession($id, 'remote', $me['id']);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    if ($action === 'media') {
         $mediaId = (string)($body['media_id'] ?? '');
         $mediaAction = (string)($body['media_action'] ?? '');
         if ($mediaId === '' || !in_array($mediaAction, ['play', 'pause', 'stop'], true)) {
@@ -51,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (($body['action'] ?? '') === 'laser') {
+    if ($action === 'laser') {
         $active = !empty($body['active']);
         $x = isset($body['x']) ? (float)$body['x'] : null;
         $y = isset($body['y']) ? (float)$body['y'] : null;
@@ -60,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $size = (int)($body['size'] ?? 24);
         $trail = !empty($body['trail']);
         Presentation::setLiveLaser($id, $active, $x, $y, $slideIndex, $color, $size, $trail);
+        Presentation::touchLiveSession($id, 'remote', $me['id']);
         echo json_encode(['ok' => true]);
         exit;
     }
@@ -67,13 +139,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $index = (int)($body['index'] ?? 0);
     $frag = isset($body['frag']) && $body['frag'] !== null ? (int)$body['frag'] : null;
     $channel = ($body['channel'] ?? '') === 'editor' ? 'editor' : 'present';
-    Presentation::setLivePosition($id, $index, $frag, $channel);
+    $source = (string)($body['source'] ?? 'present');
+    if (!in_array($source, ['present', 'remote', 'editor'], true)) {
+        $source = 'present';
+    }
+    Presentation::setLivePosition($id, $index, $frag, $channel, $source);
+    if ($source === 'remote') {
+        Presentation::touchLiveSession($id, 'remote', $me['id']);
+    }
     echo json_encode(['ok' => true]);
     exit;
 }
 
-// Lesen (GET): entweder angemeldet mit View-Recht, oder gültiger öffentlicher Token -
-// dieselbe Logik wie bei asset.php, damit auch der öffentliche Link mitfolgen kann.
+// Lesen (GET): angemeldet mit View-Recht oder gültiger öffentlicher Token
 $token = $_GET['token'] ?? '';
 $allowed = false;
 if (Auth::isLoggedIn()) {
@@ -95,5 +173,12 @@ if (!$allowed) {
 }
 
 $channel = ($_GET['channel'] ?? '') === 'editor' ? 'editor' : 'present';
+$full = !empty($_GET['full']);
+if ($full) {
+    $state = Presentation::getLiveFullState($id, $channel);
+    echo json_encode(['ok' => true] + $state);
+    exit;
+}
+
 $live = Presentation::getLivePosition($id, $channel);
 echo json_encode(['ok' => true, 'live' => $live]);

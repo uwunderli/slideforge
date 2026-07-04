@@ -47,6 +47,15 @@ if (!empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
     $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
 }
 
+$remoteUrl = '';
+$scheme = current_scheme();
+$host = $_SERVER['HTTP_HOST'];
+$base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+$remoteUrl = "$scheme://$host$base/present_remote.php?id=" . urlencode($id);
+$remoteQrSrc = ($canBroadcast && $remoteUrl !== '')
+    ? ('qr.php?data=' . urlencode($remoteUrl))
+    : '';
+
 $pageTitle = 'Präsentationsmodus · ' . $meta['title'];
 $headerPresentationTitle = $meta['title'];
 $headerPresentationContext = 'present';
@@ -84,6 +93,14 @@ require __DIR__ . '/includes/header.php';
 <div class="present-topbar present-main-grid" id="presentTopbar">
   <div class="present-topbar-main">
     <a href="editor.php?id=<?= urlencode($id) ?>&amp;slide=<?= (int)$startSlide ?>" class="back-link" id="editorBackLink">&larr; <?= h(t('present.back_to_editor')) ?></a>
+    <span class="present-remote-badge" id="presentRemoteBadge" hidden>
+      <span class="present-remote-badge-dot"></span>
+      <?= h(t('remote.mobile_connected')) ?>
+    </span>
+    <?php if ($canBroadcast && $remoteUrl): ?>
+    <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkBtn" title="<?= h(t('remote.copy_url')) ?>"><?= h(t('remote.copy_url')) ?></button>
+    <input type="hidden" id="presentRemoteLinkInput" value="<?= h($remoteUrl) ?>">
+    <?php endif; ?>
     <div class="present-topbar-menus">
       <?php if ($canBroadcast): ?>
       <div class="present-config-wrap" data-present-menu-wrap data-present-config-menu>
@@ -114,6 +131,18 @@ require __DIR__ . '/includes/header.php';
             <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
             <?php endif; ?>
           </div>
+          <?php if ($canBroadcast && $remoteUrl): ?>
+          <div class="present-config-section">
+            <div class="present-config-section-title"><?= h(t('remote.qr_section')) ?></div>
+            <p class="props-video-note present-panel-settings-hint"><?= h(t('remote.qr_hint')) ?></p>
+            <div class="present-remote-qr-box">
+              <img id="presentRemoteQr" src="<?= h($remoteQrSrc) ?>" width="220" height="220" alt="<?= h(t('remote.qr_section')) ?>" decoding="async">
+            </div>
+            <div class="present-config-row" style="margin-top:8px;">
+              <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkPanelBtn"><?= h(t('remote.copy_url')) ?></button>
+            </div>
+          </div>
+          <?php endif; ?>
           <div class="present-config-section">
             <div class="present-config-section-title"><?= h(t('present.local_present')) ?></div>
             <label class="present-field-label" for="presentScreenSelect"><?= h(t('present.screen_label')) ?></label>
@@ -415,6 +444,7 @@ window.SF_PRESENT = {
   id: <?= json_encode($id) ?>,
   csrfToken: <?= json_encode(csrf_token()) ?>,
   canBroadcast: <?= $canBroadcast ? 'true' : 'false' ?>,
+  remoteUrl: <?= json_encode($canBroadcast && $remoteUrl ? $remoteUrl : '') ?>,
   slideCount: <?= count($slides) ?>,
   startSlide: <?= (int)$startSlide ?>,
   notesHtml: <?= json_encode($notesHtml, JSON_UNESCAPED_UNICODE) ?>,
@@ -441,6 +471,7 @@ window.SF_PRESENT = {
     localStart: <?= json_encode(t('present.local_start')) ?>,
     localReopen: <?= json_encode(t('present.local_reopen')) ?>,
     copyLink: <?= json_encode(t('present.copy_link')) ?>,
+    copyRemote: <?= json_encode(t('remote.copy_url')) ?>,
     notesEmpty: <?= json_encode(t('present.notes_empty')) ?>,
     clockStudio: <?= json_encode(t('present.clock_studio')) ?>,
     clockAnalog: <?= json_encode(t('present.clock_analog')) ?>,

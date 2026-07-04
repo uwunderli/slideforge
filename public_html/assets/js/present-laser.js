@@ -237,6 +237,24 @@
     }
   }
 
+  function showRemoteLaser(data) {
+    if (!dot) return;
+    if (!data || !data.active || data.x == null || data.y == null) {
+      hideDot();
+      return;
+    }
+    if (data.color != null) config.color = normalizeColor(data.color);
+    if (data.size != null) config.size = normalizeSize(data.size);
+    styleDot();
+    const vp = document.querySelector('.reveal-viewport') || document.querySelector('.reveal');
+    if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    dot.hidden = false;
+    dot.style.left = (rect.left + data.x * rect.width) + 'px';
+    dot.style.top = (rect.top + data.y * rect.height) + 'px';
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -259,7 +277,9 @@
     document.addEventListener('click', onClickCapture, true);
 
     global.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'sf-laser-config') applyConfig(e.data);
+      if (!e.data) return;
+      if (e.data.type === 'sf-laser-config') applyConfig(e.data);
+      if (e.data.type === 'sf-laser-remote') showRemoteLaser(e.data);
     });
 
     applyConfig(global.SF_LASER || null);

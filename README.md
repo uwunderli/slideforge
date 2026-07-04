@@ -64,6 +64,7 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 
 - **Präsentationsmodus** mit grosser aktueller Folie, Vorschau der nächsten Folie, Filmstreifen und Notizen
 - **Live-Sync:** Vorschau-Link und öffentlicher Link folgen der Steuerung aus dem Präsentationsmodus (Polling über `live.php`)
+- **Mobile Fernsteuerung (v2.0.0):** Auf Smartphones reduziertes Dashboard und `present_remote.php` — Folien vor/zurück, Vorschau, Uhr, Timer, Laser und Fortschrittsbalken am Handy steuern bzw. spiegeln den Desktop-Präsentationsmodus über HTTPS (kein WLAN nötig). QR-Code im Present-Menü für schnellen Remote-Zugang. Editor auf Handys gesperrt; Tablets/iPads behalten die Desktop-Oberfläche.
 - **Laserpointer** mit Farbe, Grösse und Schweif – sichtbar im Hauptfenster und in der Live-Ansicht
 - Uhr (Digital/Analog), Timer und farbige Zeitleiste mit konfigurierbaren Stufen
 - Touch-taugliche Vor-/Zurück-Steuerung, responsives Layout für Tablets

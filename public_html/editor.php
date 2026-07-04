@@ -12,6 +12,23 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 $meta = Presentation::getMeta($id);
 
+if (Mobile::isMobileClient()) {
+    $pageTitle = t('mobile.editor_unavailable_title');
+    $bodyClass = 'mobile-blocked';
+    require __DIR__ . '/includes/header.php';
+    ?>
+    <div class="mobile-blocked-page">
+      <h1><?= h(t('mobile.editor_unavailable_title')) ?></h1>
+      <p><?= h(t('mobile.editor_unavailable_body')) ?></p>
+      <p style="margin-top:1.5rem;">
+        <a href="index.php" class="button"><?= h(t('mobile.back_dashboard')) ?></a>
+      </p>
+    </div>
+    <?php
+    require __DIR__ . '/includes/footer.php';
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
     csrf_check();
     if (($_POST['action'] ?? '') === 'resize') {

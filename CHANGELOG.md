@@ -5,6 +5,29 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-04
+
+### Added
+
+- **Mobile Fernsteuerung:** Smartphone-Dashboard (Listenansicht), `present_remote.php` für Foliensteuerung über Internet (HTTPS + `live.php`)
+- **Remote-Oberfläche:** Tabs Folie, Vorschau, Uhr (analog mit Zahlen), Timer (Studiouhr), Laser; Fortschrittsbalken rechts am Handy (Timer-Sync)
+- **QR-Code** im Präsentationsmodus (Menü „Präsentieren“) für schnellen Remote-Zugang — serverseitig via `qr.php` / phpqrcode
+- **Laser vom Handy:** Touch-Fläche auf der Remote-Oberfläche steuert den Laserpointer am Desktop-Present
+- Mobile Erkennung (`Mobile.php`, `mobile-detect.js`, max-width 767px; `?mobile=1` / `?desktop=1` zum Testen)
+- Editor auf Smartphones gesperrt mit klarer Meldung; iPad/Tablet ≥768px = Desktop-UI
+- Anzeige „Handy verbunden“ im Präsentationsmodus; Remote-Link kopieren
+- `remote_slide.php` für Folien-Vorschau auf der Remote-Oberfläche
+
+### Changed
+
+- `live.php` erweitert: Remote-Schritte, Laser-Sync, Session-Heartbeats, Present-Config-Sync; View-Recht für Remote-Aktionen
+- Present-Modus: schnellerer Laser-/Remote-Poll, Menüs schliessen bei Klick ausserhalb
+
+### Fixed
+
+- Mobile-Remote: Panel-Sichtbarkeit (`hidden`-Attribut vs. CSS), Laser-Bewegung (Throttle statt Debounce)
+- QR-Code: zuverlässige serverseitige PNG-Generierung (kein fehleranfälliger Client-Generator)
+
 ## [1.0.4] - 2026-07-04
 
 ### Added

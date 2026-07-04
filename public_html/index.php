@@ -110,10 +110,50 @@ function render_card(array $p, bool $isOwner, string $csrf): void {
     <?php
 }
 
+function render_mobile_item(array $p, bool $isOwner): void {
+    $perm = $isOwner ? 'owner' : ($p['my_permission'] ?? 'view');
+    if (!in_array($perm, ['owner', 'edit', 'view'], true)) {
+        return;
+    }
+    ?>
+    <div class="mobile-pres-item">
+      <div class="mobile-pres-info">
+        <div class="mobile-pres-title"><?= h($p['title']) ?></div>
+        <div class="mobile-pres-meta"><?= h(date('d.m.Y H:i', strtotime($p['updated_at']))) ?></div>
+      </div>
+      <a href="present_remote.php?id=<?= urlencode($p['id']) ?>" class="button"><?= h(t('mobile.remote_control')) ?></a>
+    </div>
+    <?php
+}
+
 $pageTitle = t('dashboard.own_presentations');
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="container">
+<div class="container dashboard-mobile">
+  <div class="mobile-dashboard-header">
+    <h1><?= h(t('dashboard.heading')) ?></h1>
+  </div>
+
+  <div class="mobile-section-title"><?= h(t('dashboard.own_presentations')) ?></div>
+  <?php if (empty($ownedActive)): ?>
+    <div class="mobile-empty"><?= h(t('dashboard.empty_active')) ?></div>
+  <?php else: ?>
+    <div class="mobile-pres-list">
+      <?php foreach ($ownedActive as $p) render_mobile_item($p, true); ?>
+    </div>
+  <?php endif; ?>
+
+  <?php if (!empty($shared)): ?>
+    <div class="mobile-section-title"><?= h(t('dashboard.shared_with_you')) ?></div>
+    <div class="mobile-pres-list">
+      <?php foreach ($shared as $p) render_mobile_item($p, false); ?>
+    </div>
+  <?php endif; ?>
+
+  <p class="mobile-empty" style="margin-top:2rem; font-size:0.85rem;"><?= h(t('mobile.dashboard_hint')) ?></p>
+</div>
+
+<div class="container dashboard-desktop">
   <div class="section-header" style="margin-top:0;">
     <h1 style="font-size:1.6rem; text-transform:none; letter-spacing:0; color:var(--text);"><?= h(t('dashboard.heading')) ?></h1>
     <div style="display:flex; gap:10px;">

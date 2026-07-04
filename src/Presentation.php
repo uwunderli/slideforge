@@ -669,20 +669,73 @@ class Presentation
         @rmdir($dir);
     }
 
-    public static function setLivePosition(string $id, int $index, ?int $frag = null, string $channel = 'present'): void
-    {
+    public static function setLivePosition(
+        string $id,
+        int $index,
+        ?int $frag = null,
+        string $channel = 'present',
+        string $source = 'present'
+    ): void {
         if (!in_array($channel, ['editor', 'present'], true)) {
             $channel = 'present';
         }
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel) {
+        if (!in_array($source, ['present', 'remote', 'editor'], true)) {
+            $source = 'present';
+        }
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source) {
             if (!isset($data[$channel]) || !is_array($data[$channel])) {
                 $data[$channel] = [];
             }
             $data[$channel]['index'] = $index;
             $data[$channel]['frag'] = $frag;
             $data[$channel]['ts'] = time();
+            $data[$channel]['source'] = $source;
             return $data;
         }, ['media' => null]);
+    }
+
+    public static function setLiveStep(string $id, string $direction): void
+    {
+        if (!in_array($direction, ['next', 'prev'], true)) {
+            return;
+        }
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($direction) {
+            $data['command'] = [
+                'type' => 'step',
+                'direction' => $direction,
+                'cmd_ts' => microtime(true),
+            ];
+            return $data;
+        }, []);
+    }
+
+    public static function touchLiveSession(string $id, string $role, ?string $userId): void
+    {
+        if (!in_array($role, ['present', 'remote'], true)) {
+            return;
+        }
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($role, $userId) {
+            if (!isset($data['sessions']) || !is_array($data['sessions'])) {
+                $data['sessions'] = [];
+            }
+            $data['sessions'][$role] = [
+                'ts' => time(),
+                'user_id' => $userId,
+            ];
+            return $data;
+        }, []);
+    }
+
+    public static function setLiveConfig(string $id, array $partial): void
+    {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($partial) {
+            $prev = is_array($data['config'] ?? null) ? $data['config'] : [];
+            $data['config'] = array_merge($prev, $partial, [
+                'ts' => time(),
+                'source' => 'remote',
+            ]);
+            return $data;
+        }, []);
     }
 
     public static function setLiveMediaCommand(string $id, string $mediaId, string $mediaAction): void
@@ -752,6 +805,7 @@ class Presentation
             'index' => (int)$ch['index'],
             'frag' => isset($ch['frag']) && $ch['frag'] !== null ? (int)$ch['frag'] : null,
             'ts' => (int)$ch['ts'],
+            'source' => (string)($ch['source'] ?? 'present'),
         ];
         if (!empty($data['media'])) {
             $result['media'] = $data['media'];
@@ -759,7 +813,7 @@ class Presentation
         if (!empty($data['laser']) && is_array($data['laser'])) {
             $lz = $data['laser'];
             $age = microtime(true) - (float)($lz['ts'] ?? 0);
-            if (!empty($lz['active']) && $age < 1.5 && isset($lz['x'], $lz['y'])) {
+            if (!empty($lz['active']) && $age < 3.0 && isset($lz['x'], $lz['y'])) {
                 $result['laser'] = [
                     'active' => true,
                     'x' => (float)$lz['x'],
@@ -768,12 +822,53 @@ class Presentation
                     'color' => is_string($lz['color'] ?? null) ? $lz['color'] : '#ff0000',
                     'size' => (int)($lz['size'] ?? 24),
                     'trail' => !empty($lz['trail']),
+                    'ts' => (float)($lz['ts'] ?? 0),
                 ];
             } elseif (empty($lz['active']) && $age < 0.4) {
                 $result['laser'] = ['active' => false];
             }
         }
         return $result;
+    }
+
+    public static function getLiveFullState(string $id, string $channel = 'present'): array
+    {
+        $live = self::getLivePosition($id, $channel);
+        $raw = Storage::read(self::dir($id) . '/live.json', null);
+        if (!is_array($raw)) {
+            $raw = [];
+        }
+
+        $sessions = [];
+        foreach (['present', 'remote'] as $role) {
+            $s = $raw['sessions'][$role] ?? null;
+            $ts = is_array($s) && isset($s['ts']) ? (int)$s['ts'] : 0;
+            $sessions[$role] = [
+                'active' => $ts > 0 && (time() - $ts) <= 20,
+                'ts' => $ts,
+            ];
+        }
+
+        $config = null;
+        if (!empty($raw['config']) && is_array($raw['config'])) {
+            $config = $raw['config'];
+        }
+
+        $command = null;
+        if (!empty($raw['command']) && is_array($raw['command'])) {
+            $cmd = $raw['command'];
+            $age = microtime(true) - (float)($cmd['cmd_ts'] ?? 0);
+            if ($age >= 0 && $age < 2.0) {
+                $command = $cmd;
+            }
+        }
+
+        return [
+            'live' => $live,
+            'sessions' => $sessions,
+            'config' => $config,
+            'command' => $command,
+        ];
     }
 
     public static function clearLivePosition(string $id): void

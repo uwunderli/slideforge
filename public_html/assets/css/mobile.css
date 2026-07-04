@@ -1,0 +1,566 @@
+/* Mobile UI (v2.0.0) */
+
+html.sf-mobile body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.sf-mobile .topbar-main .brand {
+  font-size: 0.95rem;
+}
+
+html.sf-mobile .topbar-context {
+  display: none;
+}
+
+html.sf-mobile .topbar-user .user-menu-dropdown a[href="templates.php"],
+html.sf-mobile .topbar-user .user-menu-dropdown a[href="admin_settings.php"] {
+  display: none;
+}
+
+html.sf-mobile .dashboard-desktop {
+  display: none !important;
+}
+
+html.sf-mobile .dashboard-mobile {
+  display: block;
+}
+
+.dashboard-mobile {
+  display: none;
+}
+
+.mobile-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 1.5rem 0 0.6rem;
+}
+
+.mobile-pres-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-pres-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.mobile-pres-item .mobile-pres-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-pres-item .mobile-pres-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-pres-item .mobile-pres-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.mobile-pres-item .button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 10px;
+}
+
+.mobile-dashboard-header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.mobile-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mobile-blocked-page {
+  max-width: 420px;
+  margin: 2rem auto;
+  padding: 0 20px;
+  text-align: center;
+}
+
+/* ---------- Present remote (phone) ---------- */
+body.present-remote-mode {
+  overflow: hidden;
+  touch-action: manipulation;
+  background: var(--bg);
+}
+
+body.present-remote-mode .topbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.present-remote-wrap {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--topbar-h, 52px));
+  max-height: calc(100dvh - var(--topbar-h, 52px));
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.present-remote-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 10px 16px 0;
+}
+
+.present-remote-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.present-remote-status-dot.connected { background: #4caf6b; }
+.present-remote-status-dot.waiting { background: #d9c23a; }
+
+.present-remote-title {
+  padding: 4px 16px 0;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.present-remote-counter {
+  padding: 6px 16px 12px;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.present-remote-tools {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 0 12px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--surface) 90%, var(--border));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.present-remote-tool-btn {
+  min-height: 40px;
+  padding: 8px 2px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.15;
+}
+
+.present-remote-tool-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.present-remote-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  margin: 12px 0 0;
+  padding: 0 12px 0 16px;
+}
+
+.present-remote-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.present-remote-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.present-remote-panel[hidden] {
+  display: none !important;
+}
+
+.present-remote-panel[data-remote-panel="nav"],
+.present-remote-panel[data-remote-panel="preview"] {
+  justify-content: flex-start;
+}
+
+.present-remote-panel-hint {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+  padding: 20px 12px;
+}
+
+.present-remote-laser-pad {
+  flex: 1;
+  min-height: 200px;
+  border-radius: 14px;
+  border: 2px dashed color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.present-remote-laser-pad.active {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.present-remote-laser-hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  padding: 16px;
+  pointer-events: none;
+  max-width: 260px;
+  line-height: 1.45;
+}
+
+.present-remote-clock-face {
+  width: min(220px, 68vw);
+  height: min(220px, 68vw);
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--bg) 80%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remote-analog-clock {
+  width: 92%;
+  height: 92%;
+}
+
+.remote-analog-dial {
+  fill: color-mix(in srgb, var(--surface) 85%, var(--bg));
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.remote-analog-tick {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.remote-analog-label {
+  fill: var(--text);
+  font-size: 7px;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.remote-analog-hand {
+  stroke: var(--text);
+  vector-effect: non-scaling-stroke;
+}
+
+.remote-analog-hour { stroke-width: 3; }
+.remote-analog-minute { stroke-width: 2; }
+.remote-analog-second { stroke: var(--accent); stroke-width: 1.5; }
+
+.remote-analog-center {
+  fill: var(--accent);
+}
+
+.present-remote-clock-digital {
+  text-align: center;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 16px;
+  font-weight: 600;
+}
+
+.present-remote-timer-widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.present-remote-timer-btn {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 90%, var(--border));
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.present-remote-timer-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.present-remote-timer-ring-wrap {
+  position: relative;
+  width: min(240px, 72vw);
+  height: min(240px, 72vw);
+  flex-shrink: 0;
+  --remote-timer-color: #4caf6b;
+}
+
+.present-remote-timer-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.present-remote-timer-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.present-remote-timer-digits {
+  font-family: 'DSEG7 Classic', var(--font-mono);
+  font-size: clamp(1.35rem, 6vw, 1.85rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+
+.remote-timer-ring-dot {
+  fill: color-mix(in srgb, var(--muted) 22%, transparent);
+  transition: fill 0.6s ease;
+}
+
+.remote-timer-ring-dot.lit {
+  transition: fill 0.6s ease;
+}
+
+.present-remote-timer-ring-wrap.full .remote-timer-ring-dot.lit {
+  animation: timebar-pulse 4.5s ease-in-out infinite;
+}
+
+.remote-timer-stop-tick {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.75;
+}
+
+.present-remote-timebar {
+  flex-shrink: 0;
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 0 8px;
+  min-height: 0;
+}
+
+.present-remote-timebar-scale {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  width: 100%;
+  justify-content: center;
+  min-height: 0;
+}
+
+.present-remote-timebar-ticks {
+  position: relative;
+  width: 16px;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.remote-timebar-tick {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed var(--muted);
+}
+
+.remote-timebar-tick b {
+  position: absolute;
+  right: 2px;
+  top: -7px;
+  font-size: 0.52rem;
+  font-weight: 400;
+  color: var(--muted);
+  background: var(--bg);
+  padding-left: 1px;
+}
+
+.present-remote-timebar-track {
+  flex: 1;
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.present-remote-timebar-fill {
+  width: 100%;
+  height: 0%;
+  background: #4caf6b;
+  border-radius: 5px;
+  transition: height 1s linear, background-color 0.6s ease;
+}
+
+.present-remote-timebar-fill.full,
+.present-remote-timebar-track.full .present-remote-timebar-fill {
+  animation: timebar-pulse 4.5s ease-in-out infinite;
+}
+
+.present-remote-preview-label {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.present-remote-preview-stage {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #0a0a0a;
+}
+
+.present-remote-preview-scale {
+  transform-origin: center center;
+}
+
+.present-remote-preview-scale .remote-preview-slide {
+  background: #fff;
+}
+
+.present-remote-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  border-top: 1px solid var(--border);
+}
+
+.present-remote-nav .button {
+  min-height: 54px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.present-remote-qr-box {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.present-remote-qr-box img {
+  width: 220px;
+  height: 220px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.present-remote-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #4caf6b 18%, var(--surface));
+  border: 1px solid color-mix(in srgb, #4caf6b 40%, var(--border));
+}
+
+.present-remote-badge[hidden] { display: none !important; }
+
+.present-remote-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4caf6b;
+}
+
+@media (min-width: 768px) {
+  html.sf-mobile .dashboard-mobile { display: none; }
+  html.sf-mobile .dashboard-desktop { display: block !important; }
+}

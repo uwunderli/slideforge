@@ -408,7 +408,11 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeAll();
     });
-    document.addEventListener('click', (e) => {
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.closest('[data-present-menu-wrap]')) return;
+      closeAll();
+    });
+    document.querySelector('.present-layout')?.addEventListener('mousedown', (e) => {
       if (e.target.closest('[data-present-menu-wrap]')) return;
       closeAll();
     });
@@ -806,7 +810,7 @@
   }
 
   function broadcastPosition(h) {
-    if (!P.canBroadcast) return;
+    if (!P.canBroadcast || applyingRemote) return;
     const indices = mainReveal ? mainReveal.getIndices() : null;
     const frag = indices && typeof indices.f === 'number' ? indices.f : null;
     fetch('live.php?id=' + encodeURIComponent(P.id), {
@@ -915,8 +919,79 @@
   }
 
   // Heartbeat: Live-Sitzung auch ohne Navigation "aktiv" halten (siehe getLivePosition()-Timeout serverseitig).
+  let applyingRemote = false;
+  let lastRemoteCommandTs = 0;
+  let lastRemoteConfigTs = 0;
+  let remotePollMs = 500;
+
+  function forwardRemoteLaser(laser) {
+    if (!mainFrame?.contentWindow || !laser) return;
+    mainFrame.contentWindow.postMessage({
+      type: 'sf-laser-remote',
+      active: !!laser.active,
+      x: laser.x,
+      y: laser.y,
+      slideIndex: laser.slideIndex,
+      color: laser.color,
+      size: laser.size,
+      trail: !!laser.trail,
+    }, '*');
+  }
+
+  function pollLiveRemote() {
+    fetch('live.php?id=' + encodeURIComponent(P.id) + '&full=1')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return;
+
+        const remoteActive = !!(data.sessions && data.sessions.remote && data.sessions.remote.active);
+        const badge = document.getElementById('presentRemoteBadge');
+        if (badge) badge.hidden = !remoteActive;
+        remotePollMs = remoteActive ? 80 : 500;
+
+        if (data.config && data.config.source === 'remote' && data.config.ts > lastRemoteConfigTs) {
+          if (typeof data.config.showTimebar === 'boolean') {
+            lastRemoteConfigTs = data.config.ts;
+            window.SlideForgePresentLayout?.setShowTimebarLive?.(!!data.config.showTimebar);
+            const toggle = document.getElementById('presentShowTimebarToggle');
+            if (toggle) toggle.checked = !!data.config.showTimebar;
+          }
+        }
+
+        if (data.command && data.command.type === 'step' && data.command.cmd_ts > lastRemoteCommandTs && mainReveal) {
+          lastRemoteCommandTs = data.command.cmd_ts;
+          applyingRemote = true;
+          if (data.command.direction === 'next') mainReveal.next();
+          else if (data.command.direction === 'prev') mainReveal.prev();
+          applyingRemote = false;
+        }
+
+        if (data.live && data.live.laser) {
+          forwardRemoteLaser(data.live.laser);
+        }
+      })
+      .catch(() => {});
+  }
+
+  let remotePollTimer = null;
+  function scheduleRemotePoll() {
+    clearTimeout(remotePollTimer);
+    remotePollTimer = setTimeout(() => {
+      pollLiveRemote();
+      scheduleRemotePoll();
+    }, remotePollMs);
+  }
+  scheduleRemotePoll();
+
   setInterval(() => {
-    if (P.canBroadcast && mainReveal) broadcastPosition(currentIndex);
+    if (P.canBroadcast && mainReveal) {
+      broadcastPosition(currentIndex);
+      fetch('live.php?id=' + encodeURIComponent(P.id), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'present_heartbeat', csrf_token: P.csrfToken }),
+      }).catch(() => {});
+    }
   }, 8000);
 
   window.addEventListener('beforeunload', () => {

@@ -40,7 +40,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '256');
+define('ASSET_VERSION', '268');
 
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
@@ -61,6 +61,8 @@ spl_autoload_register(function ($class) {
         require $file;
     }
 });
+
+Mobile::handleOverride();
 
 // Sicherstellen, dass die Datenverzeichnisse existieren
 if (!is_dir(PRESENTATIONS_PATH)) {

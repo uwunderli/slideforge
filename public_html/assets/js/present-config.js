@@ -57,6 +57,33 @@
       });
     });
 
+    function copyRemoteUrl(btn) {
+      const input = document.getElementById('presentRemoteLinkInput');
+      if (!input || !input.value) return;
+      const original = i18n.copyRemote || btn.textContent;
+      const copied = () => {
+        btn.textContent = i18n.copied || 'OK';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      };
+      navigator.clipboard.writeText(input.value).then(copied).catch(() => {
+        const tmp = document.createElement('textarea');
+        tmp.value = input.value;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        tmp.remove();
+        copied();
+      });
+    }
+
+    document.getElementById('copyRemoteLinkBtn')?.addEventListener('click', (e) => {
+      copyRemoteUrl(e.currentTarget);
+    });
+
+    document.getElementById('copyRemoteLinkPanelBtn')?.addEventListener('click', (e) => {
+      copyRemoteUrl(e.currentTarget);
+    });
+
     document.getElementById('publicLinkToggle')?.addEventListener('change', async (e) => {
       const enabled = e.target.checked;
       try {

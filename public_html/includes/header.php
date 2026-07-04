@@ -20,8 +20,10 @@ $currentLang = I18n::currentLang();
 <?php endif; ?>
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/mobile.css?v=<?= ASSET_VERSION ?>">
+<script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 </head>
-<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?>>
+<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?>>
 <?php if (Config::demoMode()): ?>
 <div class="demo-banner" role="status">
   <div><?= h(t('demo.banner')) ?></div>

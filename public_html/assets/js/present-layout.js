@@ -388,15 +388,19 @@
     });
   }
 
-  function setShowTimebar(show) {
+  function setShowTimebar(show, opts) {
     layoutState.showTimebar = !!show;
     applyTimebarVisibility(layoutState);
     const { row, topbar } = gridEls();
     if (row) row.style.gridTemplateColumns = '';
     if (topbar) topbar.style.gridTemplateColumns = '';
     applyGridVars(layoutState);
-    saveLayout();
+    if (!opts || !opts.skipSave) saveLayout();
     fitAllPanels();
+  }
+
+  function setShowTimebarLive(show) {
+    setShowTimebar(show, { skipSave: true });
   }
 
   function broadcastLaserConfig() {
@@ -443,6 +447,7 @@
     fitPanel,
     relayoutMainReveal,
     setShowTimebar,
+    setShowTimebarLive,
     patchUserPrefs,
     broadcastLaserConfig,
     savePanelOpenState,

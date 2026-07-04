@@ -1,0 +1,63 @@
+<?php
+
+class RemoteQr
+{
+    public static function isAllowedRemoteUrl(string $data, string $host): bool
+    {
+        $parsed = parse_url($data);
+        if (!$parsed || ($parsed['host'] ?? '') !== $host) {
+            return false;
+        }
+
+        return str_contains($parsed['path'] ?? '', 'present_remote.php');
+    }
+
+    public static function pngDataUri(string $data): ?string
+    {
+        if ($data === '' || !extension_loaded('gd')) {
+            return null;
+        }
+
+        if (!class_exists('QRcode', false)) {
+            if (!defined('QR_FIND_BEST_MASK')) {
+                define('QR_FIND_BEST_MASK', false);
+            }
+            if (!defined('QR_CACHEABLE')) {
+                define('QR_CACHEABLE', true);
+            }
+            require BASE_PATH . '/src/phpqrcode/qrlib.php';
+        }
+
+        ob_start();
+        QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+        $png = ob_get_clean();
+        if ($png === false || strlen($png) < 64) {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . base64_encode($png);
+    }
+
+    public static function outputPng(string $data): bool
+    {
+        if ($data === '' || !extension_loaded('gd')) {
+            return false;
+        }
+
+        if (!class_exists('QRcode', false)) {
+            if (!defined('QR_FIND_BEST_MASK')) {
+                define('QR_FIND_BEST_MASK', false);
+            }
+            if (!defined('QR_CACHEABLE')) {
+                define('QR_CACHEABLE', true);
+            }
+            require BASE_PATH . '/src/phpqrcode/qrlib.php';
+        }
+
+        header('Content-Type: image/png');
+        header('Cache-Control: private, max-age=3600');
+        QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+
+        return true;
+    }
+}
