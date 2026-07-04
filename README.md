@@ -13,10 +13,6 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Feature tour** *(no login)* — [EN](https://slideforge.service7.ch/view.php?token=slideforge-tour) · [DE](https://slideforge.service7.ch/view.php?token=slideforge-tour-de) · [FR](https://slideforge.service7.ch/view.php?token=slideforge-tour-fr) · [IT](https://slideforge.service7.ch/view.php?token=slideforge-tour-it) · [RM](https://slideforge.service7.ch/view.php?token=slideforge-tour-rm)
 
-## Screenshots
-
-The **[live feature tour](https://slideforge.service7.ch/view.php?token=slideforge-tour)** replaces static screenshots. For every editor object type, open **Element-Showcase** on the demo (login as `admin`).
-
 ---
 
 Ein selbst-gehosteter, dateibasierter Multiuser-Editor für [reveal.js](https://revealjs.com)
