@@ -7,7 +7,7 @@
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.1](https://github.com/uwunderli/slideforge/releases/tag/v1.0.1)
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.4](https://github.com/uwunderli/slideforge/releases/tag/v1.0.4)
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
@@ -43,7 +43,12 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Objekte:** Text, Formen (Linie, Rechteck, Dreieck, Ellipse, Pfeil, Stern, Sprechblase, Klammer), Bild, Video, Audio – verschieben, skalieren, drehen, Ebenen-Reihenfolge
 - **Eigenschaften-Panel** in Tabs **Format**, **Form**, **Position**, **Effekt** – inkl. Füllfarbe/Verlauf, Rahmen, Schrift, Teilformatierung, Animationen
 - **Hintergründe:** Volltonfarbe (Marken-Palette), Farbverlauf, Bild-/Video-Upload – Medien liegen ausserhalb des Web-Roots und werden über `asset.php` ausgeliefert
-- **Medien-Tab** und optional **Pixabay-Suche** (lizenzfreie Bilder/Videos direkt als Hintergrund oder Objekt übernehmen)
+- **Medien-Tab:** Stock-Medien und eigene Quellen direkt im Editor einbinden
+- **Pixabay-Suche** (optional, Admin): lizenzfreie Bilder und Videos
+- **Iconify-Icon-Suche:** 150+ SVG-Icon-Sets durchsuchen, Farbe wählbar (Markenpalette), ohne API-Key
+- **Openclipart-Clipart-Suche:** SVG-Illustrationen (Public Domain), ohne API-Key
+- **WebDAV-Ordner:** im Profil konfigurierte Cloud-/NAS-Laufwerke erscheinen als Buttons — Ordner durchsuchen, Lightbox-Vorschau, Import von Bildern, SVG, Audio und Video auf Folie oder als Hintergrund
+- **Hintergrund entfernen** bei Bildobjekten (helle Flächen bei SVG und Fotos)
 - **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
 - **Vorlagen:** editierbare Markenfarben, Textvorlagen, Folienvorlagen (privat oder für alle freigegeben)
@@ -70,14 +75,18 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 ### Admin
 
 - Zwei Rollen: **Administrator** und **Editor**; erster registrierter Nutzer wird automatisch Admin
+- Einstellungen in Tabs: **Allgemein**, **SMTP**, **Rechtschreibung**, **Medien**, **Benutzer**
 - **Allgemein:** Seitentitel, Logo, offene Registrierung an-/abschaltbar
 - **SMTP:** Konfiguration und Test-Mail (reiner PHP-SMTP-Client, kein Composer) – für Einladungs-Mails
-- **Benutzerverwaltung:** Rollen ändern, Nutzer löschen (optional inkl. Präsentationen), **Einladungslinks** mit optionalem E-Mail-Versand
-- **LanguageTool:** optionaler Grammatik-/Rechtschreibserver (eigene Instanz oder Cloud-API)
-- **Pixabay:** optionaler API-Schlüssel für Stock-Medien im Editor
-- **Vorlagen-Verwaltung** für Markenfarben und Textstile (nur Admins)
+- **Rechtschreibung:** LanguageTool-Server (eigene Instanz oder Cloud-API)
+- **Medien:** Pixabay-API-Schlüssel (optional); Iconify- und Openclipart-Suche an-/abschaltbar; Vorlagen für Markenfarben und Textstile
+- **Benutzer:** Rollen ändern, Nutzer löschen (optional inkl. Präsentationen), **Einladungslinks** mit optionalem E-Mail-Versand
 - Mehrsprachige Oberfläche: Deutsch, Englisch, Französisch, Italienisch, Rumantsch
 - Hell/Dunkel-Theme pro Benutzer
+
+### Profil
+
+- **WebDAV-Laufwerke:** bis zu 10 HTTPS-WebDAV-Verbindungen pro Benutzer (URL, Benutzername, Passwort verschlüsselt gespeichert), optionaler Startordner — im Editor unter **Medien** als Laufwerks-Buttons verfügbar
 
 
 

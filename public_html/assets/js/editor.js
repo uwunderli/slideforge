@@ -30,6 +30,9 @@
     presentConfig: boot.presentConfig || null,
     spellConfig: boot.spellcheck || null,
     pixabayConfig: boot.pixabay || null,
+    iconifyConfig: boot.iconify || null,
+    openclipartConfig: boot.openclipart || null,
+    webdav: boot.webdav || null,
     i18n: boot.i18n || {},
   };
 
@@ -447,6 +450,10 @@
     bindGlobalUI();
     initSpellcheckPanel();
     initPixabayPanel();
+    initIconifyPanel();
+    initOpenclipartPanel();
+    initWebdavPanel();
+    initMediaSearchButtons();
     initMediaLibraryPanel();
     bindZoomUI();
     bindTemplatePicker();
@@ -1151,11 +1158,124 @@
   }
 
   // ---------- Shape creation / conversion ----------
-  function loadImageAsync(node, src) {
-    if (!src) return;
+  function defaultIconColor() {
+    return SF.brandColors[0]?.hex || '#3a6c8d';
+  }
+
+  function isIconSrc(src) {
+    if (!src) return false;
+    const match = String(src).match(/[?&]file=([^&]+)/);
+    if (!match) return false;
+    try {
+      return /^ic_.*\.svg$/i.test(decodeURIComponent(match[1]));
+    } catch {
+      return /^ic_.*\.svg$/i.test(match[1]);
+    }
+  }
+
+  function isClipartIconId(iconId) {
+    return String(iconId || '').startsWith('oc:');
+  }
+
+  function assetFilenameFromSrc(src) {
+    if (!src) return '';
+    const match = String(src).match(/[?&]file=([^&]+)/);
+    if (!match) return '';
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }
+
+  function isIconObject(obj) {
+    if (isClipartIconId(obj?.iconId)) return false;
+    return !!(obj?.iconId || isIconSrc(obj?.src));
+  }
+
+  function iconDisplaySrc(src, iconColor) {
+    if (!src || !iconColor) return src;
+    return src + (src.includes('?') ? '&' : '?') + 'color=' + encodeURIComponent(iconColor);
+  }
+
+  function measureImageNaturalSize(src) {
+    return new Promise((resolve, reject) => {
+      if (!src) {
+        reject(new Error('no src'));
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth || img.width || 0;
+        const h = img.naturalHeight || img.height || 0;
+        if (w > 0 && h > 0) resolve({ w, h, image: img });
+        else reject(new Error('no dimensions'));
+      };
+      img.onerror = () => reject(new Error('load failed'));
+      img.src = src;
+    });
+  }
+
+  function fitImageInsertSize(naturalW, naturalH, opts = {}) {
+    const maxW = opts.maxW ?? 480;
+    const maxH = opts.maxH ?? 480;
+    const minLongest = opts.minLongest ?? 80;
+    const fallback = opts.fallback ?? { w: 400, h: 240 };
+    if (!naturalW || !naturalH) return { ...fallback };
+
+    let w = naturalW;
+    let h = naturalH;
+    const down = Math.min(maxW / w, maxH / h, 1);
+    w = Math.round(w * down);
+    h = Math.round(h * down);
+    const longest = Math.max(w, h);
+    if (longest > 0 && longest < minLongest) {
+      const up = minLongest / longest;
+      w = Math.round(w * up);
+      h = Math.round(h * up);
+    }
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+  }
+
+  async function insertImageObjectAtCenter(url, extra = {}) {
+    const sizeOpts = extra.sizeOptions || {};
+    let size = fitImageInsertSize(0, 0, sizeOpts);
+    let preloaded = null;
+    try {
+      const measured = await measureImageNaturalSize(url);
+      size = fitImageInsertSize(measured.w, measured.h, sizeOpts);
+      preloaded = measured.image;
+    } catch (_) { /* fallback size */ }
+
+    const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
+    const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
+    const id = 'o' + Math.random().toString(16).slice(2, 10);
+    const obj = Object.assign({
+      id, type: 'image', x: centerX, y: centerY, w: size.w, h: size.h,
+      rotation: 0, opacity: 1, src: url, deferImageLoad: true,
+    }, extra.objProps || {});
+    const node = createNode(obj);
+    node.setAttr('aspectRatio', size.w / size.h);
+    insertNode(node);
+    loadImageAsync(node, url, obj.iconColor, preloaded);
+    return node;
+  }
+
+  function loadImageAsync(node, src, iconColor, preloaded) {
+    if (preloaded) {
+      node.image(preloaded);
+      if (SF.layer) SF.layer.batchDraw();
+      return;
+    }
+    const baseSrc = src || node.getAttr('src') || '';
+    const color = iconColor ?? node.getAttr('iconColor');
+    const displaySrc = (node.getAttr('iconId') || isIconSrc(baseSrc)) && color
+      ? iconDisplaySrc(baseSrc, color)
+      : baseSrc;
+    if (!displaySrc) return;
     const img = new Image();
     img.onload = () => { node.image(img); if (SF.layer) SF.layer.batchDraw(); };
-    img.src = src;
+    img.src = displaySrc;
   }
 
   function applyShapeGradientVisual(node) {
@@ -1261,7 +1381,9 @@
       }));
       node.setAttr('objType', 'image');
       node.setAttr('src', obj.src || '');
-      loadImageAsync(node, obj.src);
+      if (obj.iconId) node.setAttr('iconId', obj.iconId);
+      if (obj.iconColor) node.setAttr('iconColor', obj.iconColor);
+      if (!obj.deferImageLoad) loadImageAsync(node, obj.src, obj.iconColor);
       return node;
     }
     if (obj.type === 'video') {
@@ -1410,13 +1532,18 @@
       }, shapeFillData(node));
     }
     if (type === 'image') {
-      return Object.assign(base, {
+      const data = {
         x: Math.round(node.x()), y: Math.round(node.y()),
         w: Math.round(node.width() * node.scaleX()), h: Math.round(node.height() * node.scaleY()),
         src: node.getAttr('src') || '',
         stroke: node.stroke() || 'transparent',
         strokeWidth: node.strokeWidth() || 0,
-      });
+      };
+      const iconId = node.getAttr('iconId');
+      const iconColor = node.getAttr('iconColor');
+      if (iconId) data.iconId = iconId;
+      if (iconColor) data.iconColor = iconColor;
+      return Object.assign(base, data);
     }
     if (type === 'video') {
       const baseW = node.getAttr('baseW') || 400, baseH = node.getAttr('baseH') || 260;
@@ -2127,6 +2254,26 @@
     }[obj.type] || obj.type);
   }
 
+  function humanizeAssetFilename(filename) {
+    if (!filename) return '';
+    let base = filename.replace(/\.[^.]+$/, '').replace(/_nobg$/, '');
+
+    const ic = base.match(/^ic_([a-z0-9][a-z0-9-]*)_([a-z0-9][a-z0-9._-]*)_[a-z0-9]+$/i);
+    if (ic) return ic[1] + ':' + ic[2];
+
+    const oc = base.match(/^oc_\d+_(.+?)_[a-z0-9]+$/i);
+    if (oc) return oc[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const px = base.match(/^px(\d+)_/i);
+    if (px) return 'Pixabay ' + px[1];
+
+    if (/^[a-f0-9]{8,}$/i.test(base)) return I.typeImage || 'Bild';
+
+    const plain = base.replace(/^img_|^pptx_img|^odp_img|^pdfpage\d+_/i, '').replace(/[-_]+/g, ' ').trim();
+    if (!plain) return I.typeImage || 'Bild';
+    return plain.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   function layerItemLabel(node) {
     const obj = nodeToObject(node);
     if (obj.type === 'group') {
@@ -2139,8 +2286,15 @@
       return preview.length > 30 ? preview.slice(0, 30) + '…' : preview;
     }
     if ((obj.type === 'image' || obj.type === 'video' || obj.type === 'audio') && obj.src) {
-      const name = obj.src.split('/').pop().split('?')[0];
-      if (name) return name.length > 30 ? name.slice(0, 30) + '…' : name;
+      if (obj.iconId && !isClipartIconId(obj.iconId)) {
+        const label = obj.iconId;
+        return label.length > 36 ? label.slice(0, 36) + '…' : label;
+      }
+      const filename = assetFilenameFromSrc(obj.src);
+      if (filename) {
+        const label = humanizeAssetFilename(filename);
+        if (label) return label.length > 36 ? label.slice(0, 36) + '…' : label;
+      }
     }
     return layerTypeLabel(obj);
   }
@@ -2432,8 +2586,19 @@
     }
 
     if (tab === 'form' && isImage) {
-      html += '<div class="bg-asset-preview"><img src="' + obj.src + '" alt=""></div>';
+      const isIcon = isIconObject(obj);
+      const previewSrc = isIcon && obj.iconColor ? iconDisplaySrc(obj.src, obj.iconColor) : obj.src;
+      const filename = assetFilenameFromSrc(obj.src);
+      const isSvgAsset = isIcon || /\.svg$/i.test(filename);
+      const previewClass = 'props-asset-preview' + (isSvgAsset ? ' props-asset-preview--svg' : '');
+      html += '<div class="' + previewClass + '"><img src="' + previewSrc + '" alt=""></div>';
+      if (isIcon) {
+        html += fieldColor('p_iconColor', I.iconColor, obj.iconColor || defaultIconColor());
+        html += miniPaletteHtml('p_iconColor');
+      }
       html += '<button type="button" class="button button-ghost button-sm" id="replaceAssetBtn" style="width:100%;">' + I.replaceImage + '</button>';
+      html += '<button type="button" class="button button-ghost button-sm" id="removeBgBtn" style="width:100%; margin-top:8px;">' + I.removeBackground + '</button>';
+      html += '<div class="props-video-note" style="margin-top:8px;">' + I.removeBackgroundHint + '</div>';
       html += '<div class="row">' + fieldColor('p_stroke', I.borderColor, (obj.stroke && obj.stroke !== 'transparent') ? obj.stroke : '#ffffff') + fieldNumber('p_strokewidth', I.borderWidth, obj.strokeWidth || 0) + '</div>';
       html += miniPaletteHtml('p_stroke');
       html += fieldRange('p_opacity', I.opacity, Math.round(obj.opacity * 100));
@@ -2909,6 +3074,42 @@
         replaceTargetNode = node;
         document.getElementById('objImageInput').click();
       });
+      const removeBgBtn = document.getElementById('removeBgBtn');
+      if (removeBgBtn) removeBgBtn.addEventListener('click', async () => {
+        const filename = assetFilenameFromSrc(node.getAttr('src'));
+        if (!filename) {
+          setSaveStatus(I.removeBackgroundFailed, true);
+          return;
+        }
+        removeBgBtn.disabled = true;
+        setSaveStatus(I.removeBackgroundWorking);
+        try {
+          const res = await api('remove_image_background', { filename });
+          node.setAttr('src', res.url);
+          if (isClipartIconId(node.getAttr('iconId'))) {
+            node.setAttr('iconId', '');
+            node.setAttr('iconColor', '');
+          }
+          loadImageAsync(node, res.url);
+          refreshCanvas();
+          scheduleSave();
+          refreshPropsPanel();
+          setSaveStatus(SF.i18n?.saved || 'Gespeichert');
+        } catch (e) {
+          setSaveStatus(e.message || I.removeBackgroundFailed, true);
+        } finally {
+          removeBgBtn.disabled = false;
+        }
+      });
+      on('p_iconColor', 'input', (e) => {
+        const color = e.target.value;
+        node.setAttr('iconColor', color);
+        loadImageAsync(node, node.getAttr('src'), color);
+        refreshCanvas();
+        scheduleSave();
+        const preview = document.querySelector('.props-asset-preview img');
+        if (preview) preview.src = iconDisplaySrc(node.getAttr('src'), color);
+      });
       on('p_stroke', 'input', (e) => { node.stroke(e.target.value); refreshCanvas(); scheduleSave(); });
       on('p_strokewidth', 'input', (e) => { node.strokeWidth(parseInt(e.target.value, 10) || 0); refreshCanvas(); scheduleSave(); });
     } else if (type === 'video' || type === 'audio') {
@@ -3224,6 +3425,10 @@
       const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
       const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
       const id = 'o' + Math.random().toString(16).slice(2, 10);
+      if (kind === 'image') {
+        await insertImageObjectAtCenter(json.url);
+        return;
+      }
       const obj = { id, type: kind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: json.url };
       insertNode(createNode(obj));
     } catch (e) {
@@ -3249,14 +3454,16 @@
       }
 
       const objKind = kind === 'video' ? 'video' : 'image';
+      if (objKind === 'image') {
+        await insertImageObjectAtCenter(url);
+        return;
+      }
       const defaultSize = { w: 400, h: 240 };
       const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
       const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
       const id = 'o' + Math.random().toString(16).slice(2, 10);
       const obj = { id, type: objKind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: url };
-      const node = createNode(obj);
-      insertNode(node);
-      if (objKind === 'image') loadImageAsync(node, url);
+      insertNode(createNode(obj));
     }
 
     window.SlideForgePixabay.init({
@@ -3266,6 +3473,141 @@
       applyPixabay: applyPixabayAsset,
       refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
     });
+  }
+
+  function initIconifyPanel() {
+    if (!SF.iconifyConfig?.enabled || !window.SlideForgeIconify) return;
+
+    async function applyIconifyAsset(url, iconId, iconColor) {
+      const defaultSize = { w: 128, h: 128 };
+      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
+      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
+      const id = 'o' + Math.random().toString(16).slice(2, 10);
+      const color = iconColor || defaultIconColor();
+      const obj = {
+        id, type: 'image', x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
+        rotation: 0, opacity: 1, src: url, iconId: iconId || '', iconColor: color,
+      };
+      const node = createNode(obj);
+      insertNode(node);
+      loadImageAsync(node, url, color);
+    }
+
+    window.SlideForgeIconify.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      iconifyConfig: SF.iconifyConfig,
+      defaultIconColor: defaultIconColor(),
+      applyIconify: applyIconifyAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initOpenclipartPanel() {
+    if (!window.SlideForgeOpenclipart) return;
+
+    const cfg = SF.openclipartConfig || {
+      enabled: !!document.getElementById('openclipartOpenBtn'),
+      i18n: {},
+    };
+    if (!cfg.enabled) return;
+
+    async function applyOpenclipartAsset(url) {
+      await insertImageObjectAtCenter(url, {
+        sizeOptions: { maxW: 480, maxH: 480, minLongest: 128, fallback: { w: 256, h: 256 } },
+      });
+    }
+
+    window.SlideForgeOpenclipart.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      openclipartConfig: cfg,
+      defaultIconColor: defaultIconColor(),
+      applyOpenclipart: applyOpenclipartAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initWebdavPanel() {
+    if (!window.SlideForgeWebdav) return;
+
+    const cfg = SF.webdav || { enabled: false, drives: [], i18n: {} };
+    if (!cfg.enabled) return;
+
+    async function applyWebdavAsset(mode, url, kind) {
+      const mediaKind = kind || 'image';
+      const isBg = mode === 'background-image' || mode === 'background-video';
+      if (isBg) {
+        const bgKind = mode === 'background-video' ? 'video' : 'image';
+        setBgType(bgKind);
+        SF.currentBackground = { type: bgKind, value: url };
+        applyBackgroundVisual(SF.currentBackground);
+        populateBackgroundControls(SF.currentBackground);
+        updateCurrentTabSwatch();
+        scheduleSave();
+        return;
+      }
+
+      if (mediaKind === 'image') {
+        await insertImageObjectAtCenter(url);
+        return;
+      }
+
+      const defaultSize = mediaKind === 'audio' ? { w: 280, h: 56 } : { w: 400, h: 240 };
+      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
+      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
+      const id = 'o' + Math.random().toString(16).slice(2, 10);
+      const obj = {
+        id, type: mediaKind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
+        rotation: 0, opacity: 1, src: url,
+      };
+      insertNode(createNode(obj));
+    }
+
+    window.SlideForgeWebdav.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      webdavConfig: cfg,
+      applyWebdav: applyWebdavAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initMediaSearchButtons() {
+    document.getElementById('pixabayOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgePixabay?.openPixabayModal) {
+        window.SlideForgePixabay.openPixabayModal('object-image');
+        return;
+      }
+      document.getElementById('pixabayModal')?.classList.add('open');
+    });
+
+    document.getElementById('iconifyOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgeIconify?.openIconifyModal) {
+        window.SlideForgeIconify.openIconifyModal();
+        return;
+      }
+      const modal = document.getElementById('iconifyModal');
+      if (modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('iconifyQuery')?.focus();
+      }
+    });
+
+    document.getElementById('openclipartOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgeOpenclipart?.openOpenclipartModal) {
+        window.SlideForgeOpenclipart.openOpenclipartModal();
+        return;
+      }
+      const modal = document.getElementById('openclipartModal');
+      if (modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('openclipartQuery')?.focus();
+      }
+    });
+
   }
 
   function initMediaLibraryPanel() {
@@ -3294,29 +3636,30 @@
       return cfg.kindImage;
     }
 
-    function insertMediaAsset(url, kind) {
+    async function insertMediaAsset(url, kind) {
       if (!SF.canEdit || !url) return;
-      let size;
-      if (kind === 'audio') size = { w: 280, h: 56 };
-      else if (kind === 'video') size = { w: 400, h: 260 };
-      else size = { w: 400, h: 240 };
-      const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
-      const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
-      const id = 'o' + Math.random().toString(16).slice(2, 10);
-      const obj = {
-        id,
-        type: kind === 'video' ? 'video' : (kind === 'audio' ? 'audio' : 'image'),
-        x: centerX,
-        y: centerY,
-        w: size.w,
-        h: size.h,
-        rotation: 0,
-        opacity: 1,
-        src: url,
-      };
-      const node = createNode(obj);
-      insertNode(node);
-      if (obj.type === 'image') loadImageAsync(node, url);
+      if (kind === 'image') {
+        await insertImageObjectAtCenter(url);
+      } else {
+        let size;
+        if (kind === 'audio') size = { w: 280, h: 56 };
+        else size = { w: 400, h: 260 };
+        const centerX = Math.round(SF.meta.width / 2) - size.w / 2;
+        const centerY = Math.round(SF.meta.height / 2) - size.h / 2;
+        const id = 'o' + Math.random().toString(16).slice(2, 10);
+        const obj = {
+          id,
+          type: kind === 'video' ? 'video' : 'audio',
+          x: centerX,
+          y: centerY,
+          w: size.w,
+          h: size.h,
+          rotation: 0,
+          opacity: 1,
+          src: url,
+        };
+        insertNode(createNode(obj));
+      }
       scheduleSave();
       statusEl.textContent = cfg.inserted || '';
       setTimeout(() => {
@@ -3630,6 +3973,7 @@
     if (!SF.canEdit) return;
 
     document.querySelectorAll('.tool-btn-block').forEach(btn => {
+      if (btn.id === 'pixabayOpenBtn' || btn.id === 'iconifyOpenBtn' || btn.id === 'openclipartOpenBtn') return;
       btn.addEventListener('click', () => {
         if (btn.dataset.tool) addShape(btn.dataset.tool);
         else if (btn.dataset.preset) addTextPreset(btn.dataset.preset);

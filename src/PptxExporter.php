@@ -240,6 +240,7 @@ class PptxExporter
         if ($type === 'image' && !empty($obj['src'])) {
             $diskPath = self::resolveAssetPath($obj['src'], $presentationId);
             if ($diskPath) {
+                $diskPath = self::maybeTintSvgAsset($diskPath, $obj);
                 $ext = strtolower(pathinfo($diskPath, PATHINFO_EXTENSION)) ?: 'png';
                 $zipName = 'image' . $mediaIndex . '.' . $ext;
                 $mediaFiles[$zipName] = $diskPath;
@@ -309,6 +310,20 @@ class PptxExporter
         }
         $path = Presentation::dir($presentationId) . '/assets/' . $m[1];
         return is_file($path) ? $path : null;
+    }
+
+    private static function maybeTintSvgAsset(string $diskPath, array $obj): string
+    {
+        if (empty($obj['iconColor']) || strtolower(pathinfo($diskPath, PATHINFO_EXTENSION)) !== 'svg') {
+            return $diskPath;
+        }
+        $tinted = SvgHelper::tintSvg((string)file_get_contents($diskPath), (string)$obj['iconColor']);
+        $tmp = tempnam(sys_get_temp_dir(), 'sf_ic_');
+        if ($tmp === false) {
+            return $diskPath;
+        }
+        file_put_contents($tmp, $tinted);
+        return $tmp;
     }
 
     // ---------- Folie ----------

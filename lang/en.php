@@ -333,12 +333,20 @@ return [
     'props.fill_none' => 'None',
     'props.fill_none_hint' => 'No fill color - only the border is visible. Set border color/width below.',
     'props.border_color' => 'Border color',
+    'props.icon_color' => 'Icon color',
     'props.border_width' => 'Border width',
     'props.star_points' => 'Number of points',
     'props.arrow_style' => 'Arrow direction',
     'props.bubble_style' => 'Speech bubble style',
 
     'props.replace_image' => 'Replace image',
+    'props.remove_background' => 'Remove background',
+    'props.remove_background_hint' => 'Removes light backgrounds (e.g. white) from SVG and photos. Saves a new file.',
+    'props.remove_background_working' => 'Removing background…',
+    'props.remove_background_failed' => 'Could not remove background.',
+    'props.remove_background_invalid' => 'Invalid image file.',
+    'props.remove_background_not_found' => 'Image file not found.',
+    'props.remove_background_unsupported' => 'Unsupported file type.',
     'props.replace_video' => 'Replace video',
     'props.replace_audio' => 'Replace audio',
     'props.media_placeholder_hint' => 'Placeholder in the editor &ndash; {type} plays for real in the finished deck.',
@@ -459,6 +467,10 @@ return [
     'profile.avatar_removed' => 'Profile picture removed.',
     'profile.passwords_mismatch' => 'The new passwords do not match.',
     'profile.title' => 'My Profile',
+    'profile.tab_account' => 'Account',
+    'profile.tab_spellcheck' => 'Spelling',
+    'profile.tab_webdav' => 'WebDAV',
+    'profile.tab_password' => 'Password',
     'profile.back_to_dashboard' => 'Back to dashboard',
     'profile.role' => 'Role',
     'profile.role_admin' => 'Administrator',
@@ -605,7 +617,10 @@ return [
     'admin.cannot_delete_self' => 'You cannot delete yourself.',
     'admin.user_deleted' => 'User deleted.',
     'admin.heading' => 'Settings',
-    'admin.tab_general' => 'General Settings',
+    'admin.tab_general' => 'General',
+    'admin.tab_smtp' => 'SMTP',
+    'admin.tab_spellcheck' => 'Spell check',
+    'admin.tab_media' => 'Media',
     'admin.tab_users' => 'User Management',
     'admin.general_heading' => 'General',
     'admin.site_title' => 'Site title',
@@ -741,6 +756,198 @@ return [
     'pixabay.video_type_animation' => 'Animation',
     'pixabay.preview_hint' => 'Click to enlarge',
     'pixabay.preview_by' => 'By {user}',
+
+    'admin.iconify_heading' => 'Icons (Iconify)',
+    'admin.iconify_intro' => 'Search SVG icons from 150+ icon sets in the editor. No API key required — service by <a href="https://iconify.design/" target="_blank" rel="noopener">iconify.design</a>.',
+    'admin.iconify_enabled' => 'Enable Iconify search in the editor',
+    'admin.iconify_save_btn' => 'Save Iconify',
+    'admin.iconify_saved' => 'Iconify settings saved.',
+
+    'iconify.title' => 'Icons',
+    'iconify.search' => 'Search',
+    'iconify.search_placeholder' => 'Keyword, e.g. home, search, arrow…',
+    'iconify.searching' => 'Searching…',
+    'iconify.importing' => 'Downloading icon…',
+    'iconify.import_done' => 'Applied.',
+    'iconify.no_results' => 'No results.',
+    'iconify.result_count' => '{count} results (total {total})',
+    'iconify.enter_query' => 'Please enter a search term.',
+    'iconify.error_generic' => 'Iconify request failed.',
+    'iconify.error_auth' => 'Not signed in.',
+    'iconify.error_not_found' => 'Presentation not found.',
+    'iconify.error_forbidden' => 'Access denied.',
+    'iconify.error_disabled' => 'Iconify is disabled. Please contact the administrator.',
+    'iconify.error_edit' => 'No edit permission.',
+    'iconify.error_csrf' => 'Invalid session token. Reload the page.',
+    'iconify.error_unknown_action' => 'Unknown action.',
+    'iconify.error_api' => 'Iconify API unreachable.',
+    'iconify.error_invalid_icon' => 'Invalid icon.',
+    'iconify.error_invalid_url' => 'Invalid download URL.',
+    'iconify.error_download' => 'Download failed.',
+    'iconify.error_too_large' => 'File is too large.',
+    'iconify.error_type' => 'Unsupported file type.',
+    'iconify.error_save' => 'Save failed.',
+    'iconify.use_object' => 'On slide',
+    'iconify.attribution' => 'Icons via <a href="https://iconify.design/" target="_blank" rel="noopener">Iconify</a> — licenses per icon set',
+    'iconify.target_object' => 'Pick a color, then add the icon to the slide — change color later in the properties panel',
+    'iconify.open_from_media' => 'Browse icons…',
+    'iconify.icon_color' => 'Icon color',
+    'iconify.brand_colors' => 'Brand colors',
+    'iconify.prev' => 'Previous',
+    'iconify.next' => 'Next',
+    'iconify.filter_collection' => 'Icon set',
+    'iconify.collection_all' => 'All sets',
+    'iconify.collection_mdi' => 'Material Design Icons',
+    'iconify.collection_fa6_solid' => 'Font Awesome 6 Solid',
+    'iconify.collection_fa6_regular' => 'Font Awesome 6 Regular',
+    'iconify.collection_lucide' => 'Lucide',
+    'iconify.collection_tabler' => 'Tabler Icons',
+    'iconify.collection_material_symbols' => 'Material Symbols',
+    'iconify.collection_bi' => 'Bootstrap Icons',
+    'iconify.collection_ph' => 'Phosphor',
+    'iconify.collection_carbon' => 'Carbon',
+    'iconify.collection_ri' => 'Remix Icon',
+    'iconify.collection_simple_icons' => 'Simple Icons',
+    'iconify.preview_hint' => 'Click to enlarge',
+
+    'admin.openclipart_heading' => 'Clipart (Openclipart)',
+    'admin.openclipart_intro' => 'Search free SVG illustrations in the editor. No API key required — public domain cliparts from <a href="https://openclipart.org/" target="_blank" rel="noopener">openclipart.org</a>.',
+    'admin.openclipart_enabled' => 'Enable Openclipart search in the editor',
+    'admin.openclipart_save_btn' => 'Save Openclipart',
+    'admin.openclipart_saved' => 'Openclipart settings saved.',
+
+    'openclipart.title' => 'Clipart',
+    'openclipart.search' => 'Search',
+    'openclipart.search_placeholder' => 'Keyword, e.g. cat, tree, car…',
+    'openclipart.searching' => 'Searching…',
+    'openclipart.importing' => 'Downloading clipart…',
+    'openclipart.import_done' => 'Applied.',
+    'openclipart.no_results' => 'No results.',
+    'openclipart.result_count' => '{count} results (approx. {total})',
+    'openclipart.enter_query' => 'Please enter a search term.',
+    'openclipart.error_generic' => 'Openclipart request failed.',
+    'openclipart.error_auth' => 'Not signed in.',
+    'openclipart.error_not_found' => 'Presentation not found.',
+    'openclipart.error_forbidden' => 'Access denied.',
+    'openclipart.error_disabled' => 'Openclipart is disabled. Please contact the administrator.',
+    'openclipart.error_edit' => 'No edit permission.',
+    'openclipart.error_csrf' => 'Invalid session token. Reload the page.',
+    'openclipart.error_unknown_action' => 'Unknown action.',
+    'openclipart.error_api' => 'Openclipart unreachable.',
+    'openclipart.error_invalid_clipart' => 'Invalid clipart.',
+    'openclipart.error_invalid_url' => 'Invalid download URL.',
+    'openclipart.error_download' => 'Download failed.',
+    'openclipart.error_too_large' => 'File is too large.',
+    'openclipart.error_type' => 'Unsupported file type.',
+    'openclipart.error_save' => 'Save failed.',
+    'openclipart.use_object' => 'On slide',
+    'openclipart.attribution' => 'Clipart via <a href="https://openclipart.org/" target="_blank" rel="noopener">Openclipart</a> — public domain',
+    'openclipart.target_object' => 'Pick clipart and add it to the slide — remove the background later in the properties panel',
+    'openclipart.open_from_media' => 'Browse clipart…',
+    'openclipart.icon_color' => 'Color (simple SVGs)',
+    'openclipart.brand_colors' => 'Brand colors',
+    'openclipart.prev' => 'Previous',
+    'openclipart.next' => 'Next',
+    'openclipart.preview_hint' => 'Click to enlarge',
+
+    'webdav.title' => 'WebDAV',
+    'webdav.loading' => 'Loading folder…',
+    'webdav.importing' => 'Importing file…',
+    'webdav.import_done' => 'Added to slide.',
+    'webdav.empty_folder' => 'No media or subfolders in this folder.',
+    'webdav.error_generic' => 'WebDAV request failed.',
+    'webdav.error_auth' => 'Not signed in.',
+    'webdav.error_not_found' => 'Presentation not found.',
+    'webdav.error_forbidden' => 'Access denied.',
+    'webdav.error_edit' => 'No edit permission.',
+    'webdav.error_csrf' => 'Invalid session token. Reload the page.',
+    'webdav.error_unknown_action' => 'Unknown action.',
+    'webdav.error_drive_not_found' => 'WebDAV drive not found.',
+    'webdav.error_invalid_path' => 'Invalid path.',
+    'webdav.error_invalid_url' => 'Invalid WebDAV URL (HTTPS only).',
+    'webdav.error_https_required' => 'Only HTTPS URLs are allowed.',
+    'webdav.error_blocked_host' => 'This address is not allowed for security reasons.',
+    'webdav.error_auth_failed' => 'Sign-in failed — check username or password.',
+    'webdav.error_connection' => 'Could not connect to the WebDAV server.',
+    'webdav.error_download' => 'Download failed.',
+    'webdav.error_too_large' => 'File is too large.',
+    'webdav.error_type' => 'Only images, SVG, video (MP4/WebM), and audio (MP3/WAV/OGG/M4A) are supported.',
+    'webdav.error_save' => 'Save failed.',
+    'webdav.error_invalid_label' => 'Enter a display name (max. 80 characters).',
+    'webdav.error_invalid_username' => 'Enter a username.',
+    'webdav.error_password_required' => 'Password is required.',
+    'webdav.use_object' => 'Add to slide',
+    'webdav.target_object' => 'Browse folders and add media to the slide',
+    'webdav.up' => 'Up',
+    'webdav.root' => 'Root',
+    'webdav.folder' => 'Folder',
+    'webdav.file' => 'File',
+    'webdav.open_folder' => 'Open folder',
+    'webdav.breadcrumb' => 'Path',
+
+    'profile.webdav_heading' => 'WebDAV drives',
+    'profile.webdav_intro' => 'Connect cloud storage (Nextcloud, ownCloud, Synology …) via WebDAV. Configured drives appear as buttons under Media in the editor.',
+    'profile.webdav_label' => 'Display name',
+    'profile.webdav_label_placeholder' => 'e.g. Company cloud',
+    'profile.webdav_url' => 'WebDAV URL',
+    'profile.webdav_username' => 'Username',
+    'profile.webdav_password' => 'Password',
+    'profile.webdav_password_keep' => 'Leave blank to keep unchanged',
+    'profile.webdav_root' => 'Start folder (optional)',
+    'profile.webdav_root_placeholder' => 'e.g. Photos/Presentations',
+    'profile.webdav_add' => 'New drive',
+    'profile.webdav_add_btn' => 'Add drive',
+    'profile.webdav_test' => 'Test connection',
+    'profile.webdav_test_ok' => 'Connection successful.',
+    'profile.webdav_test_fail' => 'Connection failed',
+    'profile.webdav_delete' => 'Remove drive',
+    'profile.webdav_delete_confirm' => 'Remove this WebDAV drive?',
+    'profile.webdav_saved' => 'WebDAV drive saved.',
+    'profile.webdav_deleted' => 'WebDAV drive removed.',
+    'profile.webdav_help_btn' => 'Help: set up WebDAV',
+    'profile.webdav_help_title' => 'WebDAV — connect common providers',
+    'profile.webdav_help_body' => '<p>Connect cloud storage to SlideForge via WebDAV. Credentials are stored <strong>encrypted</strong> and used only by the server. Each drive appears as its own button under <strong>Media</strong> in the editor.</p>'
+        . '<h3>Profile fields</h3>'
+        . '<ul>'
+        . '<li><strong>Display name</strong> — any label, e.g. “Gallery” or “Company cloud”.</li>'
+        . '<li><strong>WebDAV URL</strong> — HTTPS address up to the WebDAV root (see examples below).</li>'
+        . '<li><strong>Username / password</strong> — same as your cloud login.</li>'
+        . '<li><strong>Start folder (optional)</strong> — subfolder from the WebDAV root, e.g. <code>Photos/Presentations</code> (no leading <code>/</code>).</li>'
+        . '</ul>'
+        . '<p><strong>Tip:</strong> use <strong>Test connection</strong> before saving. Only <strong>HTTPS</strong> URLs are allowed; images and SVG can be imported (max. 15 MB).</p>'
+        . '<h3>GroupOffice</h3>'
+        . '<p>WebDAV is available under <strong>Files</strong>. The URL usually ends with <code>/webdav/</code>.</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV URL:</strong> <code>https://your-server.tld/webdav/</code></li>'
+        . '<li><strong>Start folder:</strong> <code>USERNAME/subfolder</code> — e.g. <code>demo.user/Photos/Slides</code></li>'
+        . '</ul>'
+        . '<h3>Nextcloud</h3>'
+        . '<ul>'
+        . '<li><strong>WebDAV URL:</strong> <code>https://cloud.example.com/remote.php/dav/files/USERNAME/</code></li>'
+        . '<li><strong>Start folder:</strong> optional, e.g. <code>Photos/Presentations</code></li>'
+        . '</ul>'
+        . '<h3>ownCloud</h3>'
+        . '<ul>'
+        . '<li><strong>WebDAV URL:</strong> <code>https://owncloud.example.com/remote.php/dav/files/USERNAME/</code></li>'
+        . '</ul>'
+        . '<h3>Synology NAS</h3>'
+        . '<p>Enable WebDAV in DSM under <strong>Control Panel → File Services → WebDAV</strong> (HTTPS recommended).</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV URL:</strong> <code>https://nas.example.com:5006/</code> or <code>https://nas.example.com/webdav/</code></li>'
+        . '<li><strong>Start folder:</strong> shared folder path, e.g. <code>photos/slides</code></li>'
+        . '</ul>'
+        . '<h3>Infomaniak kDrive</h3>'
+        . '<ul>'
+        . '<li><strong>WebDAV URL:</strong> <code>https://connect.drive.infomaniak.com/</code></li>'
+        . '<li><strong>Start folder:</strong> often <code>USERNAME/folder</code></li>'
+        . '</ul>'
+        . '<h3>Troubleshooting</h3>'
+        . '<ul>'
+        . '<li><strong>Sign-in failed</strong> — check username/password; try an app password (Nextcloud).</li>'
+        . '<li><strong>Folder not found</strong> — split URL root and start folder correctly.</li>'
+        . '<li><strong>Invalid URL</strong> — HTTPS only; no localhost or private IPs.</li>'
+        . '</ul>',
+
     'media_lib.sub_insert' => 'Insert',
     'media_lib.sub_overview' => 'Overview',
     'media_lib.title' => 'Media in this presentation',

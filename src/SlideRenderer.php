@@ -468,6 +468,9 @@ class SlideRenderer
             $extraClass = ' sf-text';
         } elseif ($type === 'image') {
             $src = self::assetUrl($obj['src'] ?? '', $publicToken);
+            if (!empty($obj['iconColor']) && SvgHelper::normalizeHex((string)$obj['iconColor']) !== null) {
+                $src .= (strpos($src, '?') !== false ? '&' : '?') . 'color=' . rawurlencode($obj['iconColor']);
+            }
             $innerStyle .= 'overflow:visible; box-sizing:border-box;';
             $stroke = $obj['stroke'] ?? 'transparent';
             $strokeWidth = (float)($obj['strokeWidth'] ?? 0);

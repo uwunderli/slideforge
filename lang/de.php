@@ -338,12 +338,20 @@ return [
     'props.fill_none' => 'Keine',
     'props.fill_none_hint' => 'Keine Füllfarbe – nur der Rahmen ist sichtbar. Rahmenfarbe/-breite weiter unten einstellen.',
     'props.border_color' => 'Rahmenfarbe',
+    'props.icon_color' => 'Iconfarbe',
     'props.border_width' => 'Rahmenbreite',
     'props.star_points' => 'Anzahl Zacken',
     'props.arrow_style' => 'Pfeil-Ausrichtung',
     'props.bubble_style' => 'Sprechblasen-Stil',
 
     'props.replace_image' => 'Bild ersetzen',
+    'props.remove_background' => 'Hintergrund entfernen',
+    'props.remove_background_hint' => 'Entfernt helle Hintergründe (z. B. Weiss) bei SVG und Fotos. Ergebnis wird als neue Datei gespeichert.',
+    'props.remove_background_working' => 'Entferne Hintergrund…',
+    'props.remove_background_failed' => 'Hintergrund konnte nicht entfernt werden.',
+    'props.remove_background_invalid' => 'Ungültige Bilddatei.',
+    'props.remove_background_not_found' => 'Bilddatei nicht gefunden.',
+    'props.remove_background_unsupported' => 'Dateityp wird nicht unterstützt.',
     'props.replace_video' => 'Video ersetzen',
     'props.replace_audio' => 'Audio ersetzen',
     'props.media_placeholder_hint' => 'Platzhalter im Editor &ndash; im fertigen Foliensatz spielt {type} echt ab.',
@@ -465,6 +473,10 @@ return [
     'profile.avatar_removed' => 'Profilbild entfernt.',
     'profile.passwords_mismatch' => 'Die neuen Passwörter stimmen nicht überein.',
     'profile.title' => 'Mein Profil',
+    'profile.tab_account' => 'Kontodaten',
+    'profile.tab_spellcheck' => 'Rechtschreibung',
+    'profile.tab_webdav' => 'WebDAV',
+    'profile.tab_password' => 'Passwort',
     'profile.back_to_dashboard' => 'Zurück zum Dashboard',
     'profile.role' => 'Rolle',
     'profile.role_admin' => 'Administrator',
@@ -611,7 +623,10 @@ return [
     'admin.cannot_delete_self' => 'Du kannst dich nicht selbst löschen.',
     'admin.user_deleted' => 'Benutzer gelöscht.',
     'admin.heading' => 'Einstellungen',
-    'admin.tab_general' => 'Allgemeine Einstellungen',
+    'admin.tab_general' => 'Allgemein',
+    'admin.tab_smtp' => 'SMTP',
+    'admin.tab_spellcheck' => 'Rechtschreibung',
+    'admin.tab_media' => 'Medien',
     'admin.tab_users' => 'Benutzerverwaltung',
     'admin.general_heading' => 'Allgemein',
     'admin.site_title' => 'Seitentitel',
@@ -746,6 +761,207 @@ return [
     'pixabay.video_type_film' => 'Film',
     'pixabay.video_type_animation' => 'Animation',
     'pixabay.preview_hint' => 'Zum Vergrössern klicken',
+    'pixabay.preview_by' => 'Von {user}',
+
+    'admin.iconify_heading' => 'Icons (Iconify)',
+    'admin.iconify_intro' => 'Ermöglicht die Suche nach SVG-Icons aus über 150 Icon-Sets im Editor. Kein API-Schlüssel nötig — Dienst von <a href="https://iconify.design/" target="_blank" rel="noopener">iconify.design</a>.',
+    'admin.iconify_enabled' => 'Iconify-Suche im Editor aktivieren',
+    'admin.iconify_save_btn' => 'Iconify speichern',
+    'admin.iconify_saved' => 'Iconify-Einstellungen gespeichert.',
+
+    'iconify.title' => 'Icons',
+    'iconify.search' => 'Suchen',
+    'iconify.search_placeholder' => 'Stichwort, z. B. home, Suche, Pfeil…',
+    'iconify.searching' => 'Suche…',
+    'iconify.importing' => 'Lade Icon herunter…',
+    'iconify.import_done' => 'Übernommen.',
+    'iconify.no_results' => 'Keine Treffer.',
+    'iconify.result_count' => '{count} Treffer (gesamt {total})',
+    'iconify.enter_query' => 'Bitte Suchbegriff eingeben.',
+    'iconify.error_generic' => 'Iconify-Anfrage fehlgeschlagen.',
+    'iconify.error_auth' => 'Nicht angemeldet.',
+    'iconify.error_not_found' => 'Präsentation nicht gefunden.',
+    'iconify.error_forbidden' => 'Kein Zugriff.',
+    'iconify.error_disabled' => 'Iconify ist deaktiviert. Bitte den Administrator kontaktieren.',
+    'iconify.error_edit' => 'Keine Bearbeitungsrechte.',
+    'iconify.error_csrf' => 'Ungültiges Sitzungs-Token. Seite neu laden.',
+    'iconify.error_unknown_action' => 'Unbekannte Aktion.',
+    'iconify.error_api' => 'Iconify-API nicht erreichbar.',
+    'iconify.error_invalid_icon' => 'Ungültiges Icon.',
+    'iconify.error_invalid_url' => 'Ungültige Download-URL.',
+    'iconify.error_download' => 'Download fehlgeschlagen.',
+    'iconify.error_too_large' => 'Datei ist zu gross.',
+    'iconify.error_type' => 'Dateityp nicht unterstützt.',
+    'iconify.error_save' => 'Speichern fehlgeschlagen.',
+    'iconify.use_object' => 'Auf Folie',
+    'iconify.attribution' => 'Icons via <a href="https://iconify.design/" target="_blank" rel="noopener">Iconify</a> — Lizenzen je Icon-Set',
+    'iconify.target_object' => 'Farbe wählen, dann Icon auf die Folie — Farbe später im Eigenschaften-Panel änderbar',
+    'iconify.open_from_media' => 'Icons durchsuchen…',
+    'iconify.icon_color' => 'Iconfarbe',
+    'iconify.brand_colors' => 'Standardfarben',
+    'iconify.prev' => 'Zurück',
+    'iconify.next' => 'Weiter',
+    'iconify.filter_collection' => 'Icon-Set',
+    'iconify.collection_all' => 'Alle Sets',
+    'iconify.collection_mdi' => 'Material Design Icons',
+    'iconify.collection_fa6_solid' => 'Font Awesome 6 Solid',
+    'iconify.collection_fa6_regular' => 'Font Awesome 6 Regular',
+    'iconify.collection_lucide' => 'Lucide',
+    'iconify.collection_tabler' => 'Tabler Icons',
+    'iconify.collection_material_symbols' => 'Material Symbols',
+    'iconify.collection_bi' => 'Bootstrap Icons',
+    'iconify.collection_ph' => 'Phosphor',
+    'iconify.collection_carbon' => 'Carbon',
+    'iconify.collection_ri' => 'Remix Icon',
+    'iconify.collection_simple_icons' => 'Simple Icons',
+    'iconify.preview_hint' => 'Zum Vergrössern klicken',
+
+    'admin.openclipart_heading' => 'Cliparts (Openclipart)',
+    'admin.openclipart_intro' => 'Ermöglicht die Suche nach freien SVG-Illustrationen im Editor. Kein API-Schlüssel nötig — Public-Domain-Cliparts von <a href="https://openclipart.org/" target="_blank" rel="noopener">openclipart.org</a>.',
+    'admin.openclipart_enabled' => 'Openclipart-Suche im Editor aktivieren',
+    'admin.openclipart_save_btn' => 'Openclipart speichern',
+    'admin.openclipart_saved' => 'Openclipart-Einstellungen gespeichert.',
+
+    'openclipart.title' => 'Cliparts',
+    'openclipart.search' => 'Suchen',
+    'openclipart.search_placeholder' => 'Stichwort, z. B. Katze, Baum, Auto…',
+    'openclipart.searching' => 'Suche…',
+    'openclipart.importing' => 'Lade Clipart herunter…',
+    'openclipart.import_done' => 'Übernommen.',
+    'openclipart.no_results' => 'Keine Treffer.',
+    'openclipart.result_count' => '{count} Treffer (ca. {total})',
+    'openclipart.enter_query' => 'Bitte Suchbegriff eingeben.',
+    'openclipart.error_generic' => 'Openclipart-Anfrage fehlgeschlagen.',
+    'openclipart.error_auth' => 'Nicht angemeldet.',
+    'openclipart.error_not_found' => 'Präsentation nicht gefunden.',
+    'openclipart.error_forbidden' => 'Kein Zugriff.',
+    'openclipart.error_disabled' => 'Openclipart ist deaktiviert. Bitte den Administrator kontaktieren.',
+    'openclipart.error_edit' => 'Keine Bearbeitungsrechte.',
+    'openclipart.error_csrf' => 'Ungültiges Sitzungs-Token. Seite neu laden.',
+    'openclipart.error_unknown_action' => 'Unbekannte Aktion.',
+    'openclipart.error_api' => 'Openclipart nicht erreichbar.',
+    'openclipart.error_invalid_clipart' => 'Ungültiges Clipart.',
+    'openclipart.error_invalid_url' => 'Ungültige Download-URL.',
+    'openclipart.error_download' => 'Download fehlgeschlagen.',
+    'openclipart.error_too_large' => 'Datei ist zu gross.',
+    'openclipart.error_type' => 'Dateityp nicht unterstützt.',
+    'openclipart.error_save' => 'Speichern fehlgeschlagen.',
+    'openclipart.use_object' => 'Auf Folie',
+    'openclipart.attribution' => 'Cliparts via <a href="https://openclipart.org/" target="_blank" rel="noopener">Openclipart</a> — Public Domain',
+    'openclipart.target_object' => 'Clipart auswählen und auf die Folie legen — Hintergrund danach im Eigenschaften-Panel entfernen',
+    'openclipart.open_from_media' => 'Cliparts durchsuchen…',
+    'openclipart.icon_color' => 'Farbe (einfache SVGs)',
+    'openclipart.brand_colors' => 'Standardfarben',
+    'openclipart.prev' => 'Zurück',
+    'openclipart.next' => 'Weiter',
+    'openclipart.preview_hint' => 'Zum Vergrössern klicken',
+
+    'webdav.title' => 'WebDAV',
+    'webdav.loading' => 'Ordner wird geladen…',
+    'webdav.importing' => 'Datei wird importiert…',
+    'webdav.import_done' => 'Übernommen.',
+    'webdav.empty_folder' => 'Keine Medien oder Unterordner in diesem Ordner.',
+    'webdav.error_generic' => 'WebDAV-Anfrage fehlgeschlagen.',
+    'webdav.error_auth' => 'Nicht angemeldet.',
+    'webdav.error_not_found' => 'Präsentation nicht gefunden.',
+    'webdav.error_forbidden' => 'Kein Zugriff.',
+    'webdav.error_edit' => 'Keine Bearbeitungsrechte.',
+    'webdav.error_csrf' => 'Ungültiges Sitzungs-Token. Seite neu laden.',
+    'webdav.error_unknown_action' => 'Unbekannte Aktion.',
+    'webdav.error_drive_not_found' => 'WebDAV-Laufwerk nicht gefunden.',
+    'webdav.error_invalid_path' => 'Ungültiger Pfad.',
+    'webdav.error_invalid_url' => 'Ungültige WebDAV-URL (nur HTTPS).',
+    'webdav.error_https_required' => 'Nur HTTPS-URLs sind erlaubt.',
+    'webdav.error_blocked_host' => 'Diese Adresse ist aus Sicherheitsgründen nicht erlaubt.',
+    'webdav.error_auth_failed' => 'Anmeldung fehlgeschlagen — Benutzername oder Passwort prüfen.',
+    'webdav.error_connection' => 'Verbindung zum WebDAV-Server fehlgeschlagen.',
+    'webdav.error_not_webdav' => 'An dieser URL antwortet kein WebDAV-Ordner — bitte Startordner angeben (z. B. webdav/BENUTZER/…).',
+    'webdav.error_download' => 'Download fehlgeschlagen.',
+    'webdav.error_too_large' => 'Datei ist zu gross.',
+    'webdav.error_type' => 'Nur Bilder, SVG, Video (MP4/WebM) und Audio (MP3/WAV/OGG/M4A) werden unterstützt.',
+    'webdav.error_save' => 'Speichern fehlgeschlagen.',
+    'webdav.error_invalid_label' => 'Bitte einen Anzeigenamen eingeben (max. 80 Zeichen).',
+    'webdav.error_invalid_username' => 'Bitte Benutzername eingeben.',
+    'webdav.error_password_required' => 'Passwort ist erforderlich.',
+    'webdav.use_object' => 'Auf Folie',
+    'webdav.target_object' => 'Ordner durchsuchen und Medien auf die Folie legen',
+    'webdav.up' => 'Nach oben',
+    'webdav.root' => 'Stamm',
+    'webdav.folder' => 'Ordner',
+    'webdav.file' => 'Datei',
+    'webdav.open_folder' => 'Ordner öffnen',
+    'webdav.breadcrumb' => 'Pfad',
+
+    'profile.webdav_heading' => 'WebDAV-Laufwerke',
+    'profile.webdav_intro' => 'Verbinde Cloud-Speicher (Nextcloud, ownCloud, Synology …) per WebDAV. Im Editor erscheinen konfigurierte Laufwerke unter «Medien» als eigene Schaltflächen.',
+    'profile.webdav_label' => 'Anzeigename',
+    'profile.webdav_label_placeholder' => 'z. B. Firmen-Cloud',
+    'profile.webdav_url' => 'WebDAV-URL',
+    'profile.webdav_url_hint' => 'GroupOffice/Nextcloud: Basis-URL (https://…) und Pfad ab /webdav/BENUTZER/ als Startordner.',
+    'profile.webdav_username' => 'Benutzername',
+    'profile.webdav_password' => 'Passwort',
+    'profile.webdav_password_keep' => 'Leer lassen = unverändert',
+    'profile.webdav_root' => 'Startordner (optional)',
+    'profile.webdav_root_placeholder' => 'z. B. Fotos/Präsentationen',
+    'profile.webdav_add' => 'Neues Laufwerk',
+    'profile.webdav_add_btn' => 'Laufwerk hinzufügen',
+    'profile.webdav_test' => 'Verbindung testen',
+    'profile.webdav_test_ok' => 'Verbindung erfolgreich.',
+    'profile.webdav_test_fail' => 'Verbindung fehlgeschlagen',
+    'profile.webdav_delete' => 'Laufwerk entfernen',
+    'profile.webdav_delete_confirm' => 'Dieses WebDAV-Laufwerk wirklich entfernen?',
+    'profile.webdav_saved' => 'WebDAV-Laufwerk gespeichert.',
+    'profile.webdav_deleted' => 'WebDAV-Laufwerk entfernt.',
+    'profile.webdav_help_btn' => 'Hilfe: WebDAV einrichten',
+    'profile.webdav_help_title' => 'WebDAV — gängige Anbieter einbinden',
+    'profile.webdav_help_body' => '<p>Verbinde Cloud-Speicher per WebDAV mit SlideForge. Zugangsdaten werden <strong>verschlüsselt</strong> gespeichert und nur vom Server genutzt. Im Editor erscheint jedes Laufwerk unter <strong>Medien</strong> als eigene Schaltfläche.</p>'
+        . '<h3>Felder im Profil</h3>'
+        . '<ul>'
+        . '<li><strong>Anzeigename</strong> — frei wählbar, z. B. «Galerie» oder «Firmen-Cloud».</li>'
+        . '<li><strong>WebDAV-URL</strong> — HTTPS-Adresse bis zum WebDAV-Stamm (siehe Beispiele unten).</li>'
+        . '<li><strong>Benutzername / Passwort</strong> — wie beim Login in der Cloud.</li>'
+        . '<li><strong>Startordner (optional)</strong> — Unterordner ab WebDAV-Stamm, z. B. <code>Bilder/Präsentationen</code> (ohne führenden <code>/</code>).</li>'
+        . '</ul>'
+        . '<p><strong>Tipp:</strong> Zuerst «Verbindung testen», dann speichern. Es funktionieren nur <strong>HTTPS</strong>-URLs; importiert werden Bilder und SVG (max. 15 MB).</p>'
+        . '<h3>GroupOffice</h3>'
+        . '<p>WebDAV ist in GroupOffice unter <strong>Dateien</strong> verfügbar. Die URL endet meist auf <code>/webdav/</code>.</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV-URL:</strong> <code>https://dein-server.tld/webdav/</code></li>'
+        . '<li><strong>Startordner:</strong> <code>BENUTZERNAME/Unterordner</code> — z. B. <code>max.muster/Fotos/Slidebilder</code></li>'
+        . '<li><strong>Benutzername:</strong> GroupOffice-Benutzername</li>'
+        . '</ul>'
+        . '<h3>Nextcloud</h3>'
+        . '<p>In Nextcloud findest du die WebDAV-Adresse unter <strong>Einstellungen → Sicherheit → Geräte &amp; Sitzungen</strong> (oder in den Datei-Einstellungen).</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV-URL:</strong> <code>https://cloud.example.com/remote.php/dav/files/BENUTZERNAME/</code></li>'
+        . '<li><strong>Startordner:</strong> optional, z. B. <code>Fotos/Präsentationen</code></li>'
+        . '<li><strong>Benutzername:</strong> Nextcloud-Benutzername (nicht zwingend E-Mail)</li>'
+        . '</ul>'
+        . '<h3>ownCloud</h3>'
+        . '<p>Entspricht Nextcloud — gleiches URL-Schema:</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV-URL:</strong> <code>https://owncloud.example.com/remote.php/dav/files/BENUTZERNAME/</code></li>'
+        . '<li><strong>Startordner:</strong> optional, Unterordner in deinen Dateien</li>'
+        . '</ul>'
+        . '<h3>Synology NAS</h3>'
+        . '<p>WebDAV muss in der DSM unter <strong>Systemsteuerung → Dateidienste → WebDAV</strong> aktiviert sein (HTTPS empfohlen).</p>'
+        . '<ul>'
+        . '<li><strong>WebDAV-URL:</strong> <code>https://nas.example.com:5006/</code> oder <code>https://nas.example.com/webdav/</code> (je nach Konfiguration)</li>'
+        . '<li><strong>Startordner:</strong> Freigegebener Ordner, z. B. <code>photos/slides</code></li>'
+        . '<li><strong>Benutzername:</strong> DSM-Benutzer mit Lesezugriff auf den Ordner</li>'
+        . '</ul>'
+        . '<h3>Infomaniak kDrive / kSuite</h3>'
+        . '<ul>'
+        . '<li><strong>WebDAV-URL:</strong> <code>https://connect.drive.infomaniak.com/</code></li>'
+        . '<li><strong>Startordner:</strong> oft <code>BENUTZERNAME/Ordner</code> — genaue Angaben in der kDrive-Dokumentation</li>'
+        . '</ul>'
+        . '<h3>Fehlersuche</h3>'
+        . '<ul>'
+        . '<li><strong>Anmeldung fehlgeschlagen</strong> — Benutzername oder Passwort prüfen; ggf. App-Passwort statt Hauptpasswort (Nextcloud).</li>'
+        . '<li><strong>Ordner nicht gefunden</strong> — Startordner und URL-Stamm trennen: URL bis <code>/webdav/</code> bzw. <code>/remote.php/dav/files/USER/</code>, Rest in Startordner.</li>'
+        . '<li><strong>Ungültige URL</strong> — nur <code>https://</code>, keine internen Adressen (localhost, 192.168.x.x).</li>'
+        . '</ul>',
+
     'pixabay.preview_by' => 'Von {user}',
     'media_lib.sub_insert' => 'Einbinden',
     'media_lib.sub_overview' => 'Übersicht',

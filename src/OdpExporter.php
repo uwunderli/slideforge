@@ -121,6 +121,20 @@ class OdpExporter
         return is_file($path) ? $path : null;
     }
 
+    private static function maybeTintSvgAsset(string $diskPath, array $obj): string
+    {
+        if (empty($obj['iconColor']) || strtolower(pathinfo($diskPath, PATHINFO_EXTENSION)) !== 'svg') {
+            return $diskPath;
+        }
+        $tinted = SvgHelper::tintSvg((string)file_get_contents($diskPath), (string)$obj['iconColor']);
+        $tmp = tempnam(sys_get_temp_dir(), 'sf_ic_');
+        if ($tmp === false) {
+            return $diskPath;
+        }
+        file_put_contents($tmp, $tinted);
+        return $tmp;
+    }
+
     private static function stripMarkdown(string $text): string
     {
         $text = preg_replace('/\[color=#[0-9a-fA-F]{6}\]|\[\/color\]|\[mark=#[0-9a-fA-F]{6}\]|\[\/mark\]|\[upper\]|\[\/upper\]|\[sc\]|\[\/sc\]/', '', $text);
@@ -184,6 +198,7 @@ class OdpExporter
         if ($type === 'image' && !empty($obj['src'])) {
             $diskPath = self::resolveAssetPath($obj['src'], $presentationId);
             if ($diskPath) {
+                $diskPath = self::maybeTintSvgAsset($diskPath, $obj);
                 $ext = strtolower(pathinfo($diskPath, PATHINFO_EXTENSION)) ?: 'png';
                 $zipName = 'image' . $styleId . '.' . $ext;
                 $mediaFiles[$zipName] = $diskPath;

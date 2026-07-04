@@ -99,8 +99,8 @@
     metaEl.textContent = metaParts.join(' · ');
 
     actionsEl.innerHTML =
-      '<button type="button" class="button button-sm pixabay-lightbox-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>' +
-      '<button type="button" class="button button-ghost button-sm pixabay-lightbox-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>';
+      '<button type="button" class="button button-sm pixabay-lightbox-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
+      '<button type="button" class="button button-ghost button-sm pixabay-lightbox-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>';
 
     actionsEl.querySelector('.pixabay-lightbox-use-bg')?.addEventListener('click', () => {
       importHit(hit, isVideo ? 'background-video' : 'background-image');
@@ -214,8 +214,8 @@
             (meta ? '<span class="pixabay-card-size">' + escapeHtml(meta) + '</span>' : '') +
           '</div>' +
           '<div class="pixabay-card-actions">' +
-            '<button type="button" class="button button-sm pixabay-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>' +
-            '<button type="button" class="button button-ghost button-sm pixabay-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
+            '<button type="button" class="button button-sm pixabay-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
+            '<button type="button" class="button button-ghost button-sm pixabay-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>' +
           '</div>' +
         '</div>'
       );

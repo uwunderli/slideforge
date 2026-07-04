@@ -16,23 +16,20 @@ Stand: Juli 2026 · Projekt: selbst gehosteter reveal.js-Editor (PHP, dateibasie
 | README | DE + englische Kurzfassung oben, Deployment-Docs vorhanden |
 | Lizenz | `LICENSE` (MIT) |
 | `.gitignore` | Secrets, `data/`, Uploads, Root-HTML, Logs, OS-Dateien |
-| Demo-Instanz | Noch nicht eingerichtet |
-| GitHub / Releases | Noch nicht veröffentlicht |
+| Demo-Instanz | [slideforge.service7.ch](https://slideforge.service7.ch/) — Deploy: `.deploy/deploy-demo.sh` |
+| GitHub / Releases | [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · aktuell **v1.0.4** |
 | Secrets | `.deploy/ssh.env` mit Zugangsdaten – **nicht committen** (Beispiel: `ssh.env.example`) |
 | Export-HTML im Root | `Medien Test.html` – per `.gitignore` ausgeschlossen |
-
-**Stärken fürs Marketing:** kein Composer, kein Docker-Zwang, Offline-HTML-Export,
-Präsentationsmodus, Multiuser, reveal.js-kompatibel.
 
 ---
 
 ## Offene Entscheidungen (vor Phase 1 klären)
 
 - [x] **Lizenz:** MIT (einfach, maximal offen) ~~oder AGPL-3.0~~
-- [ ] **Repo-Name:** `slideforge` / `SlideForge` / anderer Name?
+- [x] **Repo-Name:** `slideforge` auf GitHub
 - [x] **Git-Host:** GitHub ~~(empfohlen) oder Codeberg?~~
-- [ ] **Demo:** Subdomain ja/nein? Täglicher Reset der Demo-Daten? *(Phase 3)*
-- [ ] **Sprache README:** DE beibehalten + englische Kurzfassung oben, oder vollständig zweisprachig?
+- [x] **Demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) — Reset alle 12h via Cron
+- [x] **Sprache README:** DE + englische Kurzfassung oben
 
 ---
 
@@ -99,25 +96,10 @@ git log --oneline -5
 
 ---
 
-## Phase 4 – Bekanntmachen (Reihenfolge empfohlen)
-
-1. [ ] **awesome-selfhosted** – PR/Issue: SlideForge eintragen (Kategorie Presentation / Groupware o. Ä.)
-2. [ ] **Reddit** `r/selfhosted` – Post mit Demo-Link + GitHub (Regeln lesen)
-3. [ ] **Show HN** – nur wenn Demo stabil läuft
-4. [ ] **reveal.js**-Community (Discussions/Issues) – als Editor-Ergänzung, nicht als Fork
-5. [ ] Optional: Product Hunt, EDU-Foren (DACH), Schul-IT-Kreise
-
-**Textbausteine** (anpassen vor Veröffentlichung):
-
-> SlideForge is a self-hosted, file-based multi-user editor for reveal.js presentations.
-> No database, runs on any nginx+PHP host. Offline HTML export, presentation mode with live sync, templates, PPTX export, and more.
-
----
-
 ## Phase 5 – Nach der Veröffentlichung
 
 - [ ] Issues aktiv beantworten (Installation, Feature-Wünsche)
-- [ ] Kleine Releases (`v1.0.1`, …) bei Bugfixes
+- [x] Releases bis **v1.0.4** (WebDAV, Iconify, Openclipart, Admin-Tabs)
 - [ ] README „Known limitations“ pflegen (z. B. PPTX-Import fehlt, Konva-Teilformatierung im Canvas)
 - [ ] Optional: GitHub Discussions aktivieren
 - [ ] Optional: Roadmap-Issue oder `docs/ROADMAP.md`
@@ -155,12 +137,11 @@ find data -type f 2>/dev/null | head
 
 ## Erfolgskriterien
 
-Veröffentlichung ist „fertig“, wenn:
+Veröffentlichung ist abgeschlossen, wenn:
 
 1. Öffentliches Repo mit Lizenz und bereinigter `.gitignore` existiert
-2. Release **v1.0.0** mit Install-Hinweis online ist
-3. Mindestens eine Demo oder klare Screenshots vorhanden sind
-4. SlideForge an **einem** Discovery-Kanal (z. B. awesome-selfhosted) gelistet ist
+2. Release **v1.0.0** (und Folge-Releases) mit Install-Hinweis online ist
+3. Demo-Instanz und Feature-Tour öffentlich erreichbar sind
 
 ---
 
