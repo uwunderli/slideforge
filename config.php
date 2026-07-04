@@ -33,10 +33,14 @@ define('MAX_AUDIO_SIZE', 60 * 1024 * 1024);  // 60 MB (WAV ist unkomprimiert und
 // App-Name (für Titel etc.)
 define('APP_NAME', 'SlideForge');
 
+// Demo-Instanz: Banner auf allen Seiten mit Header (Login, Dashboard, Editor …).
+// Auf der öffentlichen Demo-Subdomain auf true setzen; Produktiv-Installation: false.
+define('DEMO_MODE', false);
+
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '225');
+define('ASSET_VERSION', '226');
 
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben

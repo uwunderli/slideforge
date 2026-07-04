@@ -68,6 +68,11 @@ class Config
         return (bool)self::get('registration_enabled', true);
     }
 
+    public static function demoMode(): bool
+    {
+        return defined('DEMO_MODE') && DEMO_MODE;
+    }
+
     public static function smtp(): array
     {
         return self::get('smtp', []);

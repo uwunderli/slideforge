@@ -7,6 +7,14 @@
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.0](https://github.com/uwunderli/slideforge/releases/tag/v1.0.0)
+
+<!-- Live demo: https://… (Subdomain eintragen, sobald Phase 3 Demo steht) -->
+
+## Screenshots
+
+Screenshots folgen in `docs/screenshots/` (Editor, Präsentationsmodus, Vorschau). Bis dahin: lokale Instanz oder Demo-Subdomain nutzen.
+
 ---
 
 Ein selbst-gehosteter, dateibasierter Multiuser-Editor für [reveal.js](https://revealjs.com)

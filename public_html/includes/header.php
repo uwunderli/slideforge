@@ -22,6 +22,9 @@ $currentLang = I18n::currentLang();
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?>>
+<?php if (Config::demoMode()): ?>
+<div class="demo-banner" role="status"><?= h(t('demo.banner')) ?></div>
+<?php endif; ?>
 <?php if ($currentUser): ?>
 <header class="topbar">
   <div class="topbar-main">

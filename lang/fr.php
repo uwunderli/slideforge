@@ -8,6 +8,8 @@ return [
     'nav.theme_to_light' => '☀️ Thème clair',
     'nav.language' => 'Langue',
 
+    'demo.banner' => 'Instance de démonstration – les données sont régulièrement effacées. Ne pas utiliser pour du contenu de production.',
+
     'header.context_edit' => 'Modifier :',
     'header.context_present' => 'Présenter',
 

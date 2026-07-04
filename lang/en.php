@@ -8,6 +8,8 @@ return [
     'nav.theme_to_light' => '☀️ Light theme',
     'nav.language' => 'Language',
 
+    'demo.banner' => 'Demo instance – data is reset regularly. Do not use for production content.',
+
     'header.context_edit' => 'Edit:',
     'header.context_present' => 'Present',
 

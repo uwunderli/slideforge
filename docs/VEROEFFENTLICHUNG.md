@@ -74,25 +74,25 @@ git log --oneline -5
 - [x] Neues **öffentliches** Repository erstellen (ohne README, wenn lokal schon vorhanden)
 - [x] Ersten Push durchführen → https://github.com/uwunderli/slideforge
 - [x] Repository-Beschreibung gesetzt
-- [ ] Repository-Topics setzen, z. B.:
+- [x] Repository-Topics gesetzt:
   `reveal-js`, `presentation`, `php`, `self-hosted`, `no-database`, `editor`
-  (Skript: `scripts/publish-phase2-github.sh` nach `gh auth login`)
 - [x] Default-Branch `main` bestätigen
 - [ ] Branch-Schutz optional später (PRs für Contributions)
 
 **Release v1.0.0:**
 
 - [x] Git-Tag `v1.0.0` setzen und gepusht
-- [ ] GitHub Release mit Kurztext (`.github/RELEASE_v1.0.0.md` vorbereitet)
+- [x] GitHub Release mit Kurztext (`.github/RELEASE_v1.0.0.md`)
 - [x] Source-ZIP anhängen (automatisch von GitHub sobald Release existiert)
 
 ---
 
 ## Phase 3 – Demo & Sichtbarkeit
 
-- [ ] Demo auf Subdomain (bestehendes Deployment nutzen oder separate Instanz)
-- [ ] Hinweis auf Demo-Seite: *„Testinstanz – Daten werden regelmässig gelöscht“*
-- [ ] **Screenshots** ins Repo (`docs/screenshots/` oder `README`):
+- [ ] Demo auf Subdomain (bestehendes Deployment nutzen oder separate Instanz) — siehe [docs/DEMO.md](DEMO.md)
+- [x] Hinweis auf Demo-Seite: `DEMO_MODE` in `config.php` + Banner (DE/EN/FR)
+- [x] Reset-Skript: `scripts/reset-demo-data.sh` (für Cron)
+- [ ] **Screenshots** ins Repo (`docs/screenshots/`):
   - Editor
   - Präsentationsmodus
   - Export / Vorschau

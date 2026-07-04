@@ -9,6 +9,8 @@ return [
     'nav.theme_to_light' => '☀️ Helles Design',
     'nav.language' => 'Sprache',
 
+    'demo.banner' => 'Testinstanz – Daten werden regelmässig gelöscht. Nicht für produktive Inhalte verwenden.',
+
     'header.context_edit' => 'Bearbeiten:',
     'header.context_present' => 'Präsentieren',
 
