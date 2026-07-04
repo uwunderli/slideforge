@@ -9,11 +9,13 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.0](https://github.com/uwunderli/slideforge/releases/tag/v1.0.0)
 
-**Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(Testinstanz – Reset alle 12h; Zugangsdaten auf der Login-Seite)*
+**Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
+
+**Feature tour:** [slideforge.service7.ch/view.php?token=slideforge-tour](https://slideforge.service7.ch/view.php?token=slideforge-tour) *(click through all features — no login)*
 
 ## Screenshots
 
-Screenshots folgen in `docs/screenshots/` (Editor, Präsentationsmodus, Vorschau). Bis dahin: lokale Instanz oder Demo-Subdomain nutzen.
+Static screenshots are replaced by the **[live feature tour](https://slideforge.service7.ch/view.php?token=slideforge-tour)** above. For a technical reference of every editor object, open the **Element-Showcase** presentation on the demo (after login as `admin`).
 
 ---
 

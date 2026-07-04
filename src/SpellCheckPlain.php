@@ -105,6 +105,8 @@ class SpellCheckPlain
         return match ($lang) {
             'en' => 'en-US',
             'fr' => 'fr',
+            'it' => 'it',
+            'rm' => 'rm',
             'de-CH' => 'de-CH',
             default => 'de-DE',
         };

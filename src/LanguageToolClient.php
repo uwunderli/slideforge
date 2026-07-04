@@ -147,9 +147,7 @@ class LanguageToolClient
             'language' => $languageCode,
             'enabledOnly' => 'false',
         ];
-        if ($languageCode === 'de-CH') {
-            $post['preferredVariants'] = 'de-CH';
-        }
+        // preferredVariants gilt nur mit language=auto; bei de-CH reicht language=de-CH.
         if (!empty($config['api_username'])) {
             $post['username'] = $config['api_username'];
         }

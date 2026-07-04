@@ -528,6 +528,8 @@ class Auth
         'de-CH' => 'Deutsch (Schweiz)',
         'en' => 'English',
         'fr' => 'Français',
+        'it' => 'Italiano',
+        'rm' => 'Rumantsch',
     ];
 
     public static function isSpellcheckLanguage(string $lang): bool

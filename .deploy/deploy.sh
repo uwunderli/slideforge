@@ -53,27 +53,46 @@ with_retry() {
   done
 }
 
+upload_one() {
+  local rel="$1"
+  local src="$ROOT/$rel"
+  [[ "$rel" == "config.php" ]] && src="$CONFIG_UPLOAD"
+  [[ -f "$src" ]] || return 0
+  curl_sftp -T "$src" "${REMOTE}/$rel"
+}
+
 upload_batch() {
-  local -a args=()
+  local -a rels=()
   local files=(config.php README.md)
   local dirs=(src lang seed docker public_html scripts)
+  local i=0
+  local failed=0
+  local total=0
 
   for f in "${files[@]}"; do
-    [[ -f "$ROOT/$f" ]] || continue
-    local src="$ROOT/$f"
-    [[ "$f" == "config.php" ]] && src="$CONFIG_UPLOAD"
-    args+=(-T "$src" "${REMOTE}/$f")
+    [[ -f "$ROOT/$f" ]] && rels+=("$f")
   done
 
   for dir in "${dirs[@]}"; do
     [[ -d "$ROOT/$dir" ]] || continue
     while IFS= read -r local; do
-      local rel="${local#$ROOT/}"
-      args+=(-T "$local" "${REMOTE}/$rel")
-    done < <(find "$ROOT/$dir" -type f | sort)
+      rels+=("${local#$ROOT/}")
+    done < <(find "$ROOT/$dir" -type f \
+      ! -path "$ROOT/public_html/uploads/*" | sort)
   done
 
-  curl_sftp "${args[@]}"
+  total=${#rels[@]}
+  echo "  Upload einzeln (${total} Datei(en)) …"
+  for rel in "${rels[@]}"; do
+    i=$((i + 1))
+    if ! with_retry upload_one "$rel"; then
+      echo "  FEHLER: $rel" >&2
+      failed=1
+    elif (( i % 20 == 0 || i == total )); then
+      echo "  … ${i}/${total}"
+    fi
+  done
+  return "$failed"
 }
 
 cmd="${1:-status}"
@@ -94,16 +113,35 @@ case "$cmd" in
       echo "  Demo-Modus: DEMO_MODE=true in config.php"
     fi
     file_count=$((
-      $(find "$ROOT"/src "$ROOT"/lang "$ROOT"/seed "$ROOT"/docker "$ROOT"/public_html "$ROOT"/scripts -type f 2>/dev/null | wc -l) +
+      $(find "$ROOT"/src "$ROOT"/lang "$ROOT"/seed "$ROOT"/docker "$ROOT"/public_html "$ROOT"/scripts -type f \
+        ! -path "$ROOT/public_html/uploads/*" 2>/dev/null | wc -l) +
       $( [[ -f "$ROOT/config.php" ]] && echo 1 || echo 0 ) +
       $( [[ -f "$ROOT/README.md" ]] && echo 1 || echo 0 )
     ))
     echo "  ${file_count} Datei(en) …"
-    with_retry upload_batch
+    if ! with_retry upload_batch; then
+      echo "Warnung: Mindestens ein Upload-Block fehlgeschlagen – ggf. erneut sync-code oder einzelne Dateien prüfen." >&2
+      exit 1
+    fi
+    echo "Fertig."
+    ;;
+  sync-demo)
+    "$0" sync-code
+    "$0" reset-demo
+    ;;
+  reset-demo)
+    echo "Setze Demo-Daten zurück (${label}) …"
+    if [[ "${DEPLOY_DEMO_MODE:-0}" != "1" ]]; then
+      echo "Hinweis: DEPLOY_DEMO_MODE ist nicht gesetzt – config.php auf dem Server braucht DEMO_MODE=true." >&2
+    fi
+    demo_url="${DEMO_URL:-https://slideforge.service7.ch/demo-reset.php}"
+    echo "  Aufruf: $demo_url"
+    body="$(curl -sS -L "$demo_url" || true)"
+    echo "$body"
     echo "Fertig."
     ;;
   *)
-    echo "Usage: $0 [--env <file>] {status|upload-file <local> <remote>|sync-code}" >&2
+    echo "Usage: $0 [--env <file>] {status|upload-file <local> <remote>|sync-code|sync-demo|reset-demo}" >&2
     exit 1
     ;;
 esac

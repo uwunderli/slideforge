@@ -548,6 +548,69 @@ class Presentation
         return $count;
     }
 
+    /**
+     * Importiert eine Seed-Präsentation (keine Vorlage) aus seed/<name>/.
+     * @return string|null neue Präsentations-ID
+     */
+    public static function importSeedPresentation(string $ownerId, string $seedDir): ?string
+    {
+        $metaPath = $seedDir . '/meta.json';
+        $slidesPath = $seedDir . '/slides.json';
+        if (!is_file($metaPath) || !is_file($slidesPath)) {
+            return null;
+        }
+        $seedMeta = json_decode((string)file_get_contents($metaPath), true);
+        if (!is_array($seedMeta)) {
+            return null;
+        }
+        $slidesData = json_decode((string)file_get_contents($slidesPath), true);
+        if (!is_array($slidesData)) {
+            return null;
+        }
+
+        $seedAssetId = (string)($seedMeta['seed_asset_id'] ?? basename($seedDir));
+
+        $newId = self::create(
+            $ownerId,
+            $seedMeta['title'] ?? 'Showcase',
+            (int)($seedMeta['width'] ?? DEFAULT_SLIDE_WIDTH),
+            (int)($seedMeta['height'] ?? DEFAULT_SLIDE_HEIGHT),
+            false
+        );
+
+        $seedAssets = $seedDir . '/assets';
+        $dstAssets = self::dir($newId) . '/assets';
+        if (is_dir($seedAssets)) {
+            foreach (glob($seedAssets . '/*') ?: [] as $file) {
+                if (is_file($file)) {
+                    copy($file, $dstAssets . '/' . basename($file));
+                }
+            }
+        }
+
+        $json = json_encode($slidesData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = str_replace('asset.php?id=' . urlencode($seedAssetId) . '&', 'asset.php?id=' . urlencode($newId) . '&', $json);
+        $slidesData = json_decode($json, true) ?? ['slides' => []];
+        Storage::write(self::dir($newId) . '/slides.json', $slidesData);
+
+        if (!empty($seedMeta['public_link']['enabled'])) {
+            $token = trim((string)($seedMeta['public_link']['token'] ?? ''));
+            if ($token === '') {
+                $token = Storage::generateId(12);
+            }
+            Storage::update(self::dir($newId) . '/acl.json', function ($acl) use ($token) {
+                $acl['public'] = [
+                    'enabled' => true,
+                    'token' => $token,
+                    'permission' => 'view',
+                ];
+                return $acl;
+            });
+        }
+
+        return $newId;
+    }
+
     private static function importSeedTemplate(string $ownerId, string $seedId, array $seedMeta, string $slidesPath): void
     {
         $slidesData = json_decode((string)file_get_contents($slidesPath), true);

@@ -6,6 +6,9 @@ class Demo
 {
     public const RESET_INTERVAL_SECONDS = 12 * 3600;
 
+    /** Fester Token für die öffentliche Feature-Tour (README / Marketing). */
+    public const FEATURE_TOUR_TOKEN = 'slideforge-tour';
+
     /** @var list<array{username:string,email:string,password:string,role:string}> */
     public const ACCOUNTS = [
         ['username' => 'admin', 'email' => 'admin@service7.ch', 'password' => 'admin', 'role' => 'admin'],
@@ -98,10 +101,40 @@ class Demo
         }
 
         self::clearUploads(PUBLIC_UPLOADS_PATH);
-        self::seedUsers();
+        self::seedDefaultTextTemplates();
+
+        $adminId = self::seedUsers();
+        if ($adminId !== null) {
+            self::seedDefaultSlideTemplates($adminId);
+            self::seedShowcasePresentation($adminId);
+            self::seedFeatureTour($adminId);
+        }
+
         self::applyDemoSiteConfig();
 
         self::writeState(['next_reset_at' => time() + self::RESET_INTERVAL_SECONDS]);
+    }
+
+    /** Textvorlagen wie bei einer frischen Installation (config.php-Defaults). */
+    private static function seedDefaultTextTemplates(): void
+    {
+        Storage::write(TEXT_TEMPLATES_FILE, [
+            ['id' => 'title', 'name' => 'Titel', 'fontFamily' => 'Open Sans', 'fontSize' => 120, 'fontWeight' => 'bold', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'center', 'w' => 1270, 'h' => 90],
+            ['id' => 'subtitle', 'name' => 'Untertitel', 'fontFamily' => 'PT Sans', 'fontSize' => 68, 'fontWeight' => 'normal', 'italic' => true, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#94c2dc', 'align' => 'center', 'w' => 1270, 'h' => 80],
+            ['id' => '0b3aec509d2e', 'name' => 'Überschrift 1', 'fontFamily' => 'Open Sans', 'fontSize' => 86, 'fontWeight' => 'bold', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 100],
+            ['id' => '6ccca4e48029', 'name' => 'Überschrift 2', 'fontFamily' => 'Open Sans', 'fontSize' => 74, 'fontWeight' => 'normal', 'italic' => true, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 60],
+            ['id' => '982874cf3eb0', 'name' => 'Überschrift 3', 'fontFamily' => 'Open Sans', 'fontSize' => 68, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 60],
+            ['id' => 'standard', 'name' => 'Text', 'fontFamily' => 'Open Sans', 'fontSize' => 65, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'left', 'w' => 599, 'h' => 70],
+        ]);
+    }
+
+    private static function seedDefaultSlideTemplates(string $adminId): void
+    {
+        $seedDir = BASE_PATH . '/seed/templates';
+        if (!is_dir($seedDir)) {
+            return;
+        }
+        Presentation::seedDefaultTemplates($adminId);
     }
 
     private static function clearUploads(string $dir): void
@@ -130,7 +163,15 @@ class Demo
         if (!is_dir($dir)) {
             return;
         }
-        foreach (scandir($dir) ?: [] as $entry) {
+        if (!is_readable($dir)) {
+            @rmdir($dir);
+            return;
+        }
+        $entries = @scandir($dir);
+        if ($entries === false) {
+            return;
+        }
+        foreach ($entries as $entry) {
             if ($entry === '.' || $entry === '..') {
                 continue;
             }
@@ -140,7 +181,8 @@ class Demo
         @rmdir($dir);
     }
 
-    private static function seedUsers(): void
+    /** @return string|null Admin-User-ID nach dem Anlegen der Demo-Konten */
+    private static function seedUsers(): ?string
     {
         $adminId = null;
         $now = date('c');
@@ -167,9 +209,35 @@ class Demo
             return $users;
         }, []);
 
-        if ($adminId !== null) {
-            Presentation::seedDefaultTemplates($adminId);
+        return $adminId;
+    }
+
+    private static function seedShowcasePresentation(string $adminId): void
+    {
+        $seedDir = BASE_PATH . '/seed/demo-showcase';
+        if (!is_dir($seedDir)) {
+            return;
         }
+        $presId = Presentation::importSeedPresentation($adminId, $seedDir);
+        if ($presId === null) {
+            return;
+        }
+        $users = Storage::read(USERS_FILE, []);
+        foreach ($users as $u) {
+            if (strcasecmp($u['username'] ?? '', 'editor') === 0) {
+                Presentation::addShare($presId, $u['id'], $u['username'], 'edit');
+                break;
+            }
+        }
+    }
+
+    private static function seedFeatureTour(string $adminId): void
+    {
+        $seedDir = BASE_PATH . '/seed/feature-tour';
+        if (!is_dir($seedDir)) {
+            return;
+        }
+        Presentation::importSeedPresentation($adminId, $seedDir);
     }
 
     private static function applyDemoSiteConfig(): void

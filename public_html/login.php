@@ -53,7 +53,6 @@ require __DIR__ . '/includes/header.php';
         <thead>
           <tr>
             <th><?= h(t('demo.col_username')) ?></th>
-            <th><?= h(t('demo.col_email')) ?></th>
             <th><?= h(t('demo.col_password')) ?></th>
             <th><?= h(t('demo.col_role')) ?></th>
           </tr>
@@ -62,7 +61,6 @@ require __DIR__ . '/includes/header.php';
           <?php foreach (Demo::accountRows() as $acc): ?>
           <tr>
             <td><code><?= h($acc['username']) ?></code></td>
-            <td><code><?= h($acc['email']) ?></code></td>
             <td><code><?= h($acc['password']) ?></code></td>
             <td><?= h($acc['role_label']) ?></td>
           </tr>

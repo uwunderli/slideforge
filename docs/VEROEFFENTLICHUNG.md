@@ -92,10 +92,9 @@ git log --oneline -5
 - [x] Demo auf Subdomain → [slideforge.service7.ch](https://slideforge.service7.ch/) (Deploy: `.deploy/deploy-demo.sh`)
 - [x] Hinweis auf Demo-Seite: `DEMO_MODE` in `config.php` + Banner (DE/EN/FR)
 - [x] Reset-Skript: `scripts/reset-demo-data.sh` (für Cron)
-- [ ] **Screenshots** ins Repo (`docs/screenshots/`):
-  - Editor
-  - Präsentationsmodus
-  - Export / Vorschau
+- [x] **Feature-Tour** statt Screenshots — öffentlicher Link (festes Token `slideforge-tour`):
+  - https://slideforge.service7.ch/view.php?token=slideforge-tour
+  - Seed: `seed/feature-tour/` · wird bei jedem Demo-Reset neu angelegt
 - [ ] Optional: 2-Minuten-Screencast (YouTube/Vimeo, Link im README)
 
 ---
