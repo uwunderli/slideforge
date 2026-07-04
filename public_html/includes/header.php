@@ -8,20 +8,34 @@ $siteTitle = Config::siteTitle();
 $logoUrl = Config::logoUrl();
 $redirectUri = urlencode($_SERVER['REQUEST_URI'] ?? 'index.php');
 $currentLang = I18n::currentLang();
+$webBase = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
+$webPrefix = $webBase === '' ? '' : $webBase;
+$pwaIcon = $webPrefix . '/assets/pwa/icon-180.png';
+$manifestUrl = $webPrefix . '/manifest.php';
 ?>
 <!DOCTYPE html>
 <html lang="<?= h($currentLang) ?>" data-theme="<?= h($theme) ?>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#3a6c8d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="<?= h(Config::siteTitle()) ?>">
+<link rel="manifest" href="<?= h($manifestUrl) ?>">
+<link rel="apple-touch-icon" href="<?= h($pwaIcon) ?>">
 <title><?= h($pageTitle ?? $siteTitle) ?> · <?= h($siteTitle) ?></title>
 <?php if ($logoUrl): ?>
 <link rel="icon" href="<?= h($logoUrl) ?>">
+<?php else: ?>
+<link rel="icon" type="image/png" sizes="192x192" href="<?= h($webPrefix . '/assets/pwa/icon-192.png') ?>">
 <?php endif; ?>
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
 <link rel="stylesheet" href="assets/css/mobile.css?v=<?= ASSET_VERSION ?>">
 <script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/pwa.js?v=<?= ASSET_VERSION ?>" defer></script>
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?>>
 <?php if (Config::demoMode()): ?>
