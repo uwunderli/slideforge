@@ -15,4 +15,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PPTX import, user roles, SMTP mail, invite links, DE/EN/FR UI
 - Seven default slide templates seeded on first admin registration
 
-[1.0.0]: https://github.com/PLACEHOLDER/slideforge/releases/tag/v1.0.0
+[1.0.0]: https://github.com/uwunderli/slideforge/releases/tag/v1.0.0
