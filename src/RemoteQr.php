@@ -29,9 +29,14 @@ class RemoteQr
         }
 
         ob_start();
-        QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+        $prevLevel = error_reporting(E_ERROR);
+        try {
+            QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+        } finally {
+            error_reporting($prevLevel);
+        }
         $png = ob_get_clean();
-        if ($png === false || strlen($png) < 64) {
+        if ($png === false || strlen($png) < 64 || strncmp($png, "\x89PNG", 4) !== 0) {
             return null;
         }
 
@@ -54,9 +59,21 @@ class RemoteQr
             require BASE_PATH . '/src/phpqrcode/qrlib.php';
         }
 
+        $prevLevel = error_reporting(E_ERROR);
+        ob_start();
+        try {
+            QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+        } finally {
+            error_reporting($prevLevel);
+        }
+        $png = ob_get_clean();
+        if ($png === false || strlen($png) < 64 || strncmp($png, "\x89PNG", 4) !== 0) {
+            return false;
+        }
+
         header('Content-Type: image/png');
         header('Cache-Control: private, max-age=3600');
-        QRcode::png($data, false, QR_ECLEVEL_H, 10, 4);
+        echo $png;
 
         return true;
     }

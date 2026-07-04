@@ -59,6 +59,9 @@ function tourStrings(): array
             'present_title' => 'Präsentationsmodus',
             'present_body' => "Echtes **reveal.js** — nicht nur Screenshots.\n\nLive-Sync, Laserpointer, Notizen, Timer.",
             'present_caption' => 'Vollbild-Präsentation wie beim Vortrag',
+            'remote_title' => 'Mobile Fernsteuerung',
+            'remote_body' => "**Smartphone** als Fernbedienung über **HTTPS** — kein gemeinsames WLAN nötig.\n\nTabs: Folie, Vorschau, Uhr, Timer, Laser · **Fortschrittsbalken** am Handy.\n\n**QR-Code** im Present-Menü oder Link teilen.",
+            'remote_caption' => 'Remote-Oberfläche auf dem Smartphone (present_remote.php)',
             'export_title' => 'Export',
             'export_body' => "- **Offline-HTML** (Einzeldatei)\n- **PDF**\n- **PPTX / ODP** *(mit Einschränkungen — Layout und Animationen werden vereinfacht)*\n- Öffentlicher **View-Link**",
             'oss_title' => 'Open Source · MIT',
@@ -92,6 +95,9 @@ function tourStrings(): array
             'present_title' => 'Presentation mode',
             'present_body' => "Real **reveal.js** output — not screenshots.\n\nLive sync, laser pointer, notes, timer.",
             'present_caption' => 'Fullscreen presentation view',
+            'remote_title' => 'Mobile remote control',
+            'remote_body' => "Use your **phone** as a remote over **HTTPS** — no shared Wi‑Fi required.\n\nTabs: slide, preview, clock, timer, laser · **progress bar** on the phone.\n\n**QR code** in the present menu or share the remote link.",
+            'remote_caption' => 'Remote UI on a smartphone (present_remote.php)',
             'export_title' => 'Export anywhere',
             'export_body' => "- **Offline HTML** (single file)\n- **PDF**\n- **PPTX / ODP** *(with limitations — layout and animations are simplified)*\n- Public **view link**",
             'oss_title' => 'Open source · MIT',
@@ -125,6 +131,9 @@ function tourStrings(): array
             'present_title' => 'Mode présentation',
             'present_body' => "Vrai **reveal.js** — pas une capture d’écran.\n\nSync live, pointeur laser, notes, minuterie.",
             'present_caption' => 'Présentation plein écran',
+            'remote_title' => 'Télécommande mobile',
+            'remote_body' => "**Smartphone** comme télécommande via **HTTPS** — pas besoin du même Wi‑Fi.\n\nOnglets : diapo, aperçu, horloge, minuterie, laser · **barre de progression** sur le téléphone.\n\n**QR code** dans le menu présentation ou lien à partager.",
+            'remote_caption' => 'Interface remote sur smartphone (present_remote.php)',
             'export_title' => 'Export',
             'export_body' => "- **HTML hors ligne** · **PDF**\n- **PPTX / ODP** *(avec limitations — mise en page et animations simplifiées)*\n- Lien public **view**",
             'oss_title' => 'Open source · MIT',
@@ -156,8 +165,11 @@ function tourStrings(): array
             'tpl_body' => "- **Modelli di diapositive** e stili testo\n- **Colori brand** modificabili\n- **Pixabay** (opzionale)\n- Icone **Iconify** e cliparts **Openclipart** (senza API key)\n- **WebDAV** — cloud/NAS dal profilo\n- **Rimuovi sfondo** sulle immagini",
             'tpl_caption' => 'Modelli, stili testo e palette',
             'present_title' => 'Modalità presentazione',
-            'present_body' => "Vero **reveal.js** — non screenshot.\n\nSync live, puntatore laser, note.",
+            'present_body' => "Vero **reveal.js** — non screenshot.\n\nSync live, puntatore laser, note, timer.",
             'present_caption' => 'Presentazione a schermo intero',
+            'remote_title' => 'Telecomando mobile',
+            'remote_body' => "**Smartphone** come telecomando via **HTTPS** — nessun Wi‑Fi condiviso necessario.\n\nTab: slide, anteprima, orologio, timer, laser · **barra di avanzamento** sul telefono.\n\n**QR code** nel menu presentazione o link da condividere.",
+            'remote_caption' => 'Interfaccia remote su smartphone (present_remote.php)',
             'export_title' => 'Export',
             'export_body' => "- **HTML offline** · **PDF**\n- **PPTX / ODP** *(con limitazioni — layout e animazioni semplificati)*\n- Link pubblico",
             'oss_title' => 'Open source · MIT',
@@ -189,8 +201,11 @@ function tourStrings(): array
             'tpl_body' => "- **Models da slides** e stils da text\n- **Colurs da marca**\n- **Pixabay**, **Iconify**, **Openclipart**\n- **WebDAV** — medias cloud/NAS en profil",
             'tpl_caption' => 'Models e palette',
             'present_title' => 'Modus presentaziun',
-            'present_body' => "Ver **reveal.js** — betg mo screenshots.\n\nSync live, laser, notas.",
+            'present_body' => "Ver **reveal.js** — betg mo screenshots.\n\nSync live, laser, notas, timer.",
             'present_caption' => 'Presentaziun a plen maletg',
+            'remote_title' => 'Telecumanda mobil',
+            'remote_body' => "**Smartphone** sco telecumanda via **HTTPS** — nagin WLAN commun necessari.\n\nTabs: slide, previsa, ura, timer, laser · **barra da progress** sin telefon.\n\n**QR code** en il menu presentaziun u link da divider.",
+            'remote_caption' => 'Interface remote sin smartphone (present_remote.php)',
             'export_title' => 'Export',
             'export_body' => "- **HTML offline** · **PDF**\n- **PPTX / ODP** *(cun limitaziuns — layout e animaziuns simplifitgadas)*",
             'oss_title' => 'Open source · MIT',
@@ -424,6 +439,17 @@ function buildSlides(string $lang, array $s): array
         'autoAdvance' => 0,
         'notes' => '',
         'objects' => [heading('pr1', $s['present_title']), bodyText('pr1b', $s['present_body'])],
+    ];
+
+    $slides[] = screenshotSlide('remote', $s['remote_title'], $s['remote_caption'], 'ui-remote.png', 'slide');
+
+    $slides[] = [
+        'id' => 'remotetxt',
+        'background' => ['type' => 'color', 'value' => '#111318'],
+        'transition' => 'fade',
+        'autoAdvance' => 0,
+        'notes' => '',
+        'objects' => [heading('rm1', $s['remote_title']), bodyText('rm1b', $s['remote_body'])],
     ];
 
     $slides[] = [

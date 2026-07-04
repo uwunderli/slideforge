@@ -5,6 +5,17 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-07-04
+
+### Added
+
+- **Feature-Tour (Demo):** Folien „Mobile Fernsteuerung“ mit Screenshot in DE / EN / FR / IT / RM
+- Screenshot-Asset `ui-remote.png` und erweitertes Capture-Skript (`capture_feature_tour_screenshots.py`)
+
+### Fixed
+
+- **QR-Code** im Present-Menü: PHP-Warnungen aus phpqrcode zerstörten die PNG-Ausgabe — Konstanten-Guards und sauberer Output-Buffer in `RemoteQr.php`
+
 ## [2.0.0] - 2026-07-04
 
 ### Added
