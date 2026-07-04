@@ -1,7 +1,7 @@
 # SlideForge
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[License: MIT](LICENSE)
+[PHP](https://www.php.net/)
 
 **SlideForge** is a self-hosted, file-based multi-user editor for [reveal.js](https://revealjs.com) presentations. It runs on any nginx + PHP host with **no database** and no Composer dependency. You get a full canvas editor, presentation mode with live sync, offline HTML export, templates, and PPTX/ODP/PDF export. Data is stored as JSON files under `data/`, so backup and migration stay simple.
 
@@ -16,9 +16,11 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 ---
 
 Ein selbst-gehosteter, dateibasierter Multiuser-Editor für [reveal.js](https://revealjs.com)
-Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig.
+Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 
 ## SlideForge – Funktionen
+
+
 
 ### Dashboard
 
@@ -33,6 +35,8 @@ Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig
 - **Export:** offline-fähiges HTML (Einzeldatei oder ZIP), PowerPoint (`.pptx`), OpenDocument (`.odp`), PDF (über Browser-Druckdialog)
 - Alle Daten als JSON-Dateien unter `data/` – keine Datenbank
 
+
+
 ### Editor
 
 - **Canvas-Editor (Konva.js):** Folien als verschiebbare Tabs (Drag & Drop), Zoomen (+/−/Einpassen), Karo-Hintergrund exakt foliengross
@@ -40,7 +44,7 @@ Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig
 - **Eigenschaften-Panel** in Tabs **Format**, **Form**, **Position**, **Effekt** – inkl. Füllfarbe/Verlauf, Rahmen, Schrift, Teilformatierung, Animationen
 - **Hintergründe:** Volltonfarbe (Marken-Palette), Farbverlauf, Bild-/Video-Upload – Medien liegen ausserhalb des Web-Roots und werden über `asset.php` ausgeliefert
 - **Medien-Tab** und optional **Pixabay-Suche** (lizenzfreie Bilder/Videos direkt als Hintergrund oder Objekt übernehmen)
-- **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
+- **Markdown** in Textobjekten (`**fett`**, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
 - **Vorlagen:** editierbare Markenfarben, Textvorlagen, Folienvorlagen (privat oder für alle freigegeben)
 - **Rechtschreibung & Grammatik** über LanguageTool (Admin konfiguriert den Server), optional automatische Prüfung vor dem Präsentieren
@@ -48,6 +52,8 @@ Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig
 - Auto-Speichern, Notizen pro Folie (Markdown)
 - Eigene **Ansehen-Ansicht** für Nutzer ohne Bearbeitungsrecht (kein fehleranfälliger Editor-Code)
 - Einstellungen für Fortschrittsbalken, Navigationspfeile, Präsentationsdauer, Zeitleiste und Uhr-Anzeigen
+
+
 
 ### Präsentation
 
@@ -58,6 +64,8 @@ Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig
 - Touch-taugliche Vor-/Zurück-Steuerung, responsives Layout für Tablets
 - Echte **reveal.js**-Ausgabe in Vorschau (`preview.php`), öffentlichem Link (`view.php`) und Export
 - Audio-/Video-Wiedergabe: manuell, bei Klick oder automatisch nach Verzögerung; optional Dauerschleife
+
+
 
 ### Admin
 
@@ -70,6 +78,8 @@ Präsentationen. Läuft auf jedem nginx+PHP-Webspace, **keine Datenbank** nötig
 - **Vorlagen-Verwaltung** für Markenfarben und Textstile (nur Admins)
 - Mehrsprachige Oberfläche: Deutsch, Englisch, Französisch, Italienisch, Rumantsch
 - Hell/Dunkel-Theme pro Benutzer
+
+
 
 ## Installation
 
@@ -121,14 +131,13 @@ Upload-Limits beim Docker-Image optional über `PHP_UPLOAD_MAX_FILESIZE` und `PH
 
 1. Gesamten Ordner auf den Server hochladen, z. B. nach `/var/www/slideforge/`.
 2. Schreibrechte für `data/` und `public_html/uploads/`:
-   ```bash
+  ```bash
    chown -R www-data:www-data /var/www/slideforge/data /var/www/slideforge/public_html/uploads
    chmod -R 770 /var/www/slideforge/data /var/www/slideforge/public_html/uploads
-   ```
+  ```
    (User an eure PHP-FPM-Konfiguration anpassen.)
 3. nginx-Serverblock mit `root` auf `public_html`:
-
-   ```nginx
+  ```nginx
    server {
        listen 80;
        server_name praesentationen.eure-domain.tld;
@@ -149,8 +158,7 @@ Upload-Limits beim Docker-Image optional über `PHP_UPLOAD_MAX_FILESIZE` und `PH
            deny all;
        }
    }
-   ```
-
+  ```
 4. Aufrufen: `https://praesentationen.eure-domain.tld/register.php`
 
 Kein `.htaccess` nötig – die Absicherung erfolgt dadurch, dass `data/`, `src/` und `config.php` ausserhalb von `root` liegen. Optional enthält `docker/nginx-conf/default.conf` zusätzliche `deny`-Regeln als zweite Sicherheitsebene.
@@ -161,9 +169,9 @@ Für klassisches Shared Hosting (cPanel, Plesk, Hostpoint, Metanet usw.), wo ihr
 
 1. **PHP-Version prüfen:** mindestens **8.2** im Hosting-Panel aktivieren.
 2. **Dateien hochladen** (FTP/SFTP): den **kompletten** Projektordner auf den Server legen, z. B. nach `~/slideforge/` oder `~/domains/example.com/slideforge/`.
-3. **Document Root setzen:** im Hosting-Panel den Document Root (Webroot) der Domain/Unterdomain auf den Unterordner **`public_html`** innerhalb des Projektordners zeigen lassen – **nicht** auf das Projektverzeichnis selbst.
-   - Beispiel: Dateien liegen in `/home/user/slideforge/` → Document Root = `/home/user/slideforge/public_html`
-   - Liegen `config.php`, `src/` und `data/` damit eine Ebene **über** dem Web-Root, sind Nutzdaten nicht per URL erreichbar.
+3. **Document Root setzen:** im Hosting-Panel den Document Root (Webroot) der Domain/Unterdomain auf den Unterordner `public_html` innerhalb des Projektordners zeigen lassen – **nicht** auf das Projektverzeichnis selbst.
+  - Beispiel: Dateien liegen in `/home/user/slideforge/` → Document Root = `/home/user/slideforge/public_html`
+  - Liegen `config.php`, `src/` und `data/` damit eine Ebene **über** dem Web-Root, sind Nutzdaten nicht per URL erreichbar.
 4. **Schreibrechte:** `data/` und `public_html/uploads/` müssen für den Webserver beschreibbar sein (im Panel oft „Rechte 775“ oder „Schreibbar für Gruppe“; bei Problemen kurz testweise 777, danach wieder einschränken).
 5. **PHP-Limits:** `upload_max_filesize` und `post_max_size` mindestens auf die gewünschte Maximalgrösse setzen (Bilder standardmässig 15 MB, Videos 60 MB – änderbar in `config.php`). PDF-Import braucht die PHP-Erweiterung **Imagick** mit Ghostscript.
 6. **HTTPS aktivieren** (Let’s Encrypt im Panel) – wichtig für Session-Cookies.
@@ -172,6 +180,8 @@ Für klassisches Shared Hosting (cPanel, Plesk, Hostpoint, Metanet usw.), wo ihr
 Falls euer Hoster **keinen** Document Root auf einen Unterordner erlaubt, müsst ihr die Struktur anpassen oder einen VPS/nginx-Webspace verwenden – SlideForge setzt voraus, dass nur `public_html/` öffentlich erreichbar ist.
 
 ## Weiteres
+
+
 
 ### Erster Start
 
@@ -186,6 +196,8 @@ Beim ersten Admin werden zudem sieben Standard-Folienvorlagen aus `seed/template
 - Präsentations-IDs sind zufällige Hex-Strings – dienen **nicht** als alleiniger Schutz; Zugriff wird immer über Berechtigungsprüfung gesteuert.
 - Öffentliche Links sind immer **nur Ansehen** – Bearbeitungsrechte per öffentlichem Link gibt es bewusst nicht.
 - Bild-Uploads: max. 15 MB, Videos: max. 60 MB (in `config.php` über `MAX_IMAGE_SIZE` / `MAX_VIDEO_SIZE` anpassbar).
+
+
 
 ### KI-Hinweis
 
