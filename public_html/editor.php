@@ -64,6 +64,7 @@ $bootstrap = [
     'templateMode' => $isTemplateMode,
     'i18n' => [
         'loading' => t('template_modal.loading'),
+        'saved' => t('editor.saved'),
         'error' => t('template_modal.error'),
         'empty' => t('template_modal.empty'),
         'own' => t('template_modal.own'),
@@ -125,6 +126,10 @@ $bootstrap = [
         'arrowStyle' => t('props.arrow_style'),
         'bubbleStyle' => t('props.bubble_style'),
         'replaceImage' => t('props.replace_image'),
+        'removeBackground' => t('props.remove_background'),
+        'removeBackgroundHint' => t('props.remove_background_hint'),
+        'removeBackgroundWorking' => t('props.remove_background_working'),
+        'removeBackgroundFailed' => t('props.remove_background_failed'),
         'replaceVideo' => t('props.replace_video'),
         'replaceAudio' => t('props.replace_audio'),
         'mediaPlaceholderHint' => t('props.media_placeholder_hint'),
@@ -330,6 +335,26 @@ $bootstrap = [
             'previewHint' => t('iconify.preview_hint'),
             'targetObject' => t('iconify.target_object'),
             'iconColor' => t('iconify.icon_color'),
+        ],
+    ],
+    'openclipart' => [
+        'enabled' => $canEdit && Config::openclipartEnabled(),
+        'i18n' => [
+            'title' => t('openclipart.title'),
+            'search' => t('openclipart.search'),
+            'searching' => t('openclipart.searching'),
+            'importing' => t('openclipart.importing'),
+            'importDone' => t('openclipart.import_done'),
+            'noResults' => t('openclipart.no_results'),
+            'resultCount' => t('openclipart.result_count'),
+            'enterQuery' => t('openclipart.enter_query'),
+            'errorGeneric' => t('openclipart.error_generic'),
+            'useObject' => t('openclipart.use_object'),
+            'openFromMedia' => t('openclipart.open_from_media'),
+            'prev' => t('openclipart.prev'),
+            'next' => t('openclipart.next'),
+            'previewHint' => t('openclipart.preview_hint'),
+            'targetObject' => t('openclipart.target_object'),
         ],
     ],
     'mediaLibrary' => [
@@ -732,10 +757,13 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <input type="file" id="objAudioInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4" hidden>
       <input type="file" id="objVideoInput" accept="video/mp4,video/webm" hidden>
       <?php if ($canEdit && Config::pixabayEnabled()): ?>
-      <button type="button" class="tool-btn-block" id="pixabayOpenBtn"><?= h(t('pixabay.open_from_bg')) ?></button>
+      <button type="button" class="tool-btn-block" id="pixabayOpenBtn">📷 <?= h(t('pixabay.open_from_bg')) ?></button>
       <?php endif; ?>
       <?php if ($canEdit && Config::iconifyEnabled()): ?>
-      <button type="button" class="tool-btn-block" id="iconifyOpenBtn"><?= h(t('iconify.open_from_media')) ?></button>
+      <button type="button" class="tool-btn-block" id="iconifyOpenBtn">▣ <?= h(t('iconify.open_from_media')) ?></button>
+      <?php endif; ?>
+      <?php if ($canEdit && Config::openclipartEnabled()): ?>
+      <button type="button" class="tool-btn-block" id="openclipartOpenBtn">✂️ <?= h(t('openclipart.open_from_media')) ?></button>
       <?php endif; ?>
       </div>
       <div class="media-sub-panel" data-mediasub="library" id="mediaLibraryPanel" hidden>
@@ -1040,6 +1068,50 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </div>
 <?php endif; ?>
 
+<?php if (Config::openclipartEnabled()): ?>
+<div class="modal-backdrop" id="openclipartModal" aria-hidden="true">
+  <div class="modal pixabay-modal" role="dialog" aria-modal="true" aria-labelledby="openclipartModalTitle">
+    <div class="pixabay-modal-header">
+      <div>
+        <h2 id="openclipartModalTitle" class="pixabay-modal-title"><?= h(t('openclipart.title')) ?></h2>
+        <p class="pixabay-target-hint"><?= h(t('openclipart.target_object')) ?></p>
+      </div>
+      <button type="button" class="button button-ghost button-sm" id="openclipartModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    </div>
+    <div class="pixabay-modal-toolbar openclipart-modal-toolbar">
+      <div class="iconify-toolbar-row iconify-search-row">
+        <div class="pixabay-search-wrap">
+          <input type="search" id="openclipartQuery" placeholder="<?= h(t('openclipart.search_placeholder')) ?>" autocomplete="off">
+          <button type="button" class="button button-sm" id="openclipartSearchBtn"><?= h(t('openclipart.search')) ?></button>
+        </div>
+      </div>
+    </div>
+    <div class="pixabay-modal-meta">
+      <div class="pixabay-status" id="openclipartStatus"></div>
+      <div class="pixabay-pager" id="openclipartPager" hidden>
+        <button type="button" class="button button-ghost button-sm" id="openclipartPrev"><?= h(t('openclipart.prev')) ?></button>
+        <button type="button" class="button button-ghost button-sm" id="openclipartNext"><?= h(t('openclipart.next')) ?></button>
+      </div>
+    </div>
+    <div class="pixabay-modal-body">
+      <div class="pixabay-grid openclipart-grid" id="openclipartGrid"></div>
+    </div>
+    <p class="pixabay-attribution pixabay-modal-footer"><?= t('openclipart.attribution') ?></p>
+  </div>
+  <div class="pixabay-lightbox" id="openclipartLightbox" aria-hidden="true">
+    <button type="button" class="pixabay-lightbox-close" id="openclipartLightboxClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="pixabay-lightbox-backdrop" id="openclipartLightboxBackdrop" aria-hidden="true"></div>
+    <div class="pixabay-lightbox-panel" role="dialog" aria-modal="true">
+      <div class="pixabay-lightbox-media openclipart-lightbox-media" id="openclipartLightboxMedia"></div>
+      <div class="pixabay-lightbox-footer">
+        <div class="pixabay-lightbox-meta" id="openclipartLightboxMeta"></div>
+        <div class="pixabay-lightbox-actions" id="openclipartLightboxActions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 </script>
@@ -1050,6 +1122,9 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php endif; ?>
 <?php if ($canEdit && Config::iconifyEnabled()): ?>
 <script src="assets/js/icons.js?v=<?= ASSET_VERSION ?>"></script>
+<?php endif; ?>
+<?php if ($canEdit && Config::openclipartEnabled()): ?>
+<script src="assets/js/clipart.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>

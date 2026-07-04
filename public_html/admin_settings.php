@@ -100,6 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.iconify_saved');
     }
 
+    if ($action === 'save_openclipart') {
+        Config::update(['openclipart' => [
+            'enabled' => isset($_POST['oc_enabled']),
+        ]]);
+        $msg = t('admin.openclipart_saved');
+    }
+
     // ---- Tab "Benutzerverwaltung" ----
     if ($action === 'create_invite') {
         $inviteEmail = trim($_POST['invite_email'] ?? '');
@@ -177,6 +184,7 @@ $smtp = $cfg['smtp'] ?? [];
 $languagetool = Config::languageTool();
 $pixabay = Config::pixabay();
 $iconify = Config::iconify();
+$openclipart = Config::openclipart();
 $invites = InviteToken::listAll();
 $users = Auth::listAll();
 $smtpDemoLocked = Demo::smtpLocked();
@@ -345,6 +353,18 @@ require __DIR__ . '/includes/header.php';
         <?= h(t('admin.iconify_enabled')) ?>
       </label>
       <button type="submit" class="button button-sm"><?= h(t('admin.iconify_save_btn')) ?></button>
+    </form>
+
+    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.openclipart_heading')) ?></h2></div>
+    <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.openclipart_intro') ?></p>
+    <form method="post" style="margin-top:12px;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="save_openclipart">
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <input type="checkbox" name="oc_enabled" style="width:auto;" <?= !empty($openclipart['enabled']) ? 'checked' : '' ?>>
+        <?= h(t('admin.openclipart_enabled')) ?>
+      </label>
+      <button type="submit" class="button button-sm"><?= h(t('admin.openclipart_save_btn')) ?></button>
     </form>
 
   <?php else: /* Tab: Benutzerverwaltung */ ?>

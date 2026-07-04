@@ -46,7 +46,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media'];
+$mutating = ['save_slide', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -230,6 +230,25 @@ switch ($action) {
             'items' => Presentation::listMediaAssets($id),
             'deleted' => $result['deleted'] ?? [],
             'count' => (int)($result['count'] ?? 0),
+        ]);
+        break;
+
+    case 'remove_image_background':
+        $filename = basename((string)($body['filename'] ?? ''));
+        $result = ImageHelper::removeBackgroundFromAsset($id, $filename);
+        if (!$result['ok']) {
+            $messages = [
+                'invalid_filename' => t('props.remove_background_invalid'),
+                'not_found' => t('props.remove_background_not_found'),
+                'unsupported_type' => t('props.remove_background_unsupported'),
+                'process_failed' => t('props.remove_background_failed'),
+                'save_failed' => t('props.remove_background_failed'),
+            ];
+            json_fail($messages[$result['error'] ?? ''] ?? t('props.remove_background_failed'), 400);
+        }
+        json_ok([
+            'url' => $result['url'],
+            'filename' => $result['filename'],
         ]);
         break;
 

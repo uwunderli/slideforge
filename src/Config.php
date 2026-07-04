@@ -129,4 +129,15 @@ class Config
     {
         return !empty(self::iconify()['enabled']);
     }
+
+    public static function openclipart(): array
+    {
+        $defaults = ['enabled' => true];
+        return array_merge($defaults, self::get('openclipart', []));
+    }
+
+    public static function openclipartEnabled(): bool
+    {
+        return !empty(self::openclipart()['enabled']);
+    }
 }

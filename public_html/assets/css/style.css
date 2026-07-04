@@ -2677,6 +2677,45 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
   background: #000;
 }
 
+.props-asset-preview { margin-bottom: 8px; }
+.props-asset-preview img {
+  width: 100%;
+  max-height: 120px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  display: block;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #111;
+}
+.props-asset-preview--svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  max-height: 112px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface-raised);
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+.props-asset-preview--svg img {
+  width: auto;
+  max-width: 72px;
+  max-height: 72px;
+  aspect-ratio: auto;
+  object-fit: contain;
+  border: none;
+  background: transparent;
+}
+
 .props-panel-wrap {
   border-left: 1px solid var(--border);
   display: flex;
@@ -3460,8 +3499,10 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
   gap: 8px;
 }
 
-/* Pixabay Lightbox (Vorschau vergrössert) */
-.modal-backdrop#pixabayModal {
+/* Pixabay / Iconify / Openclipart Lightbox (Vorschau vergrössert) */
+.modal-backdrop#pixabayModal,
+.modal-backdrop#iconifyModal,
+.modal-backdrop#openclipartModal {
   position: fixed;
 }
 .pixabay-lightbox {

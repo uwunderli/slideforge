@@ -31,6 +31,7 @@
     spellConfig: boot.spellcheck || null,
     pixabayConfig: boot.pixabay || null,
     iconifyConfig: boot.iconify || null,
+    openclipartConfig: boot.openclipart || null,
     i18n: boot.i18n || {},
   };
 
@@ -449,6 +450,8 @@
     initSpellcheckPanel();
     initPixabayPanel();
     initIconifyPanel();
+    initOpenclipartPanel();
+    initMediaSearchButtons();
     initMediaLibraryPanel();
     bindZoomUI();
     bindTemplatePicker();
@@ -1168,7 +1171,23 @@
     }
   }
 
+  function isClipartIconId(iconId) {
+    return String(iconId || '').startsWith('oc:');
+  }
+
+  function assetFilenameFromSrc(src) {
+    if (!src) return '';
+    const match = String(src).match(/[?&]file=([^&]+)/);
+    if (!match) return '';
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }
+
   function isIconObject(obj) {
+    if (isClipartIconId(obj?.iconId)) return false;
     return !!(obj?.iconId || isIconSrc(obj?.src));
   }
 
@@ -2165,6 +2184,26 @@
     }[obj.type] || obj.type);
   }
 
+  function humanizeAssetFilename(filename) {
+    if (!filename) return '';
+    let base = filename.replace(/\.[^.]+$/, '').replace(/_nobg$/, '');
+
+    const ic = base.match(/^ic_([a-z0-9][a-z0-9-]*)_([a-z0-9][a-z0-9._-]*)_[a-z0-9]+$/i);
+    if (ic) return ic[1] + ':' + ic[2];
+
+    const oc = base.match(/^oc_\d+_(.+?)_[a-z0-9]+$/i);
+    if (oc) return oc[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const px = base.match(/^px(\d+)_/i);
+    if (px) return 'Pixabay ' + px[1];
+
+    if (/^[a-f0-9]{8,}$/i.test(base)) return I.typeImage || 'Bild';
+
+    const plain = base.replace(/^img_|^pptx_img|^odp_img|^pdfpage\d+_/i, '').replace(/[-_]+/g, ' ').trim();
+    if (!plain) return I.typeImage || 'Bild';
+    return plain.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   function layerItemLabel(node) {
     const obj = nodeToObject(node);
     if (obj.type === 'group') {
@@ -2177,8 +2216,15 @@
       return preview.length > 30 ? preview.slice(0, 30) + '…' : preview;
     }
     if ((obj.type === 'image' || obj.type === 'video' || obj.type === 'audio') && obj.src) {
-      const name = obj.src.split('/').pop().split('?')[0];
-      if (name) return name.length > 30 ? name.slice(0, 30) + '…' : name;
+      if (obj.iconId && !isClipartIconId(obj.iconId)) {
+        const label = obj.iconId;
+        return label.length > 36 ? label.slice(0, 36) + '…' : label;
+      }
+      const filename = assetFilenameFromSrc(obj.src);
+      if (filename) {
+        const label = humanizeAssetFilename(filename);
+        if (label) return label.length > 36 ? label.slice(0, 36) + '…' : label;
+      }
     }
     return layerTypeLabel(obj);
   }
@@ -2472,12 +2518,17 @@
     if (tab === 'form' && isImage) {
       const isIcon = isIconObject(obj);
       const previewSrc = isIcon && obj.iconColor ? iconDisplaySrc(obj.src, obj.iconColor) : obj.src;
-      html += '<div class="bg-asset-preview"><img src="' + previewSrc + '" alt=""></div>';
+      const filename = assetFilenameFromSrc(obj.src);
+      const isSvgAsset = isIcon || /\.svg$/i.test(filename);
+      const previewClass = 'props-asset-preview' + (isSvgAsset ? ' props-asset-preview--svg' : '');
+      html += '<div class="' + previewClass + '"><img src="' + previewSrc + '" alt=""></div>';
       if (isIcon) {
         html += fieldColor('p_iconColor', I.iconColor, obj.iconColor || defaultIconColor());
         html += miniPaletteHtml('p_iconColor');
       }
       html += '<button type="button" class="button button-ghost button-sm" id="replaceAssetBtn" style="width:100%;">' + I.replaceImage + '</button>';
+      html += '<button type="button" class="button button-ghost button-sm" id="removeBgBtn" style="width:100%; margin-top:8px;">' + I.removeBackground + '</button>';
+      html += '<div class="props-video-note" style="margin-top:8px;">' + I.removeBackgroundHint + '</div>';
       html += '<div class="row">' + fieldColor('p_stroke', I.borderColor, (obj.stroke && obj.stroke !== 'transparent') ? obj.stroke : '#ffffff') + fieldNumber('p_strokewidth', I.borderWidth, obj.strokeWidth || 0) + '</div>';
       html += miniPaletteHtml('p_stroke');
       html += fieldRange('p_opacity', I.opacity, Math.round(obj.opacity * 100));
@@ -2953,13 +3004,40 @@
         replaceTargetNode = node;
         document.getElementById('objImageInput').click();
       });
+      const removeBgBtn = document.getElementById('removeBgBtn');
+      if (removeBgBtn) removeBgBtn.addEventListener('click', async () => {
+        const filename = assetFilenameFromSrc(node.getAttr('src'));
+        if (!filename) {
+          setSaveStatus(I.removeBackgroundFailed, true);
+          return;
+        }
+        removeBgBtn.disabled = true;
+        setSaveStatus(I.removeBackgroundWorking);
+        try {
+          const res = await api('remove_image_background', { filename });
+          node.setAttr('src', res.url);
+          if (isClipartIconId(node.getAttr('iconId'))) {
+            node.setAttr('iconId', '');
+            node.setAttr('iconColor', '');
+          }
+          loadImageAsync(node, res.url);
+          refreshCanvas();
+          scheduleSave();
+          refreshPropsPanel();
+          setSaveStatus(SF.i18n?.saved || 'Gespeichert');
+        } catch (e) {
+          setSaveStatus(e.message || I.removeBackgroundFailed, true);
+        } finally {
+          removeBgBtn.disabled = false;
+        }
+      });
       on('p_iconColor', 'input', (e) => {
         const color = e.target.value;
         node.setAttr('iconColor', color);
         loadImageAsync(node, node.getAttr('src'), color);
         refreshCanvas();
         scheduleSave();
-        const preview = document.querySelector('.bg-asset-preview img');
+        const preview = document.querySelector('.props-asset-preview img');
         if (preview) preview.src = iconDisplaySrc(node.getAttr('src'), color);
       });
       on('p_stroke', 'input', (e) => { node.stroke(e.target.value); refreshCanvas(); scheduleSave(); });
@@ -3349,6 +3427,75 @@
     });
   }
 
+  function initOpenclipartPanel() {
+    if (!window.SlideForgeOpenclipart) return;
+
+    const cfg = SF.openclipartConfig || {
+      enabled: !!document.getElementById('openclipartOpenBtn'),
+      i18n: {},
+    };
+    if (!cfg.enabled) return;
+
+    async function applyOpenclipartAsset(url) {
+      const defaultSize = { w: 256, h: 256 };
+      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
+      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
+      const id = 'o' + Math.random().toString(16).slice(2, 10);
+      const obj = {
+        id, type: 'image', x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
+        rotation: 0, opacity: 1, src: url,
+      };
+      const node = createNode(obj);
+      insertNode(node);
+      loadImageAsync(node, url);
+    }
+
+    window.SlideForgeOpenclipart.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      openclipartConfig: cfg,
+      defaultIconColor: defaultIconColor(),
+      applyOpenclipart: applyOpenclipartAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initMediaSearchButtons() {
+    document.getElementById('pixabayOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgePixabay?.openPixabayModal) {
+        window.SlideForgePixabay.openPixabayModal('object-image');
+        return;
+      }
+      document.getElementById('pixabayModal')?.classList.add('open');
+    });
+
+    document.getElementById('iconifyOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgeIconify?.openIconifyModal) {
+        window.SlideForgeIconify.openIconifyModal();
+        return;
+      }
+      const modal = document.getElementById('iconifyModal');
+      if (modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('iconifyQuery')?.focus();
+      }
+    });
+
+    document.getElementById('openclipartOpenBtn')?.addEventListener('click', () => {
+      if (window.SlideForgeOpenclipart?.openOpenclipartModal) {
+        window.SlideForgeOpenclipart.openOpenclipartModal();
+        return;
+      }
+      const modal = document.getElementById('openclipartModal');
+      if (modal) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('openclipartQuery')?.focus();
+      }
+    });
+  }
+
   function initMediaLibraryPanel() {
     const cfg = boot.mediaLibrary?.i18n;
     const listEl = document.getElementById('mediaLibraryList');
@@ -3711,6 +3858,7 @@
     if (!SF.canEdit) return;
 
     document.querySelectorAll('.tool-btn-block').forEach(btn => {
+      if (btn.id === 'pixabayOpenBtn' || btn.id === 'iconifyOpenBtn' || btn.id === 'openclipartOpenBtn') return;
       btn.addEventListener('click', () => {
         if (btn.dataset.tool) addShape(btn.dataset.tool);
         else if (btn.dataset.preset) addTextPreset(btn.dataset.preset);
