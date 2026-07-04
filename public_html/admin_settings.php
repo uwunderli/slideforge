@@ -93,6 +93,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.pixabay_saved');
     }
 
+    if ($action === 'save_iconify') {
+        Config::update(['iconify' => [
+            'enabled' => isset($_POST['ic_enabled']),
+        ]]);
+        $msg = t('admin.iconify_saved');
+    }
+
     // ---- Tab "Benutzerverwaltung" ----
     if ($action === 'create_invite') {
         $inviteEmail = trim($_POST['invite_email'] ?? '');
@@ -169,6 +176,7 @@ $cfg = Config::all();
 $smtp = $cfg['smtp'] ?? [];
 $languagetool = Config::languageTool();
 $pixabay = Config::pixabay();
+$iconify = Config::iconify();
 $invites = InviteToken::listAll();
 $users = Auth::listAll();
 $smtpDemoLocked = Demo::smtpLocked();
@@ -325,6 +333,18 @@ require __DIR__ . '/includes/header.php';
         <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener"><?= h(t('admin.pixabay_docs_link')) ?></a>
       </p>
       <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('admin.pixabay_save_btn')) ?></button>
+    </form>
+
+    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.iconify_heading')) ?></h2></div>
+    <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.iconify_intro') ?></p>
+    <form method="post" style="margin-top:12px;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="save_iconify">
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <input type="checkbox" name="ic_enabled" style="width:auto;" <?= !empty($iconify['enabled']) ? 'checked' : '' ?>>
+        <?= h(t('admin.iconify_enabled')) ?>
+      </label>
+      <button type="submit" class="button button-sm"><?= h(t('admin.iconify_save_btn')) ?></button>
     </form>
 
   <?php else: /* Tab: Benutzerverwaltung */ ?>

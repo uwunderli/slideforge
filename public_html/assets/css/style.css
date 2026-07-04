@@ -3249,6 +3249,23 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+.pixabay-modal-body .iconify-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+.iconify-card-thumb {
+  aspect-ratio: 1;
+  background: var(--surface);
+  cursor: zoom-in;
+}
+.iconify-card-thumb img {
+  object-fit: contain;
+  padding: 12px;
+}
+.iconify-lightbox-media img.iconify-lightbox-img {
+  max-width: min(240px, 80vw);
+  max-height: min(240px, 60vh);
+  object-fit: contain;
+}
 .pixabay-modal-footer {
   margin: 12px 0 0;
   padding-top: 10px;
@@ -3258,6 +3275,9 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
 @media (max-width: 760px) {
   .pixabay-modal-body .pixabay-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .pixabay-modal-body .iconify-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
   .pixabay-modal-toolbar .pixabay-filters {
     flex-basis: 100%;

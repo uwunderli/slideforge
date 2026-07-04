@@ -30,6 +30,7 @@
     presentConfig: boot.presentConfig || null,
     spellConfig: boot.spellcheck || null,
     pixabayConfig: boot.pixabay || null,
+    iconifyConfig: boot.iconify || null,
     i18n: boot.i18n || {},
   };
 
@@ -447,6 +448,7 @@
     bindGlobalUI();
     initSpellcheckPanel();
     initPixabayPanel();
+    initIconifyPanel();
     initMediaLibraryPanel();
     bindZoomUI();
     bindTemplatePicker();
@@ -3264,6 +3266,29 @@
       csrfToken: SF.csrfToken,
       pixabayConfig: SF.pixabayConfig,
       applyPixabay: applyPixabayAsset,
+      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
+    });
+  }
+
+  function initIconifyPanel() {
+    if (!SF.iconifyConfig?.enabled || !window.SlideForgeIconify) return;
+
+    async function applyIconifyAsset(url) {
+      const defaultSize = { w: 128, h: 128 };
+      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
+      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
+      const id = 'o' + Math.random().toString(16).slice(2, 10);
+      const obj = { id, type: 'image', x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: url };
+      const node = createNode(obj);
+      insertNode(node);
+      loadImageAsync(node, url);
+    }
+
+    window.SlideForgeIconify.init({
+      id: SF.id,
+      csrfToken: SF.csrfToken,
+      iconifyConfig: SF.iconifyConfig,
+      applyIconify: applyIconifyAsset,
       refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
     });
   }

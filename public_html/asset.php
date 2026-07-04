@@ -40,7 +40,7 @@ if (!$realPath || !$realAssets || strpos($realPath, $realAssets) !== 0 || !is_fi
 $ext = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
 $mimeMap = [
     'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
-    'gif' => 'image/gif', 'webp' => 'image/webp',
+    'gif' => 'image/gif', 'webp' => 'image/webp', 'svg' => 'image/svg+xml',
     'mp4' => 'video/mp4', 'webm' => 'video/webm',
 ];
 $mime = $mimeMap[$ext] ?? 'application/octet-stream';

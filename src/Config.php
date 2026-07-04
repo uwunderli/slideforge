@@ -118,4 +118,15 @@ class Config
         $cfg = self::pixabay();
         return !empty($cfg['enabled']) && trim((string)($cfg['api_key'] ?? '')) !== '';
     }
+
+    public static function iconify(): array
+    {
+        $defaults = ['enabled' => true];
+        return array_merge($defaults, self::get('iconify', []));
+    }
+
+    public static function iconifyEnabled(): bool
+    {
+        return !empty(self::iconify()['enabled']);
+    }
 }

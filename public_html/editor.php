@@ -295,6 +295,39 @@ $bootstrap = [
             'previewBy' => t('pixabay.preview_by'),
         ],
     ],
+    'iconify' => [
+        'enabled' => $canEdit && Config::iconifyEnabled(),
+        'i18n' => [
+            'title' => t('iconify.title'),
+            'search' => t('iconify.search'),
+            'searching' => t('iconify.searching'),
+            'importing' => t('iconify.importing'),
+            'importDone' => t('iconify.import_done'),
+            'noResults' => t('iconify.no_results'),
+            'resultCount' => t('iconify.result_count'),
+            'enterQuery' => t('iconify.enter_query'),
+            'errorGeneric' => t('iconify.error_generic'),
+            'useObject' => t('iconify.use_object'),
+            'openFromMedia' => t('iconify.open_from_media'),
+            'prev' => t('iconify.prev'),
+            'next' => t('iconify.next'),
+            'filterCollection' => t('iconify.filter_collection'),
+            'collectionAll' => t('iconify.collection_all'),
+            'collectionMdi' => t('iconify.collection_mdi'),
+            'collectionFa6Solid' => t('iconify.collection_fa6_solid'),
+            'collectionFa6Regular' => t('iconify.collection_fa6_regular'),
+            'collectionLucide' => t('iconify.collection_lucide'),
+            'collectionTabler' => t('iconify.collection_tabler'),
+            'collectionMaterialSymbols' => t('iconify.collection_material_symbols'),
+            'collectionBi' => t('iconify.collection_bi'),
+            'collectionPh' => t('iconify.collection_ph'),
+            'collectionCarbon' => t('iconify.collection_carbon'),
+            'collectionRi' => t('iconify.collection_ri'),
+            'collectionSimpleIcons' => t('iconify.collection_simple_icons'),
+            'previewHint' => t('iconify.preview_hint'),
+            'targetObject' => t('iconify.target_object'),
+        ],
+    ],
     'mediaLibrary' => [
         'i18n' => [
             'subInsert' => t('media_lib.sub_insert'),
@@ -697,6 +730,9 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <?php if ($canEdit && Config::pixabayEnabled()): ?>
       <button type="button" class="tool-btn-block" id="pixabayOpenBtn"><?= h(t('pixabay.open_from_bg')) ?></button>
       <?php endif; ?>
+      <?php if ($canEdit && Config::iconifyEnabled()): ?>
+      <button type="button" class="tool-btn-block" id="iconifyOpenBtn"><?= h(t('iconify.open_from_media')) ?></button>
+      <?php endif; ?>
       </div>
       <div class="media-sub-panel" data-mediasub="library" id="mediaLibraryPanel" hidden>
         <div class="media-library-header">
@@ -923,6 +959,67 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </div>
 <?php endif; ?>
 
+<?php if (Config::iconifyEnabled()): ?>
+<div class="modal-backdrop" id="iconifyModal" aria-hidden="true">
+  <div class="modal pixabay-modal" role="dialog" aria-modal="true" aria-labelledby="iconifyModalTitle">
+    <div class="pixabay-modal-header">
+      <div>
+        <h2 id="iconifyModalTitle" class="pixabay-modal-title"><?= h(t('iconify.title')) ?></h2>
+        <p class="pixabay-target-hint"><?= h(t('iconify.target_object')) ?></p>
+      </div>
+      <button type="button" class="button button-ghost button-sm" id="iconifyModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    </div>
+    <div class="pixabay-modal-toolbar">
+      <div class="pixabay-search-row">
+        <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
+        <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
+      </div>
+      <div class="pixabay-filters">
+        <label class="pixabay-filter-item">
+          <span><?= h(t('iconify.filter_collection')) ?></span>
+          <select id="iconifyPrefix">
+            <option value=""><?= h(t('iconify.collection_all')) ?></option>
+            <option value="mdi"><?= h(t('iconify.collection_mdi')) ?></option>
+            <option value="fa6-solid"><?= h(t('iconify.collection_fa6_solid')) ?></option>
+            <option value="fa6-regular"><?= h(t('iconify.collection_fa6_regular')) ?></option>
+            <option value="lucide"><?= h(t('iconify.collection_lucide')) ?></option>
+            <option value="tabler"><?= h(t('iconify.collection_tabler')) ?></option>
+            <option value="material-symbols"><?= h(t('iconify.collection_material_symbols')) ?></option>
+            <option value="bi"><?= h(t('iconify.collection_bi')) ?></option>
+            <option value="ph"><?= h(t('iconify.collection_ph')) ?></option>
+            <option value="carbon"><?= h(t('iconify.collection_carbon')) ?></option>
+            <option value="ri"><?= h(t('iconify.collection_ri')) ?></option>
+            <option value="simple-icons"><?= h(t('iconify.collection_simple_icons')) ?></option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="pixabay-modal-meta">
+      <div class="pixabay-status" id="iconifyStatus"></div>
+      <div class="pixabay-pager" id="iconifyPager" hidden>
+        <button type="button" class="button button-ghost button-sm" id="iconifyPrev"><?= h(t('iconify.prev')) ?></button>
+        <button type="button" class="button button-ghost button-sm" id="iconifyNext"><?= h(t('iconify.next')) ?></button>
+      </div>
+    </div>
+    <div class="pixabay-modal-body">
+      <div class="pixabay-grid iconify-grid" id="iconifyGrid"></div>
+    </div>
+    <p class="pixabay-attribution pixabay-modal-footer"><?= t('iconify.attribution') ?></p>
+  </div>
+  <div class="pixabay-lightbox" id="iconifyLightbox" aria-hidden="true">
+    <button type="button" class="pixabay-lightbox-close" id="iconifyLightboxClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="pixabay-lightbox-backdrop" id="iconifyLightboxBackdrop" aria-hidden="true"></div>
+    <div class="pixabay-lightbox-panel" role="dialog" aria-modal="true">
+      <div class="pixabay-lightbox-media iconify-lightbox-media" id="iconifyLightboxMedia"></div>
+      <div class="pixabay-lightbox-footer">
+        <div class="pixabay-lightbox-meta" id="iconifyLightboxMeta"></div>
+        <div class="pixabay-lightbox-actions" id="iconifyLightboxActions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 </script>
@@ -930,6 +1027,9 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/spellcheck.js?v=<?= ASSET_VERSION ?>"></script>
 <?php if ($canEdit && Config::pixabayEnabled()): ?>
 <script src="assets/js/pixabay.js?v=<?= ASSET_VERSION ?>"></script>
+<?php endif; ?>
+<?php if ($canEdit && Config::iconifyEnabled()): ?>
+<script src="assets/js/icons.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
