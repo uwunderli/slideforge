@@ -5,6 +5,8 @@
 | Prio | Release | Fokus | Status | Briefing |
 |------|---------|--------|--------|----------|
 | **1** | **v2.0.0** | **Mobile Fernsteuerung** — reduzierte UI, Present-Remote | ✔️ shipped | [RELEASE_v2.0.0.md](RELEASE_v2.0.0.md) |
+| — | **v2.0.1** | QR-Fix, Demo Feature-Tour Fernsteuerung | ✔️ shipped | [GitHub Release](https://github.com/uwunderli/slideforge/releases/tag/v2.0.1) |
+| — | **v2.0.2** | **PWA** — Home-Bildschirm, Standalone | ✔️ shipped | [RELEASE_v2.0.2.md](../.github/RELEASE_v2.0.2.md) |
 | **2** | **v2.1.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig | [RELEASE_v2.1.0.md](RELEASE_v2.1.0.md) |
 | **3** | **v2.2.0** | Integrierter **Medien-Editor** (Trim, Bild, SVG) | ✅ Briefing fertig | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
 | **4** | **v2.3.0** | reveal.js **Auto-Animate** — Objekte zwischen Folien morphen | ✅ Briefing fertig | [RELEASE_v2.3.0.md](RELEASE_v2.3.0.md) |
@@ -29,18 +31,20 @@
 ```
 v1.0.4   ✔️ shipped
 v2.0.0   ✔️ shipped — Mobile Fernsteuerung
+v2.0.1   ✔️ shipped — QR-Fix, Demo Feature-Tour
+v2.0.2   ✔️ shipped — PWA
 v2.1.0   church.tools
 v2.2.0   Medien-Editor
 v2.3.0   Auto-Animate
 v3.0.0   Visueller Editor (slides.com)
 ```
 
-**Nächster Schritt:** **v2.1.0** church.tools (Basis: v2.0.0 auf `main`).
+**Nächster Schritt:** **v2.1.0** church.tools (Basis: **v2.0.2** auf `main`).
 
 ---
 
 ## Handoff an Cursor
 
 ```
-Lies docs/RELEASES.md und setze v2.0.0 um.
+Lies docs/RELEASES.md und setze v2.1.0 um.
 ```

@@ -33,7 +33,9 @@ Standardkonten nach jedem Reset:
 
 Das Skript löscht Benutzer, Präsentationen, Uploads und Cache, legt danach die Standardkonten, **7 Folienvorlagen**, **Textvorlagen**, die **Element-Showcase**- und die **Feature-Tour**-Präsentation neu an. `data/config.json` (Titel, SMTP, …) bleibt erhalten.
 
-**Feature-Touren (Marketing, öffentlich)** — Seed in `seed/feature-tour/{de,en,fr,it,rm}/`, gemeinsame UI-Bilder in `seed/feature-tour/assets/`:
+**Feature-Touren (Marketing, öffentlich)** — Seed in `seed/feature-tour/{de,en,fr,it,rm}/`, gemeinsame UI-Bilder in `seed/feature-tour/assets/` (inkl. Mobile-Fernsteuerung). Neu generieren: `php scripts/build_feature_tour.php`; Screenshots: `python3 scripts/capture_feature_tour_screenshots.py`.
+
+**PWA:** Auf Smartphones installierbar (Manifest + Service Worker) — „Zum Home-Bildschirm“ / „App installieren“.
 
 | Sprache | Link |
 |---------|------|

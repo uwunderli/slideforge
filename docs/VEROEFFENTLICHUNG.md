@@ -17,7 +17,7 @@ Stand: Juli 2026 · Projekt: selbst gehosteter reveal.js-Editor (PHP, dateibasie
 | Lizenz | `LICENSE` (MIT) |
 | `.gitignore` | Secrets, `data/`, Uploads, Root-HTML, Logs, OS-Dateien |
 | Demo-Instanz | [slideforge.service7.ch](https://slideforge.service7.ch/) — Deploy: `.deploy/deploy-demo.sh` |
-| GitHub / Releases | [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · aktuell **v1.0.4** |
+| GitHub / Releases | [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · aktuell **v2.0.2** |
 | Secrets | `.deploy/ssh.env` mit Zugangsdaten – **nicht committen** (Beispiel: `ssh.env.example`) |
 | Export-HTML im Root | `Medien Test.html` – per `.gitignore` ausgeschlossen |
 
@@ -99,7 +99,7 @@ git log --oneline -5
 ## Phase 5 – Nach der Veröffentlichung
 
 - [ ] Issues aktiv beantworten (Installation, Feature-Wünsche)
-- [x] Releases bis **v1.0.4** (WebDAV, Iconify, Openclipart, Admin-Tabs)
+- [x] Releases bis **v2.0.2** (Mobile Fernsteuerung, PWA, Feature-Tour)
 - [ ] README „Known limitations“ pflegen (z. B. PPTX-Import fehlt, Konva-Teilformatierung im Canvas)
 - [ ] Optional: GitHub Discussions aktivieren
 - [ ] Optional: Roadmap-Issue oder `docs/ROADMAP.md`
