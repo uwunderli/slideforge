@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
 }
 
 $isTemplateMode = !empty($meta['is_template']);
+$iconBrandColors = Config::brandColors();
+$defaultIconColor = $iconBrandColors[0]['hex'] ?? '#3a6c8d';
 
 $acl = Presentation::getAcl($id);
 $publicUrl = '';
@@ -327,6 +329,7 @@ $bootstrap = [
             'collectionSimpleIcons' => t('iconify.collection_simple_icons'),
             'previewHint' => t('iconify.preview_hint'),
             'targetObject' => t('iconify.target_object'),
+            'iconColor' => t('iconify.icon_color'),
         ],
     ],
     'mediaLibrary' => [
@@ -970,13 +973,13 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       </div>
       <button type="button" class="button button-ghost button-sm" id="iconifyModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
     </div>
-    <div class="pixabay-modal-toolbar">
-      <div class="pixabay-search-row">
-        <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
-        <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
-      </div>
-      <div class="pixabay-filters">
-        <label class="pixabay-filter-item">
+    <div class="pixabay-modal-toolbar iconify-modal-toolbar">
+      <div class="iconify-toolbar-row iconify-search-row">
+        <div class="pixabay-search-row">
+          <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
+          <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
+        </div>
+        <label class="pixabay-filter-item iconify-set-filter">
           <span><?= h(t('iconify.filter_collection')) ?></span>
           <select id="iconifyPrefix">
             <option value=""><?= h(t('iconify.collection_all')) ?></option>
@@ -993,6 +996,22 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
             <option value="simple-icons"><?= h(t('iconify.collection_simple_icons')) ?></option>
           </select>
         </label>
+      </div>
+      <div class="iconify-toolbar-row iconify-color-row">
+        <label class="pixabay-filter-item iconify-color-filter">
+          <span><?= h(t('iconify.icon_color')) ?></span>
+          <input type="color" id="iconifyColor" value="<?= h($defaultIconColor) ?>">
+        </label>
+        <?php if (!empty($iconBrandColors)): ?>
+        <div class="pixabay-filter-item iconify-color-palette-wrap">
+          <span><?= h(t('iconify.brand_colors')) ?></span>
+          <div class="brand-palette mini" id="iconifyColorPalette">
+            <?php foreach ($iconBrandColors as $c): ?>
+            <button type="button" class="brand-swatch" data-color="<?= h($c['hex']) ?>" style="background:<?= h($c['hex']) ?>" title="<?= h($c['name'] ?? $c['hex']) ?>"></button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
     <div class="pixabay-modal-meta">

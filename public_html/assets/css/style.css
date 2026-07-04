@@ -3252,6 +3252,51 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
 .pixabay-modal-body .iconify-grid {
   grid-template-columns: repeat(4, 1fr);
 }
+.iconify-modal-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.iconify-modal-toolbar .iconify-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  width: 100%;
+}
+.iconify-search-row .pixabay-search-row {
+  flex: 1 1 280px;
+  margin-bottom: 0;
+}
+.iconify-set-filter {
+  flex: 0 1 220px;
+  min-width: 160px;
+}
+.iconify-color-row {
+  padding-top: 2px;
+}
+.iconify-color-filter {
+  flex: 0 0 120px;
+}
+.iconify-color-palette-wrap {
+  flex: 1 1 240px;
+}
+.iconify-color-palette-wrap .brand-palette.mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.iconify-color-palette-wrap .brand-palette.mini .brand-swatch {
+  width: 22px;
+  height: 22px;
+}
+#iconifyColor {
+  width: 100%;
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+}
 .iconify-card-thumb {
   aspect-ratio: 1;
   background: var(--surface);

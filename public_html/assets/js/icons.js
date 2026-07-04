@@ -6,6 +6,8 @@
   let lastQuery = '';
   let searching = false;
   let lastHits = [];
+  let lastTotal = 0;
+  let lastLightboxHit = null;
   const perPage = 24;
 
   function $(id) {
@@ -27,6 +29,17 @@
     return text;
   }
 
+  function getSelectedColor() {
+    return $('iconifyColor')?.value || api?.defaultIconColor || '#3a6c8d';
+  }
+
+  function previewUrl(hit, color) {
+    if (!hit?.id) return '';
+    let url = 'icons.php?action=preview&iconId=' + encodeURIComponent(hit.id) + '&height=128';
+    if (color) url += '&color=' + encodeURIComponent(color);
+    return url;
+  }
+
   function setStatus(msg, isError) {
     const el = $('iconifyStatus');
     if (!el) return;
@@ -43,6 +56,7 @@
   }
 
   function closeIconifyLightbox() {
+    lastLightboxHit = null;
     const lb = $('iconifyLightbox');
     if (!lb) return;
     lb.classList.remove('open');
@@ -58,9 +72,10 @@
     const actionsEl = $('iconifyLightboxActions');
     if (!lb || !mediaEl || !metaEl || !actionsEl || !hit) return;
 
-    const src = hit.previewURL || hit.svgURL || '';
+    const src = previewUrl(hit, getSelectedColor());
     if (!src) return;
 
+    lastLightboxHit = hit;
     mediaEl.innerHTML = '<img src="' + escapeHtml(src) + '" alt="" class="iconify-lightbox-img">';
     metaEl.textContent = hit.id || '';
 
@@ -82,6 +97,15 @@
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     $('iconifyQuery')?.focus();
+  }
+
+  function refreshPreviewColors() {
+    if (lastHits.length) {
+      renderResults(lastHits, lastTotal);
+    }
+    if (lastLightboxHit && $('iconifyLightbox')?.classList.contains('open')) {
+      openIconifyLightbox(lastLightboxHit);
+    }
   }
 
   async function runSearch(page) {
@@ -128,6 +152,9 @@
     const grid = $('iconifyGrid');
     if (!grid) return;
 
+    lastTotal = total || 0;
+    const color = getSelectedColor();
+
     if (!hits.length) {
       lastHits = [];
       grid.innerHTML = '<p class="pixabay-empty">' + escapeHtml(t('noResults')) + '</p>';
@@ -137,7 +164,7 @@
 
     lastHits = hits;
     grid.innerHTML = hits.map((hit, idx) => {
-      const thumb = hit.previewURL || hit.svgURL || '';
+      const thumb = previewUrl(hit, color);
       const label = hit.name || hit.id || '';
       return (
         '<div class="pixabay-card iconify-card" data-idx="' + idx + '">' +
@@ -195,7 +222,7 @@
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || t('errorGeneric'));
-      await api.applyIconify(json.url, json.iconId);
+      await api.applyIconify(json.url, json.iconId, getSelectedColor());
       if (typeof api.refreshMediaLibrary === 'function') {
         api.refreshMediaLibrary();
       }
@@ -203,6 +230,20 @@
     } catch (e) {
       setStatus(e.message || t('errorGeneric'), true);
     }
+  }
+
+  function bindColorControls() {
+    const colorInput = $('iconifyColor');
+    colorInput?.addEventListener('input', refreshPreviewColors);
+    colorInput?.addEventListener('change', refreshPreviewColors);
+    $('iconifyColorPalette')?.querySelectorAll('.brand-swatch').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = $('iconifyColor');
+        if (!input) return;
+        input.value = btn.dataset.color;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
   }
 
   function bindEvents() {
@@ -225,6 +266,8 @@
     $('iconifyModalClose')?.addEventListener('click', closeIconifyModal);
     $('iconifyLightboxClose')?.addEventListener('click', closeIconifyLightbox);
     $('iconifyLightboxBackdrop')?.addEventListener('click', closeIconifyLightbox);
+
+    bindColorControls();
 
     const modal = $('iconifyModal');
     modal?.addEventListener('click', (e) => {

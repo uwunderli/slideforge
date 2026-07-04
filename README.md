@@ -7,7 +7,7 @@
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.1](https://github.com/uwunderli/slideforge/releases/tag/v1.0.1)
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v1.0.2](https://github.com/uwunderli/slideforge/releases/tag/v1.0.2)
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
@@ -43,7 +43,7 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Objekte:** Text, Formen (Linie, Rechteck, Dreieck, Ellipse, Pfeil, Stern, Sprechblase, Klammer), Bild, Video, Audio – verschieben, skalieren, drehen, Ebenen-Reihenfolge
 - **Eigenschaften-Panel** in Tabs **Format**, **Form**, **Position**, **Effekt** – inkl. Füllfarbe/Verlauf, Rahmen, Schrift, Teilformatierung, Animationen
 - **Hintergründe:** Volltonfarbe (Marken-Palette), Farbverlauf, Bild-/Video-Upload – Medien liegen ausserhalb des Web-Roots und werden über `asset.php` ausgeliefert
-- **Medien-Tab** und optional **Pixabay-Suche** (lizenzfreie Bilder/Videos direkt als Hintergrund oder Objekt übernehmen)
+- **Medien-Tab** und optional **Pixabay-Suche** (lizenzfreie Bilder/Videos) sowie **Iconify-Icons** (150+ SVG-Sets, ohne API-Key — Farbe wählbar)
 - **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
 - **Vorlagen:** editierbare Markenfarben, Textvorlagen, Folienvorlagen (privat oder für alle freigegeben)
@@ -75,6 +75,7 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Benutzerverwaltung:** Rollen ändern, Nutzer löschen (optional inkl. Präsentationen), **Einladungslinks** mit optionalem E-Mail-Versand
 - **LanguageTool:** optionaler Grammatik-/Rechtschreibserver (eigene Instanz oder Cloud-API)
 - **Pixabay:** optionaler API-Schlüssel für Stock-Medien im Editor
+- **Iconify:** SVG-Icon-Suche im Editor (standardmässig aktiv, kein API-Key nötig)
 - **Vorlagen-Verwaltung** für Markenfarben und Textstile (nur Admins)
 - Mehrsprachige Oberfläche: Deutsch, Englisch, Französisch, Italienisch, Rumantsch
 - Hell/Dunkel-Theme pro Benutzer

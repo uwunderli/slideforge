@@ -1,6 +1,46 @@
 <?php
 require __DIR__ . '/../config.php';
 ini_set('display_errors', '0');
+
+if (!Auth::isLoggedIn()) {
+    if (($_GET['action'] ?? '') === 'preview') {
+        http_response_code(401);
+        exit;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'error' => t('iconify.error_auth')]);
+    exit;
+}
+$me = Auth::currentUser();
+
+$raw = file_get_contents('php://input');
+$body = [];
+if ($raw !== '' && str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
+    $body = json_decode($raw, true) ?? [];
+}
+
+$action = $_GET['action'] ?? $body['action'] ?? '';
+
+if ($action === 'preview') {
+    if (!IconifyClient::enabled()) {
+        http_response_code(503);
+        exit;
+    }
+    $iconId = trim((string)($_GET['iconId'] ?? ''));
+    $color = trim((string)($_GET['color'] ?? ''));
+    $height = (int)($_GET['height'] ?? 128);
+    $svg = IconifyClient::previewSvg($iconId, $color, $height);
+    if ($svg === null) {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: image/svg+xml; charset=utf-8');
+    header('Cache-Control: private, max-age=3600');
+    echo $svg;
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 function icons_json_fail(string $message, int $code = 400): void
@@ -16,18 +56,6 @@ function icons_json_ok(array $data = []): void
     exit;
 }
 
-if (!Auth::isLoggedIn()) {
-    icons_json_fail(t('iconify.error_auth'), 401);
-}
-$me = Auth::currentUser();
-
-$raw = file_get_contents('php://input');
-$body = [];
-if ($raw !== '' && str_starts_with($_SERVER['CONTENT_TYPE'] ?? '', 'application/json')) {
-    $body = json_decode($raw, true) ?? [];
-}
-
-$action = $_GET['action'] ?? $body['action'] ?? '';
 $id = $_GET['id'] ?? $body['id'] ?? '';
 
 if (!in_array($action, ['search', 'import'], true)) {

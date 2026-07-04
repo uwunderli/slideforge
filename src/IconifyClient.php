@@ -163,6 +163,33 @@ class IconifyClient
         ];
     }
 
+    public static function previewSvg(string $iconId, string $color = '', int $height = 128): ?string
+    {
+        if (!self::enabled()) {
+            return null;
+        }
+        $hit = self::normalizeIconId($iconId);
+        if (!$hit) {
+            return null;
+        }
+
+        $height = max(32, min(256, $height));
+        $url = $hit['svgURL'] . '?height=' . $height;
+        $hex = SvgHelper::normalizeHex($color);
+        if ($hex !== null) {
+            $url .= '&color=' . rawurlencode($hex);
+        }
+
+        $body = self::httpRequest($url);
+        if ($body === null) {
+            return null;
+        }
+        if ($hex !== null) {
+            $body = SvgHelper::tintSvg($body, $hex);
+        }
+        return $body;
+    }
+
     private static function normalizeIconId(string $iconId): ?array
     {
         $iconId = trim($iconId);

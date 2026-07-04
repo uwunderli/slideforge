@@ -3324,25 +3324,26 @@
   function initIconifyPanel() {
     if (!SF.iconifyConfig?.enabled || !window.SlideForgeIconify) return;
 
-    async function applyIconifyAsset(url, iconId) {
+    async function applyIconifyAsset(url, iconId, iconColor) {
       const defaultSize = { w: 128, h: 128 };
       const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
       const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
       const id = 'o' + Math.random().toString(16).slice(2, 10);
-      const iconColor = defaultIconColor();
+      const color = iconColor || defaultIconColor();
       const obj = {
         id, type: 'image', x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
-        rotation: 0, opacity: 1, src: url, iconId: iconId || '', iconColor,
+        rotation: 0, opacity: 1, src: url, iconId: iconId || '', iconColor: color,
       };
       const node = createNode(obj);
       insertNode(node);
-      loadImageAsync(node, url, iconColor);
+      loadImageAsync(node, url, color);
     }
 
     window.SlideForgeIconify.init({
       id: SF.id,
       csrfToken: SF.csrfToken,
       iconifyConfig: SF.iconifyConfig,
+      defaultIconColor: defaultIconColor(),
       applyIconify: applyIconifyAsset,
       refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
     });
