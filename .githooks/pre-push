@@ -23,6 +23,16 @@ fi
 
 log() { echo "[slideforge release] $*"; }
 
+export_git_identity() {
+  if git config user.email >/dev/null 2>&1 && git config user.name >/dev/null 2>&1; then
+    return
+  fi
+  local name email
+  read -r name email <<< "$(git log -1 --format='%an %ae')"
+  export GIT_AUTHOR_NAME="$name" GIT_AUTHOR_EMAIL="$email"
+  export GIT_COMMITTER_NAME="$name" GIT_COMMITTER_EMAIL="$email"
+}
+
 if ! [[ -f "$ROOT/.deploy/ssh.env" ]]; then
   echo "[slideforge release] Abbruch: .deploy/ssh.env fehlt (Prod-Zugang)." >&2
   exit 1
@@ -39,6 +49,7 @@ else
   git add VERSION CHANGELOG.md README.md
   if ! git diff --cached --quiet; then
     ver="$(tr -d '[:space:]' < VERSION)"
+    export_git_identity
     git commit --no-verify -m "chore(release): v${ver}"
     log "Version v${ver} committed"
   fi
@@ -53,6 +64,7 @@ log "Deploy Demo (slideforge.service7.ch) …"
 "$ROOT/.deploy/deploy-demo.sh" sync-demo
 
 if ! git rev-parse "v${ver}" >/dev/null 2>&1; then
+  export_git_identity
   git tag -a "v${ver}" -m "Release v${ver}"
   log "Tag v${ver} erstellt (push.followTags)"
 fi
