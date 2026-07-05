@@ -2,7 +2,7 @@
 
 /**
  * Smartphone-Erkennung für die reduzierte Mobile-UI (v2.0.0).
- * Tablets/iPads erhalten weiterhin die Desktop-Oberfläche.
+ * Tablets erhalten die Desktop-Oberfläche mit Touch-Optimierung (sf-tablet).
  */
 class Mobile
 {
@@ -43,7 +43,15 @@ class Mobile
         if ($cookie === 'desktop') {
             return false;
         }
+        if (client_is_touch_tablet()) {
+            return false;
+        }
         return self::detectMobileUserAgent();
+    }
+
+    public static function isTabletClient(): bool
+    {
+        return client_is_touch_tablet();
     }
 
     private static function detectMobileUserAgent(): bool

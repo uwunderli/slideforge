@@ -37,7 +37,7 @@ $manifestUrl = $webPrefix . '/manifest.php';
 <script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/pwa.js?v=<?= ASSET_VERSION ?>" defer></script>
 </head>
-<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?>>
+<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?><?= client_is_touch_tablet() ? ' data-sf-tablet="1"' : '' ?>>
 <?php if (Config::demoMode()): ?>
 <div class="demo-banner" role="status">
   <div><?= h(t('demo.banner')) ?></div>

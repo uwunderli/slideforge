@@ -119,6 +119,12 @@ class Config
         return !empty($cfg['enabled']) && trim((string)($cfg['api_key'] ?? '')) !== '';
     }
 
+    /** Optionale LAN-IP/Hostname für Remote-QR bei localhost-Zugriff (data/config.json). */
+    public static function presentReachableHost(): string
+    {
+        return trim((string)self::get('present_reachable_host', ''));
+    }
+
     public static function iconify(): array
     {
         $defaults = ['enabled' => true];

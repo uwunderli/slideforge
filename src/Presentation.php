@@ -361,12 +361,112 @@ class Presentation
         return $result;
     }
 
-    /** Setzt den Übergang für ALLE Folien auf den gleichen Wert (Editor-Button "Für alle Folien übernehmen"). */
-    public static function applyTransitionToAll(string $id, string $transition): array
+    /** Folie wird beim Präsentieren übersprungen, bleibt aber im Editor sichtbar. */
+    public static function isSlidePresentDisabled(array $slide): bool
     {
-        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($transition) {
+        return !empty($slide['presentDisabled']);
+    }
+
+    /** @return bool[] */
+    public static function slidePresentDisabledFlags(array $slidesData): array
+    {
+        return array_map(
+            fn($slide) => self::isSlidePresentDisabled($slide),
+            $slidesData['slides'] ?? []
+        );
+    }
+
+    /** Nächste aktive Folie in Richtung $direction (-1 oder 1), ausgehend von $from (ohne $from). */
+    public static function nearestPresentEnabledIndex(array $flags, int $from, int $direction): ?int
+    {
+        $n = count($flags);
+        if ($n === 0 || ($direction !== -1 && $direction !== 1)) {
+            return null;
+        }
+        $i = $from;
+        while (true) {
+            $i += $direction;
+            if ($i < 0 || $i >= $n) {
+                return null;
+            }
+            if (!$flags[$i]) {
+                return $i;
+            }
+        }
+    }
+
+    public static function nextPresentEnabledIndex(array $flags, int $from): ?int
+    {
+        return self::nearestPresentEnabledIndex($flags, $from, 1);
+    }
+
+    /** Startfolie auf nächste präsentierbare Folie legen, falls $start deaktiviert ist. */
+    public static function normalizePresentStartIndex(array $flags, int $start): int
+    {
+        if ($flags === []) {
+            return 0;
+        }
+        $start = max(0, min(count($flags) - 1, $start));
+        if (!$flags[$start]) {
+            $next = self::nearestPresentEnabledIndex($flags, $start, 1);
+            if ($next !== null) {
+                return $next;
+            }
+            $prev = self::nearestPresentEnabledIndex($flags, $start, -1);
+            if ($prev !== null) {
+                return $prev;
+            }
+        }
+        return $start;
+    }
+
+    public static function toggleSlidePresentDisabled(string $id, int $index): array
+    {
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index) {
+            if (!isset($data['slides'][$index])) {
+                return $data;
+            }
+            $slide = &$data['slides'][$index];
+            if (self::isSlidePresentDisabled($slide)) {
+                unset($slide['presentDisabled']);
+            } else {
+                $slide['presentDisabled'] = true;
+            }
+            return $data;
+        }, ['slides' => []]);
+        self::updateMeta($id, []);
+        return $result;
+    }
+
+    /** Übergang für ausgewählte Folien-Indizes setzen (Editor-Raster, Batch). */
+    public static function applyTransitionToSlides(string $id, array $indices, string $transition, ?int $autoAdvance = null): array
+    {
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($indices, $transition, $autoAdvance) {
+            foreach ($indices as $index) {
+                $index = (int)$index;
+                if (!isset($data['slides'][$index])) {
+                    continue;
+                }
+                $data['slides'][$index]['transition'] = $transition;
+                if ($autoAdvance !== null) {
+                    $data['slides'][$index]['autoAdvance'] = max(0, $autoAdvance);
+                }
+            }
+            return $data;
+        }, ['slides' => []]);
+        self::updateMeta($id, []);
+        return $result;
+    }
+
+    /** Übergang und optional Auto-Weiter für alle Folien (Editor-Raster). */
+    public static function applyTransitionToAll(string $id, string $transition, ?int $autoAdvance = null): array
+    {
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($transition, $autoAdvance) {
             foreach ($data['slides'] as &$slide) {
                 $slide['transition'] = $transition;
+                if ($autoAdvance !== null) {
+                    $slide['autoAdvance'] = max(0, $autoAdvance);
+                }
             }
             return $data;
         }, ['slides' => []]);
@@ -439,11 +539,13 @@ class Presentation
 
     /**
      * Legt die mitgelieferten Standard-Folienvorlagen an (aus seed/templates/) - wird einmalig
-     * aufgerufen, wenn der allererste Benutzer (automatisch Admin) registriert wird, damit eine
-     * frische Installation direkt mit sinnvollen, öffentlich freigegebenen Vorlagen startet.
+     * aufgerufen, wenn der allererste Benutzer (automatisch Admin) registriert wird.
+     * Vorlagen sind zunächst privat (nur Admin); „Für alle freigeben“ bewusst manuell.
      */
     public static function seedDefaultTemplates(string $ownerId): void
     {
+        self::removeAllSlideTemplates();
+
         $seedDir = BASE_PATH . '/seed/templates';
         if (!is_dir($seedDir)) {
             return;
@@ -656,9 +758,47 @@ class Presentation
         Storage::write(self::dir($newId) . '/slides.json', $slidesData);
 
         self::updateMeta($newId, [
-            'template_shared' => true,
+            'template_shared' => false,
             'template_order' => $seedMeta['template_order'] ?? microtime(true),
         ]);
+    }
+
+    /** Entfernt Folienvorlagen ohne gültigen Besitzer (z. B. nach Neuinstallation mit alten data/). */
+    public static function removeOrphanSlideTemplates(): void
+    {
+        if (!is_dir(PRESENTATIONS_PATH)) {
+            return;
+        }
+        $userIds = array_flip(array_column(Storage::read(USERS_FILE, []), 'id'));
+        foreach (scandir(PRESENTATIONS_PATH) as $id) {
+            if ($id === '.' || $id === '..') {
+                continue;
+            }
+            $meta = self::getMeta($id);
+            if (!$meta || empty($meta['is_template'])) {
+                continue;
+            }
+            if (!isset($userIds[$meta['owner_id'] ?? ''])) {
+                self::delete($id);
+            }
+        }
+    }
+
+    /** Entfernt alle Folienvorlagen (z. B. vor Neu-Seed bei frischer Admin-Installation). */
+    private static function removeAllSlideTemplates(): void
+    {
+        if (!is_dir(PRESENTATIONS_PATH)) {
+            return;
+        }
+        foreach (scandir(PRESENTATIONS_PATH) as $id) {
+            if ($id === '.' || $id === '..') {
+                continue;
+            }
+            $meta = self::getMeta($id);
+            if ($meta && !empty($meta['is_template'])) {
+                self::delete($id);
+            }
+        }
     }
 
     private static function removeDir(string $dir): void
@@ -669,20 +809,254 @@ class Presentation
         @rmdir($dir);
     }
 
+    private const PRESENT_LEADER_STALE_SEC = 25;
+
+    private static function presentLeaderIsStale(?array $leader): bool
+    {
+        if (!is_array($leader) || ($leader['client_id'] ?? '') === '') {
+            return true;
+        }
+        $ts = (int)($leader['ts'] ?? 0);
+
+        return $ts <= 0 || (time() - $ts) > self::PRESENT_LEADER_STALE_SEC;
+    }
+
+    private static function normalizeControlKind(?string $kind): string
+    {
+        return in_array($kind, ['present', 'remote'], true) ? $kind : 'present';
+    }
+
+    private static function pruneControlClients(array &$data): void
+    {
+        if (!isset($data['control_clients']) || !is_array($data['control_clients'])) {
+            $data['control_clients'] = [];
+
+            return;
+        }
+        $now = time();
+        foreach ($data['control_clients'] as $id => $client) {
+            if (!is_array($client)) {
+                unset($data['control_clients'][$id]);
+                continue;
+            }
+            $ts = (int)($client['ts'] ?? 0);
+            if ($ts <= 0 || ($now - $ts) > self::PRESENT_LEADER_STALE_SEC) {
+                unset($data['control_clients'][$id]);
+            }
+        }
+    }
+
+    private static function registerControlClient(array &$data, string $clientId, string $kind, ?string $userId): void
+    {
+        if ($clientId === '') {
+            return;
+        }
+        if (!isset($data['control_clients']) || !is_array($data['control_clients'])) {
+            $data['control_clients'] = [];
+        }
+        $data['control_clients'][$clientId] = [
+            'kind' => self::normalizeControlKind($kind),
+            'ts' => time(),
+            'user_id' => $userId,
+        ];
+        self::pruneControlClients($data);
+    }
+
+    private static function countActiveControlClients(array $data): int
+    {
+        $clients = $data['control_clients'] ?? [];
+        if (!is_array($clients)) {
+            return 0;
+        }
+        self::pruneControlClients($data);
+
+        return count($data['control_clients'] ?? []);
+    }
+
+    /** @return array{is_leader: bool, leader_id: ?string, leader_kind: ?string} */
+    public static function resolvePresentLeader(
+        string $id,
+        string $clientId,
+        ?string $userId,
+        bool $forceClaim = false,
+        string $kind = 'present'
+    ): array {
+        $kind = self::normalizeControlKind($kind);
+        $result = ['is_leader' => false, 'leader_id' => null, 'leader_kind' => null];
+        if ($clientId === '') {
+            $result['is_leader'] = true;
+            $result['leader_kind'] = $kind;
+
+            return $result;
+        }
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($clientId, $userId, $forceClaim, $kind, &$result) {
+            self::registerControlClient($data, $clientId, $kind, $userId);
+            $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+            $currentId = self::presentLeaderIsStale($leader) ? '' : (string)($leader['client_id'] ?? '');
+            if ($forceClaim || $currentId === '' || $currentId === $clientId) {
+                $data['present_leader'] = [
+                    'client_id' => $clientId,
+                    'kind' => $kind,
+                    'ts' => time(),
+                    'user_id' => $userId,
+                ];
+                $result['is_leader'] = true;
+                $result['leader_id'] = $clientId;
+                $result['leader_kind'] = $kind;
+            } else {
+                $result['is_leader'] = false;
+                $result['leader_id'] = $currentId !== '' ? $currentId : null;
+                $result['leader_kind'] = is_array($leader) ? self::normalizeControlKind($leader['kind'] ?? null) : null;
+            }
+
+            return $data;
+        }, []);
+
+        return $result;
+    }
+
+    /** @return array{is_leader: bool, leader_id: ?string, leader_kind: ?string} */
+    public static function presentHeartbeat(string $id, string $clientId, ?string $userId): array
+    {
+        return self::controlHeartbeat($id, $clientId, $userId, 'present');
+    }
+
+    /** @return array{is_leader: bool, leader_id: ?string, leader_kind: ?string} */
+    public static function remoteHeartbeat(string $id, string $clientId, ?string $userId): array
+    {
+        return self::controlHeartbeat($id, $clientId, $userId, 'remote');
+    }
+
+    /** @return array{is_leader: bool, leader_id: ?string, leader_kind: ?string} */
+    private static function controlHeartbeat(string $id, string $clientId, ?string $userId, string $kind): array
+    {
+        $kind = self::normalizeControlKind($kind);
+        $result = ['is_leader' => false, 'leader_id' => null, 'leader_kind' => null];
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($clientId, $userId, $kind, &$result) {
+            if (!isset($data['sessions']) || !is_array($data['sessions'])) {
+                $data['sessions'] = [];
+            }
+            $sessionRole = $kind === 'remote' ? 'remote' : 'present';
+            $data['sessions'][$sessionRole] = [
+                'ts' => time(),
+                'user_id' => $userId,
+            ];
+
+            if ($clientId === '') {
+                $result['is_leader'] = true;
+                $result['leader_kind'] = $kind;
+
+                return $data;
+            }
+
+            self::registerControlClient($data, $clientId, $kind, $userId);
+
+            $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+            $currentId = self::presentLeaderIsStale($leader) ? '' : (string)($leader['client_id'] ?? '');
+            if ($currentId === '' || $currentId === $clientId) {
+                $data['present_leader'] = [
+                    'client_id' => $clientId,
+                    'kind' => $kind,
+                    'ts' => time(),
+                    'user_id' => $userId,
+                ];
+                $result['is_leader'] = true;
+                $result['leader_id'] = $clientId;
+                $result['leader_kind'] = $kind;
+                if ($kind === 'present' && isset($data['present']) && is_array($data['present'])) {
+                    $data['present']['ts'] = time();
+                }
+                if ($kind === 'remote' && isset($data['present']) && is_array($data['present'])) {
+                    $data['present']['ts'] = time();
+                }
+            } else {
+                $result['is_leader'] = false;
+                $result['leader_id'] = $currentId;
+                $result['leader_kind'] = is_array($leader) ? self::normalizeControlKind($leader['kind'] ?? null) : null;
+            }
+
+            return $data;
+        }, []);
+
+        return $result;
+    }
+
+    private static function canClientControl(?array $leader, string $clientId): bool
+    {
+        if ($clientId === '') {
+            return true;
+        }
+        if (self::presentLeaderIsStale($leader)) {
+            return true;
+        }
+        $leaderId = (string)($leader['client_id'] ?? '');
+
+        return $leaderId === '' || $leaderId === $clientId;
+    }
+
+    /**
+     * @return array{accepted: bool, is_leader: bool, leader_id: ?string, leader_kind: ?string}
+     */
     public static function setLivePosition(
         string $id,
         int $index,
         ?int $frag = null,
         string $channel = 'present',
-        string $source = 'present'
-    ): void {
+        string $source = 'present',
+        ?string $clientId = null,
+        ?string $userId = null
+    ): array {
         if (!in_array($channel, ['editor', 'present'], true)) {
             $channel = 'present';
         }
         if (!in_array($source, ['present', 'remote', 'editor'], true)) {
             $source = 'present';
         }
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source) {
+        $clientId = $clientId ?? '';
+        $accepted = true;
+        $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
+
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, &$accepted, &$leaderResult) {
+            if ($channel === 'present' && $source === 'present' && $clientId !== '') {
+                self::registerControlClient($data, $clientId, 'present', $userId);
+                $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+                $isInputLeader = self::canClientControl($leader, $clientId);
+                $presentSessionActive = self::isLiveSessionActive($data, 'present');
+
+                // Input-Steuerung nur für den Leader; Live-Position darf der Present-Modus
+                // aber immer an view.php weiterleiten (genaue Folie + Fragmente).
+                if (!$isInputLeader && !$presentSessionActive) {
+                    $accepted = false;
+                    $leaderResult = [
+                        'is_leader' => false,
+                        'leader_id' => (string)($leader['client_id'] ?? ''),
+                        'leader_kind' => self::normalizeControlKind($leader['kind'] ?? null),
+                    ];
+
+                    return $data;
+                }
+
+                if ($isInputLeader) {
+                    $data['present_leader'] = [
+                        'client_id' => $clientId,
+                        'kind' => 'present',
+                        'ts' => time(),
+                        'user_id' => $userId,
+                    ];
+                    $leaderResult = ['is_leader' => true, 'leader_id' => $clientId, 'leader_kind' => 'present'];
+                } else {
+                    $leaderResult = [
+                        'is_leader' => false,
+                        'leader_id' => (string)($leader['client_id'] ?? ''),
+                        'leader_kind' => self::normalizeControlKind($leader['kind'] ?? null),
+                    ];
+                }
+            }
+
+            if (!$accepted) {
+                return $data;
+            }
+
             if (!isset($data[$channel]) || !is_array($data[$channel])) {
                 $data[$channel] = [];
             }
@@ -690,23 +1064,106 @@ class Presentation
             $data[$channel]['frag'] = $frag;
             $data[$channel]['ts'] = time();
             $data[$channel]['source'] = $source;
+
             return $data;
         }, ['media' => null]);
+
+        return array_merge(['accepted' => $accepted], $leaderResult);
     }
 
-    public static function setLiveStep(string $id, string $direction): void
+    /** @return array{accepted: bool, is_leader: bool, leader_id: ?string, leader_kind: ?string, live?: array{index: int, frag: ?int}} */
+    public static function setLiveStep(string $id, string $direction, string $clientId = '', ?string $userId = null): array
     {
         if (!in_array($direction, ['next', 'prev'], true)) {
-            return;
+            return ['accepted' => false, 'is_leader' => false, 'leader_id' => null, 'leader_kind' => null];
         }
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($direction) {
+        $accepted = true;
+        $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
+        $liveOut = null;
+        $disabled = self::slidePresentDisabledFlags(self::getSlides($id));
+        $stepDir = $direction === 'prev' ? -1 : 1;
+
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($direction, $clientId, $userId, $disabled, $stepDir, &$accepted, &$leaderResult, &$liveOut) {
+            if ($clientId !== '') {
+                self::registerControlClient($data, $clientId, 'remote', $userId);
+            }
+            $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+            if (!self::canClientControl($leader, $clientId)) {
+                $accepted = false;
+                $leaderResult = [
+                    'is_leader' => false,
+                    'leader_id' => (string)($leader['client_id'] ?? ''),
+                    'leader_kind' => self::normalizeControlKind($leader['kind'] ?? null),
+                ];
+
+                return $data;
+            }
+            if ($clientId !== '') {
+                $data['present_leader'] = [
+                    'client_id' => $clientId,
+                    'kind' => 'remote',
+                    'ts' => time(),
+                    'user_id' => $userId,
+                ];
+                $leaderResult = ['is_leader' => true, 'leader_id' => $clientId, 'leader_kind' => 'remote'];
+            }
+
+            if (!isset($data['present']) || !is_array($data['present'])) {
+                $data['present'] = ['index' => 0, 'frag' => null, 'ts' => 0];
+            }
+
+            $presentActive = self::isLiveSessionActive($data, 'present');
+            $currentIndex = (int)($data['present']['index'] ?? 0);
+            $newIndex = self::nearestPresentEnabledIndex($disabled, $currentIndex, $stepDir) ?? $currentIndex;
+
+            // Ohne aktiven Present-Modus: Live-Position direkt setzen (view.php folgt per Poll).
+            if (!$presentActive) {
+                $data['present']['index'] = $newIndex;
+                $data['present']['frag'] = null;
+                $data['present']['ts'] = time();
+                $data['present']['source'] = 'remote';
+                $liveOut = ['index' => $newIndex, 'frag' => null];
+            } else {
+                // Present-Modus aktiv: Sitzung für view.php am Leben halten; genaue Position kommt per Broadcast.
+                $data['present']['ts'] = time();
+            }
+
+            if (!isset($data['sessions']) || !is_array($data['sessions'])) {
+                $data['sessions'] = [];
+            }
+            $data['sessions']['remote'] = [
+                'ts' => time(),
+                'user_id' => $userId,
+            ];
+
             $data['command'] = [
                 'type' => 'step',
                 'direction' => $direction,
                 'cmd_ts' => microtime(true),
             ];
+
             return $data;
         }, []);
+
+        $result = array_merge(['accepted' => $accepted], $leaderResult);
+        if ($liveOut !== null) {
+            $result['live'] = $liveOut;
+        }
+
+        return $result;
+    }
+
+    private static function isLiveSessionActive(array $data, string $role): bool
+    {
+        if (!in_array($role, ['present', 'remote'], true)) {
+            return false;
+        }
+        $s = $data['sessions'][$role] ?? null;
+        if (!is_array($s) || !isset($s['ts'])) {
+            return false;
+        }
+
+        return (time() - (int)$s['ts']) <= 20;
     }
 
     public static function touchLiveSession(string $id, string $role, ?string $userId): void
@@ -747,8 +1204,19 @@ class Presentation
         }, ['index' => 0]);
     }
 
-    public static function setLiveLaser(string $id, bool $active, ?float $x, ?float $y, int $slideIndex, string $color, int $size, bool $trail = false): void
-    {
+    /** @return array{accepted: bool, is_leader: bool, leader_id: ?string, leader_kind: ?string} */
+    public static function setLiveLaser(
+        string $id,
+        bool $active,
+        ?float $x,
+        ?float $y,
+        int $slideIndex,
+        string $color,
+        int $size,
+        bool $trail = false,
+        string $clientId = '',
+        ?string $userId = null
+    ): array {
         if ($active) {
             $x = max(0.0, min(1.0, $x ?? 0.0));
             $y = max(0.0, min(1.0, $y ?? 0.0));
@@ -759,7 +1227,30 @@ class Presentation
             $color = strtolower($color);
         }
         $size = max(8, min(64, $size));
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($active, $x, $y, $slideIndex, $color, $size, $trail) {
+        $accepted = true;
+        $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($active, $x, $y, $slideIndex, $color, $size, $trail, $clientId, $userId, &$accepted, &$leaderResult) {
+            if ($clientId !== '') {
+                self::registerControlClient($data, $clientId, 'remote', $userId);
+                $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+                if (!self::canClientControl($leader, $clientId)) {
+                    $accepted = false;
+                    $leaderResult = [
+                        'is_leader' => false,
+                        'leader_id' => (string)($leader['client_id'] ?? ''),
+                        'leader_kind' => self::normalizeControlKind($leader['kind'] ?? null),
+                    ];
+
+                    return $data;
+                }
+                $data['present_leader'] = [
+                    'client_id' => $clientId,
+                    'kind' => 'remote',
+                    'ts' => time(),
+                    'user_id' => $userId,
+                ];
+                $leaderResult = ['is_leader' => true, 'leader_id' => $clientId, 'leader_kind' => 'remote'];
+            }
             $data['laser'] = [
                 'active' => $active,
                 'x' => $active ? $x : null,
@@ -770,8 +1261,11 @@ class Presentation
                 'trail' => $trail,
                 'ts' => microtime(true),
             ];
+
             return $data;
         }, []);
+
+        return array_merge(['accepted' => $accepted], $leaderResult);
     }
 
     public static function getLivePosition(string $id, string $channel = 'present'): ?array
@@ -863,11 +1357,25 @@ class Presentation
             }
         }
 
+        $leader = is_array($raw['present_leader'] ?? null) ? $raw['present_leader'] : null;
+        $leaderId = is_array($leader) ? (string)($leader['client_id'] ?? '') : '';
+        $leaderActive = $leaderId !== '' && !self::presentLeaderIsStale($leader);
+        $controlCount = self::countActiveControlClients($raw);
+
         return [
             'live' => $live,
             'sessions' => $sessions,
             'config' => $config,
             'command' => $command,
+            'present_leader' => [
+                'client_id' => $leaderActive ? $leaderId : null,
+                'kind' => $leaderActive && is_array($leader) ? self::normalizeControlKind($leader['kind'] ?? null) : null,
+                'active' => $leaderActive,
+            ],
+            'control_clients' => [
+                'count' => $controlCount,
+                'multiple' => $controlCount > 1,
+            ],
         ];
     }
 

@@ -7,6 +7,29 @@
   const R = window.SF_REMOTE;
   if (!R || !R.id) return;
 
+  function isRemoteTabletLayout() {
+    if (R.isTablet) return true;
+    if (window.innerWidth >= 600) return true;
+    const sw = Math.min(window.screen.width, window.screen.height);
+    const sh = Math.max(window.screen.width, window.screen.height);
+    if (sw >= 600 && sh >= 900) return true;
+    if (window.matchMedia('(pointer: coarse)').matches && sw >= 480) return true;
+    return false;
+  }
+
+  function applyRemoteLayoutClass() {
+    const tablet = document.body.classList.contains('present-remote-tablet') || isRemoteTabletLayout();
+    document.body.classList.toggle('present-remote-tablet', tablet);
+  }
+
+  applyRemoteLayoutClass();
+  window.addEventListener('resize', applyRemoteLayoutClass);
+  window.addEventListener('orientationchange', applyRemoteLayoutClass);
+
+  const remoteClientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ('sf-r-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const ICON_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
   const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l14 8-14 8z"/></svg>';
@@ -20,11 +43,18 @@
   let clockInterval = null;
   let previewLoadedFor = -1;
   let navLoadedFor = -1;
+  let isRemoteLeader = true;
+  let multipleControllers = false;
+  let globalLeaderKind = null;
 
   const counterEl = document.getElementById('remoteSlideCounter');
   const presentDot = document.getElementById('remotePresentDot');
   const presentLabel = document.getElementById('remotePresentLabel');
+  const controlStatus = document.getElementById('remoteControlStatus');
+  const controlDot = document.getElementById('remoteControlDot');
   const laserPad = document.getElementById('remoteLaserPad');
+  const laserDisabledEl = document.getElementById('remoteLaserDisabled');
+  const laserEnabledInput = document.getElementById('remoteLaserEnabled');
   const timebarFill = document.getElementById('remoteTimebarFill');
   const timebarTrack = document.getElementById('remoteTimebarTrack');
   const previewScale = document.getElementById('remotePreviewScale');
@@ -50,8 +80,59 @@
     return fetch(apiUrl(false), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ csrf_token: R.csrfToken }, body)),
-    }).catch(function () {});
+      body: JSON.stringify(Object.assign({
+        csrf_token: R.csrfToken,
+        client_id: remoteClientId,
+      }, body)),
+    }).then(function (r) { return r.json(); }).catch(function () { return null; });
+  }
+
+  function updateLeaderUI() {
+    const show = multipleControllers;
+    if (controlStatus) {
+      controlStatus.hidden = !show;
+      controlStatus.classList.toggle('is-master', show && isRemoteLeader);
+      controlStatus.classList.toggle('is-follower', show && !isRemoteLeader);
+    }
+    if (!controlDot || !show) return;
+    controlDot.classList.toggle('is-master', isRemoteLeader);
+    controlDot.classList.toggle('is-follower', !isRemoteLeader);
+  }
+
+  function applyLeaderState(leader, controlClients) {
+    if (controlClients && typeof controlClients.multiple === 'boolean') {
+      multipleControllers = controlClients.multiple;
+    }
+    if (!leader) {
+      updateLeaderUI();
+      return;
+    }
+    const leaderId = leader.client_id;
+    const active = !!leader.active;
+    globalLeaderKind = leader.kind || null;
+    if (active && leaderId && leaderId !== remoteClientId) {
+      isRemoteLeader = false;
+    } else if (!active || leaderId === remoteClientId || !leaderId) {
+      isRemoteLeader = true;
+    }
+    updateLeaderUI();
+  }
+
+  function claimRemoteLeader() {
+    return post({
+      action: 'claim_leader',
+      client_kind: 'remote',
+    }).then(function (data) {
+      if (!data || !data.ok) return false;
+      isRemoteLeader = !!data.is_leader;
+      updateLeaderUI();
+      return isRemoteLeader;
+    });
+  }
+
+  function withRemoteLeader(fn) {
+    if (isRemoteLeader) { fn(); return; }
+    claimRemoteLeader().then(function (ok) { if (ok) fn(); });
   }
 
   function haptic() {
@@ -75,6 +156,36 @@
     }
   }
 
+  function isLaserEnabled() {
+    return R.laser.enabled !== false && (R.presentLayout?.laserPointerEnabled !== false);
+  }
+
+  function applyLaserUi() {
+    const on = isLaserEnabled();
+    if (laserDisabledEl) laserDisabledEl.hidden = on;
+    if (laserPad) laserPad.hidden = !on;
+    if (laserEnabledInput) laserEnabledInput.checked = on;
+    if (!on && activeMode === 'laser') setMode('nav');
+  }
+
+  function saveLaserEnabled(on) {
+    if (!R.presentLayout) R.presentLayout = {};
+    R.presentLayout.laserPointerEnabled = !!on;
+    R.laser.enabled = !!on;
+    applyLaserUi();
+    fetch('user_api.php?action=set_present_layout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ layout: R.presentLayout, csrf_token: R.csrfToken }),
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.ok && data.layout) {
+        R.presentLayout = data.layout;
+        R.laser.enabled = data.layout.laserPointerEnabled !== false;
+        applyLaserUi();
+      }
+    }).catch(function () {});
+  }
+
   function setMode(mode) {
     activeMode = mode;
     document.querySelectorAll('[data-remote-mode]').forEach(function (btn) {
@@ -93,11 +204,32 @@
   }
 
   function sendStep(direction) {
+    if (!isRemoteLeader) {
+      withRemoteLeader(function () { sendStep(direction); });
+      return;
+    }
     haptic();
-    post({ action: 'step', direction: direction });
+    post({ action: 'step', direction: direction }).then(function (data) {
+      if (data && data.ok && data.is_leader === false) {
+        isRemoteLeader = false;
+        updateLeaderUI();
+      }
+      if (data && data.ok && data.live && typeof data.live.index === 'number') {
+        if (data.live.index !== currentIndex) {
+          currentIndex = data.live.index;
+          previewLoadedFor = -1;
+          navLoadedFor = -1;
+          updateCounter();
+          if (activeMode === 'preview') loadPreview();
+          if (activeMode === 'nav') loadCurrentSlide();
+        }
+      }
+    });
   }
 
   function sendLaser(active, x, y) {
+    if (!isLaserEnabled()) return;
+    if (!isRemoteLeader) return;
     post({
       action: 'laser',
       active: !!active,
@@ -348,6 +480,10 @@
 
         setPresentStatus(!!(data.sessions && data.sessions.present && data.sessions.present.active));
 
+        if (data.present_leader) {
+          applyLeaderState(data.present_leader, data.control_clients);
+        }
+
         if (data.live && typeof data.live.index === 'number') {
           if (data.live.index !== currentIndex) {
             currentIndex = data.live.index;
@@ -402,12 +538,14 @@
     }
 
     laserPad.addEventListener('pointerdown', function (e) {
-      if (activeMode !== 'laser') return;
+      if (activeMode !== 'laser' || !isLaserEnabled()) return;
       e.preventDefault();
-      laserPad.setPointerCapture(e.pointerId);
-      laserPad.classList.add('active');
-      const p = normFromEvent(e);
-      if (p) sendLaser(true, p.x, p.y);
+      withRemoteLeader(function () {
+        laserPad.setPointerCapture(e.pointerId);
+        laserPad.classList.add('active');
+        const p = normFromEvent(e);
+        if (p) sendLaser(true, p.x, p.y);
+      });
     });
 
     laserPad.addEventListener('pointermove', function (e) {
@@ -427,6 +565,10 @@
     laserPad.addEventListener('pointercancel', endLaser);
   }
 
+  laserEnabledInput?.addEventListener('change', function () {
+    saveLaserEnabled(!!laserEnabledInput.checked);
+  });
+
   window.addEventListener('resize', function () {
     layoutSlidePreview(previewStage, previewScale);
     layoutSlidePreview(navStage, navScale);
@@ -440,12 +582,25 @@
   startTimer();
   updateClock();
   clockInterval = setInterval(updateClock, 1000);
+  applyLaserUi();
   setMode('nav');
   loadCurrentSlide();
-  post({ action: 'remote_heartbeat' });
+  post({ action: 'remote_heartbeat' }).then(function (data) {
+    if (data && data.ok) {
+      if (data.is_leader === false) isRemoteLeader = false;
+      else if (data.is_leader === true) isRemoteLeader = true;
+      updateLeaderUI();
+    }
+  });
   poll();
   setInterval(function () {
-    post({ action: 'remote_heartbeat' });
+    post({ action: 'remote_heartbeat' }).then(function (data) {
+      if (data && data.ok) {
+        if (data.is_leader === false) isRemoteLeader = false;
+        else if (data.is_leader === true) isRemoteLeader = true;
+        updateLeaderUI();
+      }
+    });
     poll();
   }, 800);
 })();

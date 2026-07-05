@@ -37,6 +37,10 @@
       P.laserPointer = P.laserPointer || {};
       P.laserPointer.trail = partial.laserPointerTrail;
     }
+    if (partial.laserPointerEnabled != null) {
+      P.laserPointer = P.laserPointer || {};
+      P.laserPointer.enabled = partial.laserPointerEnabled;
+    }
   }
 
   // ---------- Uhr-Reihenfolge ----------
@@ -174,6 +178,8 @@
 
   // ---------- Laserpointer ----------
   (function initLaserSettings() {
+    const enabledInput = document.getElementById('presentLaserEnabled');
+    const optionsEl = document.getElementById('presentLaserOptions');
     const colorInput = document.getElementById('presentLaserColor');
     const sizeInput = document.getElementById('presentLaserSize');
     const sizeVal = document.getElementById('presentLaserSizeVal');
@@ -182,7 +188,18 @@
     const paletteEl = document.getElementById('presentLaserPalette');
     if (!colorInput || !sizeInput) return;
 
-    const laser = P.laserPointer || { color: '#ff0000', size: 24, trail: false };
+    const laser = P.laserPointer || { color: '#ff0000', size: 24, trail: false, enabled: true };
+
+    function syncLaserOptionsUi() {
+      const on = enabledInput ? !!enabledInput.checked : true;
+      if (optionsEl) {
+        optionsEl.hidden = !on;
+        optionsEl.querySelectorAll('input, button').forEach(function (el) {
+          el.disabled = !on;
+        });
+      }
+      if (previewDot) previewDot.style.opacity = on ? '1' : '0.35';
+    }
 
     function updatePreview() {
       const color = colorInput.value;
@@ -211,6 +228,8 @@
     colorInput.value = laser.color || '#ff0000';
     sizeInput.value = String(laser.size || 24);
     if (trailInput) trailInput.checked = !!laser.trail;
+    if (enabledInput) enabledInput.checked = laser.enabled !== false;
+    syncLaserOptionsUi();
     updatePreview();
 
     function persist() {
@@ -218,18 +237,143 @@
         laserPointerColor: colorInput.value,
         laserPointerSize: parseInt(sizeInput.value, 10) || 24,
         laserPointerTrail: trailInput ? !!trailInput.checked : false,
+        laserPointerEnabled: enabledInput ? !!enabledInput.checked : true,
       };
       P.laserPointer = {
         color: partial.laserPointerColor,
         size: partial.laserPointerSize,
         trail: partial.laserPointerTrail,
+        enabled: partial.laserPointerEnabled,
       };
       savePrefs(partial);
       updatePreview();
+      window.SlideForgePresentLaserQuick?.sync?.();
     }
 
     colorInput.addEventListener('input', persist);
     sizeInput.addEventListener('input', persist);
     trailInput?.addEventListener('change', persist);
+    enabledInput?.addEventListener('change', function () {
+      syncLaserOptionsUi();
+      persist();
+    });
+  })();
+
+  // ---------- Laser Schnellschalter (Folien steuern) ----------
+  (function initLaserQuickToggle() {
+    const btn = document.getElementById('presentLaserQuickToggle');
+    if (!btn) return;
+    const i18n = P.i18n || {};
+
+    function laserColor() {
+      return P.laserPointer?.color || P.presentLayout?.laserPointerColor || '#ff0000';
+    }
+
+    function isLaserOn() {
+      return P.laserPointer?.enabled !== false;
+    }
+
+    function syncQuickToggle() {
+      const on = isLaserOn();
+      const color = laserColor();
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.title = on ? (i18n.laserToggleOn || '') : (i18n.laserToggleOff || '');
+      btn.style.color = on ? color : '';
+    }
+
+    btn.addEventListener('click', function () {
+      const enabledInput = document.getElementById('presentLaserEnabled');
+      const next = !isLaserOn();
+      if (enabledInput) {
+        enabledInput.checked = next;
+        enabledInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        P.laserPointer = Object.assign({}, P.laserPointer || {}, { enabled: next });
+        savePrefs({ laserPointerEnabled: next });
+        syncQuickToggle();
+      }
+    });
+
+    window.SlideForgePresentLaserQuick = { sync: syncQuickToggle };
+    syncQuickToggle();
+  })();
+
+  // ---------- Fertige Folie im Hintergrund ----------
+  (function initSlideGhostSettings() {
+    const toggle = document.getElementById('presentShowSlideGhostToggle');
+    const opacity = document.getElementById('presentSlideGhostOpacity');
+    const opacityVal = document.getElementById('presentSlideGhostOpacityVal');
+    const inlineWrap = document.getElementById('presentGhostInline');
+    const inlineOpacity = document.getElementById('presentSlideGhostOpacityInline');
+    const inlineVal = document.getElementById('presentSlideGhostOpacityInlineVal');
+    if (!toggle) return;
+
+    function clampOpacity(v) {
+      return Math.max(5, Math.min(80, parseInt(v, 10) || 25));
+    }
+
+    function syncGhostUi(show, pct) {
+      const on = !!show;
+      const val = clampOpacity(pct);
+      if (inlineWrap) inlineWrap.classList.toggle('is-disabled', !on);
+      [opacity, inlineOpacity].forEach((el) => {
+        if (!el) return;
+        el.disabled = !on;
+        el.value = String(val);
+      });
+      if (opacityVal) opacityVal.textContent = String(val);
+      if (inlineVal) inlineVal.textContent = String(val);
+      if (inlineOpacity) inlineOpacity.setAttribute('aria-valuetext', val + '%');
+      window.SlideForgePresentGhostQuick?.sync?.(on);
+    }
+
+    function persistFromUi(show, pct) {
+      const val = clampOpacity(pct);
+      syncGhostUi(show, val);
+      savePrefs({ showSlideGhost: !!show, slideGhostOpacity: val });
+    }
+
+    toggle.addEventListener('change', () => {
+      persistFromUi(toggle.checked, opacity?.value || inlineOpacity?.value || 25);
+    });
+
+    function bindOpacityInput(input) {
+      if (!input) return;
+      input.addEventListener('input', () => {
+        persistFromUi(toggle.checked, input.value);
+      });
+    }
+
+    bindOpacityInput(opacity);
+    bindOpacityInput(inlineOpacity);
+    syncGhostUi(toggle.checked, opacity?.value || inlineOpacity?.value || 25);
+  })();
+
+  // ---------- Ghost Schnellschalter (Folien steuern) ----------
+  (function initGhostQuickToggle() {
+    const btn = document.getElementById('presentGhostQuickToggle');
+    const settingsToggle = document.getElementById('presentShowSlideGhostToggle');
+    if (!btn) return;
+    const i18n = P.i18n || {};
+
+    function syncGhostQuick(on) {
+      const active = typeof on === 'boolean'
+        ? on
+        : (settingsToggle ? settingsToggle.checked : P.presentLayout?.showSlideGhost !== false);
+      btn.classList.toggle('is-on', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.title = active ? (i18n.ghostToggleOn || '') : (i18n.ghostToggleOff || '');
+    }
+
+    btn.addEventListener('click', function () {
+      if (settingsToggle) {
+        settingsToggle.checked = !settingsToggle.checked;
+        settingsToggle.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    window.SlideForgePresentGhostQuick = { sync: syncGhostQuick };
+    syncGhostQuick();
   })();
 })();

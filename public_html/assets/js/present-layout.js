@@ -26,6 +26,9 @@
       laserPointerColor: '#ff0000',
       laserPointerSize: 24,
       laserPointerTrail: false,
+      laserPointerEnabled: true,
+      showSlideGhost: true,
+      slideGhostOpacity: 25,
     };
   }
 
@@ -75,6 +78,9 @@
       laserPointerColor: src.laserPointerColor || base.laserPointerColor,
       laserPointerSize: src.laserPointerSize != null ? src.laserPointerSize : base.laserPointerSize,
       laserPointerTrail: src.laserPointerTrail != null ? !!src.laserPointerTrail : base.laserPointerTrail,
+      laserPointerEnabled: src.laserPointerEnabled != null ? !!src.laserPointerEnabled : base.laserPointerEnabled,
+      showSlideGhost: src.showSlideGhost != null ? !!src.showSlideGhost : base.showSlideGhost,
+      slideGhostOpacity: src.slideGhostOpacity != null ? src.slideGhostOpacity : base.slideGhostOpacity,
     };
   }
 
@@ -412,6 +418,7 @@
       color: ls.laserPointerColor || '#ff0000',
       size: ls.laserPointerSize || 24,
       trail: !!ls.laserPointerTrail,
+      enabled: ls.laserPointerEnabled !== false,
     }, '*');
   }
 
@@ -422,9 +429,24 @@
     if (partial.laserPointerColor) layoutState.laserPointerColor = partial.laserPointerColor;
     if (partial.laserPointerSize != null) layoutState.laserPointerSize = partial.laserPointerSize;
     if (partial.laserPointerTrail != null) layoutState.laserPointerTrail = !!partial.laserPointerTrail;
+    if (partial.laserPointerEnabled != null) layoutState.laserPointerEnabled = !!partial.laserPointerEnabled;
+    if (partial.showSlideGhost != null) layoutState.showSlideGhost = !!partial.showSlideGhost;
+    if (partial.slideGhostOpacity != null) layoutState.slideGhostOpacity = partial.slideGhostOpacity;
     if (P) P.presentLayout = cloneLayout(layoutState);
     saveLayout();
-    if (partial.laserPointerColor || partial.laserPointerSize != null || partial.laserPointerTrail != null) broadcastLaserConfig();
+    if (partial.laserPointerColor || partial.laserPointerSize != null || partial.laserPointerTrail != null || partial.laserPointerEnabled != null) broadcastLaserConfig();
+    if (partial.showSlideGhost != null || partial.slideGhostOpacity != null) broadcastSlideGhost();
+  }
+
+  function broadcastSlideGhost() {
+    const frame = document.getElementById('mainFrame');
+    if (!frame?.contentWindow) return;
+    const ls = layoutState || defaultLayout();
+    frame.contentWindow.postMessage({
+      type: 'sf-slide-ghost',
+      enabled: !!ls.showSlideGhost,
+      opacity: ls.slideGhostOpacity != null ? ls.slideGhostOpacity : 25,
+    }, '*');
   }
 
   function init(opts) {
@@ -450,6 +472,7 @@
     setShowTimebarLive,
     patchUserPrefs,
     broadcastLaserConfig,
+    broadcastSlideGhost,
     savePanelOpenState,
     applyGridVars: () => applyGridVars(layoutState),
   };

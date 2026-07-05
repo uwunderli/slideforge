@@ -121,6 +121,12 @@ switch ($action) {
         json_ok(['slides' => $result['slides']]);
         break;
 
+    case 'toggle_slide_present_disabled':
+        $index = (int)($body['index'] ?? -1);
+        $result = Presentation::toggleSlidePresentDisabled($id, $index);
+        json_ok(['slides' => $result['slides']]);
+        break;
+
     case 'reorder_slides':
         $order = $body['order'] ?? [];
         $result = Presentation::reorderSlides($id, $order);
@@ -129,7 +135,19 @@ switch ($action) {
 
     case 'apply_transition_all':
         $transition = (string)($body['transition'] ?? 'slide');
-        $result = Presentation::applyTransitionToAll($id, $transition);
+        $autoAdvance = array_key_exists('autoAdvance', $body) ? max(0, (int)$body['autoAdvance']) : null;
+        $result = Presentation::applyTransitionToAll($id, $transition, $autoAdvance);
+        json_ok(['slides' => $result['slides']]);
+        break;
+
+    case 'apply_transition_slides':
+        $indices = array_values(array_filter(array_map('intval', $body['indices'] ?? []), fn($i) => $i >= 0));
+        $transition = (string)($body['transition'] ?? 'slide');
+        $autoAdvance = array_key_exists('autoAdvance', $body) ? max(0, (int)$body['autoAdvance']) : null;
+        if ($indices === []) {
+            json_fail('Keine Folien ausgewählt.', 400);
+        }
+        $result = Presentation::applyTransitionToSlides($id, $indices, $transition, $autoAdvance);
         json_ok(['slides' => $result['slides']]);
         break;
 

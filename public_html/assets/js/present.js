@@ -1,6 +1,48 @@
 (function () {
   'use strict';
   const P = window.SF_PRESENT;
+  const presentClientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : ('sf-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+  let isPresentLeader = true;
+  let applyingRemote = false;
+  let multipleControllers = false;
+  let globalLeaderKind = null;
+
+  function slideDisabledFlags() {
+    return Array.isArray(P.slideDisabled) ? P.slideDisabled : [];
+  }
+
+  function isSlideDisabled(idx) {
+    const flags = slideDisabledFlags();
+    return idx >= 0 && idx < flags.length && !!flags[idx];
+  }
+
+  function nextEnabledSlideIndex(from, direction) {
+    const flags = slideDisabledFlags();
+    let i = from;
+    let guard = 0;
+    while (guard++ < flags.length + 1) {
+      i += direction;
+      if (i < 0 || i >= flags.length) return null;
+      if (!flags[i]) return i;
+    }
+    return null;
+  }
+
+  function normalizeSlideJumpIndex(idx, preferredDir) {
+    if (!isSlideDisabled(idx)) return idx;
+    const dir = preferredDir ?? 1;
+    return nextEnabledSlideIndex(idx, dir) ?? nextEnabledSlideIndex(idx, -dir) ?? idx;
+  }
+
+  function nextPresentPreviewIndex(from) {
+    const flags = slideDisabledFlags();
+    for (let i = from + 1; i < flags.length; i++) {
+      if (!flags[i]) return i;
+    }
+    return from;
+  }
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -660,6 +702,15 @@
   let currentIndex = P.startSlide || 0;
   let controlsBound = false;
 
+  function presentSlideIndex(preferredDir) {
+    if (!mainReveal) return currentIndex;
+    let h = (mainReveal.getIndices() || { h: 0 }).h || 0;
+    if (isSlideDisabled(h)) {
+      h = normalizeSlideJumpIndex(h, preferredDir);
+    }
+    return h;
+  }
+
   document.querySelectorAll('.filmstrip-item').forEach((btn) => {
     btn.classList.toggle('active', parseInt(btn.dataset.index, 10) === currentIndex);
   });
@@ -697,7 +748,7 @@
   function syncNextPreview() {
     if (!nextPreview) return;
     const scaleEl = nextPreview.querySelector('.present-next-thumb-scale');
-    const nextIdx = Math.min(currentIndex + 1, P.slideCount - 1);
+    const nextIdx = nextPresentPreviewIndex(currentIndex);
     const src = document.querySelector('.filmstrip-item[data-index="' + nextIdx + '"] .filmstrip-thumb-scale');
     if (scaleEl && src) scaleEl.innerHTML = src.innerHTML;
     layoutNextPreview();
@@ -732,7 +783,11 @@
   mainFrame.addEventListener('load', () => {
     waitForReveal(mainFrame.contentWindow, (reveal) => {
       mainReveal = reveal;
-      mainReveal.on('slidechanged', (e) => updateUI(e.indexh || 0));
+      mainReveal.on('slidechanged', (e) => {
+        const prevH = typeof e.previousIndexh === 'number' ? e.previousIndexh : currentIndex;
+        const dir = (typeof e.indexh === 'number' ? e.indexh : currentIndex) >= prevH ? 1 : -1;
+        requestAnimationFrame(() => updateUI(presentSlideIndex(dir)));
+      });
       // Fragmente (schrittweise Animationen innerhalb einer Folie) lösen KEIN
       // 'slidechanged' aus, müssen aber genauso live übertragen werden - sonst bleibt
       // die Zuschauer-Ansicht (view.php) beim vorherigen Fragment-Stand hängen und
@@ -741,6 +796,8 @@
       mainReveal.on('fragmenthidden', () => broadcastPosition(currentIndex));
       updateUI((mainReveal.getIndices() || { h: 0 }).h || 0);
       window.SlideForgePresentLayout?.broadcastLaserConfig?.();
+      window.SlideForgePresentLayout?.broadcastSlideGhost?.();
+      try { mainFrame.contentWindow?.focus(); } catch (err) { /* ignore */ }
       if (!controlsBound) { bindControls(); controlsBound = true; }
     });
   });
@@ -796,7 +853,9 @@
       '</div>';
     }).join('');
     list.querySelectorAll('[data-media-cmd]').forEach((btn) => {
-      btn.addEventListener('click', () => sendMediaCommand(btn.dataset.mediaId, btn.dataset.mediaCmd));
+      btn.addEventListener('click', () => {
+        withLeaderControl(() => sendMediaCommand(btn.dataset.mediaId, btn.dataset.mediaCmd));
+      });
     });
   }
 
@@ -809,20 +868,136 @@
     }).catch(() => {});
   }
 
-  function broadcastPosition(h) {
-    if (!P.canBroadcast || applyingRemote) return;
-    const indices = mainReveal ? mainReveal.getIndices() : null;
-    const frag = indices && typeof indices.f === 'number' ? indices.f : null;
+  function updateLeaderUI() {
+    const status = document.getElementById('presentControlStatus');
+    const dot = document.getElementById('presentControlDot');
+    if (!P.canBroadcast) {
+      if (status) status.hidden = true;
+      return;
+    }
+    const show = multipleControllers;
+    if (status) {
+      status.hidden = !show;
+      status.classList.toggle('is-master', show && isPresentLeader);
+      status.classList.toggle('is-follower', show && !isPresentLeader);
+    }
+    if (!dot || !show) return;
+    dot.classList.toggle('is-master', isPresentLeader);
+    dot.classList.toggle('is-follower', !isPresentLeader);
+  }
+
+  function applyLeaderState(leader, controlClients) {
+    if (!P.canBroadcast) return;
+    if (controlClients && typeof controlClients.multiple === 'boolean') {
+      multipleControllers = controlClients.multiple;
+    }
+    if (!leader) {
+      updateLeaderUI();
+      return;
+    }
+    const leaderId = leader.client_id;
+    const active = !!leader.active;
+    globalLeaderKind = leader.kind || null;
+    if (active && leaderId && leaderId !== presentClientId) {
+      isPresentLeader = false;
+    } else if (!active || leaderId === presentClientId || !leaderId) {
+      isPresentLeader = true;
+    }
+    updateLeaderUI();
+  }
+
+  function remoteDrivesPresentation() {
+    return globalLeaderKind === 'remote' && !isPresentLeader;
+  }
+
+  function canBroadcastPosition() {
+    if (!P.canBroadcast || applyingRemote) return false;
+    if (isPresentLeader) return true;
+    // Present-Modus leitet Remote-Schritte an Zuschauer (view.php) weiter.
+    if (globalLeaderKind === 'remote') return true;
+    return false;
+  }
+
+  function syncFollowerPosition(live) {
+    if (isPresentLeader || !mainReveal || !live || typeof live.index !== 'number') return;
+    const targetIndex = normalizeSlideJumpIndex(live.index);
+    const frag = typeof live.frag === 'number' ? live.frag : null;
+    const indices = mainReveal.getIndices() || {};
+    const curH = indices.h || 0;
+    const curF = typeof indices.f === 'number' ? indices.f : -1;
+    if (targetIndex === curH && (frag === null || frag === curF)) return;
+    applyingRemote = true;
+    if (frag !== null) mainReveal.slide(targetIndex, 0, frag);
+    else mainReveal.slide(targetIndex, 0);
+    applyingRemote = false;
+    currentIndex = targetIndex;
+  }
+
+  function claimPresentLeader() {
+    if (!P.canBroadcast) return Promise.resolve(false);
+    return fetch('live.php?id=' + encodeURIComponent(P.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'claim_leader',
+        client_id: presentClientId,
+        client_kind: 'present',
+        csrf_token: P.csrfToken,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return false;
+        isPresentLeader = !!data.is_leader;
+        globalLeaderKind = data.leader_kind || 'present';
+        updateLeaderUI();
+        if (isPresentLeader && mainReveal) broadcastPosition(currentIndex);
+        return isPresentLeader;
+      })
+      .catch(() => false);
+  }
+
+  function withLeaderControl(fn) {
+    if (!P.canBroadcast) return;
+    if (isPresentLeader) { fn(); return; }
+    claimPresentLeader().then((ok) => { if (ok) fn(); });
+  }
+
+  function broadcastPosition(h, fragOverride) {
+    if (!canBroadcastPosition()) return;
+    let frag = fragOverride;
+    if (frag === undefined) {
+      const indices = mainReveal ? mainReveal.getIndices() : null;
+      frag = indices && typeof indices.f === 'number' ? indices.f : null;
+    }
     fetch('live.php?id=' + encodeURIComponent(P.id), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ index: h, frag: frag, channel: 'present', csrf_token: P.csrfToken }),
-    }).catch(() => {});
+      body: JSON.stringify({
+        index: h,
+        frag: frag,
+        channel: 'present',
+        client_id: presentClientId,
+        csrf_token: P.csrfToken,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return;
+        if (data.is_leader === false) {
+          isPresentLeader = false;
+          updateLeaderUI();
+        } else if (data.is_leader === true) {
+          isPresentLeader = true;
+          updateLeaderUI();
+        }
+      })
+      .catch(() => {});
   }
 
   let laserBroadcastTimer = null;
   function broadcastLaser(data) {
-    if (!P.canBroadcast || !data) return;
+    if (!P.canBroadcast || !data || P.presentLayout?.laserPointerEnabled === false) return;
     fetch('live.php?id=' + encodeURIComponent(P.id), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -839,6 +1014,15 @@
       }),
     }).catch(() => {});
   }
+
+  window.addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'sf-present-position') return;
+    if (!mainFrame?.contentWindow || e.source !== mainFrame.contentWindow) return;
+    if (typeof e.data.index !== 'number') return;
+    currentIndex = e.data.index;
+    const frag = typeof e.data.frag === 'number' ? e.data.frag : null;
+    broadcastPosition(e.data.index, frag);
+  });
 
   window.addEventListener('message', (e) => {
     if (!e.data || e.data.type !== 'sf-laser-live') return;
@@ -877,37 +1061,37 @@
       if (!mainReveal || shouldSkipPresentNav(e)) return;
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
         e.preventDefault();
-        mainReveal.next();
+        withLeaderControl(() => mainReveal.next());
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
-        mainReveal.prev();
-      }
-    }
-
-    function handleIframeEnterKey(e) {
-      if (!mainReveal || shouldSkipPresentNav(e)) return;
-      // reveal.js steuert Pfeiltasten/Leertaste im iframe bereits (Folien + Fragmente/Effekte)
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        mainReveal.next();
+        withLeaderControl(() => mainReveal.prev());
       }
     }
 
     document.addEventListener('keydown', handleParentNavKey);
-    try {
-      const idoc = mainFrame.contentDocument;
-      if (idoc) idoc.addEventListener('keydown', handleIframeEnterKey);
-    } catch (err) { /* iframe noch nicht bereit */ }
   }
 
   function bindControls() {
-    document.getElementById('presPrevBtn').addEventListener('click', () => { if (mainReveal) mainReveal.prev(); });
-    document.getElementById('presNextBtn').addEventListener('click', () => { if (mainReveal) mainReveal.next(); });
+    document.getElementById('presPrevBtn').addEventListener('click', () => {
+      withLeaderControl(() => { if (mainReveal) mainReveal.prev(); });
+    });
+    document.getElementById('presNextBtn').addEventListener('click', () => {
+      withLeaderControl(() => { if (mainReveal) mainReveal.next(); });
+    });
 
     document.querySelectorAll('.filmstrip-item').forEach((btn) => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
-        if (mainReveal) mainReveal.slide(idx, 0);
+        if (isSlideDisabled(idx)) return;
+        withLeaderControl(() => {
+          if (!mainReveal) return;
+          if (idx === currentIndex) {
+            // Gleiche Folie: nächster Animationsschritt, oder nächste Folie wenn fertig
+            mainReveal.next();
+          } else {
+            mainReveal.slide(normalizeSlideJumpIndex(idx), 0);
+          }
+        });
       });
     });
 
@@ -919,13 +1103,12 @@
   }
 
   // Heartbeat: Live-Sitzung auch ohne Navigation "aktiv" halten (siehe getLivePosition()-Timeout serverseitig).
-  let applyingRemote = false;
   let lastRemoteCommandTs = 0;
   let lastRemoteConfigTs = 0;
   let remotePollMs = 500;
 
   function forwardRemoteLaser(laser) {
-    if (!mainFrame?.contentWindow || !laser) return;
+    if ((P.presentLayout?.laserPointerEnabled === false) || !mainFrame?.contentWindow || !laser) return;
     mainFrame.contentWindow.postMessage({
       type: 'sf-laser-remote',
       active: !!laser.active,
@@ -958,12 +1141,25 @@
           }
         }
 
-        if (data.command && data.command.type === 'step' && data.command.cmd_ts > lastRemoteCommandTs && mainReveal) {
+        if (data.present_leader) {
+          applyLeaderState(data.present_leader, data.control_clients);
+        }
+
+        const remoteControls = globalLeaderKind === 'remote';
+
+        if (data.command && data.command.type === 'step' && data.command.cmd_ts > lastRemoteCommandTs && mainReveal && (isPresentLeader || remoteControls)) {
           lastRemoteCommandTs = data.command.cmd_ts;
           applyingRemote = true;
+          const stepDir = data.command.direction === 'prev' ? -1 : 1;
           if (data.command.direction === 'next') mainReveal.next();
           else if (data.command.direction === 'prev') mainReveal.prev();
           applyingRemote = false;
+          requestAnimationFrame(() => {
+            const h = presentSlideIndex(stepDir);
+            updateUI(h);
+          });
+        } else if (!isPresentLeader && data.live && !remoteControls) {
+          syncFollowerPosition(data.live);
         }
 
         if (data.live && data.live.laser) {
@@ -984,18 +1180,35 @@
   scheduleRemotePoll();
 
   setInterval(() => {
-    if (P.canBroadcast && mainReveal) {
+    if (!P.canBroadcast) return;
+    fetch('live.php?id=' + encodeURIComponent(P.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'present_heartbeat',
+        client_id: presentClientId,
+        csrf_token: P.csrfToken,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return;
+        if (data.is_leader === false) {
+          isPresentLeader = false;
+        } else if (data.is_leader === true) {
+          isPresentLeader = true;
+        }
+        if (data.leader_kind) globalLeaderKind = data.leader_kind;
+        updateLeaderUI();
+      })
+      .catch(() => {});
+    if (isPresentLeader && mainReveal) {
       broadcastPosition(currentIndex);
-      fetch('live.php?id=' + encodeURIComponent(P.id), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'present_heartbeat', csrf_token: P.csrfToken }),
-      }).catch(() => {});
     }
   }, 8000);
 
   window.addEventListener('beforeunload', () => {
-    if (P.canBroadcast && navigator.sendBeacon) {
+    if (P.canBroadcast && isPresentLeader && navigator.sendBeacon) {
       navigator.sendBeacon(
         'live.php?id=' + encodeURIComponent(P.id),
         JSON.stringify({ action: 'stop', csrf_token: P.csrfToken })

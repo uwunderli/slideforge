@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Commit & Push in Cursor: Version bump, Prod (BK Biel), Demo deployen.
+# Überspringen: SKIP_RELEASE_DEPLOY=1 git push
+set -euo pipefail
+
+if [[ "${SKIP_RELEASE_DEPLOY:-}" == "1" ]]; then
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+pushing=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$local_sha" != "0000000000000000000000000000000000000000" ]]; then
+    pushing=1
+  fi
+done
+
+if [[ "$pushing" -eq 0 ]]; then
+  exit 0
+fi
+
+log() { echo "[slideforge release] $*"; }
+
+if ! [[ -f "$ROOT/.deploy/ssh.env" ]]; then
+  echo "[slideforge release] Abbruch: .deploy/ssh.env fehlt (Prod-Zugang)." >&2
+  exit 1
+fi
+if ! [[ -f "$ROOT/.deploy/ssh.env.demo" ]]; then
+  echo "[slideforge release] Abbruch: .deploy/ssh.env.demo fehlt (Demo-Zugang)." >&2
+  exit 1
+fi
+
+if git log -1 --pretty=%s | grep -qE '^chore\(release\): v[0-9]+\.[0-9]+\.[0-9]+$'; then
+  log "Release-Commit bereits vorhanden – nur Deploy"
+else
+  "$ROOT/.deploy/release-prep.sh"
+  git add VERSION CHANGELOG.md README.md
+  if ! git diff --cached --quiet; then
+    ver="$(tr -d '[:space:]' < VERSION)"
+    git commit --no-verify -m "chore(release): v${ver}"
+    log "Version v${ver} committed"
+  fi
+fi
+
+ver="$(tr -d '[:space:]' < VERSION)"
+
+log "Deploy Produktion (BK Biel) …"
+"$ROOT/.deploy/deploy.sh" sync-code
+
+log "Deploy Demo (slideforge.service7.ch) …"
+"$ROOT/.deploy/deploy-demo.sh" sync-demo
+
+if ! git rev-parse "v${ver}" >/dev/null 2>&1; then
+  git tag -a "v${ver}" -m "Release v${ver}"
+  log "Tag v${ver} erstellt (push.followTags)"
+fi
+
+log "Deploy fertig – Git-Push wird fortgesetzt"
+exit 0

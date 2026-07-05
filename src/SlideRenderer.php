@@ -201,6 +201,9 @@ class SlideRenderer
             if (($o['type'] ?? '') === 'text' && !empty($o['animPerLine'])) {
                 $lines = preg_split('/\n/', $o['text'] ?? '');
                 foreach (array_keys($lines) as $lineIndex) {
+                    if (!self::isAnimatablePerLineText($lines[$lineIndex])) {
+                        continue;
+                    }
                     $units[] = [
                         'objIndex' => $objIndex,
                         'lineIndex' => $lineIndex,
@@ -232,25 +235,32 @@ class SlideRenderer
 
         $fragmentIndex = [];
         $autoAdvanceForOrder = [];
-        $sectionAutoSlideMs = null;
+        $firstUnitAutoMs = null;
+        $hasManualStep = false;
 
         foreach ($units as $i => $u) {
+            if ($u['ms'] <= 0) {
+                $hasManualStep = true;
+            }
             $revealIdx = $i + 1;
             $fragmentIndex[$u['objIndex']][$u['lineIndex']] = $revealIdx;
             if ($u['ms'] <= 0) {
                 continue;
             }
             if ($i === 0) {
-                $sectionAutoSlideMs = $u['ms'];
-            } else {
-                $autoAdvanceForOrder[$i] = $u['ms'];
+                // Erster Schritt nach Folienstart (ohne Klick), wenn animAutoAdvance > 0
+                $firstUnitAutoMs = $u['ms'];
+                continue;
             }
+            $autoAdvanceForOrder[$revealIdx - 1] = $u['ms'];
         }
 
         return [
             'fragmentIndex' => $fragmentIndex,
             'autoAdvanceForOrder' => $autoAdvanceForOrder,
-            'sectionAutoSlideMs' => $sectionAutoSlideMs,
+            'firstUnitAutoMs' => $firstUnitAutoMs,
+            'animStepCount' => count($units),
+            'wantsGhostPreview' => count($units) >= 2 && $hasManualStep,
         ];
     }
 
@@ -260,17 +270,22 @@ class SlideRenderer
         foreach ($slidesData['slides'] ?? [] as $slide) {
             $objects = $slide['objects'] ?? [];
             $plan = self::buildSlideFragmentPlan($objects);
+            $plan['slideHasAutoAdvance'] = !empty($slide['autoAdvance']);
 
             $attrs = self::backgroundAttrs($slide['background'] ?? null, $publicToken);
             if (!empty($slide['transition'])) {
                 $attrs .= ' data-transition="' . h($slide['transition']) . '"';
             }
             if (!empty($slide['autoAdvance'])) {
-                // Manuelles "ganze Folie nach X Sek. weiterschalten" hat Vorrang vor dem
-                // automatischen Start des ersten Animationsschritts, falls beides gesetzt ist.
                 $attrs .= ' data-autoslide="' . ((int)$slide['autoAdvance'] * 1000) . '"';
-            } elseif ($plan['sectionAutoSlideMs'] !== null) {
-                $attrs .= ' data-autoslide="' . $plan['sectionAutoSlideMs'] . '"';
+            } elseif (!empty($plan['firstUnitAutoMs'])) {
+                $attrs .= ' data-sf-first-autoadvance="' . (int)$plan['firstUnitAutoMs'] . '"';
+            }
+            if (!empty($plan['wantsGhostPreview'])) {
+                $attrs .= ' data-sf-ghost-preview="1"';
+            }
+            if (!empty($slide['presentDisabled'])) {
+                $attrs .= ' data-sf-slide-disabled="1" class="sf-slide-present-disabled"';
             }
             $html .= "<section{$attrs} style=\"width:100%; height:100%;\">\n";
             foreach ($objects as $objIndex => $obj) {
@@ -324,6 +339,31 @@ class SlideRenderer
         return $em . 'em';
     }
 
+    /** Leerzeilen / nur Leerzeichen: kein eigener Animationsschritt bei «Jede Zeile». */
+    private static function isAnimatablePerLineText(string $line): bool
+    {
+        if (trim($line) === '') {
+            return false;
+        }
+        $rendered = Markdown::render($line);
+        $plain = trim(html_entity_decode(strip_tags($rendered), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        return $plain !== '';
+    }
+
+    private static function fragmentAutoSlideAttr(array $plan, int $order): string
+    {
+        $autoAdvanceForOrder = $plan['autoAdvanceForOrder'] ?? [];
+        if (isset($autoAdvanceForOrder[$order]) && (int)$autoAdvanceForOrder[$order] > 0) {
+            return ' data-autoslide="' . (int)$autoAdvanceForOrder[$order] . '"';
+        }
+        // data-autoslide="0" nur wenn die Folie ein ganzes-Folie-AutoAdvance hat
+        // (sonst erzeugt reveal.js nach dem letzten Fragment einen Leerschritt).
+        if (!empty($plan['slideHasAutoAdvance'])) {
+            return ' data-autoslide="0"';
+        }
+        return '';
+    }
+
     private static function renderTextPerLine(array $obj, string $outerStyle, string $animType, array $plan, int $objIndex): string
     {
         $fontFamily = $obj['fontFamily'] ?? 'Open Sans';
@@ -352,11 +392,14 @@ class SlideRenderer
         $lines = preg_split('/\n/', $obj['text'] ?? '');
         $linesHtml = '';
         foreach ($lines as $i => $line) {
+            if (!self::isAnimatablePerLineText($line)) {
+                // Abstand wie früher (&nbsp;), aber kein Fragment → kein Extra-Klick
+                $linesHtml .= '<div class="sf-text-line sf-text-line-gap" aria-hidden="true" style="' . $baseTextStyle . '">&nbsp;</div>';
+                continue;
+            }
             $order = $lineIndices[$i] ?? ((int)($obj['animOrder'] ?? 1) + $i);
-            $autoslide = isset($autoAdvanceForOrder[$order]) ? (int)$autoAdvanceForOrder[$order] : 0;
             $rendered = Markdown::render($line);
-            if ($rendered === '') $rendered = '&nbsp;'; // leere Zeile trotzdem als Fragment-Schritt sichtbar halten
-            $linesHtml .= '<div class="sf-text-line fragment ' . h($animType) . '" data-fragment-index="' . $order . '" data-autoslide="' . $autoslide . '" style="' . $baseTextStyle . $durationCss . '">' . $rendered . '</div>';
+            $linesHtml .= '<div class="sf-text-line fragment ' . h($animType) . '" data-fragment-index="' . $order . '"' . self::fragmentAutoSlideAttr($plan, $order) . ' style="' . $baseTextStyle . $durationCss . '">' . $rendered . '</div>';
         }
 
         $opacity = $obj['opacity'] ?? 1;
@@ -433,13 +476,10 @@ class SlideRenderer
             $fragmentClass = ' fragment ' . h($animType);
             $order = $objectIndices[-1] ?? (int)($obj['animOrder'] ?? 1);
             $fragmentAttr = ' data-fragment-index="' . $order . '"';
-            // Auto-Start-Verzögerung für den NÄCHSTEN Schritt sitzt auf DIESEM Fragment
-            // (reveal.js wartet nach dem Erscheinen dieses Fragments so lange, bevor es
-            // zum nächsten Schritt weitergeht). WICHTIG: reveal.js "erbt" sonst mitunter
-            // den data-autoslide-Wert der Folie bzw. eines vorherigen Fragments weiter,
-            // wenn hier gar kein Attribut steht - deshalb explizit auf 0 setzen, wenn
-            // dieses Fragment eigentlich stehen bleiben und auf einen Klick warten soll.
-            $fragmentAttr .= ' data-autoslide="' . (isset($autoAdvanceForOrder[$order]) ? (int)$autoAdvanceForOrder[$order] : 0) . '"';
+            // Auto-Weiter nach diesem Fragment: nur setzen wenn > 0 ms. reveal.js wertet
+            // data-autoslide="0" als explizites Stoppen und nutzt dann NICHT die Folien-
+            // Verzögerung — deshalb Attribut weglassen statt 0.
+            $fragmentAttr .= self::fragmentAutoSlideAttr($plan, $order);
         }
 
         $extraClass = '';
@@ -591,6 +631,33 @@ class SlideRenderer
     }
 
     /**
+     * Ghost-Layer im Präsentationsmodus: gleiche Fragment-Struktur wie die Live-Folie,
+     * damit Schritt-für-Schritt-Animationen synchron einblendbar sind (nicht Endzustand).
+     */
+    public static function renderSlideGhostHtml(array $slide, ?string $publicToken = null): string
+    {
+        $bg = $slide['background'] ?? null;
+        $bgStyle = 'background:#161a12;';
+        if ($bg) {
+            if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
+                $bgStyle = 'background:' . h($bg['value'] ?? '#161a12') . ';';
+            } elseif (($bg['type'] ?? '') === 'image' && !empty($bg['value'])) {
+                $src = self::assetUrl($bg['value'], $publicToken);
+                $bgStyle = 'background-image:url(\'' . h($src) . '\'); background-size:cover; background-position:center;';
+            }
+        }
+        $objects = $slide['objects'] ?? [];
+        $plan = self::buildSlideFragmentPlan($objects);
+        $html = '<div style="position:relative; width:100%; height:100%; box-sizing:border-box; ' . $bgStyle . ' overflow:hidden;">';
+        foreach ($objects as $objIndex => $obj) {
+            $html .= self::renderObject($obj, $publicToken, $plan, $objIndex);
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
      * Statisches Vorschaubild einer einzelnen Folie (z.B. für den Filmstreifen im
      * Präsentationsmodus): zeigt alle Objekte im "Endzustand" nach allen Animationen,
      * da hier kein reveal.js/reveal.css läuft, das Fragmente anfangs ausblenden würde.
@@ -609,9 +676,11 @@ class SlideRenderer
                 $bgStyle = 'background-image:url(\'' . h($src) . '\'); background-size:cover; background-position:center;';
             }
         }
+        $objects = $slide['objects'] ?? [];
+        $plan = self::buildSlideFragmentPlan($objects);
         $html = '<div style="position:relative; width:100%; height:100%; box-sizing:border-box; ' . $bgStyle . ' overflow:hidden;">';
-        foreach ($slide['objects'] ?? [] as $obj) {
-            $html .= self::renderObject($obj, $publicToken);
+        foreach ($objects as $objIndex => $obj) {
+            $html .= self::renderObject($obj, $publicToken, $plan, $objIndex);
         }
         $html .= '</div>';
         return $html;

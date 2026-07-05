@@ -11,17 +11,25 @@ if (!Presentation::canView($id, $me['id'])) {
 $mode = ($_GET['mode'] ?? 'main') === 'next' ? 'next' : 'main';
 $meta = Presentation::getMeta($id);
 $slidesData = Presentation::getSlides($id);
+$slideDisabled = Presentation::slidePresentDisabledFlags($slidesData);
 $startSlide = max(0, (int)($_GET['start'] ?? 0));
 $slideCount = count($slidesData['slides'] ?? []);
 if ($startSlide >= $slideCount) {
     $startSlide = max(0, $slideCount - 1);
 }
+$startSlide = Presentation::normalizePresentStartIndex($slideDisabled, $startSlide);
 $sections = SlideRenderer::renderSections($slidesData, null);
 $isMain = $mode === 'main';
 $presentLayout = Auth::getPresentLayout($me);
 $laserColor = $presentLayout['laserPointerColor'] ?? '#ff0000';
 $laserSize = (int)($presentLayout['laserPointerSize'] ?? 24);
 $laserTrail = !empty($presentLayout['laserPointerTrail']);
+$laserEnabled = ($presentLayout['laserPointerEnabled'] ?? true) !== false;
+$showGhost = $isMain && !empty($presentLayout['showSlideGhost']);
+$ghostOpacity = max(5, min(80, (int)($presentLayout['slideGhostOpacity'] ?? 25)));
+$slideW = (int)$meta['width'];
+$slideH = (int)$meta['height'];
+$slides = $slidesData['slides'] ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -42,19 +50,64 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;}
   position:fixed; z-index:9998; border-radius:50%; pointer-events:none;
   transform:translate(-50%,-50%);
 }
+.sf-present-stack{position:relative;width:100%;height:100%;background:#000;}
+.sf-present-stack .reveal.sf-present-live{position:absolute;inset:0;z-index:2;}
+.sf-present-stack.sf-ghost-on .reveal.sf-present-live{background:transparent!important;}
+.sf-present-stack.sf-ghost-on .reveal.sf-present-live .slide-background{display:none!important;}
+.sf-slide-ghost{
+  position:absolute;left:0;top:0;width:100%;height:100%;
+  pointer-events:none;z-index:1;overflow:hidden;
+  opacity:var(--slide-ghost-opacity,0.25);
+}
+.sf-present-stack.sf-ghost-on .slides section > :not(.sf-slide-ghost){
+  position:relative;
+  z-index:2;
+}
+.sf-slide-ghost .sf-ghost-frag:not(.sf-ghost-suppressed){
+  opacity:1!important;visibility:visible!important;transform:none!important;filter:none!important;
+}
+.sf-slide-ghost .sf-text-line.sf-ghost-frag:not(.sf-ghost-suppressed){
+  opacity:1!important;visibility:visible!important;transform:none!important;filter:none!important;
+}
+.sf-slide-ghost .sf-ghost-suppressed{
+  opacity:0!important;visibility:hidden!important;
+}
+.sf-slide-ghost .sf-text-line-gap{
+  visibility:hidden!important;
+}
 </style>
 <?= Exporter::mediaStatusMarkup() ?>
 </head>
 <body>
+<?php if ($isMain): ?>
+<div class="sf-present-stack<?= $showGhost ? ' sf-ghost-on' : '' ?>" style="--slide-ghost-opacity: <?= $ghostOpacity / 100 ?>;">
+  <div id="slideGhostStore" hidden aria-hidden="true">
+    <?php foreach ($slides as $i => $s): ?>
+    <div data-slide-index="<?= (int)$i ?>"><?= SlideRenderer::renderSlideGhostHtml($s, null) ?></div>
+    <?php endforeach; ?>
+  </div>
+  <div class="reveal sf-present-live">
+    <div class="slides">
+      <?= $sections ?>
+    </div>
+  </div>
+</div>
+<?php else: ?>
 <div class="reveal">
   <div class="slides">
     <?= $sections ?>
   </div>
 </div>
+<?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
-<?php if ($isMain): ?>
 <script>
-window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize, 'trail' => $laserTrail], JSON_UNESCAPED_UNICODE) ?>;
+window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
+</script>
+<script src="assets/js/present-slide-skip.js?v=<?= ASSET_VERSION ?>"></script>
+<?php if ($isMain): ?>
+<script src="assets/js/reveal-autoslide.js?v=<?= ASSET_VERSION ?>"></script>
+<script>
+window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize, 'trail' => $laserTrail, 'enabled' => $laserEnabled], JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="assets/js/present-laser.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
@@ -67,7 +120,7 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
     progress: false,
     center: false, // unsere Objekte sind absolut positioniert (x/y) - reveal.js soll nichts selbst verschieben
     margin: 0,
-    keyboard: <?= $isMain ? 'true' : 'false' ?>,
+    keyboard: <?= $isMain ? '{ 13: "next", 32: "next", 33: "prev", 34: "next", 37: "prev", 39: "next", 38: "prev", 40: "next" }' : 'false' ?>,
     touch: <?= $isMain ? 'true' : 'false' ?>,
     help: false
   });
@@ -92,8 +145,145 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
   <?php endif; ?>
   <?php if ($isMain): ?>
   Reveal.on('ready', function () {
+    window.SlideForgePresentSlideSkip?.install(Reveal, window.SF_SLIDE_DISABLED || []);
     window.SlideForgePresentLaser?.init();
+    window.SlideForgeRevealAutoSlide?.install(Reveal);
   });
+  (function () {
+    const ghostStore = document.getElementById('slideGhostStore');
+    let ghostEnabled = <?= $showGhost ? 'true' : 'false' ?>;
+
+    function removeAllGhosts() {
+      document.querySelectorAll('.sf-slide-ghost').forEach(function (el) { el.remove(); });
+    }
+
+    function setGhostStackActive(on) {
+      const stack = document.querySelector('.sf-present-stack');
+      if (stack) stack.classList.toggle('sf-ghost-on', !!on);
+    }
+
+    function setGhostOpacity(pct) {
+      const val = Math.max(5, Math.min(80, parseInt(pct, 10) || 25)) / 100;
+      const stack = document.querySelector('.sf-present-stack');
+      if (stack) stack.style.setProperty('--slide-ghost-opacity', String(val));
+    }
+
+    function slideWantsGhost(slideEl) {
+      if (!slideEl) return false;
+      // Vom Renderer gesetzt: ≥2 Schritte und mindestens ein manueller (nicht nur Auto-Kette)
+      return slideEl.getAttribute('data-sf-ghost-preview') === '1';
+    }
+
+    function syncGhostVisibility() {
+      const slideEl = typeof Reveal !== 'undefined' && Reveal.getCurrentSlide
+        ? Reveal.getCurrentSlide()
+        : null;
+      if (!slideEl || !ghostEnabled) return;
+      const ghost = slideEl.querySelector(':scope > .sf-slide-ghost');
+      if (!ghost) return;
+
+      function isLiveEl(el) {
+        return el && !el.closest('.sf-slide-ghost');
+      }
+
+      function matchGhostEl(liveEl) {
+        const idx = liveEl.getAttribute('data-fragment-index');
+        if (idx == null) return null;
+        return ghost.querySelector('[data-fragment-index="' + idx + '"]');
+      }
+
+      function setSuppressed(liveEl, ghostEl) {
+        if (!ghostEl) return;
+        ghostEl.classList.toggle('sf-ghost-suppressed', liveEl.classList.contains('visible'));
+      }
+
+      ghost.querySelectorAll('.sf-ghost-suppressed').forEach(function (el) {
+        el.classList.remove('sf-ghost-suppressed');
+      });
+
+      // Nur wirklich statische Objekte ausblenden (kein Fragment auf sich oder in Kindern).
+      ghost.querySelectorAll('.sf-object').forEach(function (go) {
+        const animated = go.classList.contains('fragment')
+          || go.classList.contains('sf-ghost-frag')
+          || go.querySelector('.fragment, .sf-ghost-frag');
+        if (!animated) go.classList.add('sf-ghost-suppressed');
+      });
+
+      const liveLines = Array.from(slideEl.querySelectorAll('.sf-text-line.fragment')).filter(isLiveEl);
+      if (liveLines.length) {
+        const ghostLines = ghost.querySelectorAll('.sf-text-line');
+        liveLines.forEach(function (lf, i) {
+          setSuppressed(lf, matchGhostEl(lf) || ghostLines[i]);
+        });
+        return;
+      }
+
+      const ghostFrags = ghost.querySelectorAll('.sf-ghost-frag');
+      Array.from(slideEl.querySelectorAll('.fragment')).filter(isLiveEl).forEach(function (lf, i) {
+        const gf = matchGhostEl(lf) || ghostFrags[i];
+        if (gf) setSuppressed(lf, gf);
+      });
+    }
+
+    function sanitizeGhostHtml(html) {
+      return html.replace(/\bfragment\b/g, 'sf-ghost-frag');
+    }
+
+    function scheduleGhostVisibilitySync() {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(syncGhostVisibility);
+      });
+    }
+
+    function notifyParentPosition() {
+      if (window.parent === window || typeof Reveal === 'undefined') return;
+      const idx = Reveal.getIndices() || { h: 0 };
+      window.parent.postMessage({
+        type: 'sf-present-position',
+        index: idx.h || 0,
+        frag: typeof idx.f === 'number' ? idx.f : null,
+      }, '*');
+    }
+
+    function syncGhostSlide(index) {
+      removeAllGhosts();
+      if (!ghostEnabled || !ghostStore) return;
+      const slideEl = typeof Reveal !== 'undefined' && Reveal.getCurrentSlide
+        ? Reveal.getCurrentSlide()
+        : null;
+      if (!slideEl || !slideWantsGhost(slideEl)) return;
+      const idx = index != null
+        ? index
+        : ((Reveal.getIndices() || { h: 0 }).h || 0);
+      const tpl = ghostStore.querySelector('[data-slide-index="' + idx + '"]');
+      if (!tpl) return;
+      const ghost = document.createElement('div');
+      ghost.className = 'sf-slide-ghost';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.innerHTML = sanitizeGhostHtml(tpl.innerHTML);
+      slideEl.insertBefore(ghost, slideEl.firstChild);
+      scheduleGhostVisibilitySync();
+    }
+
+    window.sfApplySlideGhost = function (enabled, opacityPct) {
+      ghostEnabled = !!enabled;
+      setGhostOpacity(opacityPct);
+      setGhostStackActive(ghostEnabled);
+      if (ghostEnabled) syncGhostSlide();
+      else removeAllGhosts();
+    };
+
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'sf-slide-ghost') return;
+      window.sfApplySlideGhost(!!e.data.enabled, e.data.opacity);
+    });
+
+    Reveal.on('ready', function () { syncGhostSlide(); notifyParentPosition(); });
+    Reveal.on('slidechanged', function () { notifyParentPosition(); });
+    Reveal.on('slidetransitionend', function () { syncGhostSlide(); notifyParentPosition(); });
+    Reveal.on('fragmentshown', function () { scheduleGhostVisibilitySync(); notifyParentPosition(); });
+    Reveal.on('fragmenthidden', function () { scheduleGhostVisibilitySync(); notifyParentPosition(); });
+  })();
   (function () {
     const playTimers = [];
 <?= Exporter::mediaRuntimeJs(false) ?>

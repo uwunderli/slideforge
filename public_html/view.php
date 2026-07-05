@@ -19,6 +19,7 @@ if (!$id) {
 
 $meta = Presentation::getMeta($id);
 $slidesData = Storage::read(Presentation::dir($id) . '/slides.json', ['slides' => []]);
+$slideDisabled = Presentation::slidePresentDisabledFlags($slidesData);
 $sections = SlideRenderer::renderSections($slidesData, $token);
 ?>
 <!DOCTYPE html>
@@ -52,6 +53,10 @@ html,body{margin:0;height:100%;background:#000;}
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
+</script>
+<script src="assets/js/present-slide-skip.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-laser-audience.js?v=<?= ASSET_VERSION ?>"></script>
 <script>
   Reveal.initialize({
@@ -68,25 +73,43 @@ html,body{margin:0;height:100%;background:#000;}
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
 
-  // Folgt automatisch der Steuerung aus dem Präsentationsmodus, sobald der
-  // Vortragende dort aktiv navigiert (Live-Sitzung). Ohne aktive Sitzung passiert
-  // nichts - man kann die Folien dann ganz normal selbst durchklicken.
-  (function () {
+  Reveal.on('ready', function () {
+    window.SlideForgePresentSlideSkip?.install(Reveal, window.SF_SLIDE_DISABLED || []);
+    SlideForgePresentLaserAudience?.init({
+      pollUrl: 'live.php?id=<?= urlencode($id) ?>&token=<?= urlencode($token) ?>&channel=present',
+    });
+
+    // Live-Sync erst nach Reveal-Init — sonst leere Folie bei aktiver Remote-Sitzung.
     let lastIndex = null;
     let lastFrag = undefined;
     let lastMediaCmdTs = null;
-    setInterval(function () {
+    const disabled = window.SF_SLIDE_DISABLED || [];
+
+    function applyLivePosition(live) {
+      if (!live || typeof live.index !== 'number') return;
+      const total = Reveal.getTotalSlides ? Reveal.getTotalSlides() : 0;
+      if (total < 1) return;
+      let idx = Math.max(0, Math.min(total - 1, live.index));
+      const rawIdx = idx;
+      if (window.SlideForgePresentSlideSkip?.normalizeLiveIndex) {
+        idx = window.SlideForgePresentSlideSkip.normalizeLiveIndex(disabled, idx, 1);
+      }
+      const frag = (idx === rawIdx && typeof live.frag === 'number') ? live.frag : null;
+      if (idx === lastIndex && frag === lastFrag) return;
+      lastIndex = idx;
+      lastFrag = frag;
+      try {
+        if (frag !== null) Reveal.slide(idx, 0, frag);
+        else Reveal.slide(idx, 0);
+      } catch (e) { /* ignore */ }
+    }
+
+    function pollLive() {
       fetch('live.php?id=<?= urlencode($id) ?>&token=<?= urlencode($token) ?>&channel=present')
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data.ok || !data.live) return;
-          const frag = typeof data.live.frag === 'number' ? data.live.frag : null;
-          if (data.live.index !== lastIndex || frag !== lastFrag) {
-            lastIndex = data.live.index;
-            lastFrag = frag;
-            if (frag !== null) { Reveal.slide(data.live.index, 0, frag); }
-            else { Reveal.slide(data.live.index, 0); }
-          }
+          applyLivePosition(data.live);
           const media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
             lastMediaCmdTs = media.cmd_ts;
@@ -94,18 +117,15 @@ html,body{margin:0;height:100%;background:#000;}
             if (el) {
               if (media.action === 'play') { el.play && el.play().catch(function () {}); }
               else if (media.action === 'pause') { el.pause && el.pause(); }
-              else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (e) {} }
+              else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (err) {} }
             }
           }
         })
         .catch(function () {});
-    }, 1500);
-  })();
+    }
 
-  Reveal.on('ready', function () {
-    SlideForgePresentLaserAudience?.init({
-      pollUrl: 'live.php?id=<?= urlencode($id) ?>&token=<?= urlencode($token) ?>&channel=present',
-    });
+    pollLive();
+    setInterval(pollLive, 400);
   });
 </script>
 <script>

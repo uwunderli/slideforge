@@ -239,6 +239,18 @@ $bootstrap = [
         'duplicateSlide' => t('editor.duplicate_slide'),
         'deleteSlide' => t('editor.delete_slide'),
         'reorderSlide' => t('editor.reorder_slide'),
+        'togglePresentDisabled' => t('editor.toggle_present_disabled'),
+        'slidePresentEnabled' => t('editor.slide_present_enabled'),
+        'slidePresentDisabled' => t('editor.slide_present_disabled'),
+        'slideGridTitle' => t('editor.slide_grid_title'),
+        'slideGridOpen' => t('editor.slide_grid_open'),
+        'slideGridSelected' => t('editor.slide_grid_selected'),
+        'slideGridSelectAll' => t('editor.slide_grid_select_all'),
+        'slideGridSelectNone' => t('editor.slide_grid_select_none'),
+        'applyTransitionSelected' => t('editor.apply_transition_selected'),
+        'applyTransitionAll' => t('bg.apply_transition_all'),
+        'transitionTitle' => t('bg.transition_title'),
+        'autoAdvanceLabel' => t('bg.autoadvance_label'),
         'notesTitle' => t('present.notes'),
     ],
     'presentConfig' => [
@@ -764,6 +776,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <div class="editor-slides-toolbar">
         <?php if ($canEdit && !$isTemplateMode): ?>
           <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>
+          <button type="button" class="button button-ghost button-sm" id="slideGridViewBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.slide_grid_open')) ?></button>
           <button type="button" class="button button-ghost button-sm" id="applyTemplateBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.apply_template')) ?></button>
         <?php endif; ?>
       </div>
@@ -939,6 +952,38 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <div class="props-empty"><?= t('props.empty') ?></div>
     </div>
   </aside>
+  <div class="editor-slide-grid-overlay" id="slideGridOverlay" hidden>
+    <div class="editor-slide-grid-inner" role="dialog" aria-modal="true" aria-labelledby="slideGridTitle">
+      <header class="editor-slide-grid-header">
+        <h2 id="slideGridTitle"><?= h(t('editor.slide_grid_title')) ?></h2>
+        <button type="button" class="button button-ghost button-sm" id="slideGridCloseBtn" aria-label="<?= h(t('common.close')) ?>">✕</button>
+      </header>
+      <div class="editor-slide-grid-toolbar">
+        <div class="editor-slide-grid-toolbar-row">
+          <span class="editor-slide-grid-selection" id="slideGridSelectionInfo"></span>
+          <button type="button" class="button button-ghost button-sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
+          <button type="button" class="button button-ghost button-sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
+          <span class="present-toolbar-sep"></span>
+          <button type="button" class="button button-sm" id="applyTransitionSelectedBtn" disabled><?= h(t('editor.apply_transition_selected')) ?></button>
+          <button type="button" class="button button-ghost button-sm" id="applyTransitionAllGridBtn"><?= h(t('bg.apply_transition_all')) ?></button>
+        </div>
+        <div class="editor-slide-grid-toolbar-row editor-slide-grid-toolbar-row-settings">
+          <div class="editor-slide-grid-setting-block">
+            <span class="editor-slide-grid-toolbar-label"><?= h(t('bg.transition_title')) ?></span>
+            <input type="hidden" id="gridTransitionSelect" value="slide">
+            <div id="gridTransitionPickerGroup" class="effect-icon-grid editor-grid-transition-picker"></div>
+          </div>
+          <div class="editor-slide-grid-setting-block editor-slide-grid-autoadvance-block">
+            <label class="editor-slide-grid-toolbar-label" for="gridAutoAdvanceInput"><?= h(t('bg.autoadvance_label')) ?></label>
+            <input type="number" id="gridAutoAdvanceInput" class="editor-slide-grid-autoadvance-input" min="0" step="1" value="0">
+          </div>
+        </div>
+      </div>
+      <div class="editor-slide-grid-scroll">
+        <div class="editor-slide-grid" id="slideGrid"></div>
+      </div>
+    </div>
+  </div>
   <?php endif; ?>
 </div>
 <?php endif; // canEdit-Verzweigung Editor-Layout ?>

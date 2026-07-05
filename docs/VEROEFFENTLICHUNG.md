@@ -118,6 +118,31 @@ git log --oneline -5
 
 ---
 
+## Lokaler Workflow (Entwicklung → Commit & Push)
+
+Entwicklung läuft lokal (Docker/gemeinde-kit). Wenn alles getestet ist: **Commit & Push** in Cursor — der Rest ist automatisch.
+
+**Einmalig installieren:**
+
+```bash
+./scripts/install-git-hooks.sh
+```
+
+**Bei jedem Push** (Git-Hook `.githooks/pre-push`):
+
+1. Patch-Version erhöhen (`VERSION`, `CHANGELOG.md`, `README.md`)
+2. Release-Commit `chore(release): vX.Y.Z` (falls noch nicht vorhanden)
+3. **Produktion (BK Biel):** `./.deploy/deploy.sh sync-code`
+4. **Demo:** `./.deploy/deploy-demo.sh sync-demo`
+5. Git-Tag `vX.Y.Z` (wird mit `push.followTags` mitgepusht)
+6. Git-Push zu GitHub
+
+**Nur pushen, ohne Deploy:** `SKIP_RELEASE_DEPLOY=1 git push`
+
+Voraussetzung: `.deploy/ssh.env` und `.deploy/ssh.env.demo` lokal vorhanden (gitignored).
+
+---
+
 ## Nützliche Befehle (Referenz)
 
 ```bash

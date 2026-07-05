@@ -4,6 +4,8 @@ Auth::requireLogin();
 $me = Auth::currentUser();
 $isAdmin = Auth::isAdmin();
 
+Presentation::removeOrphanSlideTemplates();
+
 $msg = '';
 $error = '';
 

@@ -1344,9 +1344,115 @@ html[data-theme="light"] .present-notes-overlay-inner code {
 }
 .present-side-accordions .props-accordion-group[data-acc="slides"] .present-panel-body-inner {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0;
   overflow: hidden;
+  width: 100%;
+  padding: 6px 12px 10px;
+  box-sizing: border-box;
+}
+.present-slides-control-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+.present-slides-control-stack .present-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  width: 100%;
+}
+.present-slides-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.present-toolbar-quick-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.present-toolbar-quick-toggle:hover {
+  border-color: var(--text-muted);
+}
+.present-laser-quick-toggle.is-on {
+  border-color: color-mix(in srgb, currentColor 50%, var(--border));
+}
+.present-ghost-quick-toggle.is-on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.present-toolbar-quick-toggle svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.present-ghost-inline {
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+  box-sizing: border-box;
+}
+.present-ghost-inline.is-disabled input[type="range"] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.present-ghost-inline.is-disabled .present-ghost-inline-val {
+  opacity: 0.35;
+}
+.present-ghost-inline-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.present-ghost-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.present-ghost-inline-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 120px;
+  margin: 0;
+}
+.present-ghost-inline-val {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 2.2rem;
+  text-align: center;
+  flex-shrink: 0;
 }
 .present-side-accordions {
   flex: 1;
@@ -1837,6 +1943,14 @@ body.present-panel-dragging { cursor: grabbing !important; user-select: none; }
   touch-action: manipulation;
 }
 .filmstrip-item.active { border-color: var(--accent); }
+.filmstrip-item.is-present-disabled {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+.filmstrip-item.is-present-disabled .filmstrip-num {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
 .filmstrip-thumb-scale {
   position: absolute;
   top: 0; left: 0;
@@ -1993,9 +2107,187 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
   background: rgba(0,0,0,0.75);
   color: #fff;
 }
+.editor-filmstrip-actions .tab-action.is-present-off {
+  color: var(--accent);
+}
 .editor-add-slide-btn {
   flex-shrink: 0;
   margin-top: 0;
+}
+
+.editor-slide-grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px;
+}
+.editor-slide-grid-overlay[hidden] { display: none !important; }
+.editor-slide-grid-inner {
+  display: flex;
+  flex-direction: column;
+  width: min(1200px, 100%);
+  max-height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.editor-slide-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.editor-slide-grid-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.editor-slide-grid-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface-raised);
+}
+.editor-slide-grid-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.editor-slide-grid-toolbar-row-settings {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding-top: 2px;
+}
+.editor-slide-grid-setting-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.editor-slide-grid-autoadvance-block {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.editor-slide-grid-autoadvance-block .editor-slide-grid-toolbar-label {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+.editor-slide-grid-autoadvance-input {
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+.editor-slide-grid-selection {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-width: 6rem;
+}
+.editor-slide-grid-toolbar-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.editor-grid-transition-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 2.35rem);
+  gap: 6px;
+  width: 100%;
+  max-width: none;
+}
+.editor-grid-transition-picker .format-toggle-btn,
+.editor-grid-transition-picker .effect-icon-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.editor-slide-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px 20px;
+}
+.editor-slide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 14px;
+}
+.editor-slide-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 6px;
+  background: var(--surface-raised);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  overflow: hidden;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.editor-slide-grid-item:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.editor-slide-grid-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.editor-slide-grid-item.is-current:not(.selected) {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.editor-slide-grid-item.is-present-disabled {
+  opacity: 0.5;
+}
+.editor-slide-grid-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #111;
+  overflow: hidden;
+}
+.editor-slide-grid-thumb .filmstrip-thumb-scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+}
+.editor-slide-grid-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+.editor-slide-grid-meta strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.editor-slide-grid-transition {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+  text-align: right;
 }
 
 .present-side-panel {
@@ -2044,7 +2336,12 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
   }
   .present-topbar-side,
   .present-topbar-time { display: none; }
-  .present-topbar-main { grid-column: auto; }
+  .present-topbar-main {
+    grid-column: auto;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 8px 12px;
+  }
   body.present-mode .present-main-grid {
     grid-template-columns: 1fr;
     overflow-y: auto;
@@ -2945,6 +3242,27 @@ body.editor-filmstrip-dragging { cursor: grabbing !important; user-select: none;
 }
 .transition-icon-grid {
   grid-template-columns: repeat(3, 1fr);
+}
+/* Raster-Ansicht: Übergänge in einer Zeile (1×6) */
+.editor-grid-transition-picker.effect-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 2.35rem);
+  grid-auto-flow: column;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+}
+.editor-grid-transition-picker.effect-icon-grid .format-toggle-btn,
+.editor-grid-transition-picker.effect-icon-grid .effect-icon-btn {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+}
+.editor-grid-transition-picker.effect-icon-grid .effect-icon-btn svg {
+  width: 22px;
+  height: 22px;
 }
 .brand-palette.mini {
   display: flex;

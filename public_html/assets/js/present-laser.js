@@ -8,7 +8,7 @@
   const TRAIL_DURATION = 480;
   const TRAIL_MIN_DIST = 6;
 
-  let config = { color: '#ff0000', size: 24, trail: false };
+  let config = { color: '#ff0000', size: 24, trail: false, enabled: true };
   let activePointerId = null;
   let dot = null;
   let captureTarget = null;
@@ -94,8 +94,15 @@
     if (c.color != null) config.color = normalizeColor(c.color);
     if (c.size != null) config.size = normalizeSize(c.size);
     if (c.trail != null) config.trail = !!c.trail;
+    if (c.enabled != null) config.enabled = !!c.enabled;
     styleDot();
     if (!config.trail) clearTrail();
+    if (!config.enabled) {
+      hideDot();
+      stopHeartbeat();
+      clearTrail();
+      activePointerId = null;
+    }
   }
 
   function styleDot() {
@@ -190,6 +197,7 @@
   }
 
   function onPointerDown(e) {
+    if (!config.enabled) return;
     if (activePointerId !== null) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     activePointerId = e.pointerId;
@@ -239,7 +247,7 @@
 
   function showRemoteLaser(data) {
     if (!dot) return;
-    if (!data || !data.active || data.x == null || data.y == null) {
+    if (!config.enabled || !data || !data.active || data.x == null || data.y == null) {
       hideDot();
       return;
     }

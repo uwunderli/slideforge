@@ -21,6 +21,7 @@ $presentLayout = Auth::getPresentLayout($me);
 $laserColor = $presentLayout['laserPointerColor'] ?? '#ff0000';
 $laserSize = (int)($presentLayout['laserPointerSize'] ?? 24);
 $laserTrail = !empty($presentLayout['laserPointerTrail']);
+$laserEnabled = ($presentLayout['laserPointerEnabled'] ?? true) !== false;
 $hasLayoutStops = array_key_exists('timebarStops', $me['present_layout'] ?? []);
 $timebarStops = Presentation::normalizeTimebarStops(
     $hasLayoutStops ? ($presentLayout['timebarStops'] ?? null) : ($meta['timebar_stops'] ?? null)
@@ -32,7 +33,7 @@ $slideH = max(1, (int)$meta['height']);
 $pageTitle = t('remote.page_title');
 $headerPresentationTitle = $meta['title'];
 $headerPresentationContext = 'present';
-$bodyClass = 'present-remote-mode';
+$bodyClass = 'present-remote-mode' . (client_is_touch_tablet() ? ' present-remote-tablet' : '');
 require __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DSEG7+Classic:wght@700&display=swap">
@@ -42,6 +43,10 @@ require __DIR__ . '/includes/header.php';
     <span id="remotePresentStatus">
       <span class="present-remote-status-dot waiting" id="remotePresentDot"></span>
       <span id="remotePresentLabel"><?= h(t('remote.waiting_present')) ?></span>
+    </span>
+    <span class="present-control-status" id="remoteControlStatus" hidden>
+      <span class="present-control-status-dot" id="remoteControlDot" aria-hidden="true"></span>
+      <?= h(t('remote.control_status')) ?>
     </span>
     <span id="remoteConnLabel"><?= h(t('remote.connected')) ?></span>
   </div>
@@ -68,7 +73,14 @@ require __DIR__ . '/includes/header.php';
     </div>
 
     <div class="present-remote-panel" data-remote-panel="laser" hidden>
-      <div class="present-remote-laser-pad" id="remoteLaserPad">
+      <div class="present-remote-laser-disabled" id="remoteLaserDisabled"<?= $laserEnabled ? ' hidden' : '' ?>>
+        <p><?= h(t('remote.laser_disabled_hint')) ?></p>
+        <label class="present-remote-laser-enable">
+          <input type="checkbox" id="remoteLaserEnabled"<?= $laserEnabled ? ' checked' : '' ?>>
+          <span><?= h(t('remote.laser_enabled')) ?></span>
+        </label>
+      </div>
+      <div class="present-remote-laser-pad" id="remoteLaserPad"<?= $laserEnabled ? '' : ' hidden' ?>>
         <span class="present-remote-laser-hint"><?= h(t('remote.laser_pad_hint')) ?></span>
       </div>
     </div>
@@ -150,7 +162,10 @@ window.SF_REMOTE = {
     color: <?= json_encode($laserColor) ?>,
     size: <?= (int)$laserSize ?>,
     trail: <?= $laserTrail ? 'true' : 'false' ?>,
+    enabled: <?= $laserEnabled ? 'true' : 'false' ?>,
   },
+  presentLayout: <?= json_encode($presentLayout, JSON_UNESCAPED_UNICODE) ?>,
+  isTablet: <?= client_is_touch_tablet() ? 'true' : 'false' ?>,
   presentationDuration: <?= (int)$presentationDuration ?>,
   timebarStops: <?= json_encode($timebarStops, JSON_UNESCAPED_UNICODE) ?>,
   i18n: {

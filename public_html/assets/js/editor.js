@@ -851,8 +851,9 @@
     SF.slides.forEach((slide, i) => {
       const thumb = SF.thumbnails[slide.id] || {};
       const hasNotes = slideHasNotes(slide);
+      const presentOff = !!slide.presentDisabled;
       const tab = document.createElement('div');
-      tab.className = 'filmstrip-item editor-filmstrip-item' + (i === SF.currentIndex ? ' active' : '') + (hasNotes ? ' has-notes' : '');
+      tab.className = 'filmstrip-item editor-filmstrip-item' + (i === SF.currentIndex ? ' active' : '') + (hasNotes ? ' has-notes' : '') + (presentOff ? ' is-present-disabled' : '');
       tab.dataset.id = slide.id;
       tab.style.setProperty('--fs-color', thumb.color || slideBgColor(slide));
       tab.style.height = itemHeight + 'px';
@@ -866,6 +867,7 @@
         '<span class="filmstrip-num">' + (i + 1) + '</span>' +
         (SF.canEdit
           ? '<span class="editor-filmstrip-actions">' +
+              '<button type="button" class="tab-action' + (presentOff ? ' is-present-off' : '') + '" data-act="toggle-present" title="' + (presentOff ? (SF.i18n.slidePresentEnabled || 'Beim Präsentieren einblenden') : (SF.i18n.togglePresentDisabled || 'Beim Präsentieren überspringen')) + '">' + (presentOff ? '◉' : '⊘') + '</button>' +
               '<button type="button" class="tab-action" data-act="dup" title="' + (SF.i18n.duplicateSlide || 'Duplizieren') + '">⧉</button>' +
               (SF.slides.length > 1 ? '<button type="button" class="tab-action" data-act="del" title="' + (SF.i18n.deleteSlide || 'Löschen') + '">✕</button>' : '') +
             '</span>'
@@ -879,6 +881,11 @@
       });
 
       if (SF.canEdit) {
+        const togglePresentBtn = tab.querySelector('[data-act="toggle-present"]');
+        if (togglePresentBtn) togglePresentBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSlidePresentDisabled(SF.slides.findIndex((s) => s.id === tab.dataset.id));
+        });
         const dupBtn = tab.querySelector('[data-act="dup"]');
         if (dupBtn) dupBtn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1155,6 +1162,211 @@
     loadSlideIntoStage(SF.currentIndex);
     await renderSlideFilmstrip();
     reloadPreviewWindow();
+  }
+
+  async function toggleSlidePresentDisabled(index) {
+    if (index < 0) return;
+    setSaveStatus('Speichere…');
+    const res = await api('toggle_slide_present_disabled', { index });
+    SF.slides = res.slides;
+    await renderSlideFilmstrip();
+    setSaveStatus('Gespeichert');
+    reloadPreviewWindow();
+  }
+
+  // ---------- Slide grid (Raster-Ansicht) ----------
+  const gridSelectedIndices = new Set();
+  let gridLastClickedIndex = null;
+  let gridTransitionPickerBound = false;
+
+  function transitionOptionLabel(value) {
+    const opt = TRANSITION_OPTIONS.find((o) => o.value === (value || 'slide'));
+    return opt ? opt.label : (value || 'slide');
+  }
+
+  function gridCellScale() {
+    return 168 / SF.meta.width;
+  }
+
+  function gridAutoAdvanceValue() {
+    const el = document.getElementById('gridAutoAdvanceInput');
+    return el ? Math.max(0, parseInt(el.value, 10) || 0) : 0;
+  }
+
+  function initGridFields() {
+    initGridTransitionPicker();
+    const slide = SF.slides[SF.currentIndex] || {};
+    const aa = document.getElementById('gridAutoAdvanceInput');
+    if (aa) aa.value = slide.autoAdvance || 0;
+  }
+
+  function syncGridFieldsFromSlide(index) {
+    const slide = SF.slides[index];
+    if (!slide) return;
+    setGridTransitionPickerValue(slide.transition || 'slide');
+    const aa = document.getElementById('gridAutoAdvanceInput');
+    if (aa) aa.value = slide.autoAdvance || 0;
+  }
+
+  function updateGridSelectionUi() {
+    const info = document.getElementById('slideGridSelectionInfo');
+    const applyBtn = document.getElementById('applyTransitionSelectedBtn');
+    const n = gridSelectedIndices.size;
+    const tpl = SF.i18n.slideGridSelected || '{n} ausgewählt';
+    if (info) info.textContent = tpl.replace('{n}', String(n));
+    if (applyBtn) applyBtn.disabled = n === 0;
+  }
+
+  function renderSlideGrid() {
+    const grid = document.getElementById('slideGrid');
+    if (!grid) return;
+    const scale = gridCellScale();
+    grid.innerHTML = '';
+    SF.slides.forEach((slide, i) => {
+      const thumb = SF.thumbnails[slide.id] || {};
+      const presentOff = !!slide.presentDisabled;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'editor-slide-grid-item'
+        + (gridSelectedIndices.has(i) ? ' selected' : '')
+        + (i === SF.currentIndex ? ' is-current' : '')
+        + (presentOff ? ' is-present-disabled' : '');
+      card.dataset.index = String(i);
+      card.innerHTML =
+        '<div class="editor-slide-grid-thumb">' +
+          '<div class="filmstrip-thumb-scale" style="width:' + SF.meta.width + 'px;height:' + SF.meta.height + 'px;transform:scale(' + scale + ');">' +
+            (thumb.html || '') +
+          '</div>' +
+        '</div>' +
+        '<div class="editor-slide-grid-meta">' +
+          '<strong>' + (i + 1) + '</strong>' +
+          '<span class="editor-slide-grid-transition">' +
+            escapeHtml(transitionOptionLabel(slide.transition)) +
+            (slide.autoAdvance ? (' · ' + slide.autoAdvance + 's') : '') +
+          '</span>' +
+        '</div>';
+      card.addEventListener('click', (e) => {
+        if (e.detail === 2) {
+          switchToSlide(i);
+          closeSlideGridView();
+          return;
+        }
+        handleGridSelectionClick(e, i);
+      });
+      grid.appendChild(card);
+    });
+    updateGridSelectionUi();
+  }
+
+  function handleGridSelectionClick(e, index) {
+    if (e.shiftKey && gridLastClickedIndex !== null) {
+      const a = Math.min(gridLastClickedIndex, index);
+      const b = Math.max(gridLastClickedIndex, index);
+      for (let i = a; i <= b; i++) gridSelectedIndices.add(i);
+    } else if (e.ctrlKey || e.metaKey) {
+      if (gridSelectedIndices.has(index)) gridSelectedIndices.delete(index);
+      else gridSelectedIndices.add(index);
+      gridLastClickedIndex = index;
+    } else {
+      gridSelectedIndices.clear();
+      gridSelectedIndices.add(index);
+      gridLastClickedIndex = index;
+    }
+    syncGridFieldsFromSlide(index);
+    document.querySelectorAll('.editor-slide-grid-item').forEach((el) => {
+      const idx = parseInt(el.dataset.index, 10);
+      el.classList.toggle('selected', gridSelectedIndices.has(idx));
+    });
+    updateGridSelectionUi();
+  }
+
+  function setGridTransitionPickerValue(value) {
+    const hidden = document.getElementById('gridTransitionSelect');
+    const group = document.getElementById('gridTransitionPickerGroup');
+    if (!hidden || !group) return;
+    hidden.value = value || 'slide';
+    group.querySelectorAll('[data-icon-value]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.iconValue === hidden.value);
+    });
+  }
+
+  function initGridTransitionPicker() {
+    const group = document.getElementById('gridTransitionPickerGroup');
+    const hidden = document.getElementById('gridTransitionSelect');
+    if (!group || !hidden) return;
+    const slide = SF.slides[SF.currentIndex] || {};
+    hidden.value = slide.transition || 'slide';
+    group.innerHTML = TRANSITION_OPTIONS.map((o) =>
+      '<button type="button" class="format-toggle-btn effect-icon-btn' + (o.value === hidden.value ? ' active' : '') + '" data-icon-value="' + o.value + '" title="' + escapeHtml(o.label) + '" aria-label="' + escapeHtml(o.label) + '">' + o.icon + '</button>'
+    ).join('');
+    if (!gridTransitionPickerBound) {
+      gridTransitionPickerBound = true;
+      group.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-icon-value]');
+        if (!btn) return;
+        setGridTransitionPickerValue(btn.dataset.iconValue);
+      });
+    } else {
+      setGridTransitionPickerValue(hidden.value);
+    }
+  }
+
+  function openSlideGridView() {
+    const overlay = document.getElementById('slideGridOverlay');
+    if (!overlay) return;
+    gridSelectedIndices.clear();
+    gridSelectedIndices.add(SF.currentIndex);
+    gridLastClickedIndex = SF.currentIndex;
+    initGridFields();
+    renderSlideGrid();
+    overlay.hidden = false;
+  }
+
+  function closeSlideGridView() {
+    const overlay = document.getElementById('slideGridOverlay');
+    if (overlay) overlay.hidden = true;
+  }
+
+  async function applyTransitionToIndices(indices) {
+    if (!indices.length) return;
+    const hidden = document.getElementById('gridTransitionSelect');
+    const transition = hidden ? hidden.value : 'slide';
+    const autoAdvance = gridAutoAdvanceValue();
+    setSaveStatus('Speichere…');
+    try {
+      const res = await api('apply_transition_slides', { indices, transition, autoAdvance });
+      SF.slides = res.slides;
+      setSaveStatus('Gespeichert');
+      renderSlideGrid();
+      await renderSlideFilmstrip();
+      if (SF.slides[SF.currentIndex]) {
+        setTransitionPickerValue(SF.slides[SF.currentIndex].transition || 'slide');
+        const aaMain = document.getElementById('autoAdvanceInput');
+        if (aaMain) aaMain.value = SF.slides[SF.currentIndex].autoAdvance || 0;
+      }
+      reloadPreviewWindow();
+    } catch (err) {
+      setSaveStatus('Fehler beim Speichern');
+    }
+  }
+
+  async function applyTransitionAllFromGrid() {
+    const hidden = document.getElementById('gridTransitionSelect');
+    const transition = hidden ? hidden.value : getTransitionValue();
+    const autoAdvance = gridAutoAdvanceValue();
+    setSaveStatus('Speichere…');
+    try {
+      const res = await api('apply_transition_all', { transition, autoAdvance });
+      SF.slides = res.slides;
+      setSaveStatus('Gespeichert');
+      renderSlideGrid();
+      setTransitionPickerValue(transition);
+      const aaMain = document.getElementById('autoAdvanceInput');
+      if (aaMain) aaMain.value = autoAdvance;
+      reloadPreviewWindow();
+    } catch (err) {
+      setSaveStatus('Fehler beim Speichern');
+    }
   }
 
   // ---------- Shape creation / conversion ----------
@@ -4239,6 +4451,27 @@
         setSaveStatus('Fehler beim Speichern');
       }
     });
+
+    document.getElementById('slideGridViewBtn')?.addEventListener('click', openSlideGridView);
+    document.getElementById('slideGridCloseBtn')?.addEventListener('click', closeSlideGridView);
+    document.getElementById('slideGridOverlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'slideGridOverlay') closeSlideGridView();
+    });
+    document.getElementById('slideGridSelectAllBtn')?.addEventListener('click', () => {
+      gridSelectedIndices.clear();
+      SF.slides.forEach((_, i) => gridSelectedIndices.add(i));
+      gridLastClickedIndex = SF.currentIndex;
+      renderSlideGrid();
+    });
+    document.getElementById('slideGridSelectNoneBtn')?.addEventListener('click', () => {
+      gridSelectedIndices.clear();
+      gridLastClickedIndex = null;
+      renderSlideGrid();
+    });
+    document.getElementById('applyTransitionSelectedBtn')?.addEventListener('click', () => {
+      applyTransitionToIndices([...gridSelectedIndices]);
+    });
+    document.getElementById('applyTransitionAllGridBtn')?.addEventListener('click', applyTransitionAllFromGrid);
     document.getElementById('undoBtn')?.addEventListener('click', undo);
     document.getElementById('redoBtn')?.addEventListener('click', redo);
     document.getElementById('pasteBtn')?.addEventListener('click', pasteClipboard);
@@ -4282,6 +4515,14 @@
     applySpellcheckAttrs(document.getElementById('edTitle'));
 
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const gridOverlay = document.getElementById('slideGridOverlay');
+        if (gridOverlay && !gridOverlay.hidden) {
+          e.preventDefault();
+          closeSlideGridView();
+          return;
+        }
+      }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && SF.selectedNodes.length) {

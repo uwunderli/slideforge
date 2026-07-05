@@ -361,6 +361,9 @@ class Auth
             'laserPointerColor' => '#ff0000',
             'laserPointerSize' => 24,
             'laserPointerTrail' => false,
+            'laserPointerEnabled' => true,
+            'showSlideGhost' => true,
+            'slideGhostOpacity' => 25,
         ];
     }
 
@@ -441,6 +444,13 @@ class Auth
             'laserPointerColor' => self::normalizeLaserPointerColor($layout['laserPointerColor'] ?? null),
             'laserPointerSize' => self::normalizeLaserPointerSize($layout['laserPointerSize'] ?? null),
             'laserPointerTrail' => self::normalizeLaserPointerTrail($layout['laserPointerTrail'] ?? null),
+            'laserPointerEnabled' => array_key_exists('laserPointerEnabled', $layout)
+                ? (bool)$layout['laserPointerEnabled']
+                : $defaults['laserPointerEnabled'],
+            'showSlideGhost' => array_key_exists('showSlideGhost', $layout)
+                ? (bool)$layout['showSlideGhost']
+                : $defaults['showSlideGhost'],
+            'slideGhostOpacity' => max(5, min(80, (int)($layout['slideGhostOpacity'] ?? $defaults['slideGhostOpacity']))),
         ];
     }
 
@@ -452,7 +462,10 @@ class Auth
 
     public static function setPresentLayout(string $userId, array $layout): array
     {
-        $normalized = self::normalizePresentLayout($layout);
+        $user = self::findById($userId);
+        $base = is_array($user['present_layout'] ?? null) ? $user['present_layout'] : [];
+        $merged = array_merge($base, $layout);
+        $normalized = self::normalizePresentLayout($merged);
         Storage::update(USERS_FILE, function ($users) use ($userId, $normalized) {
             foreach ($users as &$u) {
                 if ($u['id'] === $userId) {

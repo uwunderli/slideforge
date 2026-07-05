@@ -5,11 +5,18 @@ class RemoteQr
     public static function isAllowedRemoteUrl(string $data, string $host): bool
     {
         $parsed = parse_url($data);
-        if (!$parsed || ($parsed['host'] ?? '') !== $host) {
+        if (!$parsed || empty($parsed['host'])) {
             return false;
         }
-
-        return str_contains($parsed['path'] ?? '', 'present_remote.php');
+        if (!str_contains($parsed['path'] ?? '', 'present_remote.php')) {
+            return false;
+        }
+        $dataHost = strtolower($parsed['host']);
+        $allowed = array_unique([
+            strtolower(preg_replace('/:\d+$/', '', $host)),
+            strtolower(preg_replace('/:\d+$/', '', http_request_host())),
+        ]);
+        return in_array($dataHost, $allowed, true);
     }
 
     public static function pngDataUri(string $data): ?string

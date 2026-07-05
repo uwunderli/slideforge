@@ -14,6 +14,7 @@ $meta = Presentation::getMeta($id);
 $slidesData = Presentation::getSlides($id);
 $slides = $slidesData['slides'] ?? [];
 $slideCount = count($slides);
+$slideDisabled = Presentation::slidePresentDisabledFlags($slidesData);
 
 // Startfolie: expliziter Link aus dem Editor, sonst letzte Live-Position, sonst 0.
 $startSlide = 0;
@@ -25,7 +26,9 @@ if (isset($_GET['slide'])) {
         $startSlide = max(0, min($slideCount - 1, (int)$live['index']));
     }
 }
-$nextPreviewIdx = min($startSlide + 1, max(0, $slideCount - 1));
+$startSlide = Presentation::normalizePresentStartIndex($slideDisabled, $startSlide);
+$nextPreviewIdx = Presentation::nextPresentEnabledIndex($slideDisabled, $startSlide)
+    ?? $startSlide;
 
 // Notizen serverseitig zu HTML vorrendern (Markdown), damit present.js keinen
 // eigenen Markdown-Parser braucht.
@@ -42,14 +45,14 @@ $acl = Presentation::getAcl($id);
 $publicUrl = '';
 if (!empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
     $scheme = current_scheme();
-    $host = $_SERVER['HTTP_HOST'];
+    $host = http_request_host();
     $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
     $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
 }
 
 $remoteUrl = '';
 $scheme = current_scheme();
-$host = $_SERVER['HTTP_HOST'];
+$host = http_request_host();
 $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
 $remoteUrl = "$scheme://$host$base/present_remote.php?id=" . urlencode($id);
 $remoteQrSrc = ($canBroadcast && $remoteUrl !== '')
@@ -97,6 +100,12 @@ require __DIR__ . '/includes/header.php';
       <span class="present-remote-badge-dot"></span>
       <?= h(t('remote.mobile_connected')) ?>
     </span>
+    <?php if ($canBroadcast): ?>
+    <span class="present-control-status" id="presentControlStatus" hidden>
+      <span class="present-control-status-dot" id="presentControlDot" aria-hidden="true"></span>
+      <?= h(t('present.control_status')) ?>
+    </span>
+    <?php endif; ?>
     <?php if ($canBroadcast && $remoteUrl): ?>
     <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkBtn" title="<?= h(t('remote.copy_url')) ?>"><?= h(t('remote.copy_url')) ?></button>
     <input type="hidden" id="presentRemoteLinkInput" value="<?= h($remoteUrl) ?>">
@@ -176,6 +185,10 @@ require __DIR__ . '/includes/header.php';
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M19.1 4.9l-2.1 2.1M7.1 16.9l-2.1 2.1"/></svg>
             <?= h(t('present.settings_submenu_laser')) ?>
           </button>
+          <button type="button" class="dropdown-menu-item" data-settings-open="display">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 10h10"/><path d="M7 13h6" opacity="0.45"/></svg>
+            <?= h(t('present.settings_submenu_display')) ?>
+          </button>
         </div>
         <div class="present-config-panel editor-settings-panel" data-settings-panel="panels" hidden>
           <div class="present-config-section">
@@ -230,6 +243,11 @@ require __DIR__ . '/includes/header.php';
         </div>
         <div class="present-config-panel editor-settings-panel" data-settings-panel="laser" hidden>
           <div class="present-config-section">
+            <label class="present-config-check present-config-check-block" style="margin-bottom:14px;">
+              <input type="checkbox" id="presentLaserEnabled" <?= (($presentLayout['laserPointerEnabled'] ?? true) !== false) ? 'checked' : '' ?>>
+              <span><?= h(t('present.laser_enabled')) ?></span>
+            </label>
+            <div id="presentLaserOptions">
             <p class="props-video-note present-panel-settings-hint"><?= h(t('present.laser_hint')) ?></p>
             <div class="present-laser-preview" id="presentLaserPreview" aria-hidden="true">
               <span class="present-laser-preview-dot" id="presentLaserPreviewDot"></span>
@@ -244,6 +262,21 @@ require __DIR__ . '/includes/header.php';
               <?= h(t('present.laser_trail')) ?>
             </label>
             <p class="props-video-note" style="margin-top:6px;"><?= h(t('present.laser_trail_hint')) ?></p>
+            </div>
+          </div>
+          <div class="present-config-panel-footer">
+            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
+          </div>
+        </div>
+        <div class="present-config-panel editor-settings-panel" data-settings-panel="display" hidden>
+          <div class="present-config-section">
+            <label class="present-config-check present-config-check-block">
+              <input type="checkbox" id="presentShowSlideGhostToggle" <?= !empty($presentLayout['showSlideGhost']) ? 'checked' : '' ?>>
+              <span><?= h(t('present.show_slide_ghost')) ?></span>
+            </label>
+            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.show_slide_ghost_hint')) ?></p>
+            <label for="presentSlideGhostOpacity" style="margin-top:12px;"><?= h(t('present.slide_ghost_opacity')) ?> (<span id="presentSlideGhostOpacityVal"><?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?></span> %)</label>
+            <input type="range" id="presentSlideGhostOpacity" min="5" max="80" step="1" value="<?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?>" <?= empty($presentLayout['showSlideGhost']) ? 'disabled' : '' ?>>
           </div>
           <div class="present-config-panel-footer">
             <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
@@ -385,7 +418,28 @@ require __DIR__ . '/includes/header.php';
           <span class="props-accordion-chevron">▾</span>
         </button>
         <div class="props-accordion-body">
-          <div class="present-panel-body-inner">
+          <div class="present-panel-body-inner present-slides-widget-inner">
+          <div class="present-slides-control-stack">
+          <div class="present-slides-toolbar">
+            <?php
+              $laserOn = ($presentLayout['laserPointerEnabled'] ?? true) !== false;
+              $laserQuickColor = $presentLayout['laserPointerColor'] ?? '#ff0000';
+              $ghostOn = !empty($presentLayout['showSlideGhost']);
+            ?>
+            <button type="button" id="presentLaserQuickToggle" class="present-toolbar-quick-toggle present-laser-quick-toggle<?= $laserOn ? ' is-on' : '' ?>" aria-pressed="<?= $laserOn ? 'true' : 'false' ?>" title="<?= h(t('present.laser_toggle')) ?>"<?= $laserOn ? ' style="color:' . h($laserQuickColor) . '"' : '' ?>>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M19.1 4.9l-2.1 2.1M7.1 16.9l-2.1 2.1"/></svg>
+            </button>
+            <div class="present-ghost-inline<?= $ghostOn ? '' : ' is-disabled' ?>" id="presentGhostInline">
+              <label for="presentSlideGhostOpacityInline" class="present-ghost-inline-label"><?= h(t('present.slide_ghost_opacity')) ?></label>
+              <div class="present-ghost-inline-row">
+                <input type="range" id="presentSlideGhostOpacityInline" min="5" max="80" step="1" value="<?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?>" aria-valuetext="<?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?>%" aria-label="<?= h(t('present.slide_ghost_opacity')) ?>"<?= $ghostOn ? '' : ' disabled' ?>>
+                <span class="present-ghost-inline-val" id="presentSlideGhostOpacityInlineVal"><?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?></span>
+              </div>
+            </div>
+            <button type="button" id="presentGhostQuickToggle" class="present-toolbar-quick-toggle present-ghost-quick-toggle<?= $ghostOn ? ' is-on' : '' ?>" aria-pressed="<?= $ghostOn ? 'true' : 'false' ?>" title="<?= h(t('present.ghost_toggle')) ?>">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="8" width="14" height="10" rx="1.5" opacity="0.45"/><rect x="3" y="5" width="14" height="10" rx="1.5"/><path d="M7 9h6" opacity="0.5"/><path d="M7 12h4" opacity="0.5"/></svg>
+            </button>
+          </div>
           <div class="present-controls">
             <button type="button" id="presPrevBtn" class="present-nav-btn" title="<?= h(t('present.prev')) ?>">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
@@ -394,6 +448,7 @@ require __DIR__ . '/includes/header.php';
             <button type="button" id="presNextBtn" class="present-nav-btn" title="<?= h(t('present.next')) ?>">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
             </button>
+          </div>
           </div>
           </div>
           <div class="present-panel-resize-handle" data-panel-resize="slides" role="separator" aria-orientation="horizontal" title="<?= h(t('present.resize_panel')) ?>"></div>
@@ -422,11 +477,15 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <div class="present-filmstrip" id="filmstrip">
-  <?php $fsScale = 168 / max(1, (int)$meta['width']); ?>
+  <?php
+    $fsThumbW = client_is_touch_tablet() ? 200 : 168;
+    $fsScale = $fsThumbW / max(1, (int)$meta['width']);
+  ?>
   <?php foreach ($slides as $i => $s):
     $slideHasNotes = trim($s['notes'] ?? '') !== '';
+    $slidePresentOff = Presentation::isSlidePresentDisabled($s);
   ?>
-    <button type="button" class="filmstrip-item<?= $slideHasNotes ? ' has-notes' : '' ?>" data-index="<?= (int)$i ?>" style="--fs-color: <?= h($swatches[$i]) ?>;">
+    <button type="button" class="filmstrip-item<?= $slideHasNotes ? ' has-notes' : '' ?><?= $slidePresentOff ? ' is-present-disabled' : '' ?>" data-index="<?= (int)$i ?>" style="--fs-color: <?= h($swatches[$i]) ?>;"<?= $slidePresentOff ? ' title="' . h(t('editor.slide_present_disabled')) . '"' : '' ?>>
       <div class="filmstrip-thumb-scale" style="width:<?= (int)$meta['width'] ?>px; height:<?= (int)$meta['height'] ?>px; transform:scale(<?= $fsScale ?>);">
         <?= SlideRenderer::renderSlideThumbnailHtml($s, null) ?>
       </div>
@@ -447,6 +506,7 @@ window.SF_PRESENT = {
   remoteUrl: <?= json_encode($canBroadcast && $remoteUrl ? $remoteUrl : '') ?>,
   slideCount: <?= count($slides) ?>,
   startSlide: <?= (int)$startSlide ?>,
+  slideDisabled: <?= json_encode($slideDisabled) ?>,
   notesHtml: <?= json_encode($notesHtml, JSON_UNESCAPED_UNICODE) ?>,
   slideWidth: <?= (int)$meta['width'] ?>,
   slideHeight: <?= (int)$meta['height'] ?>,
@@ -459,6 +519,7 @@ window.SF_PRESENT = {
       'color' => $presentLayout['laserPointerColor'] ?? '#ff0000',
       'size' => (int)($presentLayout['laserPointerSize'] ?? 24),
       'trail' => !empty($presentLayout['laserPointerTrail']),
+      'enabled' => ($presentLayout['laserPointerEnabled'] ?? true) !== false,
   ], JSON_UNESCAPED_UNICODE) ?>,
   i18n: {
     copied: <?= json_encode(t('present.copied')) ?>,
@@ -476,6 +537,10 @@ window.SF_PRESENT = {
     clockStudio: <?= json_encode(t('present.clock_studio')) ?>,
     clockAnalog: <?= json_encode(t('present.clock_analog')) ?>,
     clockDigital: <?= json_encode(t('present.clock_digital')) ?>,
+    laserToggleOn: <?= json_encode(t('present.laser_toggle_on')) ?>,
+    laserToggleOff: <?= json_encode(t('present.laser_toggle_off')) ?>,
+    ghostToggleOn: <?= json_encode(t('present.ghost_toggle_on')) ?>,
+    ghostToggleOff: <?= json_encode(t('present.ghost_toggle_off')) ?>,
   }
 };
 </script>

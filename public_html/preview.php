@@ -37,6 +37,7 @@ $sections = SlideRenderer::renderSections($slidesData);
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="assets/js/reveal-autoslide.js?v=<?= ASSET_VERSION ?>"></script>
 <script>
   Reveal.initialize({
     width: <?= (int)$meta['width'] ?>,
@@ -51,6 +52,9 @@ $sections = SlideRenderer::renderSections($slidesData);
   // Medien: Ladehinweis, automatische Wiedergabe nach Verzögerung.
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
+  Reveal.on('ready', function () {
+    window.SlideForgeRevealAutoSlide?.install(Reveal);
+  });
   <?php if (isset($_GET['slide'])): ?>
   Reveal.on('ready', function () { Reveal.slide(<?= (int)$startSlide ?>, 0); });
   <?php endif; ?>

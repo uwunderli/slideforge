@@ -40,7 +40,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '269');
+define('ASSET_VERSION', '292');
 
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
@@ -312,7 +312,118 @@ function current_scheme(): string {
     return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 }
 
-// Sprache bestimmen: angemeldeter User > Cookie (z.B. Login-Seite vor Anmeldung) > Deutsch.
+/** Tablet-Erkennung für Touch-Remote (Galaxy Tab, iPad, …). */
+function client_is_touch_tablet(): bool
+{
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if ($ua === '') {
+        return false;
+    }
+    if (preg_match('/iPad|Tablet|PlayBook|Silk/i', $ua)) {
+        return true;
+    }
+    // Samsung Galaxy Tab (SM-X710 = Tab S9, …) — meldet oft trotzdem „Mobile“ im UA
+    if (preg_match('/\bSM-X\d{3}\b/i', $ua)) {
+        return true;
+    }
+    if (preg_match('/Android/i', $ua) && !preg_match('/Mobile/i', $ua)) {
+        return true;
+    }
+    return false;
+}
+
+/** Prüft ob eine IPv4 vom WLAN/LAN aus erreichbar ist (kein Docker-Bridge-172.x). */
+function is_wlan_reachable_ipv4(string $ip): bool
+{
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return false;
+    }
+    if (str_starts_with($ip, '127.') || str_starts_with($ip, '169.254.')) {
+        return false;
+    }
+    // Docker-/Container-Bridges (172.16.0.0–172.31.255.255) sind am Tablet nicht erreichbar
+    if (preg_match('/^172\.(1[6-9]|2\d|3[0-1])\./', $ip)) {
+        return false;
+    }
+    return preg_match('/^(192\.168\.|10\.)/', $ip) === 1;
+}
+
+/** Hostname für URLs, die vom LAN erreichbar sein müssen (QR, Remote-Link). */
+function http_request_host(): string
+{
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $hostOnly = strtolower(preg_replace('/:\d+$/', '', $host));
+    if (!in_array($hostOnly, ['localhost', '127.0.0.1', '[::1]'], true)) {
+        return $host;
+    }
+    $lan = detect_lan_ipv4();
+    if (!$lan) {
+        return $host;
+    }
+    if (preg_match('/:(\d+)$/', $host, $m)) {
+        return $lan . ':' . $m[1];
+    }
+    return $lan;
+}
+
+/** LAN-IPv4 für localhost-Zugriffe (Docker: env SLIDEFORGE_PRESENT_HOST auf dem Host setzen). */
+function detect_lan_ipv4(): ?string
+{
+    $env = getenv('SLIDEFORGE_PRESENT_HOST');
+    if (is_string($env) && trim($env) !== '') {
+        $ip = preg_replace('/:\d+$/', '', trim($env));
+        return is_wlan_reachable_ipv4($ip) ? $ip : null;
+    }
+    $cfg = Config::presentReachableHost();
+    if ($cfg !== '') {
+        $ip = preg_replace('/:\d+$/', '', $cfg);
+        return is_wlan_reachable_ipv4($ip) ? $ip : null;
+    }
+    if (!function_exists('shell_exec')) {
+        return null;
+    }
+    $fromIfaces = detect_lan_ipv4_from_interfaces();
+    if ($fromIfaces !== null) {
+        return $fromIfaces;
+    }
+    $src = @shell_exec('ip -4 route get 1.1.1.1 2>/dev/null');
+    if (is_string($src) && preg_match('/\bsrc\s+(\d+\.\d+\.\d+\.\d+)/', $src, $m)) {
+        $ip = $m[1];
+        if (is_wlan_reachable_ipv4($ip)) {
+            return $ip;
+        }
+    }
+    return null;
+}
+
+/** Sucht 192.168.x.x / 10.x.x.x auf lokalen Interfaces (funktioniert nur ausserhalb Docker). */
+function detect_lan_ipv4_from_interfaces(): ?string
+{
+    $out = @shell_exec('ip -4 -o addr show scope global 2>/dev/null');
+    if (!is_string($out) || $out === '') {
+        return null;
+    }
+    $preferred = null;
+    $fallback = null;
+    foreach (preg_split('/\r?\n/', trim($out)) as $line) {
+        if (!preg_match('/inet\s+(\d+\.\d+\.\d+\.\d+)/', $line, $m)) {
+            continue;
+        }
+        $ip = $m[1];
+        if (!is_wlan_reachable_ipv4($ip)) {
+            continue;
+        }
+        if (str_starts_with($ip, '192.168.')) {
+            $preferred = $ip;
+            break;
+        }
+        if ($fallback === null) {
+            $fallback = $ip;
+        }
+    }
+    return $preferred ?? $fallback;
+}
+
 $__lang = 'de';
 if (!empty($_SESSION['user_id'])) {
     $__u = Auth::findById($_SESSION['user_id']);

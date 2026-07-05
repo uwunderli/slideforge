@@ -45,6 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['ok' => false, 'error' => 'Keine Present-Rechte.']);
             exit;
         }
+    } elseif ($action === 'claim_leader') {
+        if (!$canEdit) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Keine Present-Rechte.']);
+            exit;
+        }
     } elseif ($action === 'stop' || $action === 'media') {
         if (!$canEdit) {
             http_response_code(403);
@@ -73,14 +79,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'present_heartbeat') {
-        Presentation::touchLiveSession($id, 'present', $me['id']);
-        echo json_encode(['ok' => true]);
+        $clientId = (string)($body['client_id'] ?? '');
+        $leader = Presentation::presentHeartbeat($id, $clientId, $me['id']);
+        echo json_encode(['ok' => true] + $leader);
+        exit;
+    }
+
+    if ($action === 'claim_leader') {
+        $clientId = (string)($body['client_id'] ?? '');
+        $clientKind = (string)($body['client_kind'] ?? 'present');
+        if ($clientId === '') {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'client_id fehlt.']);
+            exit;
+        }
+        $leader = Presentation::resolvePresentLeader($id, $clientId, $me['id'], true, $clientKind);
+        echo json_encode(['ok' => true] + $leader);
         exit;
     }
 
     if ($action === 'remote_heartbeat') {
-        Presentation::touchLiveSession($id, 'remote', $me['id']);
-        echo json_encode(['ok' => true]);
+        $clientId = (string)($body['client_id'] ?? '');
+        $leader = Presentation::remoteHeartbeat($id, $clientId, $me['id']);
+        echo json_encode(['ok' => true] + $leader);
         exit;
     }
 
@@ -103,9 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['ok' => false, 'error' => 'Ungültige Richtung.']);
             exit;
         }
-        Presentation::setLiveStep($id, $direction);
-        Presentation::touchLiveSession($id, 'remote', $me['id']);
-        echo json_encode(['ok' => true]);
+        $clientId = (string)($body['client_id'] ?? '');
+        $result = Presentation::setLiveStep($id, $direction, $clientId, $me['id']);
+        echo json_encode(['ok' => true] + $result);
         exit;
     }
 
@@ -130,9 +151,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $color = (string)($body['color'] ?? '#ff0000');
         $size = (int)($body['size'] ?? 24);
         $trail = !empty($body['trail']);
-        Presentation::setLiveLaser($id, $active, $x, $y, $slideIndex, $color, $size, $trail);
-        Presentation::touchLiveSession($id, 'remote', $me['id']);
-        echo json_encode(['ok' => true]);
+        $clientId = (string)($body['client_id'] ?? '');
+        $result = Presentation::setLiveLaser($id, $active, $x, $y, $slideIndex, $color, $size, $trail, $clientId, $me['id']);
+        echo json_encode(['ok' => true] + $result);
         exit;
     }
 
@@ -143,11 +164,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($source, ['present', 'remote', 'editor'], true)) {
         $source = 'present';
     }
-    Presentation::setLivePosition($id, $index, $frag, $channel, $source);
+    $clientId = (string)($body['client_id'] ?? '');
+    $result = Presentation::setLivePosition($id, $index, $frag, $channel, $source, $clientId, $me['id']);
     if ($source === 'remote') {
         Presentation::touchLiveSession($id, 'remote', $me['id']);
     }
-    echo json_encode(['ok' => true]);
+    echo json_encode(['ok' => true] + $result);
     exit;
 }
 
