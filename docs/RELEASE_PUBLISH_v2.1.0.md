@@ -98,9 +98,10 @@ gh release create v2.1.0 --title "v2.1.0 — Folien-Sets & Logos-Import" \
 - [x] Keine Secrets im Diff (`data/`, `.env` ausgeschlossen)
 - [x] Schlicht-Seed verifiziert
 - [ ] Owner: manuelle Tests (siehe `.github/RELEASE_v2.1.0.md` Test plan)
-- [ ] Commit + Merge + Push + Tag `v2.1.0`
-- [ ] Prod-Deploy (Hook oder manuell)
-- [ ] Optional: `./.deploy/push-layout-set-seed.sh schlicht` (Abschnitt 3)
+- [x] Commit + Merge + Push + Tag `v2.1.0`
+- [x] Prod-Deploy + Demo-Deploy (pre-push-Hook)
+- [x] GitHub Release: https://github.com/uwunderli/slideforge/releases/tag/v2.1.0
+- [ ] Optional: `./.deploy/push-layout-set-seed.sh schlicht` (bereits am 2026-07-07)
 
 ---
 

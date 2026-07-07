@@ -74,17 +74,24 @@ Modus: Agent codet, Owner testet/freigibt
 - [x] Archiv- oder Seed-Weg waehlen (`.chs` oder `seed/layout-sets/...`) — Seed `schlicht`
 - [x] Upload/Import auf Prod durchfuehren — `./.deploy/push-layout-set-seed.sh schlicht`
 - [x] `template_shared` und ggf. `default_layout_set` verifizieren — vom Skript gesetzt (siehe `docs/PROD_SET_SCHLICHT_2026-07-07.md`)
-- [ ] Sichttest in Templates/Import-Maske (Owner)
+- [x] Sichttest in Templates/Import-Maske (Owner)
 
 **Abnahme**
 
 - [x] Set auf Prod vorhanden (aktualisiert)
 - [x] Set fuer alle zugaenglich (`template_shared: true`)
-- [ ] Import mit diesem Set funktioniert (Owner-Test)
+- [x] Import mit diesem Set funktioniert (Owner-Test)
 
 ---
 
 
+
+### 4) Finalisieren
+
+- [x] Aktuelle Version auf Prod und Demo veröffentlichen.
+- [x] Git aktualisieren und auf neue Version setzen.
+
+---
 
 ## Empfohlene Reihenfolge heute
 
@@ -132,14 +139,17 @@ Modus: Agent codet, Owner testet/freigibt
 - [x] Release **v2.1.0** dokumentiert; Roadmap v2.2–v2.4 und v3.1 angepasst
 - [x] Release-Veröffentlichung vorbereitet (`docs/RELEASE_PUBLISH_v2.1.0.md`, README, VERSION, CHANGELOG)
 - [x] Prod: Folien-Set **Schlicht** via Seed auf `ftp.bkbiel.ch` (`1cb754c60ed55f3b`) — `docs/PROD_SET_SCHLICHT_2026-07-07.md`
-- [x] Prod: Vollständiger Code-Deploy (584 Dateien) + Admin-Rolle `urs` wiederhergestellt
+- [x] Editor-UI: Vorlagen-Accordion, Raster im Hauptfenster, Sidebar-Scroll-Fixes (`ASSET_VERSION` 356)
+- [x] Commit `f54a83b`, Release-Commit `c582670`, Merge auf `main`
+- [x] Prod-Deploy (584 Dateien) + Demo-Deploy + Demo-Reset via pre-push-Hook
+- [x] Git-Tag `v2.1.0` gepusht, GitHub Release erstellt
 
 
 
 ### Offen
 
-- [ ] Commit, Merge `main`, Push, Tag `v2.1.0`, GitHub Release (Owner)
-- [ ] Sichttest Prod nach Re-Login: Einstellungen/Admin sichtbar?
+- [ ] Owner: Sichttest Prod nach Re-Login (Einstellungen/Admin, Vorlagen-Accordion, Raster-Toggle)
+- [ ] Optional: Schlicht-Seed erneut auf Prod (`./.deploy/push-layout-set-seed.sh schlicht`) — zuletzt 2026-07-07
 
 
 
@@ -151,5 +161,4 @@ Modus: Agent codet, Owner testet/freigibt
 
 ### Naechster Schritt
 
-- [ ] Owner: Sichttest auf Prod (Vorlagen/Import), dann Commit + Push v2.1.0
-
+- [ ] Owner: Hard-Reload (Ctrl+Shift+R) auf Prod/Demo, Sichttest laut `.github/RELEASE_v2.1.0.md`
