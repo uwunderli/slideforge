@@ -21,12 +21,31 @@
     currentBackground: { type: 'color', value: '#111111' },
     manualZoom: null,
     currentZoom: 1,
+    transformSnapStart: null,
     activePropsTab: 'form',
     activeFormatGroup: null,
     layersPanelOpen: localStorage.getItem('sf_layers_open') === '1',
     brandColors: boot.brandColors || [],
     textTemplates: boot.textTemplates || [],
     templateMode: !!boot.templateMode,
+    layoutSetMode: !!boot.layoutSetMode,
+    hasLayoutSet: !!boot.hasLayoutSet,
+    logosImporterEnabled: !!boot.logosImporterEnabled,
+    logosImportedRoles: boot.logosImportedRoles || [],
+    logosExtraRoles: boot.logosExtraRoles || [],
+    logosZonesAccordionOpen: boot.logosZonesAccordionOpen !== false,
+    logosLayoutMap: boot.logosLayoutMap || {},
+    logosLayoutSlideIds: boot.logosLayoutSlideIds || {},
+    logosRoleLabels: boot.logosRoleLabels || {},
+    logosPlaceholderRoles: boot.logosPlaceholderRoles || [],
+    elementTextLinks: boot.elementTextLinks || {},
+    elementLinkRoles: boot.elementLinkRoles || [],
+    standardElementRoles: boot.standardElementRoles || [],
+    logosElementLinkRoles: boot.logosElementLinkRoles || [],
+    elementZones: boot.elementZones || {},
+    elementZoneKeys: boot.elementZoneKeys || ['slides', 'footer', 'custom', 'unused'],
+    elementIconHtml: boot.elementIconHtml || {},
+    logosBadgeHtml: boot.logosBadgeHtml || '',
     presentConfig: boot.presentConfig || null,
     spellConfig: boot.spellcheck || null,
     pixabayConfig: boot.pixabay || null,
@@ -354,12 +373,63 @@
       listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">' + SF.i18n.loading + '</p>';
       document.getElementById('templateModal').classList.add('open');
       try {
-        const res = await apiGet('list_slide_templates');
-        renderTemplatePicker(res.mine, res.shared);
+        const setId = SF.meta.layout_set_id;
+        if (setId) {
+          const res = await fetch(
+            'api.php?action=list_layout_set_layouts&id=' + encodeURIComponent(SF.id) +
+            '&layout_set_id=' + encodeURIComponent(setId)
+          ).then(r => r.json());
+          if (!res.ok) throw new Error(res.error || 'Fehler');
+          renderLayoutSetPicker(res.layouts || [], setId);
+        } else {
+          const res = await apiGet('list_slide_templates');
+          renderTemplatePicker(res.mine, res.shared);
+        }
       } catch (e) {
         listEl.innerHTML = '<p style="color:var(--danger); font-size:0.85rem;">' + SF.i18n.error + '</p>';
       }
     });
+  }
+
+  function renderLayoutSetPicker(layouts, setId) {
+    const listEl = document.getElementById('templateList');
+    if (!layouts.length) {
+      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">' + SF.i18n.empty + '</p>';
+      return;
+    }
+    listEl.innerHTML = layouts.map(l =>
+      '<div class="template-pick-row" data-layout-key="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' +
+        '<span>' + escapeHtml(l.title || l.layoutKey) + '</span>' +
+        '<button type="button" class="button button-sm" data-apply-layout="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' + SF.i18n.apply + '</button>' +
+      '</div>'
+    ).join('');
+    listEl.querySelectorAll('[data-apply-layout]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const slideId = btn.getAttribute('data-layout-slide-id') || '';
+        applyLayoutFromSet(setId, btn.dataset.applyLayout, slideId);
+      });
+    });
+  }
+
+  async function applyLayoutFromSet(setId, layoutKey, layoutSlideId) {
+    setSaveStatus('Wende Layout an…');
+    try {
+      pushHistory();
+      const payload = { index: SF.currentIndex, layout_set_id: setId, layout_key: layoutKey };
+      if (layoutSlideId) payload.layout_slide_id = layoutSlideId;
+      await api('apply_layout_from_set', payload);
+      const res = await apiGet('get_slides');
+      SF.slides = res.slides;
+      loadSlideIntoStage(SF.currentIndex, true);
+      pushHistory();
+      await renderSlideFilmstrip();
+      document.getElementById('templateModal').classList.remove('open');
+      setSaveStatus('Gespeichert');
+      reloadPreviewWindow();
+    } catch (e) {
+      setSaveStatus('Fehler beim Anwenden', true);
+      console.error(e);
+    }
   }
 
   function renderTemplatePicker(mine, shared) {
@@ -387,10 +457,12 @@
   async function applySlideTemplate(templateId) {
     setSaveStatus('Wende Vorlage an…');
     try {
+      pushHistory();
       await api('apply_slide_template', { index: SF.currentIndex, template_id: templateId });
       const res = await apiGet('get_slides');
       SF.slides = res.slides;
-      loadSlideIntoStage(SF.currentIndex);
+      loadSlideIntoStage(SF.currentIndex, true);
+      pushHistory();
       await renderSlideFilmstrip();
       document.getElementById('templateModal').classList.remove('open');
       setSaveStatus('Gespeichert');
@@ -427,7 +499,7 @@
       return;
     }
     renderTextTemplateButtons();
-    if (SF.templateMode) {
+    if (SF.templateMode && !SF.layoutSetMode) {
       document.querySelector('[data-objtab="slides"]')?.remove();
       document.querySelector('.obj-tab-panel[data-objtab="slides"]')?.remove();
       const firstTab = document.querySelector('.obj-tab-btn');
@@ -435,19 +507,23 @@
       if (firstTab) firstTab.classList.add('active');
       if (firstPanel) firstPanel.hidden = false;
     } else {
-      SF.currentIndex = Math.min(initialSlideIndexFromUrl(), Math.max(0, SF.slides.length - 1));
+      SF.currentIndex = SF.templateMode
+        ? 0
+        : Math.min(initialSlideIndexFromUrl(), Math.max(0, SF.slides.length - 1));
+      await loadLayoutSetTitles();
       await renderSlideFilmstrip();
     }
     buildStage();
     initTransitionPicker();
     loadSlideIntoStage(SF.currentIndex);
-    if (!SF.templateMode) {
+    if (!SF.templateMode || SF.layoutSetMode) {
       updateFilmstripActive();
       const filmstrip = document.getElementById('slideFilmstrip');
       const activeItem = filmstrip?.querySelector('.filmstrip-item.active');
       if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
     }
     bindGlobalUI();
+    initMasterSlideNav();
     initSpellcheckPanel();
     initPixabayPanel();
     initIconifyPanel();
@@ -457,6 +533,7 @@
     initMediaLibraryPanel();
     bindZoomUI();
     bindTemplatePicker();
+    initElementsPanel();
     updatePresentLinkOnSlideChange();
     window.addEventListener('resize', resizeStageToFit);
     const canvasScrollEl = document.querySelector('.canvas-scroll');
@@ -493,13 +570,20 @@
         borderStroke: '#3a6c8d',
         anchorStroke: '#3a6c8d',
         anchorFill: '#ffffff',
-        boundBoxFunc: (oldBox, newBox) => {
-          if (!SF.transformer?.nodes().length) return newBox;
-          if (SF.transformer.nodes().some(isObjectGroup)) return newBox;
-          return snapTransformBox(oldBox, newBox, SF.transformer.nodes());
+        boundBoxFunc: (_oldBox, newBox) => {
+          newBox.width = Math.max(5, newBox.width);
+          newBox.height = Math.max(5, newBox.height);
+          return newBox;
         },
       });
-      SF.transformer.on('transformend', () => clearSnapGuides());
+      SF.transformer.on('transformstart', () => {
+        SF.transformSnapStart = null;
+      });
+      SF.transformer.on('transform', () => snapDuringTransform());
+      SF.transformer.on('transformend', () => {
+        clearSnapGuides();
+        SF.transformSnapStart = null;
+      });
       SF.layer.add(SF.transformer);
 
       initMarqueeSelection();
@@ -704,7 +788,12 @@
     const fsScale = filmstripScale();
     const itemHeight = filmstripItemHeight();
     container.querySelectorAll('.editor-filmstrip-item').forEach((item) => {
-      item.style.height = itemHeight + 'px';
+      const wrap = item.querySelector('.filmstrip-thumb-wrap');
+      if (wrap) {
+        wrap.style.height = itemHeight + 'px';
+      } else if (!SF.layoutSetMode) {
+        item.style.height = itemHeight + 'px';
+      }
       const scaleEl = item.querySelector('.filmstrip-thumb-scale');
       if (scaleEl) {
         scaleEl.style.width = SF.meta.width + 'px';
@@ -724,16 +813,136 @@
     return '<span class="filmstrip-notes-badge" title="' + escapeHtml(SF.i18n.notesTitle || 'Notizen') + '">' + NOTES_ICON_SVG + '</span>';
   }
 
+  function humanizeLayoutKey(key) {
+    const words = {
+      ueberschrift: 'Überschrift',
+      und: 'und',
+      inhalt: 'Inhalt',
+      inhalte: 'Inhalte',
+      zwei: 'zwei',
+      vergleich: 'Vergleich',
+      listenpunkt: 'Listenpunkt',
+      text: 'Text',
+      document: 'Dokument',
+      title: 'Titel',
+      subtitle: 'Untertitel',
+      heading: 'Überschrift',
+      scripture: 'Bibelstelle',
+      block: 'Block',
+      lighttext: 'Blockzitat',
+    };
+    return String(key || '').split('_').filter(Boolean).map((part) => {
+      const lower = part.toLowerCase();
+      if (words[lower]) return words[lower];
+      if (/^\d+$/.test(part)) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join(' ') || key;
+  }
+
+  function slideDisplayLabel(slide) {
+    if (!slide) return SF.i18n.unnamedSlide || 'Unbenannte Folie';
+    const stored = String(slide.label || '').trim();
+    if (stored) return stored;
+    const setSlideId = slide.layoutSetSlideId || '';
+    if (setSlideId && SF.layoutSetTitlesByKey && SF.layoutSetTitlesByKey['id:' + setSlideId]) {
+      return SF.layoutSetTitlesByKey['id:' + setSlideId];
+    }
+    const key = slide.layoutKey || '';
+    if (key && SF.layoutSetTitlesByKey && SF.layoutSetTitlesByKey[key]) {
+      return SF.layoutSetTitlesByKey[key];
+    }
+    if (key && SF.logosRoleLabels && SF.logosRoleLabels[key]) return SF.logosRoleLabels[key];
+    if (key) return humanizeLayoutKey(key);
+    const roleObj = (slide.objects || []).find((o) => o.setRole || o.logosRole);
+    if (roleObj && SF.logosRoleLabels && SF.logosRoleLabels[roleObj.setRole || roleObj.logosRole]) {
+      return SF.logosRoleLabels[roleObj.setRole || roleObj.logosRole];
+    }
+    return SF.i18n.unnamedSlide || 'Unbenannte Folie';
+  }
+
+  async function loadLayoutSetTitles() {
+    SF.layoutSetTitlesByKey = {};
+    if (SF.layoutSetMode || !SF.hasLayoutSet) return;
+    const setId = SF.meta?.layout_set_id;
+    if (!setId) return;
+    try {
+      const res = await fetch(
+        'api.php?action=list_layout_set_layouts&id=' + encodeURIComponent(SF.id) +
+        '&layout_set_id=' + encodeURIComponent(setId)
+      ).then((r) => r.json());
+      if (!res.ok) return;
+      (res.layouts || []).forEach((l) => {
+        if (l.slideId && l.title) {
+          SF.layoutSetTitlesByKey['id:' + l.slideId] = l.title;
+        }
+        if (l.layoutKey && l.title && !SF.layoutSetTitlesByKey[l.layoutKey]) {
+          SF.layoutSetTitlesByKey[l.layoutKey] = l.title;
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function updateEditorContextTitle() {
+    if (!SF.layoutSetMode) return;
+    const slide = SF.slides[SF.currentIndex];
+    const titleEl = document.querySelector('.topbar-context-title');
+    if (!titleEl || !slide) return;
+    const text = SF.meta.title + ' - ' + slideDisplayLabel(slide);
+    titleEl.textContent = text;
+    titleEl.title = text;
+    const siteSuffix = document.title.includes('·')
+      ? document.title.substring(document.title.lastIndexOf('·'))
+      : '';
+    document.title = 'Editor · ' + text + siteSuffix;
+  }
+
+  async function saveSlideLabel(index, label) {
+    const slide = SF.slides[index];
+    if (!slide) return;
+    const trimmed = String(label || '').trim();
+    const prev = String(slide.label || '').trim();
+    if (trimmed === prev) return;
+    setSaveStatus('Speichere…');
+    try {
+      const res = await api('save_slide_label', { index, label: trimmed });
+      SF.slides = res.slides;
+      setSaveStatus('Gespeichert');
+      updateEditorContextTitle();
+    } catch (e) {
+      setSaveStatus('Fehler', true);
+      console.error(e);
+    }
+  }
+
+  function bindFilmstripLabelInput(input, slideIndex) {
+    if (!input) return;
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('mousedown', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+      }
+    });
+    input.addEventListener('blur', () => {
+      const trimmed = input.value.trim();
+      saveSlideLabel(slideIndex, trimmed);
+    });
+  }
+
   function syncFilmstripNotesBadge(slideIndex) {
     const slide = SF.slides[slideIndex];
     if (!slide) return;
     const item = document.querySelector('.editor-filmstrip-item[data-id="' + slide.id + '"]');
     if (!item) return;
+    const host = item.querySelector('.filmstrip-thumb-wrap') || item;
     const hasNotes = slideHasNotes(slide);
     item.classList.toggle('has-notes', hasNotes);
-    const badge = item.querySelector('.filmstrip-notes-badge');
+    const badge = host.querySelector('.filmstrip-notes-badge');
     if (hasNotes && !badge) {
-      item.insertAdjacentHTML('beforeend', filmstripNotesBadgeHtml());
+      host.insertAdjacentHTML('beforeend', filmstripNotesBadgeHtml());
     } else if (!hasNotes && badge) {
       badge.remove();
     }
@@ -848,17 +1057,31 @@
     const fsScale = filmstripScale();
     const itemHeight = filmstripItemHeight();
 
+    const showSlideLabels = SF.layoutSetMode || SF.hasLayoutSet;
     SF.slides.forEach((slide, i) => {
       const thumb = SF.thumbnails[slide.id] || {};
       const hasNotes = slideHasNotes(slide);
       const presentOff = !!slide.presentDisabled;
       const tab = document.createElement('div');
-      tab.className = 'filmstrip-item editor-filmstrip-item' + (i === SF.currentIndex ? ' active' : '') + (hasNotes ? ' has-notes' : '') + (presentOff ? ' is-present-disabled' : '');
+      tab.className = 'filmstrip-item editor-filmstrip-item' +
+        (showSlideLabels ? ' has-slide-label' : '') +
+        (i === SF.currentIndex ? ' active' : '') +
+        (hasNotes ? ' has-notes' : '') +
+        (presentOff ? ' is-present-disabled' : '');
       tab.dataset.id = slide.id;
       tab.style.setProperty('--fs-color', thumb.color || slideBgColor(slide));
-      tab.style.height = itemHeight + 'px';
+      if (!showSlideLabels) {
+        tab.style.height = itemHeight + 'px';
+      }
+
+      const labelHtml = showSlideLabels
+        ? (SF.layoutSetMode && SF.canEdit
+          ? '<input type="text" class="filmstrip-label-input" value="' + escapeHtml(slideDisplayLabel(slide)) + '" placeholder="' + escapeHtml(SF.i18n.filmstripLabelPlaceholder || 'Layout-Name') + '" title="' + escapeHtml(SF.i18n.filmstripLabelPlaceholder || 'Layout-Name') + '">'
+          : '<span class="filmstrip-label-text">' + escapeHtml(slideDisplayLabel(slide)) + '</span>')
+        : '';
 
       tab.innerHTML =
+        '<div class="filmstrip-thumb-wrap"' + (showSlideLabels ? ' style="height:' + itemHeight + 'px;"' : '') + '>' +
         (SF.canEdit ? '<span class="editor-filmstrip-handle" title="' + (SF.i18n.reorderSlide || 'Ziehen zum Sortieren') + '">⋮⋮</span>' : '') +
         '<div class="filmstrip-thumb-scale" style="width:' + SF.meta.width + 'px; height:' + SF.meta.height + 'px; transform:scale(' + fsScale + ');">' +
           (thumb.html || '') +
@@ -871,16 +1094,20 @@
               '<button type="button" class="tab-action" data-act="dup" title="' + (SF.i18n.duplicateSlide || 'Duplizieren') + '">⧉</button>' +
               (SF.slides.length > 1 ? '<button type="button" class="tab-action" data-act="del" title="' + (SF.i18n.deleteSlide || 'Löschen') + '">✕</button>' : '') +
             '</span>'
-          : '');
+          : '') +
+        '</div>' +
+        labelHtml;
 
       tab.addEventListener('click', (e) => {
         if (SF.filmstripSuppressClick) return;
-        if (e.target.closest('[data-act]') || e.target.closest('.editor-filmstrip-handle')) return;
+        if (e.target.closest('[data-act]') || e.target.closest('.editor-filmstrip-handle') || e.target.closest('.filmstrip-label-input')) return;
         const idx = SF.slides.findIndex((s) => s.id === tab.dataset.id);
         switchToSlide(idx);
       });
 
       if (SF.canEdit) {
+        const labelInput = tab.querySelector('.filmstrip-label-input');
+        if (labelInput) bindFilmstripLabelInput(labelInput, i);
         const togglePresentBtn = tab.querySelector('[data-act="toggle-present"]');
         if (togglePresentBtn) togglePresentBtn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -989,6 +1216,7 @@
     if (!skipHistoryReset) resetHistoryForCurrentSlide();
     updatePresentLinkOnSlideChange();
     syncPreviewSlideIndex();
+    updateEditorContextTitle();
     renderLayersPanel();
   }
 
@@ -1156,12 +1384,20 @@
       return;
     }
     if (!confirm('Diese Folie wirklich löschen?')) return;
-    const res = await api('delete_slide', { index });
-    SF.slides = res.slides;
-    if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
-    loadSlideIntoStage(SF.currentIndex);
-    await renderSlideFilmstrip();
-    reloadPreviewWindow();
+    try {
+      setSaveStatus('Speichere…');
+      const res = await api('delete_slide', { index });
+      SF.slides = res.slides;
+      if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
+      loadSlideIntoStage(SF.currentIndex);
+      await renderSlideFilmstrip();
+      reloadPreviewWindow();
+      setSaveStatus('Gespeichert');
+    } catch (e) {
+      setSaveStatus('Fehler', true);
+      alert(e.message || 'Folie konnte nicht gelöscht werden.');
+      console.error(e);
+    }
   }
 
   async function toggleSlidePresentDisabled(index) {
@@ -1563,6 +1799,8 @@
         lineHeight: obj.lineHeight || 1.2,
       }));
       node.setAttr('objType', 'text');
+      const setRole = obj.setRole || obj.logosRole;
+      if (setRole) node.setAttr('setRole', setRole);
       node.setAttr('lineHeight', obj.lineHeight || 1.2);
       node.setAttr('letterSpacing', obj.letterSpacing || 0);
       node.letterSpacing((obj.letterSpacing || 0) * (obj.fontSize || 32));
@@ -1716,7 +1954,7 @@
     if (type === 'text') {
       const styleStr = node.fontStyle() || '';
       const decoStr = node.textDecoration() || '';
-      return Object.assign(base, {
+      const textObj = Object.assign(base, {
         x: Math.round(node.x()), y: Math.round(node.y()),
         w: Math.round(node.width() * node.scaleX()), h: Math.round(node.height() * node.scaleY()),
         text: node.text(),
@@ -1734,6 +1972,9 @@
         color: node.fill(),
         align: node.align(),
       });
+      const setRole = node.getAttr('setRole') || node.getAttr('logosRole');
+      if (setRole) textObj.setRole = setRole;
+      return textObj;
     }
     if (type === 'ellipse') {
       const rx = node.radiusX() * node.scaleX(), ry = node.radiusY() * node.scaleY();
@@ -2176,88 +2417,145 @@
     if (SF.transformer) SF.transformer.moveToTop();
   }
 
-  function snapTransformBox(oldBox, newBox, excludeNodes) {
+  function nearestSnapCoord(value, targets, threshold) {
+    let best = null;
+    let bestDist = threshold;
+    for (const t of targets) {
+      const dist = Math.abs(value - t);
+      if (dist <= bestDist) {
+        bestDist = dist;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  function transformAnchorEdges(anchor) {
+    return {
+      left: anchor === 'top-left' || anchor === 'middle-left' || anchor === 'bottom-left',
+      right: anchor === 'top-right' || anchor === 'middle-right' || anchor === 'bottom-right',
+      top: anchor === 'top-left' || anchor === 'top-center' || anchor === 'top-right',
+      bottom: anchor === 'bottom-left' || anchor === 'bottom-center' || anchor === 'bottom-right',
+    };
+  }
+
+  const SNAP_RESIZE_TYPES = new Set(['text', 'rect', 'ellipse', 'image', 'shape']);
+
+  function applyClientRectToNode(node, x, y, w, h) {
+    const type = node.getAttr('objType');
+    node.scaleX(1);
+    node.scaleY(1);
+    if (type === 'text') {
+      node.position({ x, y });
+      node.width(Math.max(20, w));
+      return;
+    }
+    if (type === 'rect' || type === 'image') {
+      node.position({ x, y });
+      node.width(Math.max(5, w));
+      node.height(Math.max(5, h));
+      return;
+    }
+    if (type === 'ellipse') {
+      const rx = Math.max(2.5, w / 2);
+      const ry = Math.max(2.5, h / 2);
+      node.position({ x: x + rx, y: y + ry });
+      node.radiusX(rx);
+      node.radiusY(ry);
+      if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
+      return;
+    }
+    if (type === 'shape') {
+      const baseW = Math.max(10, w);
+      const baseH = Math.max(10, h);
+      node.position({ x, y });
+      node.points(buildShapePoints(node.getAttr('shapeType'), baseW, baseH, nodeShapeCfg(node)));
+      node.setAttr('baseW', baseW);
+      node.setAttr('baseH', baseH);
+      if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
+    }
+  }
+
+  function snapDuringTransform() {
+    if (SF._snapTransformLock) return;
+    const nodes = SF.transformer?.nodes() || [];
+    if (nodes.length !== 1) return;
+    const node = nodes[0];
+    if (isObjectGroup(node)) return;
+    const type = node.getAttr('objType');
+    if (!SNAP_RESIZE_TYPES.has(type)) return;
+    if (Math.abs(node.rotation()) > 0.5) return;
+
+    const anchor = SF.transformer.getActiveAnchor();
+    if (!anchor || anchor === 'rotater') return;
+
+    SF._snapTransformLock = true;
+    try {
+    const box = node.getClientRect({ relativeTo: SF.layer });
+    if (!SF.transformSnapStart) {
+      SF.transformSnapStart = {
+        anchor,
+        left: box.x,
+        right: box.x + box.width,
+        top: box.y,
+        bottom: box.y + box.height,
+      };
+    }
+
+    const edges = transformAnchorEdges(anchor);
     const threshold = SNAP_THRESHOLD_PX / (SF.currentZoom || 1);
-    const { targetXs, targetYs } = getSnapTargets(excludeNodes);
-    const box = Object.assign({}, newBox);
-    const eps = 0.01;
+    const { targetXs, targetYs } = getSnapTargets([node]);
+    const start = SF.transformSnapStart;
 
-    const oldLeft = oldBox.x;
-    const oldRight = oldBox.x + oldBox.width;
-    const oldTop = oldBox.y;
-    const oldBottom = oldBox.y + oldBox.height;
-
-    const moveLeft = Math.abs(box.x - oldLeft) > eps;
-    const moveRight = Math.abs((box.x + box.width) - oldRight) > eps;
-    const moveTop = Math.abs(box.y - oldTop) > eps;
-    const moveBottom = Math.abs((box.y + box.height) - oldBottom) > eps;
-
+    let x, y, w, h;
     let snappedX = null;
     let snappedY = null;
 
-    if (moveLeft && !moveRight) {
-      for (const tx of targetXs) {
-        if (Math.abs(box.x - tx) <= threshold) {
-          box.x = tx;
-          box.width = oldRight - tx;
-          snappedX = tx;
-          break;
-        }
-      }
-    } else if (moveRight && !moveLeft) {
-      const right = box.x + box.width;
-      for (const tx of targetXs) {
-        if (Math.abs(right - tx) <= threshold) {
-          box.width = tx - box.x;
-          snappedX = tx;
-          break;
-        }
-      }
-    } else if (moveLeft && moveRight) {
-      const cx = box.x + box.width / 2;
-      for (const tx of targetXs) {
-        if (Math.abs(cx - tx) <= threshold) {
-          box.x = tx - box.width / 2;
-          snappedX = tx;
-          break;
-        }
-      }
+    if (edges.left) {
+      const tx = nearestSnapCoord(box.x, targetXs, threshold);
+      x = tx !== null ? tx : box.x;
+      w = start.right - x;
+      if (tx !== null) snappedX = tx;
+    } else if (edges.right) {
+      const tx = nearestSnapCoord(box.x + box.width, targetXs, threshold);
+      const right = tx !== null ? tx : box.x + box.width;
+      x = start.left;
+      w = right - start.left;
+      if (tx !== null) snappedX = tx;
+    } else {
+      x = box.x;
+      w = box.width;
     }
 
-    if (moveTop && !moveBottom) {
-      for (const ty of targetYs) {
-        if (Math.abs(box.y - ty) <= threshold) {
-          box.y = ty;
-          box.height = oldBottom - ty;
-          snappedY = ty;
-          break;
-        }
-      }
-    } else if (moveBottom && !moveTop) {
-      const bottom = box.y + box.height;
-      for (const ty of targetYs) {
-        if (Math.abs(bottom - ty) <= threshold) {
-          box.height = ty - box.y;
-          snappedY = ty;
-          break;
-        }
-      }
-    } else if (moveTop && moveBottom) {
-      const cy = box.y + box.height / 2;
-      for (const ty of targetYs) {
-        if (Math.abs(cy - ty) <= threshold) {
-          box.y = ty - box.height / 2;
-          snappedY = ty;
-          break;
-        }
-      }
+    if (edges.top) {
+      const ty = nearestSnapCoord(box.y, targetYs, threshold);
+      y = ty !== null ? ty : box.y;
+      h = start.bottom - y;
+      if (ty !== null) snappedY = ty;
+    } else if (edges.bottom) {
+      const ty = nearestSnapCoord(box.y + box.height, targetYs, threshold);
+      const bottom = ty !== null ? ty : box.y + box.height;
+      y = start.top;
+      h = bottom - start.top;
+      if (ty !== null) snappedY = ty;
+    } else {
+      y = box.y;
+      h = box.height;
     }
 
-    box.width = Math.max(5, box.width);
-    box.height = Math.max(5, box.height);
+    applyClientRectToNode(
+      node,
+      Math.round(x),
+      Math.round(y),
+      Math.round(Math.max(5, w)),
+      Math.round(Math.max(5, h))
+    );
     drawSnapGuideLines(snappedX, snappedY);
+    if (SF.transformer) SF.transformer.forceUpdate();
     refreshCanvas();
-    return box;
+    } finally {
+      SF._snapTransformLock = false;
+    }
   }
 
   function updateSnapGuides(node) {
@@ -2267,19 +2565,25 @@
     const selfYs = [box.y, box.y + box.height / 2, box.y + box.height];
     const { targetXs, targetYs } = getSnapTargets([node]);
 
-    let dx = 0, snappedX = null;
+    let dx = 0;
+    let snappedX = null;
     for (const sx of selfXs) {
-      for (const tx of targetXs) {
-        if (Math.abs(sx - tx) <= threshold) { dx = tx - sx; snappedX = tx; break; }
+      const tx = nearestSnapCoord(sx, targetXs, threshold);
+      if (tx !== null) {
+        dx = tx - sx;
+        snappedX = tx;
+        break;
       }
-      if (snappedX !== null) break;
     }
-    let dy = 0, snappedY = null;
+    let dy = 0;
+    let snappedY = null;
     for (const sy of selfYs) {
-      for (const ty of targetYs) {
-        if (Math.abs(sy - ty) <= threshold) { dy = ty - sy; snappedY = ty; break; }
+      const ty = nearestSnapCoord(sy, targetYs, threshold);
+      if (ty !== null) {
+        dy = ty - sy;
+        snappedY = ty;
+        break;
       }
-      if (snappedY !== null) break;
     }
 
     if (snappedX !== null) node.x(node.x() + dx);
@@ -2317,6 +2621,7 @@
     });
     node.on('transformend', () => {
       clearSnapGuides();
+      SF.transformSnapStart = null;
       if (isObjectGroup(node)) {
         normalizeGroupScale(node);
         updateGroupHitRect(node);
@@ -2448,6 +2753,77 @@
     return getTopLevelNodes().slice().reverse();
   }
 
+  function collectLayerOrderFromDom() {
+    const list = document.querySelector('.props-layers-list');
+    if (!list) return [];
+    return [...list.querySelectorAll('li[data-layer-id]')].map((li) => li.dataset.layerId).filter(Boolean);
+  }
+
+  function applyLayerOrder(topFirstIds) {
+    if (!SF.layer || !topFirstIds.length) return;
+    const n = topFirstIds.length;
+    topFirstIds.forEach((id, i) => {
+      const node = findNodeById(id);
+      if (node) node.zIndex(n - 1 - i);
+    });
+    getTopLevelNodes().forEach((node) => {
+      if (node._sfBadge) node._sfBadge.moveToTop();
+    });
+    if (SF.transformer) SF.transformer.moveToTop();
+    SF.layer.draw();
+    scheduleSave();
+  }
+
+  function bindLayersListDrag(listEl) {
+    if (!listEl || listEl.dataset.dragBound) return;
+    listEl.dataset.dragBound = '1';
+    let dragLi = null;
+
+    listEl.addEventListener('dragstart', (e) => {
+      if (!e.target.closest('.props-layer-drag-handle')) {
+        e.preventDefault();
+        return;
+      }
+      dragLi = e.target.closest('li[data-layer-id]');
+      if (!dragLi) return;
+      dragLi.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragLi.dataset.layerId || '');
+      }
+    });
+
+    listEl.addEventListener('dragover', (e) => {
+      if (!dragLi) return;
+      e.preventDefault();
+      const li = e.target.closest('li[data-layer-id]');
+      if (li && li !== dragLi) {
+        const items = [...listEl.querySelectorAll('li[data-layer-id]')];
+        const from = items.indexOf(dragLi);
+        const to = items.indexOf(li);
+        if (from < 0 || to < 0) return;
+        if (from < to) li.after(dragLi);
+        else li.before(dragLi);
+      } else if (!li) {
+        listEl.appendChild(dragLi);
+      }
+    });
+
+    listEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!dragLi) return;
+      applyLayerOrder(collectLayerOrderFromDom());
+      dragLi.classList.remove('dragging');
+      dragLi = null;
+      renderLayersPanel();
+    });
+
+    listEl.addEventListener('dragend', () => {
+      if (dragLi) dragLi.classList.remove('dragging');
+      dragLi = null;
+    });
+  }
+
   function findNodeById(id) {
     if (!SF.layer || !id) return null;
     return getTopLevelNodes().find((n) => n.id() === id) || null;
@@ -2541,7 +2917,9 @@
       nodes.forEach((node) => {
         const id = node.id();
         const active = SF.selectedNodes.includes(node);
-        html += '<li><button type="button" class="props-layer-item' + (active ? ' active' : '') + '" data-layer-id="' + escapeHtml(id) + '">' +
+        html += '<li data-layer-id="' + escapeHtml(id) + '">' +
+          '<span class="props-layer-drag-handle" draggable="true" title="' + escapeHtml(I.layersDrag || 'Ziehen zum Sortieren') + '" aria-hidden="true">⠿</span>' +
+          '<button type="button" class="props-layer-item' + (active ? ' active' : '') + '" data-layer-id="' + escapeHtml(id) + '">' +
           '<span class="props-layer-icon" aria-hidden="true">' + layerIconHtml(node) + '</span>' +
           '<span class="props-layer-name">' + escapeHtml(layerItemLabel(node)) + '</span>' +
           '</button></li>';
@@ -2565,7 +2943,7 @@
       syncLayersPropsLayout();
     });
 
-    panel.querySelectorAll('[data-layer-id]').forEach((btn) => {
+    panel.querySelectorAll('button.props-layer-item').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const node = findNodeById(btn.dataset.layerId);
@@ -2575,6 +2953,8 @@
         }
       });
     });
+
+    bindLayersListDrag(panel.querySelector('.props-layers-list'));
     syncLayersPropsLayout();
   }
 
@@ -2582,8 +2962,6 @@
     const list = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
     SF.selectedNodes = list;
     SF.selectedNode = list.length === 1 ? list[0] : (list.length ? list[list.length - 1] : null);
-    SF.layersPanelOpen = list.length !== 1;
-    localStorage.setItem('sf_layers_open', list.length === 1 ? '0' : '1');
     if (SF.transformer) {
       if (!list.length) {
         SF.transformer.nodes([]);
@@ -2624,8 +3002,6 @@
     SF.selectedNodes = [];
     SF.selectedNode = null;
     if (SF.transformer) { SF.transformer.nodes([]); SF.layer.draw(); }
-    SF.layersPanelOpen = true;
-    localStorage.setItem('sf_layers_open', '1');
     renderPropsPanel(null);
     renderLayersPanel();
     updateSelectionActionButtons();
@@ -2658,6 +3034,84 @@
     renderPropsPanel(SF.selectedNode);
   }
 
+  function logosPlaceholderSelectHtml(currentRole) {
+    const roles = SF.logosPlaceholderRoles.length ? SF.logosPlaceholderRoles : Object.keys(SF.logosRoleLabels);
+    const labels = SF.logosRoleLabels || {};
+    const options = [{ value: '', label: I.setPlaceholderNone || '—' }];
+    roles.forEach((r) => options.push({ value: r, label: labels[r] || r }));
+    let html = fieldSelectKV('p_setRole', I.setPlaceholderRole || 'Set-Platzhalter', options, currentRole || '');
+    html += '<button type="button" class="button button-ghost button-sm" id="refreshSetPlaceholderBtn" style="width:100%; margin-top:8px;"' +
+      (currentRole ? '' : ' disabled') + '>' + escapeHtml(I.setPlaceholderRefresh || 'Aktualisieren') + '</button>';
+    html += '<div class="props-video-note" style="margin-top:6px;">' + escapeHtml(I.setPlaceholderRefreshHint || '') + '</div>';
+    return html;
+  }
+
+  function applyTextTemplateToNode(node, t) {
+    if (!node || !t) return;
+    node.fontFamily(t.fontFamily || 'Open Sans');
+    node.fontSize(t.fontSize || 32);
+    node.fill(t.color || '#ffffff');
+    node.align(t.align || 'left');
+    const styleParts = [];
+    if (t.italic) styleParts.push('italic');
+    if (t.fontWeight === 'bold') styleParts.push('bold');
+    node.fontStyle(styleParts.length ? styleParts.join(' ') : 'normal');
+    const decoParts = [];
+    if (t.underline) decoParts.push('underline');
+    if (t.strikethrough) decoParts.push('line-through');
+    node.textDecoration(decoParts.length ? decoParts.join(' ') : '');
+    node.setAttr('fontWeight', t.fontWeight === 'bold' ? 'bold' : 'normal');
+    node.setAttr('italic', !!t.italic);
+    node.setAttr('underline', !!t.underline);
+    node.setAttr('strikethrough', !!t.strikethrough);
+    node.setAttr('uppercase', !!t.uppercase);
+    node.setAttr('smallCaps', !!t.smallCaps);
+    if (t.lineHeight != null) {
+      node.setAttr('lineHeight', t.lineHeight);
+      node.lineHeight(t.lineHeight);
+    }
+    if (t.letterSpacing != null) {
+      node.setAttr('letterSpacing', t.letterSpacing);
+      node.letterSpacing(t.letterSpacing * (parseInt(t.fontSize, 10) || node.fontSize() || 32));
+    }
+  }
+
+  async function refreshSetPlaceholder(node) {
+    const target = node || SF.selectedNode;
+    if (!target || target.getAttr('objType') !== 'text') return;
+    const role = target.getAttr('setRole') || target.getAttr('logosRole');
+    if (!role) return;
+
+    const setId = SF.layoutSetMode ? SF.id : (SF.meta?.layout_set_id || '');
+    if (!setId || (!SF.hasLayoutSet && !SF.layoutSetMode)) {
+      setSaveStatus(I.setPlaceholderRefreshNoSet || 'Kein Folien-Set zugewiesen.', true);
+      return;
+    }
+
+    const slide = SF.slides[SF.currentIndex];
+    const layoutKey = slide?.layoutKey || layoutKeyForLogosRole(role);
+    if (!layoutKey) {
+      setSaveStatus(I.setPlaceholderRefreshNoLayout || 'Kein Layout für dieses Element gefunden.', true);
+      return;
+    }
+
+    let layoutSlideId = slide?.layoutSetSlideId || '';
+    if (!layoutSlideId) {
+      layoutSlideId = (SF.logosLayoutSlideIds || {})[layoutKey] || '';
+    }
+    if (!layoutSlideId && (role === 'scripture_ref' || role === 'scripture_verse')) {
+      layoutSlideId = (SF.logosLayoutSlideIds || {}).scripture_block || '';
+    }
+    if (!layoutSlideId && SF.layoutSetMode && slide?.id) {
+      layoutSlideId = slide.id;
+    }
+
+    await applyLayoutFromSet(setId, layoutKey, layoutSlideId);
+    const refreshed = findNodeByLogosRole(role);
+    if (refreshed) selectNode(refreshed);
+    refreshPropsPanel();
+  }
+
   function renderPropsPanel(node) {
     const panel = document.getElementById('propsObjectPanel');
     if (!panel) return;
@@ -2674,6 +3128,7 @@
       html += '<div class="props-section">';
       html += '<div class="options-subtitle" style="margin-top:0;">' + I.alignToSlide + '</div>';
       html += alignGridButtonsHtml();
+      html += propsTransferRowHtml('copyPositionBtn', 'pastePositionBtn', I.positionCopy, I.positionPaste, !!SF.positionClipboard);
       html += '<div class="options-subtitle">' + I.advanced + '</div>';
       html += '<div class="row">' + fieldNumber('p_x', 'X', obj.x) + fieldNumber('p_y', 'Y', obj.y) + '</div>';
       html += fieldNumber('p_rotation', I.rotation, obj.rotation || 0);
@@ -2739,11 +3194,20 @@
           '<div><label for="p_letterspacing">' + I.letterSpacing + '</label><input type="number" id="p_letterspacing" min="-0.2" max="1" step="0.05" value="' + (obj.letterSpacing ?? 0) + '"></div>' +
         '</div>';
 
-      let templatesBody = '<div class="props-video-note" style="margin-top:0;">' + escapeHtml(I.templatesEmpty || '') + '</div>';
+      let templatesBody = '';
+      if (SF.hasLayoutSet) {
+        templatesBody += logosPlaceholderSelectHtml(obj.setRole || obj.logosRole || '');
+        templatesBody += '<div class="props-video-note" style="margin-top:8px;">' + I.setPlaceholderHint + '</div>';
+      }
       if (SF.textTemplates && SF.textTemplates.length) {
-        templatesBody = '<div class="format-toggle-group">' + SF.textTemplates.map(t =>
+        if (templatesBody) {
+          templatesBody += '<div class="options-subtitle" style="margin-top:14px;">' + escapeHtml(I.applyTextStyle) + '</div>';
+        }
+        templatesBody += '<div class="format-toggle-group">' + SF.textTemplates.map(t =>
           '<button type="button" class="button button-ghost button-sm" data-apply-text-style="' + t.id + '">' + escapeHtml(t.name) + '</button>'
         ).join('') + '</div>';
+      } else if (!templatesBody) {
+        templatesBody = '<div class="props-video-note" style="margin-top:0;">' + escapeHtml(I.templatesEmpty || '') + '</div>';
       }
 
       const colorsBody =
@@ -2830,6 +3294,7 @@
     }
 
     if (tab === 'position') {
+      html += propsTransferRowHtml('copyPositionBtn', 'pastePositionBtn', I.positionCopy, I.positionPaste, !!SF.positionClipboard);
       html += '<div class="options-subtitle" style="margin-top:0;">' + I.alignToSlide + '</div>';
       html += alignGridButtonsHtml();
 
@@ -2850,6 +3315,7 @@
     }
 
     if (tab === 'effect') {
+      html += propsTransferRowHtml('copyAnimationBtn', 'pasteAnimationBtn', I.animationCopy, I.animationPaste, !!SF.animationClipboard);
       html += fieldIconPicker('p_anim', I.effect, ANIMATIONS, obj.animType || 'none', 'effect-icon-grid anim-icon-grid');
       if ((obj.animType || 'none') !== 'none') {
         html += fieldNumber('p_animOrder', I.animOrder, obj.animOrder || 1);
@@ -3033,6 +3499,104 @@
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }
 
+  function propsTransferRowHtml(copyId, pasteId, copyLabel, pasteLabel, canPaste) {
+    return '<div class="props-transfer-row">' +
+      '<button type="button" class="button button-ghost button-sm" id="' + copyId + '">' + escapeHtml(copyLabel) + '</button>' +
+      '<button type="button" class="button button-ghost button-sm" id="' + pasteId + '"' + (canPaste ? '' : ' disabled') + '>' + escapeHtml(pasteLabel) + '</button>' +
+      '</div>';
+  }
+
+  function copyPositionFromNode(node) {
+    const obj = nodeToObject(node);
+    SF.positionClipboard = {
+      x: obj.x,
+      y: obj.y,
+      w: obj.w,
+      h: obj.h,
+      rotation: obj.rotation || 0,
+      aspectLocked: !!node.getAttr('aspectLocked'),
+      aspectRatio: node.getAttr('aspectRatio') || (obj.h ? obj.w / obj.h : 1),
+    };
+    setSaveStatus(I.propsCopied || 'Kopiert');
+  }
+
+  function pastePositionToNode(node) {
+    if (!SF.positionClipboard || !node) return;
+    const c = SF.positionClipboard;
+    const type = node.getAttr('objType');
+    node.scaleX(1);
+    node.scaleY(1);
+    if (type === 'ellipse') {
+      node.x(c.x + c.w / 2);
+      node.y(c.y + c.h / 2);
+      applyWidth(node, type, c.w);
+      applyHeight(node, type, c.h);
+    } else if (type === 'objectGroup') {
+      node.x(c.x);
+      node.y(c.y);
+      node.rotation(c.rotation || 0);
+    } else {
+      node.x(c.x);
+      node.y(c.y);
+      applyWidth(node, type, c.w);
+      if (type !== 'text') applyHeight(node, type, c.h);
+      node.rotation(c.rotation || 0);
+      if (type !== 'text') {
+        node.setAttr('aspectLocked', c.aspectLocked);
+        node.setAttr('aspectRatio', c.aspectRatio);
+      }
+    }
+    updateAnimationBadge(node);
+    if (SF.transformer && SF.selectedNodes.includes(node)) SF.transformer.forceUpdate();
+    refreshCanvas();
+    scheduleSave();
+    refreshPropsPanel();
+  }
+
+  function copyAnimationFromNode(node) {
+    SF.animationClipboard = {
+      animType: node.getAttr('animType') || 'none',
+      animOrder: node.getAttr('animOrder') || 1,
+      animAutoAdvance: node.getAttr('animAutoAdvance') || 0,
+      animDuration: node.getAttr('animDuration') || 0,
+      animPerLine: !!node.getAttr('animPerLine'),
+    };
+    setSaveStatus(I.propsCopied || 'Kopiert');
+  }
+
+  function pasteAnimationToNode(node) {
+    if (!SF.animationClipboard || !node) return;
+    const c = SF.animationClipboard;
+    node.setAttr('animType', c.animType);
+    node.setAttr('animOrder', c.animOrder);
+    node.setAttr('animAutoAdvance', c.animAutoAdvance);
+    node.setAttr('animDuration', c.animDuration);
+    if (node.getAttr('objType') === 'text') {
+      node.setAttr('animPerLine', c.animPerLine);
+    }
+    updateAnimationBadge(node);
+    refreshCanvas();
+    scheduleSave();
+    refreshPropsPanel();
+  }
+
+  function wirePropsTransferButtons(node) {
+    const on = (id, event, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, fn);
+    };
+    on('copyPositionBtn', 'click', () => {
+      copyPositionFromNode(node);
+      refreshPropsPanel();
+    });
+    on('pastePositionBtn', 'click', () => pastePositionToNode(node));
+    on('copyAnimationBtn', 'click', () => {
+      copyAnimationFromNode(node);
+      refreshPropsPanel();
+    });
+    on('pasteAnimationBtn', 'click', () => pasteAnimationToNode(node));
+  }
+
   function alignObjectToSlide(node, type, edge, toEdge) {
     const o = nodeToObject(node);
     const w = o.w, h = o.h;
@@ -3094,28 +3658,45 @@
         btn.addEventListener('click', () => {
           const t = SF.textTemplates.find((tt) => tt.id === btn.dataset.applyTextStyle);
           if (!t) return;
-          node.fontFamily(t.fontFamily || 'Open Sans');
-          node.fontSize(t.fontSize || 32);
-          node.fill(t.color || '#ffffff');
-          node.align(t.align || 'left');
-          const styleParts = [];
-          if (t.italic) styleParts.push('italic');
-          if (t.fontWeight === 'bold') styleParts.push('bold');
-          node.fontStyle(styleParts.length ? styleParts.join(' ') : 'normal');
-          const decoParts = [];
-          if (t.underline) decoParts.push('underline');
-          if (t.strikethrough) decoParts.push('line-through');
-          node.textDecoration(decoParts.length ? decoParts.join(' ') : '');
-          node.setAttr('fontWeight', t.fontWeight === 'bold' ? 'bold' : 'normal');
-          node.setAttr('italic', !!t.italic);
-          node.setAttr('underline', !!t.underline);
-          node.setAttr('strikethrough', !!t.strikethrough);
-          node.setAttr('uppercase', !!t.uppercase);
-          node.setAttr('smallCaps', !!t.smallCaps);
+          applyTextTemplateToNode(node, t);
           refreshCanvas();
           scheduleSave();
           refreshPropsPanel();
         });
+      });
+
+      const refreshSetBtn = document.getElementById('refreshSetPlaceholderBtn');
+      if (refreshSetBtn) {
+        refreshSetBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          await refreshSetPlaceholder(node);
+        });
+      }
+
+      on('p_setRole', 'change', (e) => {
+        const role = e.target.value;
+        const refreshBtn = document.getElementById('refreshSetPlaceholderBtn');
+        if (refreshBtn) refreshBtn.disabled = !role;
+        if (role) {
+          node.setAttr('setRole', role);
+          node.setAttr('logosRole', null);
+          const label = SF.logosRoleLabels[role] || role;
+          if (!node.text().trim()) {
+            const placeholder = '«' + label + '»';
+            node.text(placeholder);
+            const ta = document.getElementById('p_text');
+            if (ta) {
+              ta.value = placeholder;
+              autoGrowTextarea(ta);
+            }
+          }
+        } else {
+          node.setAttr('setRole', null);
+          node.setAttr('logosRole', null);
+        }
+        refreshCanvas();
+        scheduleSave();
       });
 
       function wrapTextSelection(before, after) {
@@ -3462,6 +4043,8 @@
       scheduleSave();
     });
 
+    wirePropsTransferButtons(node);
+
     const delBtn = document.getElementById('deleteObjBtn');
     if (delBtn) delBtn.addEventListener('click', () => {
       removeAnimationBadge(node);
@@ -3532,12 +4115,478 @@
     insertNode(createNode(obj));
   }
 
+  function addLogosPlaceholder(role, placement) {
+    const label = SF.logosRoleLabels[role] || role;
+    const tplId = SF.elementTextLinks[role];
+    const tpl = tplId ? SF.textTemplates.find(t => t.id === tplId) : null;
+    const w = placement?.w ?? tpl?.w ?? 1720;
+    const h = placement?.h ?? tpl?.h ?? 100;
+    const centerX = Math.round((SF.meta.width - w) / 2);
+    const centerY = Math.round(SF.meta.height / 3);
+    const id = 'o' + Math.random().toString(16).slice(2, 10);
+    const obj = {
+      id, type: 'text', setRole: role,
+      x: placement?.x ?? centerX,
+      y: placement?.y ?? centerY,
+      w, h, rotation: placement?.rotation ?? 0, opacity: placement?.opacity ?? 1,
+      text: placement?.text ?? ('«' + label + '»'),
+      fontFamily: placement?.fontFamily ?? tpl?.fontFamily ?? 'Open Sans',
+      fontSize: placement ? (parseInt(placement.fontSize, 10) || 48) : (tpl ? (parseInt(tpl.fontSize, 10) || 48) : 48),
+      fontWeight: (placement?.fontWeight ?? tpl?.fontWeight) === 'bold' ? 'bold' : 'normal',
+      italic: placement?.italic ?? !!tpl?.italic,
+      color: placement?.color ?? tpl?.color ?? '#ffffff',
+      align: placement?.align ?? tpl?.align ?? 'left',
+    };
+    insertNode(createNode(obj));
+  }
+
+  function layoutKeyForLogosRole(role) {
+    const idx = findSlideIndexForLogosRole(role);
+    if (idx >= 0 && SF.slides[idx]?.layoutKey) {
+      return SF.slides[idx].layoutKey;
+    }
+    const map = SF.logosLayoutMap || {};
+    if (role === 'scripture_ref' || role === 'scripture_verse') {
+      return map.scripture_block || map.scripture_ref || 'scripture_block';
+    }
+    return map[role] || role;
+  }
+
+  function findSlideIndexForLogosRole(role) {
+    const slideIds = SF.logosLayoutSlideIds || {};
+    const cachedId = slideIds[role]
+      || (role === 'scripture_ref' || role === 'scripture_verse' ? slideIds.scripture_block : null);
+    if (cachedId) {
+      const cachedIdx = SF.slides.findIndex((s) => s.id === cachedId);
+      if (cachedIdx >= 0) return cachedIdx;
+    }
+    const searchRoles = role === 'scripture_block'
+      ? ['scripture_block', 'scripture_ref', 'scripture_verse']
+      : (role === 'scripture_ref' || role === 'scripture_verse')
+        ? ['scripture_ref', 'scripture_verse', 'scripture_block']
+        : [role];
+    for (let i = 0; i < SF.slides.length; i++) {
+      const slide = SF.slides[i];
+      if (!(slide.layoutKey || '').length) continue;
+      const objects = slide.objects || [];
+      if (searchRoles.some((r) => objects.some((o) => (o.setRole || o.logosRole) === r))) {
+        return i;
+      }
+    }
+    const layoutKey = (SF.logosLayoutMap || {})[role] || role;
+    return SF.slides.findIndex((s) => (s.layoutKey || '') === layoutKey);
+  }
+
+  function findNodeByLogosRole(role) {
+    if (!SF.layer || !role) return null;
+    return getTopLevelNodes().find((n) => (n.getAttr('setRole') || n.getAttr('logosRole')) === role) || null;
+  }
+
+  async function insertLogosSlideElement(role) {
+    if (!SF.layoutSetMode) {
+      addLogosPlaceholder(role);
+      return;
+    }
+    let slideIndex = findSlideIndexForLogosRole(role);
+    if (slideIndex < 0) {
+      await saveCurrentSlide(true);
+      const res = await api('add_slide', { after_index: SF.slides.length - 1 });
+      SF.slides = res.slides;
+      slideIndex = SF.slides.length - 1;
+      SF.slides[slideIndex].layoutKey = layoutKeyForLogosRole(role);
+      SF.currentIndex = slideIndex;
+      loadSlideIntoStage(slideIndex);
+      await renderSlideFilmstrip();
+      addLogosPlaceholder(role);
+      scheduleSave();
+      return;
+    }
+    if (slideIndex !== SF.currentIndex) {
+      await switchToSlide(slideIndex);
+    }
+    const existing = findNodeByLogosRole(role);
+    if (existing) {
+      selectNode(existing);
+      return;
+    }
+    const templateObj = SF.slides[slideIndex].objects?.find((o) => (o.setRole || o.logosRole) === role);
+    addLogosPlaceholder(role, templateObj || undefined);
+  }
+
   function renderTextTemplateButtons() {
     const el = document.getElementById('textTemplateButtons');
     if (!el) return;
     el.innerHTML = SF.textTemplates.map(t =>
       '<button type="button" class="tool-btn-block" data-preset="' + t.id + '">' + escapeHtml(t.name) + '</button>'
     ).join('');
+  }
+
+  function slideInsertRolesFromZones(elementZones) {
+    const slides = (elementZones && elementZones.slides) ? elementZones.slides : [];
+    const insert = [];
+    slides.forEach(role => {
+      if (role === 'scripture_block') {
+        insert.push('scripture_ref', 'scripture_verse');
+      } else {
+        insert.push(role);
+      }
+    });
+    return [...new Set(insert)];
+  }
+
+  function additionalLogosSlideRolesFromZones(elementZones) {
+    const roles = slideInsertRolesFromZones(elementZones);
+    const standard = new Set(SF.standardElementRoles || []);
+    return roles.filter((role) => !standard.has(role));
+  }
+
+  function collectElementZonesFromDom(root) {
+    const elementZones = {};
+    const scope = root || document;
+    scope.querySelectorAll('.element-zone-list').forEach(list => {
+      const zone = list.dataset.elementZone;
+      if (!zone) return;
+      elementZones[zone] = [...list.querySelectorAll('li')].map(li => li.dataset.role).filter(Boolean);
+    });
+    return elementZones;
+  }
+
+  function zoneLabelsMap() {
+    return {
+      slides: I.zoneSlides || 'Folien',
+      footer: I.zoneFooter || 'Fußzeile',
+      custom: I.zoneCustom || 'Eigener Bereich',
+      unused: I.zoneUnused || 'Nicht verwendet',
+    };
+  }
+
+  function renderElementLinkTableRows(roles, options) {
+    const icons = SF.elementIconHtml || {};
+    const labels = SF.logosRoleLabels || {};
+    const badge = SF.logosBadgeHtml || '';
+    const showLogosBadge = options?.showLogosBadge === true;
+    return roles.map((role) => {
+      const currentTpl = SF.elementTextLinks[role] || '';
+      const selectOptions = '<option value="">' + escapeHtml(I.elementLinkNone || 'Standard') + '</option>' +
+        SF.textTemplates.map((tt) =>
+          '<option value="' + escapeHtml(tt.id) + '"' + (currentTpl === tt.id ? ' selected' : '') + '>' +
+          escapeHtml(tt.name) + '</option>'
+        ).join('');
+      const logosBadge = showLogosBadge && showLogosBadgeForRole(role) ? badge : '';
+      return '<tr>' +
+        '<td class="element-links-icon-cell"><span class="element-row-icon">' + (icons[role] || '') + '</span></td>' +
+        '<td class="element-links-name-cell">' + escapeHtml(labels[role] || role) + logosBadge + '</td>' +
+        '<td><select class="element-link-select" data-element-link-role="' + escapeHtml(role) + '">' + selectOptions + '</select></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderElementLinkTable(roles, showLogosBadge) {
+    if (!roles.length) return '';
+    return '<table class="data-table element-links-table">' +
+      '<thead><tr><th></th><th>' + escapeHtml(I.elementLinkElement || 'Element') + '</th>' +
+      '<th>' + escapeHtml(I.elementLinkTextTemplate || 'Textvorlage') + '</th></tr></thead>' +
+      '<tbody>' + renderElementLinkTableRows(roles, { showLogosBadge }) + '</tbody></table>';
+  }
+
+  function renderElementZonesHtml(zones) {
+    const zoneLabels = zoneLabelsMap();
+    const icons = SF.elementIconHtml || {};
+    const labels = SF.logosRoleLabels || {};
+    const zoneKeys = SF.elementZoneKeys.length ? SF.elementZoneKeys : Object.keys(zoneLabels);
+    return zoneKeys.map((zone) => {
+      const roles = zones[zone] || [];
+      const items = roles.map((role) =>
+        '<li data-role="' + escapeHtml(role) + '" draggable="true">' +
+          '<span class="text-template-drag-handle" aria-hidden="true">⠿</span>' +
+          '<span class="element-zone-item-icon" aria-hidden="true">' + (icons[role] || '') + '</span>' +
+          '<span>' + escapeHtml(labels[role] || role) + '</span>' +
+        '</li>'
+      ).join('');
+      return '<div class="element-zone-block">' +
+        '<div class="element-zone-title">' + escapeHtml(zoneLabels[zone] || zone) + '</div>' +
+        '<ul class="element-zone-list" data-element-zone="' + escapeHtml(zone) + '">' + items + '</ul>' +
+        '</div>';
+    }).join('');
+  }
+
+  function bindElementZoneDragDrop(container, onZonesChange) {
+    if (!container || container.dataset.zonesBound) return;
+    container.dataset.zonesBound = '1';
+    let dragItem = null;
+
+    container.addEventListener('dragstart', (e) => {
+      const li = e.target.closest('.element-zone-list li');
+      if (!li) return;
+      dragItem = li;
+    });
+
+    container.addEventListener('dragover', (e) => {
+      if (!dragItem) return;
+      e.preventDefault();
+    });
+
+    container.addEventListener('drop', (e) => {
+      if (!dragItem) return;
+      e.preventDefault();
+      const list = e.target.closest('.element-zone-list');
+      const li = e.target.closest('.element-zone-list li');
+      if (!list) return;
+      if (li && li !== dragItem) {
+        if (dragItem.parentElement !== list) {
+          list.insertBefore(dragItem, li);
+        } else {
+          const items = [...list.querySelectorAll('li')];
+          const from = items.indexOf(dragItem);
+          const to = items.indexOf(li);
+          if (from >= 0 && to >= 0) {
+            if (from < to) li.after(dragItem);
+            else li.before(dragItem);
+          }
+        }
+      } else if (!li && dragItem.parentElement !== list) {
+        list.appendChild(dragItem);
+      }
+      dragItem = null;
+      if (onZonesChange) onZonesChange();
+    });
+
+    container.addEventListener('dragend', () => {
+      dragItem = null;
+      if (onZonesChange) onZonesChange();
+    });
+  }
+
+  function bindLogosInsertButtons(container) {
+    if (!container || container.dataset.logosInsertBound) return;
+    container.dataset.logosInsertBound = '1';
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-set-role]');
+      if (!btn || !container.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      insertLogosSlideElement(btn.dataset.setRole);
+    });
+  }
+
+  function renderLogosSlideInsertButtons(elementZones) {
+    const container = document.getElementById('logosSlideInsertButtons');
+    const section = document.getElementById('logosSlideInsertSection');
+    if (!container) return;
+    const roles = additionalLogosSlideRolesFromZones(elementZones);
+    const labels = SF.logosRoleLabels || {};
+    const icons = SF.elementIconHtml || {};
+    const badge = SF.logosBadgeHtml || '';
+    if (!roles.length) {
+      container.innerHTML = '';
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = '';
+    container.innerHTML = roles.map(role =>
+      '<button type="button" class="element-row-btn tool-btn-block" data-set-role="' + escapeHtml(role) + '">' +
+      '<span class="element-row-icon" aria-hidden="true">' + (icons[role] || '') + '</span>' +
+      '<span class="element-row-label">' + escapeHtml(labels[role] || role) + '</span>' +
+      badge + '</button>'
+    ).join('');
+    bindLogosInsertButtons(container);
+  }
+
+  function initElementsPanel() {
+    if (!SF.layoutSetMode) return;
+    bindLogosInsertButtons(document.getElementById('logosSlideInsertButtons'));
+    renderLogosSlideInsertButtons(SF.elementZones || {});
+    initElementLinksModal();
+  }
+
+  function activeLogosRolesFromZones() {
+    const zones = SF.elementZones || {};
+    const active = new Set();
+    Object.keys(zones).forEach((zone) => {
+      if (zone === 'unused') return;
+      (zones[zone] || []).forEach((role) => active.add(role));
+    });
+    return active;
+  }
+
+  function showLogosBadgeForRole(role) {
+    if (!SF.logosImporterEnabled || !role) return false;
+    return activeLogosRolesFromZones().has(role);
+  }
+
+  function renderElementLinksModalBody() {
+    const body = document.getElementById('elementLinksModalBody');
+    if (!body) return;
+
+    const standardRoles = SF.standardElementRoles.length
+      ? SF.standardElementRoles
+      : (SF.elementLinkRoles || []);
+    const logosRoles = SF.logosImporterEnabled
+      ? (SF.logosElementLinkRoles.length ? SF.logosElementLinkRoles : [])
+      : [];
+    const standardRoleSet = new Set(standardRoles);
+    const zones = SF.elementZones || {};
+    const slideZoneRoles = (zones.slides || []).filter((role) => !standardRoleSet.has(role));
+    const logosOnlyRoles = slideZoneRoles.filter((role) => logosRoles.includes(role));
+    const badge = SF.logosBadgeHtml || '';
+    const logosEnabled = SF.logosImporterEnabled && logosRoles.length > 0;
+    let html = '<div class="element-links-modal-layout element-links-modal-layout--two-col">';
+    html += '<div class="element-links-modal-col element-links-modal-col--left">';
+    html += '<div class="element-links-tab-panel active" data-el-tab-panel="standard">';
+    html += '<h3 class="element-links-modal-col-title">' + escapeHtml(I.elementLinksColStandard || 'Standard-Elemente') + '</h3>';
+    html += '<p class="elements-panel-hint">' + escapeHtml(I.elementLinksColStandardDesc || '') + '</p>';
+    html += renderElementLinkTable(standardRoles, true);
+    html += '</div>';
+
+    if (logosEnabled) {
+      html += '<div class="element-links-tab-panel active" data-el-tab-panel="logos-elements">';
+      html += '<h3 class="element-links-modal-col-title element-links-modal-col-title--logos">' +
+        escapeHtml(I.elementLinksColLogosElements || 'Logos Elemente') + badge + '</h3>';
+      html += '<p class="elements-panel-hint">' + escapeHtml(I.elementLinksColLogosDesc || '') + '</p>';
+      html += renderElementLinkTable(logosOnlyRoles, true);
+      html += '</div>';
+    }
+    html += '</div>';
+
+    if (logosEnabled) {
+      html += '<div class="element-links-modal-col element-links-modal-col--right">';
+      html += '<div class="element-links-tab-panel active" data-el-tab-panel="logos-zones">';
+      html += '<h3 class="element-links-modal-col-title element-links-modal-col-title--logos">' +
+        escapeHtml(I.elementLinksColLogosMapping || I.elementLinksZonesTitle || 'Logos-Zuordnung') + '</h3>';
+      html += '<p class="elements-panel-hint">' + escapeHtml(I.elementLinksZonesDesc || '') + '</p>';
+      html += '<div id="elementLinksModalZones">' + renderElementZonesHtml(zones) + '</div>';
+      html += '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    body.innerHTML = html;
+  }
+
+  function refreshStandardElementBadges() {
+    const root = document.getElementById('standardElementButtons');
+    if (!root) return;
+    const active = activeLogosRolesFromZones();
+    const badgeHtml = SF.logosBadgeHtml || '';
+    root.querySelectorAll('[data-set-role]').forEach((btn) => {
+      const role = btn.dataset.setRole || '';
+      let badge = btn.querySelector('.element-row-logos-badge');
+      const shouldShow = SF.logosImporterEnabled && active.has(role);
+      if (shouldShow && !badge && badgeHtml) {
+        btn.insertAdjacentHTML('beforeend', badgeHtml);
+        badge = btn.querySelector('.element-row-logos-badge');
+      }
+      if (badge) {
+        badge.style.display = shouldShow ? '' : 'none';
+      }
+    });
+  }
+
+  function collectElementLinksFromModal() {
+    const links = {};
+    document.querySelectorAll('#elementLinksModalBody [data-element-link-role]').forEach((sel) => {
+      const role = sel.dataset.elementLinkRole;
+      if (!role) return;
+      links[role] = sel.value || null;
+    });
+    return links;
+  }
+
+  function initElementLinksModal() {
+    const openBtn = document.getElementById('configureElementLinksBtn');
+    const modal = document.getElementById('elementLinksModal');
+    const closeBtn = document.getElementById('elementLinksModalClose');
+    const saveBtn = document.getElementById('elementLinksModalSave');
+    if (!openBtn || !modal) return;
+
+    const previewZoneInsertButtons = () => {
+      if (!SF.logosImporterEnabled) return;
+      const zonesRoot = document.getElementById('elementLinksModalZones');
+      if (!zonesRoot) return;
+      renderLogosSlideInsertButtons(collectElementZonesFromDom(zonesRoot));
+    };
+
+    let saveZonesTimer = null;
+    const saveZonesLive = async () => {
+      if (!SF.logosImporterEnabled) return;
+      const zonesRoot = document.getElementById('elementLinksModalZones');
+      if (!zonesRoot) return;
+      const elementZones = collectElementZonesFromDom(zonesRoot);
+      const custom = elementZones.custom || [];
+      const payload = {
+        elementZones,
+        logosNotesOrder: ['normal', 'list_item', ...custom.filter(r => r !== 'normal' && r !== 'list_item')]
+      };
+      try {
+        const res = await api('save_layout_set_settings', payload);
+        if (res.elementZones) SF.elementZones = res.elementZones;
+        renderElementLinksModalBody();
+        const zonesRootUpdated = document.getElementById('elementLinksModalZones');
+        if (zonesRootUpdated) {
+          bindElementZoneDragDrop(zonesRootUpdated, () => {
+            previewZoneInsertButtons();
+            if (saveZonesTimer) clearTimeout(saveZonesTimer);
+            saveZonesTimer = setTimeout(saveZonesLive, 120);
+          });
+        }
+        refreshStandardElementBadges();
+        renderLogosSlideInsertButtons(SF.elementZones || {});
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const closeModal = () => {
+      modal.classList.remove('open');
+      renderLogosSlideInsertButtons(SF.elementZones || {});
+    };
+
+    openBtn.addEventListener('click', () => {
+      renderElementLinksModalBody();
+      const zonesRoot = document.getElementById('elementLinksModalZones');
+      if (zonesRoot) {
+        bindElementZoneDragDrop(zonesRoot, () => {
+          previewZoneInsertButtons();
+          if (saveZonesTimer) clearTimeout(saveZonesTimer);
+          saveZonesTimer = setTimeout(saveZonesLive, 120);
+        });
+      }
+      modal.classList.add('open');
+    });
+    closeBtn?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    saveBtn?.addEventListener('click', async () => {
+      const elementTextLinks = collectElementLinksFromModal();
+      const payload = { elementTextLinks };
+      if (SF.logosImporterEnabled) {
+        const zonesRoot = document.getElementById('elementLinksModalZones');
+        if (zonesRoot) {
+          const elementZones = collectElementZonesFromDom(zonesRoot);
+          const custom = elementZones.custom || [];
+          payload.elementZones = elementZones;
+          payload.logosNotesOrder = ['normal', 'list_item', ...custom.filter(r => r !== 'normal' && r !== 'list_item')];
+        }
+      }
+      setSaveStatus('Speichere…');
+      try {
+        const res = await api('save_layout_set_settings', payload);
+        SF.elementTextLinks = res.elementTextLinks || elementTextLinks;
+        if (res.elementZones) SF.elementZones = res.elementZones;
+        renderElementLinksModalBody();
+        const zonesRootUpdated = document.getElementById('elementLinksModalZones');
+        if (zonesRootUpdated) {
+          bindElementZoneDragDrop(zonesRootUpdated, previewZoneInsertButtons);
+        }
+        refreshStandardElementBadges();
+        renderLogosSlideInsertButtons(SF.elementZones || {});
+        setSaveStatus(I.elementLinksSaved || 'Gespeichert');
+      } catch (e) {
+        setSaveStatus('Fehler', true);
+        console.error(e);
+      }
+    });
   }
 
   function insertNode(node) {
@@ -3553,6 +4602,8 @@
 
   // ---------- Duplizieren / Kopieren / Ausschneiden / Einfügen ----------
   SF.clipboard = null;
+  SF.positionClipboard = null;
+  SF.animationClipboard = null;
 
   function duplicateNode(node, offset) {
     if (!node || !SF.canEdit) return;
@@ -4181,20 +5232,49 @@
     });
   }
 
+  function initMasterSlideNav() {
+    const btn = document.getElementById('masterSlideNavBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const active = btn.classList.contains('active');
+      let url;
+      if (active) {
+        url = 'editor.php?id=' + encodeURIComponent(btn.dataset.returnId || '') +
+          '&slide=' + encodeURIComponent(btn.dataset.returnSlide || '0');
+      } else {
+        url = 'editor.php?id=' + encodeURIComponent(btn.dataset.setId || '') +
+          '&return=' + encodeURIComponent(btn.dataset.presentationId || '') +
+          '&return_slide=' + encodeURIComponent(String(SF.currentIndex));
+      }
+      if (SF.canEdit) {
+        try {
+          await saveCurrentSlide(true);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      window.location.href = url;
+    });
+  }
+
   function bindGlobalUI() {
     if (!SF.canEdit) return;
 
     document.querySelectorAll('.tool-btn-block').forEach(btn => {
       if (btn.id === 'pixabayOpenBtn' || btn.id === 'iconifyOpenBtn' || btn.id === 'openclipartOpenBtn') return;
+      if (btn.closest('#logosSlideInsertButtons')) return;
       btn.addEventListener('click', () => {
-        if (btn.dataset.tool) addShape(btn.dataset.tool);
+        if (btn.dataset.setRole) addLogosPlaceholder(btn.dataset.setRole);
+        else if (btn.dataset.tool) addShape(btn.dataset.tool);
         else if (btn.dataset.preset) addTextPreset(btn.dataset.preset);
       });
     });
 
-    document.querySelectorAll('.obj-tab-btn').forEach(btn => {
+    document.querySelectorAll('.obj-tab-btn[data-objtab]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.obj-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.obj-tab-btn[data-objtab]').forEach(b => b.classList.toggle('active', b === btn));
         document.querySelectorAll('.obj-tab-panel').forEach(p => {
           p.classList.toggle('active', p.dataset.objtab === btn.dataset.objtab);
         });
@@ -4580,7 +5660,20 @@
     const autoAdvance = autoAdvanceEl ? (parseInt(autoAdvanceEl.value, 10) || 0) : 0;
     const notesEl = document.getElementById('slideNotesInput');
     const notes = notesEl ? notesEl.value : '';
-    return { background, objects, transition, autoAdvance, notes };
+    const slide = SF.slides[SF.currentIndex] || {};
+    return {
+      background,
+      objects,
+      transition,
+      autoAdvance,
+      notes,
+      layoutKey: slide.layoutKey ?? null,
+      layoutSetSlideId: slide.layoutSetSlideId ?? null,
+      label: slide.label ?? null,
+      hasLayoutKey: Object.prototype.hasOwnProperty.call(slide, 'layoutKey'),
+      hasLayoutSetSlideId: Object.prototype.hasOwnProperty.call(slide, 'layoutSetSlideId'),
+      hasLabel: Object.prototype.hasOwnProperty.call(slide, 'label'),
+    };
   }
 
   function updateUndoRedoButtons() {
@@ -4611,14 +5704,28 @@
 
   function restoreHistorySnapshot(snap) {
     SF.restoringHistory = true;
-    SF.slides[SF.currentIndex].background = snap.background;
-    SF.slides[SF.currentIndex].objects = JSON.parse(JSON.stringify(snap.objects));
-    SF.slides[SF.currentIndex].transition = snap.transition;
-    SF.slides[SF.currentIndex].autoAdvance = snap.autoAdvance;
-    SF.slides[SF.currentIndex].notes = snap.notes;
+    const slide = SF.slides[SF.currentIndex];
+    slide.background = snap.background;
+    slide.objects = JSON.parse(JSON.stringify(snap.objects));
+    slide.transition = snap.transition;
+    slide.autoAdvance = snap.autoAdvance;
+    slide.notes = snap.notes;
+    if (snap.hasLayoutKey) {
+      if (snap.layoutKey) slide.layoutKey = snap.layoutKey;
+      else delete slide.layoutKey;
+    }
+    if (snap.hasLayoutSetSlideId) {
+      if (snap.layoutSetSlideId) slide.layoutSetSlideId = snap.layoutSetSlideId;
+      else delete slide.layoutSetSlideId;
+    }
+    if (snap.hasLabel) {
+      if (snap.label) slide.label = snap.label;
+      else delete slide.label;
+    }
     loadSlideIntoStage(SF.currentIndex, true);
     SF.restoringHistory = false;
     updateUndoRedoButtons();
+    if (snap.hasLayoutKey || snap.hasLayoutSetSlideId || snap.hasLabel) renderSlideFilmstrip();
     scheduleSave();
   }
 
@@ -4653,10 +5760,24 @@
     const autoAdvance = autoAdvanceEl ? (parseInt(autoAdvanceEl.value, 10) || 0) : 0;
     const notesEl = document.getElementById('slideNotesInput');
     const notes = notesEl ? notesEl.value : '';
+    const slideMeta = SF.slides[SF.currentIndex] || {};
+    const layoutKey = SF.layoutSetMode || Object.prototype.hasOwnProperty.call(slideMeta, 'layoutKey')
+      ? (slideMeta.layoutKey || '')
+      : null;
+    const label = Object.prototype.hasOwnProperty.call(slideMeta, 'label')
+      ? (slideMeta.label || '')
+      : null;
+    const layoutSetSlideId = Object.prototype.hasOwnProperty.call(slideMeta, 'layoutSetSlideId')
+      ? (slideMeta.layoutSetSlideId || '')
+      : null;
 
     setSaveStatus('Speichere…');
     try {
-      await api('save_slide', { index: SF.currentIndex, background, objects, transition, autoAdvance, notes });
+      const payload = { index: SF.currentIndex, background, objects, transition, autoAdvance, notes };
+      if (layoutKey !== null) payload.layoutKey = layoutKey;
+      if (label !== null) payload.label = label;
+      if (layoutSetSlideId !== null) payload.layoutSetSlideId = layoutSetSlideId;
+      await api('save_slide', payload);
       if (SF.slides[SF.currentIndex]) {
         SF.slides[SF.currentIndex].background = background;
         SF.slides[SF.currentIndex].objects = objects;

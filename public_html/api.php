@@ -46,7 +46,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
+$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -57,9 +57,9 @@ if (in_array($action, $mutating, true)) {
     }
 }
 
-// Folienvorlagen dürfen immer nur genau eine Folie haben.
+// Folienvorlagen (nicht Folien-Sets) dürfen immer nur genau eine Folie haben.
 $multiSlideActions = ['add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides'];
-if (in_array($action, $multiSlideActions, true) && Presentation::isTemplate($id)) {
+if (in_array($action, $multiSlideActions, true) && Presentation::isTemplate($id) && !LayoutSet::isLayoutSet($id)) {
     json_fail('Folienvorlagen bestehen bewusst aus nur einer Folie.', 400);
 }
 
@@ -99,7 +99,17 @@ switch ($action) {
         $transition = $body['transition'] ?? null;
         $autoAdvance = isset($body['autoAdvance']) ? (int)$body['autoAdvance'] : null;
         $notes = isset($body['notes']) ? (string)$body['notes'] : null;
-        $result = Presentation::saveSlide($id, $index, $background, $objects, $transition, $autoAdvance, $notes);
+        $layoutKey = array_key_exists('layoutKey', $body) ? (string)$body['layoutKey'] : null;
+        $label = array_key_exists('label', $body) ? (string)$body['label'] : null;
+        $layoutSetSlideId = array_key_exists('layoutSetSlideId', $body) ? (string)$body['layoutSetSlideId'] : null;
+        $result = Presentation::saveSlide($id, $index, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId);
+        json_ok(['slides' => $result['slides']]);
+        break;
+
+    case 'save_slide_label':
+        $index = (int)($body['index'] ?? -1);
+        $label = (string)($body['label'] ?? '');
+        $result = Presentation::saveSlideLabel($id, $index, $label);
         json_ok(['slides' => $result['slides']]);
         break;
 
@@ -154,6 +164,133 @@ switch ($action) {
     case 'list_slide_templates':
         [$mine, $shared] = Presentation::listTemplatesForUser($me['id']);
         json_ok(['mine' => $mine, 'shared' => $shared]);
+        break;
+
+    case 'list_layout_sets':
+        [$mine, $shared] = LayoutSet::listForUser($me['id']);
+        json_ok(['mine' => $mine, 'shared' => $shared]);
+        break;
+
+    case 'list_layout_set_layouts':
+        $setId = $body['layout_set_id'] ?? ($_GET['layout_set_id'] ?? '');
+        if (!LayoutSet::isLayoutSet($setId) || !Presentation::canUseTemplate($setId, $me['id'])) {
+            json_fail('Keine Berechtigung für dieses Folien-Set.', 403);
+        }
+        $layouts = [];
+        foreach (Presentation::getSlides($setId)['slides'] ?? [] as $slide) {
+            $key = $slide['layoutKey'] ?? '';
+            if ($key === '') {
+                continue;
+            }
+            $layouts[] = [
+                'slideId' => (string)($slide['id'] ?? ''),
+                'layoutKey' => $key,
+                'title' => LayoutSet::slideLabel($slide),
+                'slide' => $slide,
+            ];
+        }
+        json_ok(['layouts' => $layouts, 'layout_set_id' => $setId]);
+        break;
+
+    case 'apply_layout_from_set':
+        $index = (int)($body['index'] ?? -1);
+        $setId = $body['layout_set_id'] ?? '';
+        $layoutKey = (string)($body['layout_key'] ?? '');
+        $layoutSlideId = trim((string)($body['layout_slide_id'] ?? ''));
+        if (!LayoutSet::isLayoutSet($setId) || !Presentation::canUseTemplate($setId, $me['id'])) {
+            json_fail('Keine Berechtigung für dieses Folien-Set.', 403);
+        }
+        $layoutSlide = $layoutSlideId !== ''
+            ? LayoutSet::findLayout($setId, $layoutKey, $layoutSlideId)
+            : LayoutSet::findLayout($setId, $layoutKey);
+        if (!$layoutSlide) {
+            json_fail('Layout nicht gefunden.', 404);
+        }
+        $slidesData = Presentation::getSlides($id);
+        $current = $slidesData['slides'][$index] ?? null;
+        if (!$current) {
+            json_fail('Folie nicht gefunden.', 404);
+        }
+        $merged = LayoutSet::applyLayoutToSlide($current, $layoutSlide);
+        $layoutLabel = trim((string)($layoutSlide['label'] ?? ''));
+        if ($layoutLabel === '') {
+            $layoutLabel = LayoutSet::slideLabel($layoutSlide);
+        }
+        if ($layoutLabel !== '') {
+            $merged['label'] = $layoutLabel;
+        }
+        $setSlideId = (string)($layoutSlide['id'] ?? $layoutSlideId);
+        if ($setSlideId !== '') {
+            $merged['layoutSetSlideId'] = $setSlideId;
+        }
+        $result = Presentation::saveSlide(
+            $id,
+            $index,
+            $merged['background'],
+            $merged['objects'],
+            $merged['transition'] ?? null,
+            $merged['autoAdvance'] ?? null,
+            $merged['notes'] ?? null,
+            $merged['layoutKey'] ?? $layoutKey,
+            $merged['label'] ?? null,
+            $merged['layoutSetSlideId'] ?? null
+        );
+        if (!empty($merged['label']) && empty($result['slides'][$index]['label'])) {
+            $result = Presentation::saveSlideLabel($id, $index, (string)$merged['label']);
+        }
+        json_ok(['slides' => $result['slides']]);
+        break;
+
+    case 'save_layout_set_settings':
+        if (!LayoutSet::isLayoutSet($id) || !Presentation::canUseTemplate($id, $me['id'])) {
+            json_fail('Keine Berechtigung.', 403);
+        }
+        $fields = [];
+        if (isset($body['logosNotesOrder']) && is_array($body['logosNotesOrder'])) {
+            $fields['logosNotesOrder'] = array_values(array_filter(
+                array_map('strval', $body['logosNotesOrder']),
+                fn($r) => in_array($r, LayoutSet::LOGOS_ROLES, true)
+            ));
+        }
+        if (isset($body['elementZones']) && is_array($body['elementZones'])) {
+            $zones = [];
+            foreach (LayoutSet::ELEMENT_ZONES as $zone) {
+                $roles = $body['elementZones'][$zone] ?? [];
+                if (!is_array($roles)) {
+                    continue;
+                }
+                $zones[$zone] = array_values(array_filter(
+                    array_map('strval', $roles),
+                    fn($r) => in_array($r, LayoutSet::LOGOS_ZONE_ROLES, true)
+                ));
+            }
+            $fields['elementZones'] = $zones;
+        }
+        if (isset($body['elementTextLinks']) && is_array($body['elementTextLinks'])) {
+            $links = [];
+            foreach (ElementLink::allRoles() as $role) {
+                if (!array_key_exists($role, $body['elementTextLinks'])) {
+                    continue;
+                }
+                $val = $body['elementTextLinks'][$role];
+                $links[$role] = ($val !== null && $val !== '') ? (string)$val : null;
+            }
+            $fields['elementTextLinks'] = $links;
+        }
+        if (!empty($fields)) {
+            Presentation::updateMeta($id, $fields);
+        }
+        $meta = Presentation::getMeta($id) ?? [];
+        json_ok([
+            'meta' => $meta,
+            'elementZones' => LayoutSet::elementZones($meta),
+            'elementTextLinks' => LayoutSet::elementTextLinks($meta),
+        ]);
+        break;
+
+    case 'save_logos_zones_accordion':
+        Auth::setLogosZonesAccordionOpen($me['id'], !empty($body['open']));
+        json_ok(['open' => Auth::logosZonesAccordionOpen(Auth::currentUser())]);
         break;
 
     case 'apply_slide_template':

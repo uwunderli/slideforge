@@ -338,9 +338,9 @@ class Presentation
     }
 
     /** Ersetzt eine einzelne Folie (Hintergrund + Objekte) an gegebenem Index. */
-    public static function saveSlide(string $id, int $index, array $background, array $objects, ?string $transition = null, $autoAdvance = null, ?string $notes = null): array
+    public static function saveSlide(string $id, int $index, array $background, array $objects, ?string $transition = null, $autoAdvance = null, ?string $notes = null, ?string $layoutKey = null, ?string $label = null, ?string $layoutSetSlideId = null): array
     {
-        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $background, $objects, $transition, $autoAdvance, $notes) {
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId) {
             if (!isset($data['slides'][$index])) {
                 return $data;
             }
@@ -354,6 +354,45 @@ class Presentation
             }
             if ($notes !== null) {
                 $data['slides'][$index]['notes'] = $notes;
+            }
+            if ($layoutKey !== null) {
+                if ($layoutKey === '') {
+                    unset($data['slides'][$index]['layoutKey']);
+                } else {
+                    $data['slides'][$index]['layoutKey'] = $layoutKey;
+                }
+            }
+            if ($label !== null) {
+                if ($label === '') {
+                    unset($data['slides'][$index]['label']);
+                } else {
+                    $data['slides'][$index]['label'] = $label;
+                }
+            }
+            if ($layoutSetSlideId !== null) {
+                if ($layoutSetSlideId === '') {
+                    unset($data['slides'][$index]['layoutSetSlideId']);
+                } else {
+                    $data['slides'][$index]['layoutSetSlideId'] = $layoutSetSlideId;
+                }
+            }
+            return $data;
+        }, ['slides' => []]);
+        self::updateMeta($id, []);
+        return $result;
+    }
+
+    public static function saveSlideLabel(string $id, int $index, string $label): array
+    {
+        $label = trim($label);
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $label) {
+            if (!isset($data['slides'][$index])) {
+                return $data;
+            }
+            if ($label === '') {
+                unset($data['slides'][$index]['label']);
+            } else {
+                $data['slides'][$index]['label'] = $label;
             }
             return $data;
         }, ['slides' => []]);
@@ -573,6 +612,44 @@ class Presentation
         foreach ($entries as $entry) {
             self::importSeedTemplate($ownerId, $entry['id'], $entry['meta'], $entry['slidesPath']);
         }
+
+        self::seedDefaultLayoutSets($ownerId);
+    }
+
+    /**
+     * Legt mitgelieferte Standard-Folien-Sets an (seed/layout-sets/) — freigegeben für alle.
+     */
+    public static function seedDefaultLayoutSets(string $ownerId): void
+    {
+        self::removeAllLayoutSets();
+
+        $seedDir = BASE_PATH . '/seed/layout-sets';
+        if (!is_dir($seedDir)) {
+            return;
+        }
+
+        $entries = [];
+        foreach (scandir($seedDir) as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $metaPath = $seedDir . '/' . $entry . '/meta.json';
+            $slidesPath = $seedDir . '/' . $entry . '/slides.json';
+            if (!is_file($metaPath) || !is_file($slidesPath)) {
+                continue;
+            }
+            $seedMeta = json_decode((string)file_get_contents($metaPath), true);
+            if (!is_array($seedMeta) || empty($seedMeta['is_layout_set'])) {
+                continue;
+            }
+            $entries[] = ['id' => $entry, 'meta' => $seedMeta, 'slidesPath' => $slidesPath];
+        }
+
+        usort($entries, fn($a, $b) => ($a['meta']['template_order'] ?? 0) <=> ($b['meta']['template_order'] ?? 0));
+
+        foreach ($entries as $entry) {
+            self::importSeedLayoutSet($ownerId, $entry['id'], $entry['meta'], $entry['slidesPath']);
+        }
     }
 
     /**
@@ -763,6 +840,89 @@ class Presentation
         ]);
     }
 
+    private static function importSeedLayoutSet(string $ownerId, string $seedId, array $seedMeta, string $slidesPath): void
+    {
+        $slidesData = json_decode((string)file_get_contents($slidesPath), true);
+        if (!is_array($slidesData)) {
+            return;
+        }
+
+        $newId = self::create(
+            $ownerId,
+            $seedMeta['title'] ?? 'Folien-Set',
+            (int)($seedMeta['width'] ?? DEFAULT_SLIDE_WIDTH),
+            (int)($seedMeta['height'] ?? DEFAULT_SLIDE_HEIGHT),
+            true
+        );
+
+        $seedAssets = BASE_PATH . '/seed/layout-sets/' . $seedId . '/assets';
+        $dstAssets = self::dir($newId) . '/assets';
+        if (is_dir($seedAssets)) {
+            foreach (glob($seedAssets . '/*') ?: [] as $file) {
+                if (is_file($file)) {
+                    copy($file, $dstAssets . '/' . basename($file));
+                }
+            }
+        }
+
+        $json = json_encode($slidesData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = str_replace('asset.php?id=' . urlencode($seedId) . '&', 'asset.php?id=' . urlencode($newId) . '&', $json);
+        $slidesData = json_decode($json, true) ?? ['slides' => []];
+        $prepared = [];
+        foreach ($slidesData['slides'] ?? [] as $slide) {
+            if (is_array($slide)) {
+                $prepared[] = LayoutSet::prepareLayoutSlide($slide);
+            }
+        }
+        Storage::write(self::dir($newId) . '/slides.json', ['slides' => $prepared]);
+
+        $metaUpdates = [
+            'is_layout_set' => true,
+            'template_shared' => !empty($seedMeta['template_shared']),
+            'template_order' => $seedMeta['template_order'] ?? microtime(true),
+        ];
+        foreach ([
+            'logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones',
+            'elementTextLinks', 'safe_margin', 'default_layout_set',
+        ] as $key) {
+            if (array_key_exists($key, $seedMeta)) {
+                $metaUpdates[$key] = $seedMeta[$key];
+            }
+        }
+        self::updateMeta($newId, $metaUpdates);
+        LayoutSet::syncLayoutMap($newId);
+    }
+
+    /** ID des Standard-Folien-Sets (freigegeben), falls vorhanden. */
+    public static function defaultLayoutSetId(): ?string
+    {
+        if (!is_dir(PRESENTATIONS_PATH)) {
+            return null;
+        }
+        $candidates = [];
+        foreach (scandir(PRESENTATIONS_PATH) as $id) {
+            if ($id === '.' || $id === '..') {
+                continue;
+            }
+            $meta = self::getMeta($id);
+            if (!$meta || empty($meta['is_template']) || empty($meta['is_layout_set']) || empty($meta['template_shared'])) {
+                continue;
+            }
+            if (!empty($meta['default_layout_set'])) {
+                return $id;
+            }
+            $candidates[] = $meta;
+        }
+        $seedTitle = defined('DEFAULT_LAYOUT_SET_SEED') ? DEFAULT_LAYOUT_SET_SEED : 'schlicht';
+        foreach ($candidates as $meta) {
+            $titleKey = strtolower(trim((string)($meta['title'] ?? '')));
+            if ($titleKey === $seedTitle || $titleKey === 'schlicht') {
+                return (string)$meta['id'];
+            }
+        }
+        return isset($candidates[0]['id']) ? (string)$candidates[0]['id'] : null;
+    }
+
     /** Entfernt Folienvorlagen ohne gültigen Besitzer (z. B. nach Neuinstallation mit alten data/). */
     public static function removeOrphanSlideTemplates(): void
     {
@@ -795,7 +955,24 @@ class Presentation
                 continue;
             }
             $meta = self::getMeta($id);
-            if ($meta && !empty($meta['is_template'])) {
+            if ($meta && !empty($meta['is_template']) && empty($meta['is_layout_set'])) {
+                self::delete($id);
+            }
+        }
+    }
+
+    /** Entfernt alle Folien-Sets (z. B. vor Neu-Seed bei frischer Admin-Installation). */
+    private static function removeAllLayoutSets(): void
+    {
+        if (!is_dir(PRESENTATIONS_PATH)) {
+            return;
+        }
+        foreach (scandir(PRESENTATIONS_PATH) as $id) {
+            if ($id === '.' || $id === '..') {
+                continue;
+            }
+            $meta = self::getMeta($id);
+            if ($meta && !empty($meta['is_template']) && !empty($meta['is_layout_set'])) {
                 self::delete($id);
             }
         }

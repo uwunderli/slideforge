@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../config.php';
+require __DIR__ . '/includes/element_icons.php';
 Auth::requireLogin();
 $me = Auth::currentUser();
 
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
                 'presentation_duration' => max(1, (int)($_POST['presentation_duration'] ?? 30)),
                 'show_progress' => isset($_POST['show_progress']),
                 'show_controls' => isset($_POST['show_controls']),
+                'layout_set_id' => trim((string)($_POST['layout_set_id'] ?? '')),
             ]));
         }
         redirect('editor.php?id=' . urlencode($id));
@@ -53,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
 }
 
 $isTemplateMode = !empty($meta['is_template']);
+$isLayoutSetMode = $isTemplateMode && !empty($meta['is_layout_set']);
 $iconBrandColors = Config::brandColors();
 $defaultIconColor = $iconBrandColors[0]['hex'] ?? '#3a6c8d';
 
@@ -70,6 +73,59 @@ if (!isset($meta['safe_margin'])) {
 }
 
 $webdavDrives = Auth::listWebdavDrivesPublic($me);
+[$mineLayoutSets, $sharedLayoutSets] = $isTemplateMode ? [[], []] : LayoutSet::listForUser($me['id']);
+$editorLayoutSets = array_merge($mineLayoutSets, $sharedLayoutSets);
+
+$logosImporterEnabled = Auth::logosImporterEnabled($me);
+
+$elementLabelRoles = array_values(array_unique(array_merge(
+    LayoutSet::STANDARD_ELEMENT_ROLES,
+    LayoutSet::LOGOS_ZONE_ROLES,
+    ['scripture_ref', 'scripture_verse'],
+)));
+$elementIconHtml = [];
+foreach ($elementLabelRoles as $r) {
+    $elementIconHtml[$r] = sf_element_icon($r);
+}
+
+$assignedLayoutSetId = trim((string)($meta['layout_set_id'] ?? ''));
+$hasLayoutSet = $isLayoutSetMode
+    || ($assignedLayoutSetId !== '' && LayoutSet::isLayoutSet($assignedLayoutSetId));
+
+$linkedLayoutSetMeta = $isLayoutSetMode
+    ? $meta
+    : (($assignedLayoutSetId !== '' && LayoutSet::isLayoutSet($assignedLayoutSetId))
+        ? (Presentation::getMeta($assignedLayoutSetId) ?? [])
+        : null);
+$elementTextLinks = $linkedLayoutSetMeta !== null
+    ? LayoutSet::elementTextLinks($linkedLayoutSetMeta)
+    : ElementLink::map();
+
+$elementLinkRoles = array_values(array_unique(array_merge(
+    LayoutSet::STANDARD_ELEMENT_ROLES,
+    $logosImporterEnabled ? LayoutSet::LOGOS_ZONE_ROLES : [],
+)));
+
+$masterSlideReturnId = trim((string)($_GET['return'] ?? ''));
+$masterSlideReturnSlide = max(0, (int)($_GET['return_slide'] ?? 0));
+$showMasterSlideNav = false;
+$masterSlideNavActive = false;
+$masterSlideSetId = '';
+if ($isLayoutSetMode) {
+    $returnPerm = $masterSlideReturnId !== '' ? Presentation::checkPermission($masterSlideReturnId, $me['id']) : null;
+    $returnMeta = $masterSlideReturnId !== '' ? Presentation::getMeta($masterSlideReturnId) : null;
+    if ($returnMeta && $returnPerm && in_array($returnPerm, ['owner', 'edit'], true)
+        && empty($returnMeta['is_template'])
+        && trim((string)($returnMeta['layout_set_id'] ?? '')) === $id) {
+        $showMasterSlideNav = true;
+        $masterSlideNavActive = true;
+        $masterSlideSetId = $id;
+    }
+} elseif ($canEdit && !$isTemplateMode && $assignedLayoutSetId !== '' && LayoutSet::isLayoutSet($assignedLayoutSetId)
+    && Presentation::canUseTemplate($assignedLayoutSetId, $me['id'])) {
+    $showMasterSlideNav = true;
+    $masterSlideSetId = $assignedLayoutSetId;
+}
 
 $bootstrap = [
     'id' => $id,
@@ -81,9 +137,35 @@ $bootstrap = [
     'fontFamilies' => FontLibrary::allFamilies(),
     'textTemplates' => TextTemplate::listAll(),
     'templateMode' => $isTemplateMode,
+    'layoutSetMode' => $isLayoutSetMode,
+    'hasLayoutSet' => $hasLayoutSet,
+    'logosImporterEnabled' => $logosImporterEnabled,
+    'logosImportedRoles' => LayoutSet::LOGOS_IMPORTED_ROLES,
+    'logosExtraRoles' => LayoutSet::LOGOS_ZONE_ROLES,
+    'logosZonesAccordionOpen' => Auth::logosZonesAccordionOpen($me),
+    'logosRoles' => LayoutSet::LOGOS_ROLES,
+    'logosNotesOrder' => $isLayoutSetMode ? LayoutSet::notesOrder($meta) : [],
+    'elementZones' => $isLayoutSetMode ? LayoutSet::elementZones($meta) : [],
+    'logosLayoutMap' => $linkedLayoutSetMeta ? LayoutSet::layoutMap($linkedLayoutSetMeta) : [],
+    'logosLayoutSlideIds' => $linkedLayoutSetMeta ? LayoutSet::layoutSlideIdMap($linkedLayoutSetMeta) : [],
+    'elementTextLinks' => $elementTextLinks,
+    'elementLinkRoles' => $elementLinkRoles,
+    'standardElementRoles' => LayoutSet::STANDARD_ELEMENT_ROLES,
+    'logosElementLinkRoles' => $logosImporterEnabled
+        ? LayoutSet::LOGOS_ZONE_ROLES
+        : [],
+    'elementZoneKeys' => LayoutSet::ELEMENT_ZONES,
+    'elementIconHtml' => $elementIconHtml,
+    'logosBadgeHtml' => sf_logos_badge(),
+    'logosRoleLabels' => array_combine(
+        $elementLabelRoles,
+        array_map(fn($r) => t('logos.role_' . $r), $elementLabelRoles)
+    ),
+    'logosPlaceholderRoles' => $elementLabelRoles,
     'i18n' => [
         'loading' => t('template_modal.loading'),
         'saved' => t('editor.saved'),
+        'logosInsertEmpty' => t('elements.logos_insert_empty'),
         'error' => t('template_modal.error'),
         'empty' => t('template_modal.empty'),
         'own' => t('template_modal.own'),
@@ -93,6 +175,7 @@ $bootstrap = [
         'layersTitle' => t('props.layers_title'),
         'layersEmpty' => t('props.layers_empty'),
         'layersHint' => t('props.layers_hint'),
+        'layersDrag' => t('props.layers_drag'),
         'tabFormat' => t('props.tab_format'),
         'tabForm' => t('props.tab_form'),
         'tabPosition' => t('props.tab_position'),
@@ -173,6 +256,35 @@ $bootstrap = [
         'groupColors' => t('props.group_colors'),
         'groupTemplates' => t('props.group_templates'),
         'templatesEmpty' => t('props.templates_empty'),
+        'setPlaceholderRole' => t('props.set_placeholder_role'),
+        'setPlaceholderNone' => t('props.set_placeholder_none'),
+        'setPlaceholderHint' => t('props.set_placeholder_hint'),
+        'setPlaceholderRefresh' => t('props.set_placeholder_refresh'),
+        'setPlaceholderRefreshNone' => t('props.set_placeholder_refresh_none'),
+        'setPlaceholderRefreshHint' => t('props.set_placeholder_refresh_hint'),
+        'setPlaceholderRefreshNoSet' => t('props.set_placeholder_refresh_no_set'),
+        'setPlaceholderRefreshNoLayout' => t('props.set_placeholder_refresh_no_layout'),
+        'elementLinksConfigure' => t('elements.configure_element_links'),
+        'elementLinksModalTitle' => t('elements.element_links_modal_title'),
+        'elementLinksModalDesc' => t('elements.element_links_modal_desc'),
+        'elementLinksColStandard' => t('elements.standard_heading'),
+        'elementLinksColStandardDesc' => t('elements.element_links_col_standard_desc'),
+        'elementLinksColLogos' => t('elements.logos_zones_heading'),
+        'elementLinksTabStandard' => t('elements.element_links_tab_standard'),
+        'elementLinksTabLogos' => t('elements.element_links_tab_logos'),
+        'elementLinksColLogosElements' => t('elements.element_links_col_logos_elements'),
+        'elementLinksColLogosMapping' => t('elements.element_links_col_logos_mapping'),
+        'elementLinksColLogosDesc' => t('elements.element_links_col_logos_desc'),
+        'elementLinksZonesTitle' => t('elements.logos_zones_heading'),
+        'elementLinksZonesDesc' => t('elements.logos_zones_desc'),
+        'zoneSlides' => t('elements.zone_slides'),
+        'zoneFooter' => t('elements.zone_footer'),
+        'zoneCustom' => t('elements.zone_custom'),
+        'zoneUnused' => t('elements.zone_unused'),
+        'elementLinksSaved' => t('elements.element_links_saved'),
+        'elementLinkNone' => t('tpl.element_link_none'),
+        'elementLinkElement' => t('tpl.sermon_element'),
+        'elementLinkTextTemplate' => t('tpl.sermon_text_template'),
         'playTriggerHint' => t('props.play_trigger_hint'),
         'alignToSlide' => t('props.align_to_slide'),
         'alignClickHint' => t('props.align_click_hint'),
@@ -198,6 +310,11 @@ $bootstrap = [
         'animHint' => t('props.anim_hint'),
         'animPerLine' => t('props.anim_per_line'),
         'animPerLineHint' => t('props.anim_per_line_hint'),
+        'positionCopy' => t('props.position_copy'),
+        'positionPaste' => t('props.position_paste'),
+        'animationCopy' => t('props.animation_copy'),
+        'animationPaste' => t('props.animation_paste'),
+        'propsCopied' => t('props.copied'),
         'deleteObject' => t('props.delete_object'),
         'optAnim' => [
             'none' => t('opt.anim_none'), 'fade-in' => t('opt.anim_fade_in'), 'fade-out' => t('opt.anim_fade_out'),
@@ -239,6 +356,8 @@ $bootstrap = [
         'duplicateSlide' => t('editor.duplicate_slide'),
         'deleteSlide' => t('editor.delete_slide'),
         'reorderSlide' => t('editor.reorder_slide'),
+        'filmstripLabelPlaceholder' => t('editor.filmstrip_label_placeholder'),
+        'unnamedSlide' => t('editor.unnamed_slide'),
         'togglePresentDisabled' => t('editor.toggle_present_disabled'),
         'slidePresentEnabled' => t('editor.slide_present_enabled'),
         'slidePresentDisabled' => t('editor.slide_present_disabled'),
@@ -440,9 +559,17 @@ $bootstrap = [
     ],
 ];
 
-$pageTitle = 'Editor · ' . $meta['title'];
-$headerPresentationTitle = $meta['title'];
-$headerPresentationContext = 'edit';
+$editorSlidesData = Presentation::getSlides($id);
+$editorCurrentSlide = $editorSlidesData['slides'][0] ?? null;
+
+if ($isLayoutSetMode && $editorCurrentSlide) {
+    $headerPresentationTitle = $meta['title'] . ' - ' . LayoutSet::slideLabel($editorCurrentSlide);
+    $headerPresentationContext = null;
+} else {
+    $headerPresentationTitle = $meta['title'];
+    $headerPresentationContext = 'edit';
+}
+$pageTitle = 'Editor · ' . $headerPresentationTitle;
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="editor-topbar editor-topbar-grid">
@@ -602,6 +729,16 @@ require __DIR__ . '/includes/header.php';
           <label for="edSafeMargin" style="margin-top:10px;"><?= h(t('modal.safe_margin_label')) ?></label>
           <input type="number" id="edSafeMargin" name="safe_margin" form="metaSettingsForm" min="0" value="<?= (int)($meta['safe_margin'] ?? 100) ?>">
           <div class="props-video-note" style="margin-top:4px;"><?= h(t('modal.safe_margin_hint')) ?></div>
+          <?php if (!$isTemplateMode): ?>
+          <label for="edLayoutSet" style="margin-top:14px;"><?= h(t('editor.layout_set_label')) ?></label>
+          <select id="edLayoutSet" name="layout_set_id" form="metaSettingsForm">
+            <option value=""><?= h(t('editor.layout_set_none')) ?></option>
+            <?php foreach ($editorLayoutSets as $set): ?>
+              <option value="<?= h($set['id']) ?>" <?= ($meta['layout_set_id'] ?? '') === $set['id'] ? 'selected' : '' ?>><?= h($set['title']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.layout_set_hint')) ?></div>
+          <?php endif; ?>
         </div>
         <div class="present-config-panel-footer">
           <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
@@ -753,6 +890,12 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
         <span><?= h(t('editor.tab_slides')) ?></span>
       </button>
+      <?php if ($isLayoutSetMode): ?>
+      <button type="button" class="obj-tab-btn" data-objtab="elements" title="<?= h(t('editor.tab_elements')) ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M14 14h4"/></svg>
+        <span><?= h(t('editor.tab_elements')) ?></span>
+      </button>
+      <?php endif; ?>
       <button type="button" class="obj-tab-btn" data-objtab="text" title="<?= h(t('editor.tab_text')) ?>">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
         <span><?= h(t('editor.tab_text')) ?></span>
@@ -769,19 +912,95 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>
         <span><?= h(t('editor.tab_background')) ?></span>
       </button>
+      <?php if ($showMasterSlideNav): ?>
+      <button type="button"
+        class="obj-tab-btn obj-tab-btn-master<?= $masterSlideNavActive ? ' active' : '' ?>"
+        id="masterSlideNavBtn"
+        title="<?= h($masterSlideNavActive ? t('editor.master_slide_back') : t('editor.master_slide_open')) ?>"
+        data-set-id="<?= h($masterSlideSetId) ?>"
+        data-presentation-id="<?= h($masterSlideNavActive ? $masterSlideReturnId : $id) ?>"
+        data-return-id="<?= h($masterSlideReturnId) ?>"
+        data-return-slide="<?= (int)$masterSlideReturnSlide ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="5" width="14" height="10" rx="1.5"/>
+          <path d="M8 19h12"/>
+          <rect x="10" y="9" width="14" height="10" rx="1.5"/>
+        </svg>
+        <span><?= h(t('editor.master_slide')) ?></span>
+      </button>
+      <?php endif; ?>
     </div>
 
     <div class="obj-tab-content">
     <div class="obj-tab-panel active" data-objtab="slides">
       <div class="editor-slides-toolbar">
-        <?php if ($canEdit && !$isTemplateMode): ?>
+        <?php if ($canEdit && (!$isTemplateMode || $isLayoutSetMode)): ?>
           <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>
+          <?php if (!$isTemplateMode): ?>
           <button type="button" class="button button-ghost button-sm" id="slideGridViewBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.slide_grid_open')) ?></button>
           <button type="button" class="button button-ghost button-sm" id="applyTemplateBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.apply_template')) ?></button>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
       <div id="slideFilmstrip" class="editor-slide-filmstrip"></div>
     </div>
+    <?php if ($isLayoutSetMode): ?>
+    <?php $elementZones = LayoutSet::elementZones($meta); ?>
+    <?php
+      $logosSlideInsertRoles = array_values(array_filter(
+          LayoutSet::slideInsertRolesFromZones($elementZones),
+          fn($role) => !in_array($role, LayoutSet::STANDARD_ELEMENT_ROLES, true)
+      ));
+      $activeLogosRoles = [];
+      foreach ($elementZones as $zone => $roles) {
+          if ($zone === 'unused' || !is_array($roles)) {
+              continue;
+          }
+          foreach ($roles as $role) {
+              $activeLogosRoles[$role] = true;
+          }
+      }
+    ?>
+    <div class="obj-tab-panel" data-objtab="elements">
+      <div class="elements-panel-inner">
+        <div class="options-subtitle"><?= h(t('elements.standard_heading')) ?></div>
+        <p class="elements-panel-hint"><?= h(t('elements.standard_desc')) ?></p>
+        <div class="element-rows" id="standardElementButtons">
+          <?php foreach (LayoutSet::STANDARD_ELEMENT_ROLES as $role): ?>
+          <button type="button" class="element-row-btn tool-btn-block" data-set-role="<?= h($role) ?>">
+            <span class="element-row-icon" aria-hidden="true"><?= sf_element_icon($role) ?></span>
+            <span class="element-row-label"><?= h(t('logos.role_' . $role)) ?></span>
+            <?php if ($logosImporterEnabled && !empty($activeLogosRoles[$role])): ?><?= sf_logos_badge() ?><?php endif; ?>
+          </button>
+          <?php endforeach; ?>
+        </div>
+        <?php if ($logosImporterEnabled): ?>
+        <div class="element-logos-insert-section" id="logosSlideInsertSection"<?= $logosSlideInsertRoles ? '' : ' style="display:none;"' ?>>
+          <div class="options-subtitle"><?= h(t('elements.logos_insert_heading_more')) ?></div>
+          <div id="logosSlideInsertButtons" class="element-rows">
+            <?php if ($logosSlideInsertRoles): ?>
+              <?php foreach ($logosSlideInsertRoles as $role): ?>
+              <button type="button" class="element-row-btn tool-btn-block" data-set-role="<?= h($role) ?>">
+                <span class="element-row-icon" aria-hidden="true"><?= sf_element_icon($role) ?></span>
+                <span class="element-row-label"><?= h(t('logos.role_' . $role)) ?></span>
+                <?= sf_logos_badge() ?>
+              </button>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <p class="elements-panel-hint elements-panel-hint-empty"><?= h(t('elements.logos_insert_empty')) ?></p>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+        <?php if ($canEdit): ?>
+        <button type="button" class="element-row-btn tool-btn-block" id="configureElementLinksBtn" style="margin-top:14px;">
+          <span class="element-row-label"><?= h(t('elements.configure_element_links')) ?></span>
+          <?php if ($logosImporterEnabled): ?><?= sf_logos_badge() ?><?php endif; ?>
+        </button>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
     <div class="obj-tab-panel" data-objtab="text">
       <button type="button" class="tool-btn-block" data-tool="text"><?= h(t('shape.text')) ?></button>
       <button type="button" class="tool-btn-block" data-tool="markdown-text"><?= h(t('shape.markdown_text')) ?></button>
@@ -905,6 +1124,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <input type="number" id="autoAdvanceInput" min="0" step="1" value="0">
       </div>
     </div>
+
     </div>
   </aside>
 
@@ -993,6 +1213,18 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
   <input type="hidden" name="action" value="resize">
 </form>
+
+<div class="modal-backdrop" id="elementLinksModal">
+  <div class="modal modal-element-config">
+    <h2 style="font-size:1.2rem; text-transform:none;"><?= h(t('elements.element_links_modal_title')) ?></h2>
+    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:-8px;"><?= h(t('elements.element_links_modal_desc')) ?></p>
+    <div id="elementLinksModalBody" class="element-links-modal-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="button button-ghost" id="elementLinksModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button" id="elementLinksModalSave"><?= h(t('tpl.save')) ?></button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="templateModal">
   <div class="modal">

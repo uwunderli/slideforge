@@ -59,10 +59,12 @@ $manifestUrl = $webPrefix . '/manifest.php';
     <?php endif; ?>
     <?= h($siteTitle) ?>
   </a>
-  <?php if (!empty($headerPresentationTitle) && !empty($headerPresentationContext)): ?>
+  <?php if (!empty($headerPresentationTitle)): ?>
   <div class="topbar-context">
     <span class="topbar-context-sep" aria-hidden="true">|</span>
+    <?php if (!empty($headerPresentationContext)): ?>
     <span class="topbar-context-label"><?= h($headerPresentationContext === 'present' ? t('header.context_present') : t('header.context_edit')) ?></span>
+    <?php endif; ?>
     <span class="topbar-context-title" title="<?= h($headerPresentationTitle) ?>"><?= h($headerPresentationTitle) ?></span>
   </div>
   <?php endif; ?>

@@ -1,0 +1,47 @@
+{
+    "title": "Schlicht",
+    "width": 1920,
+    "height": 1080,
+    "template_order": 0,
+    "is_layout_set": true,
+    "template_shared": true,
+    "default_layout_set": true,
+    "logosNotesOrder": [
+        "document_title",
+        "heading1",
+        "heading2",
+        "heading3",
+        "heading4",
+        "heading5",
+        "normal",
+        "list_item",
+        "lighttext",
+        "prompt",
+        "scripture_block",
+        "scripture_inline"
+    ],
+    "elementZones": {
+        "slides": [
+            "document_title",
+            "heading1",
+            "heading2",
+            "heading3",
+            "heading4",
+            "heading5",
+            "normal",
+            "list_item"
+        ],
+        "footer": [
+            "scripture_ref",
+            "scripture_verse"
+        ],
+        "custom": [
+            "lighttext",
+            "prompt"
+        ],
+        "unused": [
+            "meta"
+        ]
+    },
+    "safe_margin": 100
+}

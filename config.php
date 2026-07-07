@@ -40,7 +40,10 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '292');
+define('ASSET_VERSION', '338');
+
+/** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
+define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
 
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
@@ -115,6 +118,7 @@ if (!file_exists(TEXT_TEMPLATES_FILE)) {
         ['id' => 'standard', 'name' => 'Text', 'fontFamily' => 'Open Sans', 'fontSize' => 65, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'left', 'w' => 599, 'h' => 70],
     ], JSON_PRETTY_PRINT));
 }
+SermonImportTemplate::ensureDefaults();
 if (!is_dir(PUBLIC_UPLOADS_PATH)) {
     mkdir(PUBLIC_UPLOADS_PATH, 0770, true);
 }

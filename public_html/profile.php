@@ -8,7 +8,7 @@ $profileError = '';
 $passwordMsg = '';
 $passwordError = '';
 
-$allowedTabs = ['account', 'spellcheck', 'webdav', 'password'];
+$allowedTabs = ['account', 'spellcheck', 'webdav', 'logos', 'password'];
 $activeTab = $_GET['tab'] ?? 'account';
 if (!in_array($activeTab, $allowedTabs, true)) {
     $activeTab = 'account';
@@ -21,6 +21,7 @@ $tabFromAction = [
     'save_spellcheck' => 'spellcheck',
     'save_webdav_drive' => 'webdav',
     'delete_webdav_drive' => 'webdav',
+    'save_logos_importer' => 'logos',
     'change_password' => 'password',
 ];
 
@@ -128,6 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $profileError = t('webdav.error_drive_not_found');
         }
     }
+
+    if ($action === 'save_logos_importer') {
+        Auth::setLogosImporterEnabled($me['id'], isset($_POST['logos_importer_enabled']));
+        $me = Auth::currentUser();
+        $profileMsg = t('profile.logos_importer_saved');
+    }
 }
 
 $webdavDrives = Auth::listWebdavDrivesPublic($me);
@@ -146,6 +153,7 @@ require __DIR__ . '/includes/header.php';
     <a href="?tab=account" class="page-tab-btn<?= $activeTab === 'account' ? ' active' : '' ?>"><?= h(t('profile.tab_account')) ?></a>
     <a href="?tab=spellcheck" class="page-tab-btn<?= $activeTab === 'spellcheck' ? ' active' : '' ?>"><?= h(t('profile.tab_spellcheck')) ?></a>
     <a href="?tab=webdav" class="page-tab-btn<?= $activeTab === 'webdav' ? ' active' : '' ?>"><?= h(t('profile.tab_webdav')) ?></a>
+    <a href="?tab=logos" class="page-tab-btn<?= $activeTab === 'logos' ? ' active' : '' ?>"><?= h(t('profile.tab_logos')) ?></a>
     <a href="?tab=password" class="page-tab-btn<?= $activeTab === 'password' ? ' active' : '' ?>"><?= h(t('profile.tab_password')) ?></a>
   </div>
 
@@ -286,6 +294,24 @@ require __DIR__ . '/includes/header.php';
       <p class="webdav-test-result" id="webdavTestNewResult" hidden></p>
     </form>
     <?php endif; ?>
+  </div>
+
+  <div class="profile-tab-panel"<?= $activeTab !== 'logos' ? ' hidden' : '' ?> data-profile-tab="logos">
+    <?php if ($activeTab === 'logos' && $profileMsg): ?><div class="alert alert-success"><?= h($profileMsg) ?></div><?php endif; ?>
+    <div class="section-header"><h2><?= h(t('profile.logos_importer_heading')) ?></h2></div>
+    <form method="post" style="margin-bottom:24px;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="save_logos_importer">
+      <label class="profile-check-row">
+        <input type="checkbox" name="logos_importer_enabled" <?= Auth::logosImporterEnabled($me) ? 'checked' : '' ?>>
+        <?= h(t('profile.logos_importer_enable')) ?>
+      </label>
+      <p class="profile-intro" style="margin-top:10px;"><?= h(t('profile.logos_importer_enable_desc')) ?></p>
+      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
+    </form>
+    <div class="profile-logos-help">
+      <?= t('profile.logos_importer_help') ?>
+    </div>
   </div>
 
   <div class="profile-tab-panel"<?= $activeTab !== 'password' ? ' hidden' : '' ?> data-profile-tab="password">

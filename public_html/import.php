@@ -20,6 +20,10 @@ function sf_cleanup_dir(string $dir): void
 }
 
 $error = '';
+$logosImporterEnabled = Auth::logosImporterEnabled($me);
+[$layoutSetsMine, $layoutSetsShared] = LayoutSet::listForUser($me['id']);
+$layoutSets = array_merge($layoutSetsMine, $layoutSetsShared);
+$defaultLayoutSetId = Presentation::defaultLayoutSetId();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
@@ -163,6 +167,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException(t('import.unsupported_type'));
             }
 
+            if (LogosSermonImporter::isLogosExport($htmlContent)) {
+                if (!$logosImporterEnabled) {
+                    throw new RuntimeException(t('import.logos_disabled'));
+                }
+                $layoutSetId = trim((string)($_POST['layout_set_id'] ?? ''));
+                $templateId = trim((string)($_POST['sermon_template_id'] ?? ''));
+                $result = LogosSermonImporter::import(
+                    $htmlContent,
+                    $templateId !== '' ? $templateId : null,
+                    $layoutSetId !== '' ? $layoutSetId : null
+                );
+                $title = trim($result['title']) . t('import.title_suffix');
+                $newId = Presentation::create($me['id'], $title ?: t('import.default_title'), $result['width'], $result['height']);
+                if (!empty($result['layout_set_id'])) {
+                    Presentation::updateMeta($newId, ['layout_set_id' => $result['layout_set_id']]);
+                }
+                if (!empty($result['footer_text'])) {
+                    Presentation::updateMeta($newId, ['footer_text' => $result['footer_text']]);
+                }
+                $slides = $result['slides'] ?: [Presentation::defaultSlide()];
+                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides]);
+                if (!empty($result['warnings'])) {
+                    $_SESSION['import_warnings'] = $result['warnings'];
+                }
+                redirect('editor.php?id=' . urlencode($newId));
+                exit;
+            }
+
             if (!preg_match('/<script type="application\/json" id="slideforge-source-data">(.*?)<\/script>/s', $htmlContent, $m)) {
                 throw new RuntimeException(t('import.no_source_data'));
             }
@@ -177,9 +209,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title = trim((string)($meta['title'] ?? t('import.default_title'))) . t('import.title_suffix');
 
             $newId = Presentation::create($me['id'], $title, $width, $height);
-            Presentation::updateMeta($newId, [
-                'show_progress' => $meta['show_progress'] ?? true,
-            ]);
+            $restored = Exporter::metaFromReimport($meta, $me['id']);
+            if ($restored['fields'] !== []) {
+                Presentation::updateMeta($newId, $restored['fields']);
+            }
+            if ($restored['warnings'] !== []) {
+                $_SESSION['import_warnings'] = array_merge($_SESSION['import_warnings'] ?? [], $restored['warnings']);
+            }
 
             $slidesData = ['slides' => $data['slides']];
             $slidesData = Exporter::importAssets($slidesData, $newId, $zipAssetsDir);
@@ -219,10 +255,71 @@ require __DIR__ . '/includes/header.php';
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <label for="import_file"><?= h(t('import.file_label')) ?></label>
     <input type="file" id="import_file" name="import_file" accept=".html,.htm,.zip,.pdf,.pptx,.odp" required>
-    <div class="props-video-note" style="margin-top:8px;"><?= t('import.pdf_hint') ?></div>
+    <?php if ($logosImporterEnabled): ?>
+    <?php if ($layoutSets): ?>
+    <div id="logosLayoutSetBlock" hidden>
+      <label for="layout_set_id" style="margin-top:16px;"><?= h(t('import.layout_set_label')) ?></label>
+      <select id="layout_set_id" name="layout_set_id">
+        <option value=""><?= h(t('import.layout_set_none')) ?></option>
+        <?php foreach ($layoutSets as $set): ?>
+          <option value="<?= h($set['id']) ?>"<?= ($defaultLayoutSetId !== null && $set['id'] === $defaultLayoutSetId) ? ' selected' : '' ?>><?= h($set['title'] ?? $set['id']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <div class="props-video-note" style="margin-top:6px;"><?= t('import.layout_set_hint') ?></div>
+    </div>
+    <?php else: ?>
+    <div class="props-video-note" style="margin-top:16px;"><?= t('import.layout_set_none_available') ?></div>
+    <?php endif; ?>
+    <div class="props-video-note" style="margin-top:8px;"><?= t('import.logos_hint') ?></div>
+    <?php endif; ?>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.pptx_hint') ?></div>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.odp_hint') ?></div>
     <button type="submit" class="button" style="margin-top:16px;"><?= h(t('import.submit')) ?></button>
   </form>
 </div>
+<?php if ($logosImporterEnabled && $layoutSets): ?>
+<script>
+(function () {
+  var input = document.getElementById('import_file');
+  var block = document.getElementById('logosLayoutSetBlock');
+  var sel = document.getElementById('layout_set_id');
+  if (!input || !block) return;
+
+  function clearSet() {
+    if (sel) sel.value = '';
+  }
+
+  function update() {
+    var file = input.files && input.files[0];
+    if (!file) {
+      block.hidden = true;
+      clearSet();
+      return;
+    }
+    var name = file.name.toLowerCase();
+    if (!name.endsWith('.html') && !name.endsWith('.htm')) {
+      block.hidden = true;
+      clearSet();
+      return;
+    }
+    block.hidden = false;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = String(reader.result || '');
+      var isSlideForgeBackup = text.indexOf('id="slideforge-source-data"') !== -1
+        || text.indexOf("id='slideforge-source-data'") !== -1;
+      block.hidden = isSlideForgeBackup;
+      if (isSlideForgeBackup) clearSet();
+    };
+    reader.onerror = function () {
+      block.hidden = false;
+    };
+    var chunk = file.slice(0, Math.min(file.size, 131072));
+    reader.readAsText(chunk);
+  }
+
+  input.addEventListener('change', update);
+})();
+</script>
+<?php endif; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>

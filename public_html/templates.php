@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../config.php';
+require __DIR__ . '/includes/element_icons.php';
 Auth::requireLogin();
 $me = Auth::currentUser();
 $isAdmin = Auth::isAdmin();
@@ -35,6 +36,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === '' && 
         }
     }
     echo json_encode(['ok' => true]);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'export_layout_set') {
+    $setId = (string)($_GET['id'] ?? '');
+    $meta = Presentation::getMeta($setId);
+    $canUse = $meta
+        && LayoutSet::isLayoutSet($setId)
+        && ($meta['owner_id'] === $me['id'] || !empty($meta['template_shared']) || $isAdmin);
+    if (!$canUse) {
+        http_response_code(403);
+        die(t('tpl.no_permission'));
+    }
+    $filenameBase = Exporter::sanitizeFilename((string)($meta['title'] ?? t('tpl.default_layout_set_title')));
+    $tmpArchive = sys_get_temp_dir() . '/sf_layoutset_' . bin2hex(random_bytes(6)) . '.chs';
+    try {
+        LayoutSet::exportArchive($setId, $tmpArchive);
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $filenameBase . '.chs"');
+        header('Content-Length: ' . filesize($tmpArchive));
+        readfile($tmpArchive);
+    } finally {
+        @unlink($tmpArchive);
+    }
     exit;
 }
 
@@ -161,12 +186,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('tpl.text_duplicated');
     }
 
+    if ($action === 'save_element_links' && $isAdmin) {
+        $links = [];
+        foreach (ElementLink::allRoles() as $role) {
+            if (!array_key_exists($role, $_POST['el_text_template'] ?? [])) {
+                continue;
+            }
+            $val = trim((string)$_POST['el_text_template'][$role]);
+            $links[$role] = $val !== '' ? $val : null;
+        }
+        ElementLink::save($links);
+        $msg = t('tpl.element_links_saved');
+    }
+
+    // ---- Logos-Importvorlagen (Legacy, nur noch API) ----
+    if ($action === 'add_sermon_import_template' && $isAdmin) {
+        SermonImportTemplate::create(['name' => t('tpl.default_sermon_import_name')]);
+        $msg = t('tpl.sermon_import_added');
+    }
+    if ($action === 'update_sermon_import_template' && $isAdmin) {
+        $id = $_POST['id'] ?? '';
+        $existing = SermonImportTemplate::find($id);
+        $existingElements = $existing['elements'] ?? [];
+        $elements = [];
+        foreach (SermonImportTemplate::ELEMENT_TYPES as $elType) {
+            $target = $_POST['el_target'][$elType] ?? 'skip';
+            if (!in_array($target, ['slide', 'notes', 'skip', 'title_slide'], true)) {
+                $target = 'skip';
+            }
+            $next = array_merge($existingElements[$elType] ?? [], [
+                'target' => $target,
+                'x' => max(0, (int)($_POST['el_x'][$elType] ?? 100)),
+                'y' => max(0, (int)($_POST['el_y'][$elType] ?? 100)),
+                'w' => max(20, (int)($_POST['el_w'][$elType] ?? 1720)),
+                'h' => max(10, (int)($_POST['el_h'][$elType] ?? 100)),
+            ]);
+            $tplId = trim((string)($_POST['el_text_template'][$elType] ?? ''));
+            if ($tplId !== '') {
+                $next['textTemplateId'] = $tplId;
+            } else {
+                unset($next['textTemplateId']);
+            }
+            $elements[$elType] = $next;
+        }
+        SermonImportTemplate::update($id, [
+            'name' => trim($_POST['name'] ?? '') !== '' ? trim($_POST['name']) : t('tpl.default_sermon_import_name'),
+            'createTitleSlide' => isset($_POST['create_title_slide']),
+            'background' => [
+                'type' => 'color',
+                'value' => preg_match('/^#[0-9a-fA-F]{6}$/', $_POST['background_color'] ?? '') ? $_POST['background_color'] : '#111111',
+            ],
+            'elements' => $elements,
+        ]);
+        $msg = t('tpl.sermon_import_saved');
+    }
+    if ($action === 'delete_sermon_import_template' && $isAdmin) {
+        if (SermonImportTemplate::delete($_POST['id'] ?? '')) {
+            $msg = t('tpl.sermon_import_deleted');
+        } else {
+            $error = t('tpl.sermon_import_delete_last');
+        }
+    }
+    if ($action === 'duplicate_sermon_import_template' && $isAdmin) {
+        SermonImportTemplate::duplicate($_POST['id'] ?? '');
+        $msg = t('tpl.sermon_import_duplicated');
+    }
+
     // ---- Folienvorlagen (jeder für eigene, Admin für alle) ----
     if ($action === 'create_slide_template') {
         $title = trim($_POST['title'] ?? '') !== '' ? trim($_POST['title']) : t('tpl.default_slide_title');
         $tid = Presentation::createTemplate($me['id'], $title);
         redirect('editor.php?id=' . urlencode($tid));
         exit;
+    }
+    if ($action === 'create_layout_set') {
+        $title = trim($_POST['title'] ?? '') !== '' ? trim($_POST['title']) : t('tpl.default_layout_set_title');
+        $tid = LayoutSet::create($me['id'], $title);
+        redirect('editor.php?id=' . urlencode($tid));
+        exit;
+    }
+    if ($action === 'import_layout_set_archive') {
+        $file = $_FILES['layout_set_archive'] ?? null;
+        if (!$file || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            $error = t('tpl.layout_set_import_no_file');
+        } else {
+            $name = strtolower((string)($file['name'] ?? ''));
+            if (!(str_ends_with($name, '.zip') || str_ends_with($name, '.chs'))) {
+                $error = t('tpl.layout_set_import_invalid_type');
+            } else {
+                try {
+                    LayoutSet::importArchive($me['id'], (string)$file['tmp_name']);
+                    $msg = t('tpl.layout_set_imported');
+                } catch (Throwable $e) {
+                    $error = $e->getMessage();
+                }
+            }
+        }
+    }
+    if ($action === 'import_template_to_layout_set') {
+        $setId = $_POST['layout_set_id'] ?? '';
+        $templateId = $_POST['template_id'] ?? '';
+        $layoutKey = trim((string)($_POST['layout_key'] ?? ''));
+        $deleteSource = isset($_POST['delete_source']);
+        $tMeta = Presentation::getMeta($templateId);
+        $canUse = $tMeta && !empty($tMeta['is_template']) && empty($tMeta['is_layout_set'])
+            && ($tMeta['owner_id'] === $me['id'] || !empty($tMeta['template_shared']) || $isAdmin);
+        $canEditSet = LayoutSet::isLayoutSet($setId) && Presentation::canUseTemplate($setId, $me['id'])
+            && (Presentation::getMeta($setId)['owner_id'] === $me['id'] || $isAdmin);
+        if (!$canUse || !$canEditSet) {
+            $error = t('tpl.no_permission');
+        } else {
+            try {
+                if ($layoutKey === '') {
+                    $layoutKey = LayoutSet::layoutKeyFromTitle($tMeta['title'] ?? '');
+                }
+                LayoutSet::importSlideTemplate($setId, $templateId, $layoutKey);
+                if ($deleteSource && $tMeta['owner_id'] === $me['id']) {
+                    Presentation::delete($templateId);
+                    $msg = t('tpl.template_moved_to_set');
+                } else {
+                    $msg = t('tpl.template_imported_to_set');
+                }
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
     }
     if ($action === 'duplicate_slide_template') {
         $tid = $_POST['id'] ?? '';
@@ -198,16 +342,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = t('tpl.no_permission');
         }
     }
+    if ($action === 'duplicate_layout_set') {
+        $setId = $_POST['id'] ?? '';
+        $meta = Presentation::getMeta($setId);
+        $canUse = $meta && LayoutSet::isLayoutSet($setId)
+            && ($meta['owner_id'] === $me['id'] || !empty($meta['template_shared']) || $isAdmin);
+        if (!$canUse) {
+            $error = t('tpl.no_permission');
+        } else {
+            try {
+                LayoutSet::duplicate($setId, $me['id']);
+                $msg = t('tpl.layout_set_duplicated');
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+    }
+    if ($action === 'delete_layout_set') {
+        $setId = $_POST['id'] ?? '';
+        $meta = Presentation::getMeta($setId);
+        if ($meta && LayoutSet::isLayoutSet($setId) && ($meta['owner_id'] === $me['id'] || $isAdmin)) {
+            Presentation::delete($setId);
+            $msg = t('tpl.layout_set_deleted');
+        } else {
+            $error = t('tpl.no_permission');
+        }
+    }
 }
 
+$logosImporterEnabled = Auth::logosImporterEnabled($me);
+ElementLink::ensureDefaults();
+$allowedTplTabs = ['slides', 'texts', 'vorlageelemente', 'fonts', 'colors'];
 $activeTab = $_GET['tab'] ?? ($_POST['tab'] ?? 'slides');
-if (!in_array($activeTab, ['slides', 'texts', 'fonts', 'colors'], true)) $activeTab = 'slides';
+if (!in_array($activeTab, $allowedTplTabs, true)) $activeTab = 'slides';
 
 $brandColors = Config::brandColors();
 $customFonts = FontLibrary::customFonts();
 $fontFamilies = FontLibrary::allFamilies();
 $textTemplates = TextTemplate::listAll();
+$elementTextLinks = ElementLink::map();
 [$myTemplates, $sharedTemplates] = Presentation::listTemplatesForUser($me['id']);
+$mySlideTemplates = array_values(array_filter($myTemplates, fn($t) => empty($t['is_layout_set'])));
+$sharedSlideTemplates = array_values(array_filter($sharedTemplates, fn($t) => empty($t['is_layout_set'])));
+[$myLayoutSets, $sharedLayoutSets] = LayoutSet::listForUser($me['id']);
 
 $FONT_OPTIONS = $fontFamilies;
 
@@ -221,6 +398,7 @@ require __DIR__ . '/includes/header.php';
   <div class="page-tabs">
     <a href="?tab=slides" class="page-tab-btn<?= $activeTab === 'slides' ? ' active' : '' ?>"><?= h(t('tpl.tab_slides')) ?></a>
     <a href="?tab=texts" class="page-tab-btn<?= $activeTab === 'texts' ? ' active' : '' ?>"><?= h(t('tpl.tab_texts')) ?></a>
+    <a href="?tab=vorlageelemente" class="page-tab-btn<?= $activeTab === 'vorlageelemente' ? ' active' : '' ?>"><?= h(t('tpl.tab_vorlageelemente')) ?></a>
     <a href="?tab=fonts" class="page-tab-btn<?= $activeTab === 'fonts' ? ' active' : '' ?>"><?= h(t('tpl.tab_fonts')) ?></a>
     <a href="?tab=colors" class="page-tab-btn<?= $activeTab === 'colors' ? ' active' : '' ?>"><?= h(t('tpl.tab_colors')) ?></a>
   </div>
@@ -350,6 +528,66 @@ require __DIR__ . '/includes/header.php';
       <?php endif; ?>
     <?php endif; ?>
 
+  <?php elseif ($activeTab === 'vorlageelemente'): ?>
+
+    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.vorlageelemente_heading')) ?></h2></div>
+    <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('tpl.vorlageelemente_desc')) ?></p>
+
+    <?php if (!$isAdmin): ?>
+      <div class="alert alert-success"><?= h(t('tpl.admin_only_vorlageelemente')) ?></div>
+    <?php endif; ?>
+
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="save_element_links">
+      <input type="hidden" name="tab" value="vorlageelemente">
+      <div style="overflow-x:auto; margin-top:16px;">
+        <table class="data-table element-links-table" style="width:100%; font-size:0.88rem;">
+          <thead>
+            <tr>
+              <th></th>
+              <th><?= h(t('tpl.sermon_element')) ?></th>
+              <th><?= h(t('tpl.sermon_text_template')) ?></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php
+            $linkRoles = LayoutSet::STANDARD_ELEMENT_ROLES;
+            if ($logosImporterEnabled) {
+                $linkRoles = array_values(array_unique(array_merge(
+                    $linkRoles,
+                    LayoutSet::LOGOS_ZONE_ROLES
+                )));
+            }
+            foreach ($linkRoles as $role):
+              $currentTpl = $elementTextLinks[$role] ?? '';
+            ?>
+            <tr>
+              <td class="element-links-icon-cell"><span class="element-row-icon"><?= sf_element_icon($role) ?></span></td>
+              <td>
+                <?= h(t('logos.role_' . $role)) ?>
+                <?php if ($logosImporterEnabled && in_array($role, LayoutSet::LOGOS_ZONE_ROLES, true)): ?>
+                  <span class="element-links-logos-tag">Logos</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <select name="el_text_template[<?= h($role) ?>]" <?= $isAdmin ? '' : 'disabled' ?>>
+                  <option value="">— <?= h(t('tpl.element_link_none')) ?> —</option>
+                  <?php foreach ($textTemplates as $tt): ?>
+                    <option value="<?= h($tt['id']) ?>" <?= $currentTpl === $tt['id'] ? 'selected' : '' ?>><?= h($tt['name']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <?php if ($isAdmin): ?>
+      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('tpl.save')) ?></button>
+      <?php endif; ?>
+    </form>
+
   <?php elseif ($activeTab === 'texts'): ?>
 
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.texts_heading')) ?></h2></div>
@@ -451,6 +689,87 @@ require __DIR__ . '/includes/header.php';
 
   <?php elseif ($activeTab === 'slides'): ?>
 
+    <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.layout_sets_heading')) ?></h2></div>
+    <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('tpl.layout_sets_desc')) ?></p>
+    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="create_layout_set">
+      <div style="flex:1; min-width:200px;">
+        <label style="margin-top:0;"><?= h(t('tpl.name')) ?></label>
+        <input type="text" name="title" placeholder="<?= h(t('tpl.layout_set_name_placeholder')) ?>">
+      </div>
+      <button type="submit" class="button button-sm"><?= h(t('tpl.create_layout_set')) ?></button>
+    </form>
+    <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">
+      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+      <input type="hidden" name="action" value="import_layout_set_archive">
+      <div style="flex:1; min-width:240px;">
+        <label style="margin-top:0;"><?= h(t('tpl.layout_set_import_label')) ?></label>
+        <input type="file" name="layout_set_archive" accept=".chs,.zip,application/zip" required>
+      </div>
+      <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_import_submit')) ?></button>
+    </form>
+    <?php if (empty($myLayoutSets) && empty($sharedLayoutSets)): ?>
+      <div class="empty-state"><?= h(t('tpl.no_layout_sets')) ?></div>
+    <?php else: ?>
+      <?php if (!empty($myLayoutSets)): ?>
+      <ul class="share-list">
+        <?php foreach ($myLayoutSets as $t): ?>
+          <li>
+            <span><?= h($t['title']) ?> <span class="perm-tag <?= !empty($t['template_shared']) ? 'edit' : 'view' ?>"><?= !empty($t['template_shared']) ? h(t('tpl.shared_badge')) : h(t('tpl.private_badge')) ?></span></span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
+              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_export')) ?></a>
+              <form method="post" class="inline-form">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="toggle_slide_template_shared">
+                <input type="hidden" name="tab" value="slides">
+                <input type="hidden" name="id" value="<?= h($t['id']) ?>">
+                <input type="hidden" name="shared" value="<?= !empty($t['template_shared']) ? '' : '1' ?>">
+                <button type="submit" class="button button-ghost button-sm"><?= !empty($t['template_shared']) ? h(t('tpl.make_private')) : h(t('tpl.share_all')) ?></button>
+              </form>
+              <form method="post" class="inline-form">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="duplicate_layout_set">
+                <input type="hidden" name="tab" value="slides">
+                <input type="hidden" name="id" value="<?= h($t['id']) ?>">
+                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+              </form>
+              <form method="post" class="inline-form" onsubmit="return confirm('<?= h(t('tpl.delete_layout_set_confirm', ['name' => $t['title']])) ?>')">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="delete_layout_set">
+                <input type="hidden" name="tab" value="slides">
+                <input type="hidden" name="id" value="<?= h($t['id']) ?>">
+                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.delete')) ?></button>
+              </form>
+            </div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+      <?php if (!empty($sharedLayoutSets)): ?>
+      <div class="section-header" style="margin-top:20px;"><h2><?= h(t('tpl.shared_by_others_heading')) ?></h2></div>
+      <ul class="share-list">
+        <?php foreach ($sharedLayoutSets as $t): ?>
+          <li>
+            <span><?= h($t['title']) ?></span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
+              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_export')) ?></a>
+              <form method="post" class="inline-form">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                <input type="hidden" name="action" value="duplicate_layout_set">
+                <input type="hidden" name="tab" value="slides">
+                <input type="hidden" name="id" value="<?= h($t['id']) ?>">
+                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+              </form>
+            </div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+    <?php endif; ?>
+
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.new_slide_heading')) ?></h2></div>
     <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -463,11 +782,11 @@ require __DIR__ . '/includes/header.php';
     </form>
 
     <div class="section-header"><h2><?= h(t('tpl.my_slides_heading')) ?></h2></div>
-    <?php if (empty($myTemplates)): ?>
+    <?php if (empty($mySlideTemplates)): ?>
       <div class="empty-state"><?= h(t('tpl.no_own_slides')) ?></div>
     <?php else: ?>
       <ul class="share-list" id="slideTemplatesList">
-        <?php foreach ($myTemplates as $t): ?>
+        <?php foreach ($mySlideTemplates as $t): ?>
           <li draggable="true" data-tpl-id="<?= h($t['id']) ?>">
             <span><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span> <?= h($t['title']) ?> <span class="perm-tag <?= !empty($t['template_shared']) ? 'edit' : 'view' ?>"><?= !empty($t['template_shared']) ? h(t('tpl.shared_badge')) : h(t('tpl.private_badge')) ?></span></span>
             <div style="display:flex; gap:8px; align-items:center;">
@@ -491,6 +810,32 @@ require __DIR__ . '/includes/header.php';
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
                 <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.delete')) ?></button>
               </form>
+              <?php if (!empty($myLayoutSets) || !empty($sharedLayoutSets)): ?>
+              <details class="template-import-to-set" style="display:inline-block;">
+                <summary class="button button-ghost button-sm" style="cursor:pointer; list-style:none;"><?= h(t('tpl.to_layout_set')) ?></summary>
+                <form method="post" style="position:absolute; z-index:5; margin-top:6px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; min-width:260px;">
+                  <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                  <input type="hidden" name="action" value="import_template_to_layout_set">
+                  <input type="hidden" name="tab" value="slides">
+                  <input type="hidden" name="template_id" value="<?= h($t['id']) ?>">
+                  <label style="margin-top:0; font-size:0.85rem;"><?= h(t('tpl.layout_set_pick')) ?></label>
+                  <select name="layout_set_id" required style="width:100%; margin-bottom:8px;">
+                    <?php foreach (array_merge($myLayoutSets, $sharedLayoutSets) as $set): ?>
+                      <?php if ($set['owner_id'] === $me['id'] || $isAdmin): ?>
+                      <option value="<?= h($set['id']) ?>"><?= h($set['title']) ?></option>
+                      <?php endif; ?>
+                    <?php endforeach; ?>
+                  </select>
+                  <label style="font-size:0.85rem;"><?= h(t('tpl.layout_key_label')) ?></label>
+                  <input type="text" name="layout_key" value="<?= h(LayoutSet::layoutKeyFromTitle($t['title'])) ?>" placeholder="heading1" style="width:100%; margin-bottom:8px;">
+                  <label class="present-config-check" style="font-size:0.85rem; margin-bottom:8px;">
+                    <input type="checkbox" name="delete_source" style="width:auto;">
+                    <?= h(t('tpl.move_delete_source')) ?>
+                  </label>
+                  <button type="submit" class="button button-sm" style="width:100%;"><?= h(t('tpl.import_to_set_submit')) ?></button>
+                </form>
+              </details>
+              <?php endif; ?>
             </div>
           </li>
         <?php endforeach; ?>
@@ -498,11 +843,11 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
     <div class="section-header"><h2><?= h(t('tpl.shared_by_others_heading')) ?></h2></div>
-    <?php if (empty($sharedTemplates)): ?>
+    <?php if (empty($sharedSlideTemplates)): ?>
       <div class="empty-state"><?= h(t('tpl.nothing_shared')) ?></div>
     <?php else: ?>
       <ul class="share-list">
-        <?php foreach ($sharedTemplates as $t): ?>
+        <?php foreach ($sharedSlideTemplates as $t): ?>
           <li>
             <span><?= h($t['title']) ?></span>
             <div style="display:flex; gap:8px;">

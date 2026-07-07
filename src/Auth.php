@@ -603,6 +603,52 @@ class Auth
         }, []);
     }
 
+    public static function logosImporterEnabled(?array $user = null): bool
+    {
+        $user = $user ?? self::currentUser();
+        if (!$user) {
+            return false;
+        }
+        return !empty($user['logos_importer_enabled']);
+    }
+
+    public static function setLogosImporterEnabled(string $userId, bool $enabled): void
+    {
+        Storage::update(USERS_FILE, function ($users) use ($userId, $enabled) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['logos_importer_enabled'] = $enabled;
+                }
+            }
+            return $users;
+        }, []);
+    }
+
+    /** Logos-Zuordnung im Editor: standardmässig offen, danach Nutzerpräferenz. */
+    public static function logosZonesAccordionOpen(?array $user = null): bool
+    {
+        $user = $user ?? self::currentUser();
+        if (!$user) {
+            return true;
+        }
+        if (!array_key_exists('logos_zones_accordion_open', $user)) {
+            return true;
+        }
+        return (bool)$user['logos_zones_accordion_open'];
+    }
+
+    public static function setLogosZonesAccordionOpen(string $userId, bool $open): void
+    {
+        Storage::update(USERS_FILE, function ($users) use ($userId, $open) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['logos_zones_accordion_open'] = $open;
+                }
+            }
+            return $users;
+        }, []);
+    }
+
     /** @return list<array{id:string,label:string,url:string,username:string,root_path:string}> */
     public static function listWebdavDrivesPublic(array $user): array
     {

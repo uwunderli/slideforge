@@ -1110,6 +1110,11 @@ return [
     'tpl.duplicate' => 'Dupliquer',
     'tpl.text_duplicated' => 'Modèle de texte dupliqué.',
     'tpl.slide_duplicated' => 'Modèle de diapositive dupliqué.',
+    'elements.element_links_tab_standard' => 'Éléments standard',
+    'elements.element_links_tab_logos' => 'Attribution Logos',
+    'elements.element_links_col_logos_elements' => 'Éléments Logos',
+    'elements.element_links_col_logos_mapping' => 'Attribution Logos',
+    'elements.logos_insert_heading_more' => 'Autres éléments Logos pour diapositives',
 
     'common.save' => 'Enregistrer',
     'common.cancel' => 'Annuler',

@@ -349,7 +349,7 @@ JS;
         $revealJs = self::revealAsset('reveal.js');
 
         // Rohdaten für den Re-Import einbetten (Meta + bereits aufgelöste Folien).
-        $sourceData = json_encode(['meta' => $meta, 'slides' => $resolvedSlidesData['slides']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $sourceData = json_encode(['meta' => self::metaForReexport($meta), 'slides' => $resolvedSlidesData['slides']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $sourceData = str_replace('</script', '<\/script', $sourceData);
 
         $safeJs = str_replace('</script', '<\/script', $revealJs);
@@ -497,5 +497,70 @@ JS;
         unset($slide);
 
         return $slidesData;
+    }
+
+    /** Meta-Felder, die im SlideForge-Backup für den Re-Import mitgespeichert werden. */
+    public static function metaForReexport(array $meta): array
+    {
+        $keys = [
+            'title', 'width', 'height',
+            'show_progress', 'show_controls',
+            'safe_margin', 'presentation_duration',
+            'layout_set_id', 'footer_text',
+            'timebar_stops', 'clock_order',
+        ];
+        $out = [];
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $meta)) {
+                $out[$key] = $meta[$key];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Stellt Präsentations-Meta aus einem SlideForge-Backup wieder her.
+     *
+     * @return array{fields: array<string, mixed>, warnings: list<string>}
+     */
+    public static function metaFromReimport(array $exportedMeta, string $userId): array
+    {
+        $fields = [];
+        $warnings = [];
+
+        if (array_key_exists('show_progress', $exportedMeta)) {
+            $fields['show_progress'] = (bool)$exportedMeta['show_progress'];
+        }
+        if (array_key_exists('show_controls', $exportedMeta)) {
+            $fields['show_controls'] = (bool)$exportedMeta['show_controls'];
+        }
+        if (array_key_exists('safe_margin', $exportedMeta)) {
+            $fields['safe_margin'] = max(0, (int)$exportedMeta['safe_margin']);
+        }
+        if (array_key_exists('presentation_duration', $exportedMeta)) {
+            $fields['presentation_duration'] = max(1, (int)$exportedMeta['presentation_duration']);
+        }
+        if (array_key_exists('footer_text', $exportedMeta)) {
+            $fields['footer_text'] = (string)$exportedMeta['footer_text'];
+        }
+        if (isset($exportedMeta['timebar_stops']) && is_array($exportedMeta['timebar_stops'])) {
+            $fields['timebar_stops'] = $exportedMeta['timebar_stops'];
+        }
+        if (isset($exportedMeta['clock_order']) && is_array($exportedMeta['clock_order'])) {
+            $fields['clock_order'] = $exportedMeta['clock_order'];
+        }
+
+        $setId = trim((string)($exportedMeta['layout_set_id'] ?? ''));
+        if ($setId !== '') {
+            if (LayoutSet::isLayoutSet($setId) && Presentation::canUseTemplate($setId, $userId)) {
+                $fields['layout_set_id'] = $setId;
+            } else {
+                $warnings[] = t('import.layout_set_missing');
+            }
+        } elseif (array_key_exists('layout_set_id', $exportedMeta)) {
+            $fields['layout_set_id'] = '';
+        }
+
+        return ['fields' => $fields, 'warnings' => $warnings];
     }
 }

@@ -1101,6 +1101,11 @@ return [
     'tpl.duplicate' => 'Duplicar',
     'tpl.text_duplicated' => 'Model da text duplicà.',
     'tpl.slide_duplicated' => 'Model da slide duplicà.',
+    'elements.element_links_tab_standard' => 'Elements standards',
+    'elements.element_links_tab_logos' => 'Attribuziun Logos',
+    'elements.element_links_col_logos_elements' => 'Elements Logos',
+    'elements.element_links_col_logos_mapping' => 'Attribuziun Logos',
+    'elements.logos_insert_heading_more' => 'Ulteriurs elements Logos per slides',
 
     'common.save' => 'Guardar',
     'common.cancel' => 'Annullar',

@@ -1101,6 +1101,11 @@ return [
     'tpl.duplicate' => 'Duplica',
     'tpl.text_duplicated' => 'Modello di testo duplicato.',
     'tpl.slide_duplicated' => 'Modello di diapositiva duplicato.',
+    'elements.element_links_tab_standard' => 'Elementi standard',
+    'elements.element_links_tab_logos' => 'Assegnazione Logos',
+    'elements.element_links_col_logos_elements' => 'Elementi Logos',
+    'elements.element_links_col_logos_mapping' => 'Assegnazione Logos',
+    'elements.logos_insert_heading_more' => 'Altri elementi Logos per slide',
 
     'common.save' => 'Salva',
     'common.cancel' => 'Annulla',
