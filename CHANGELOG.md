@@ -6,12 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [2.0.4] - 2026-07-07
+## [2.1.0] - 2026-07-07
+
+### Added
+
+- **Folien-Sets (Layout-Sets):** Mehrere Layout-Folien pro Set, Set-Editor, Element-Zonen, Platzhalter-Rollen
+- **Logos-Import:** HTML-Export aus Logos Sermon Builder → Folien mit Layouts + Sprechernotizen
+- **Logos-Zuordnung** pro Set (Folien vs. Notizen vs. nicht verwendet)
+- **Vorlageelemente:** Modal zur Textvorlagen-Verknüpfung; Standard-Fallback-Textvorlage
+- **Set-Import/Export** als `.chs` (ZIP-Archiv)
+- **Standard-Set „Schlicht“** in `seed/layout-sets/schlicht/` für Neuinstallationen
+- **Vorlage anwenden** in Präsentationen mit verknüpftem Folien-Set
+- **Editor:** Vorlagen-Accordion (Ebenen → Objekte → Vorlagen), Raster-Ansicht im Hauptfenster (Toggle)
+- **Editor:** Raster-Ansicht und Masterfolie in linker Menüleiste
+- i18n für Set-/Logos-Funktionen in DE, EN, FR, IT, RM
 
 ### Changed
 
-- Add layout sets with Logos zone control and Schlicht default seed.
+- Editor: Folien-Raster ersetzt separates Modal — Ansicht wechselt im Hauptbereich
+- Editor: Rechte Sidebar mit einheitlichem Scroll-Verhalten
 
+### Fixed
+
+- Layout-Folien ohne `layoutKey` erscheinen in der Vorlagen-Auswahl (eindeutige `slide.id`)
+- Editor: Doppelte Scrollbalken in der rechten Sidebar behoben
 
 ## [2.0.3] - 2026-07-06
 

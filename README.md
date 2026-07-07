@@ -7,7 +7,7 @@
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v2.0.4](https://github.com/uwunderli/slideforge/releases/tag/v2.0.4)
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v2.1.0](https://github.com/uwunderli/slideforge/releases/tag/v2.1.0)
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
@@ -52,6 +52,7 @@ Präsentationen. Läuft auf jedem PHP-Webspace, **keine Datenbank** nötig.
 - **Markdown** in Textobjekten (`**fett**`, Listen, Links usw.) – in Vorschau und Export gerendert
 - **Objekt-Animationen** (reveal.js-Fragments) mit Reihenfolge, automatischem Weitergehen und Folienübergängen
 - **Vorlagen:** editierbare Markenfarben, Textvorlagen, Folienvorlagen (privat oder für alle freigegeben)
+- **Folien-Sets & Logos-Import (v2.1.0):** Layout-Sets mit mehreren Layout-Folien; Logos-HTML-Import (Sermon Builder) mit Zuordnung Folien/Notizen; Set-Export/Import als `.chs`; Standard-Set **Schlicht** bei Neuinstallation
 - **Rechtschreibung & Grammatik** über LanguageTool (Admin konfiguriert den Server), optional automatische Prüfung vor dem Präsentieren
 - Undo/Redo, Kopieren/Ausschneiden/Einfügen/Duplizieren, Ausrichtungshilfen, Sicherheitsabstand, Pfeiltasten-Verschiebung
 - Auto-Speichern, Notizen pro Folie (Markdown)
