@@ -188,20 +188,27 @@ class Presentation
         ]);
     }
 
-    public static function delete(string $id): void
+    public static function delete(string $id): bool
     {
         $dir = self::dir($id);
         if (!is_dir($dir)) {
-            return;
+            return true;
         }
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($files as $file) {
-            $file->isDir() ? rmdir($file->getPathname()) : unlink($file->getPathname());
+            $path = $file->getPathname();
+            if ($file->isDir()) {
+                if (!@rmdir($path)) {
+                    return false;
+                }
+            } elseif (!@unlink($path)) {
+                return false;
+            }
         }
-        rmdir($dir);
+        return @rmdir($dir);
     }
 
     /**
@@ -385,7 +392,8 @@ class Presentation
     public static function saveSlideLabel(string $id, int $index, string $label): array
     {
         $label = trim($label);
-        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $label) {
+        $isLayoutSet = LayoutSet::isLayoutSet($id);
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $label, $id, $isLayoutSet) {
             if (!isset($data['slides'][$index])) {
                 return $data;
             }
@@ -394,9 +402,22 @@ class Presentation
             } else {
                 $data['slides'][$index]['label'] = $label;
             }
+            if ($isLayoutSet && $label !== '') {
+                $currentKey = trim((string)($data['slides'][$index]['layoutKey'] ?? ''));
+                if ($currentKey === '' || str_starts_with($currentKey, 'slide_')) {
+                    $data['slides'][$index]['layoutKey'] = LayoutSet::assignLayoutKeyForSlide(
+                        $id,
+                        $data['slides'][$index],
+                        LayoutSet::layoutKeyFromTitle($label)
+                    );
+                }
+            }
             return $data;
         }, ['slides' => []]);
         self::updateMeta($id, []);
+        if ($isLayoutSet) {
+            LayoutSet::syncLayoutMap($id);
+        }
         return $result;
     }
 
@@ -1566,9 +1587,13 @@ class Presentation
 
     public static function addSlide(string $id, ?int $afterIndex = null): array
     {
+        $isLayoutSet = LayoutSet::isLayoutSet($id);
         $newSlide = self::defaultSlide();
-        $data = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($afterIndex, $newSlide) {
+        $data = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($afterIndex, $newSlide, $id, $isLayoutSet) {
             $slides = $data['slides'] ?? [];
+            if ($isLayoutSet) {
+                $newSlide['layoutKey'] = LayoutSet::assignLayoutKeyForSlide($id, $newSlide);
+            }
             if ($afterIndex === null || $afterIndex >= count($slides) - 1) {
                 $slides[] = $newSlide;
             } else {
@@ -1578,12 +1603,16 @@ class Presentation
             return $data;
         }, ['slides' => []]);
         self::updateMeta($id, []);
+        if ($isLayoutSet) {
+            LayoutSet::syncLayoutMap($id);
+        }
         return $data;
     }
 
     public static function duplicateSlide(string $id, int $index): array
     {
-        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index) {
+        $isLayoutSet = LayoutSet::isLayoutSet($id);
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $id, $isLayoutSet) {
             if (!isset($data['slides'][$index])) {
                 return $data;
             }
@@ -1592,10 +1621,18 @@ class Presentation
             foreach ($copy['objects'] as &$obj) {
                 $obj['id'] = Storage::generateId(4);
             }
+            if ($isLayoutSet) {
+                $sourceKey = trim((string)($copy['layoutKey'] ?? ''));
+                $preferred = $sourceKey !== '' ? $sourceKey . '_copy' : null;
+                $copy['layoutKey'] = LayoutSet::assignLayoutKeyForSlide($id, $copy, $preferred);
+            }
             array_splice($data['slides'], $index + 1, 0, [$copy]);
             return $data;
         }, ['slides' => []]);
         self::updateMeta($id, []);
+        if ($isLayoutSet) {
+            LayoutSet::syncLayoutMap($id);
+        }
         return $result;
     }
 

@@ -40,7 +40,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '338');
+define('ASSET_VERSION', '356');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -238,6 +238,8 @@ if ($__ttNeedsMigration) {
     }, []);
 }
 unset($__textTemplates, $__ttNeedsMigration, $__tt);
+
+TextTemplate::ensureFallback();
 
 // Verständliche Fehlermeldung statt rohem PHP-Fatal-Error bei Schreibproblemen
 set_exception_handler(function (Throwable $e) {

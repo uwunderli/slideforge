@@ -154,7 +154,7 @@ $bootstrap = [
     'logosElementLinkRoles' => $logosImporterEnabled
         ? LayoutSet::LOGOS_ZONE_ROLES
         : [],
-    'elementZoneKeys' => LayoutSet::ELEMENT_ZONES,
+    'elementZoneKeys' => LayoutSet::ELEMENT_ZONE_UI_KEYS,
     'elementIconHtml' => $elementIconHtml,
     'logosBadgeHtml' => sf_logos_badge(),
     'logosRoleLabels' => array_combine(
@@ -173,6 +173,9 @@ $bootstrap = [
         'apply' => t('template_modal.apply'),
         'propsEmpty' => t('props.empty'),
         'layersTitle' => t('props.layers_title'),
+        'objectsTitle' => t('props.objects_title'),
+        'settingsTemplates' => t('editor.settings_templates'),
+        'templatePickerHint' => t('editor.template_picker_hint'),
         'layersEmpty' => t('props.layers_empty'),
         'layersHint' => t('props.layers_hint'),
         'layersDrag' => t('props.layers_drag'),
@@ -277,6 +280,7 @@ $bootstrap = [
         'elementLinksColLogosDesc' => t('elements.element_links_col_logos_desc'),
         'elementLinksZonesTitle' => t('elements.logos_zones_heading'),
         'elementLinksZonesDesc' => t('elements.logos_zones_desc'),
+        'elementLinksZonesHelpBtn' => t('elements.logos_zones_help_btn'),
         'zoneSlides' => t('elements.zone_slides'),
         'zoneFooter' => t('elements.zone_footer'),
         'zoneCustom' => t('elements.zone_custom'),
@@ -912,6 +916,13 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>
         <span><?= h(t('editor.tab_background')) ?></span>
       </button>
+      <?php if (!$isTemplateMode): ?>
+      <div class="obj-tabs-separator" aria-hidden="true"></div>
+      <button type="button" class="obj-tab-btn obj-tab-btn-grid" id="slideGridViewBtn" title="<?= h(t('editor.tab_slide_grid')) ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span><?= h(t('editor.tab_slide_grid')) ?></span>
+      </button>
+      <?php endif; ?>
       <?php if ($showMasterSlideNav): ?>
       <button type="button"
         class="obj-tab-btn obj-tab-btn-master<?= $masterSlideNavActive ? ' active' : '' ?>"
@@ -936,10 +947,6 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <div class="editor-slides-toolbar">
         <?php if ($canEdit && (!$isTemplateMode || $isLayoutSetMode)): ?>
           <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>
-          <?php if (!$isTemplateMode): ?>
-          <button type="button" class="button button-ghost button-sm" id="slideGridViewBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.slide_grid_open')) ?></button>
-          <button type="button" class="button button-ghost button-sm" id="applyTemplateBtn" style="width:100%; margin-top:8px;"><?= h(t('editor.apply_template')) ?></button>
-          <?php endif; ?>
         <?php endif; ?>
       </div>
       <div id="slideFilmstrip" class="editor-slide-filmstrip"></div>
@@ -1128,7 +1135,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     </div>
   </aside>
 
-  <main class="canvas-area">
+  <main class="canvas-area" id="canvasArea">
+    <div class="canvas-slide-view" id="canvasSlideView">
     <div class="canvas-scroll">
       <div id="stageWrap" class="stage-wrap">
         <div id="stageBgLayer" class="stage-bg-layer"></div>
@@ -1151,6 +1159,37 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <textarea id="slideNotesInput" placeholder="<?= h(t('notes.placeholder')) ?>"></textarea>
     </div>
     <?php endif; ?>
+    </div>
+    <?php if ($canEdit && !$isTemplateMode): ?>
+    <div class="canvas-grid-view" id="canvasGridView" hidden>
+      <div class="editor-slide-grid-panel" id="slideGridPanel">
+        <div class="editor-slide-grid-toolbar">
+          <div class="editor-slide-grid-toolbar-row">
+            <span class="editor-slide-grid-selection" id="slideGridSelectionInfo"></span>
+            <button type="button" class="button button-ghost button-sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
+            <button type="button" class="button button-ghost button-sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
+            <span class="present-toolbar-sep"></span>
+            <button type="button" class="button button-sm" id="applyTransitionSelectedBtn" disabled><?= h(t('editor.apply_transition_selected')) ?></button>
+            <button type="button" class="button button-ghost button-sm" id="applyTransitionAllGridBtn"><?= h(t('bg.apply_transition_all')) ?></button>
+          </div>
+          <div class="editor-slide-grid-toolbar-row editor-slide-grid-toolbar-row-settings">
+            <div class="editor-slide-grid-setting-block">
+              <span class="editor-slide-grid-toolbar-label"><?= h(t('bg.transition_title')) ?></span>
+              <input type="hidden" id="gridTransitionSelect" value="slide">
+              <div id="gridTransitionPickerGroup" class="effect-icon-grid editor-grid-transition-picker"></div>
+            </div>
+            <div class="editor-slide-grid-setting-block editor-slide-grid-autoadvance-block">
+              <label class="editor-slide-grid-toolbar-label" for="gridAutoAdvanceInput"><?= h(t('bg.autoadvance_label')) ?></label>
+              <input type="number" id="gridAutoAdvanceInput" class="editor-slide-grid-autoadvance-input" min="0" step="1" value="0">
+            </div>
+          </div>
+        </div>
+        <div class="editor-slide-grid-scroll">
+          <div class="editor-slide-grid" id="slideGrid"></div>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
   </main>
 
   <?php if ($canEdit): ?>
@@ -1166,43 +1205,14 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     </div>
     <div class="spell-panel-body" id="spellResults"></div>
   </aside>
-  <aside class="props-panel-wrap" id="propsPanelWrap">
+  <div class="editor-right-sidebar" id="editorRightSidebar">
+    <aside class="props-panel-wrap" id="propsPanelWrap">
     <div class="props-layers-section" id="propsLayersPanel"></div>
     <div class="props-object-panel" id="propsObjectPanel">
       <div class="props-empty"><?= t('props.empty') ?></div>
     </div>
+    <div class="props-templates-section" id="propsTemplatesPanel" hidden></div>
   </aside>
-  <div class="editor-slide-grid-overlay" id="slideGridOverlay" hidden>
-    <div class="editor-slide-grid-inner" role="dialog" aria-modal="true" aria-labelledby="slideGridTitle">
-      <header class="editor-slide-grid-header">
-        <h2 id="slideGridTitle"><?= h(t('editor.slide_grid_title')) ?></h2>
-        <button type="button" class="button button-ghost button-sm" id="slideGridCloseBtn" aria-label="<?= h(t('common.close')) ?>">✕</button>
-      </header>
-      <div class="editor-slide-grid-toolbar">
-        <div class="editor-slide-grid-toolbar-row">
-          <span class="editor-slide-grid-selection" id="slideGridSelectionInfo"></span>
-          <button type="button" class="button button-ghost button-sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
-          <button type="button" class="button button-ghost button-sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
-          <span class="present-toolbar-sep"></span>
-          <button type="button" class="button button-sm" id="applyTransitionSelectedBtn" disabled><?= h(t('editor.apply_transition_selected')) ?></button>
-          <button type="button" class="button button-ghost button-sm" id="applyTransitionAllGridBtn"><?= h(t('bg.apply_transition_all')) ?></button>
-        </div>
-        <div class="editor-slide-grid-toolbar-row editor-slide-grid-toolbar-row-settings">
-          <div class="editor-slide-grid-setting-block">
-            <span class="editor-slide-grid-toolbar-label"><?= h(t('bg.transition_title')) ?></span>
-            <input type="hidden" id="gridTransitionSelect" value="slide">
-            <div id="gridTransitionPickerGroup" class="effect-icon-grid editor-grid-transition-picker"></div>
-          </div>
-          <div class="editor-slide-grid-setting-block editor-slide-grid-autoadvance-block">
-            <label class="editor-slide-grid-toolbar-label" for="gridAutoAdvanceInput"><?= h(t('bg.autoadvance_label')) ?></label>
-            <input type="number" id="gridAutoAdvanceInput" class="editor-slide-grid-autoadvance-input" min="0" step="1" value="0">
-          </div>
-        </div>
-      </div>
-      <div class="editor-slide-grid-scroll">
-        <div class="editor-slide-grid" id="slideGrid"></div>
-      </div>
-    </div>
   </div>
   <?php endif; ?>
 </div>

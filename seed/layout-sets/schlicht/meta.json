@@ -31,16 +31,15 @@
             "normal",
             "list_item"
         ],
-        "footer": [
-            "scripture_ref",
-            "scripture_verse"
-        ],
+        "footer": [],
         "custom": [
             "lighttext",
             "prompt"
         ],
         "unused": [
-            "meta"
+            "meta",
+            "scripture_ref",
+            "scripture_verse"
         ]
     },
     "safe_margin": 100

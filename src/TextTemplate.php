@@ -6,19 +6,83 @@
  */
 class TextTemplate
 {
+    public const FALLBACK_ID = 'standard';
+
+    public static function isFallback(string $id): bool
+    {
+        return $id === self::FALLBACK_ID;
+    }
+
+    /** @return array<string, mixed> */
+    public static function fallbackDefaults(): array
+    {
+        return [
+            'id' => self::FALLBACK_ID,
+            'name' => 'Text',
+            'fontFamily' => 'Open Sans',
+            'fontSize' => 65,
+            'fontWeight' => 'normal',
+            'italic' => false,
+            'underline' => false,
+            'strikethrough' => false,
+            'uppercase' => false,
+            'smallCaps' => false,
+            'color' => '#ffffff',
+            'align' => 'left',
+            'w' => 599,
+            'h' => 70,
+            'isFallback' => true,
+        ];
+    }
+
+    public static function ensureFallback(): void
+    {
+        Storage::update(TEXT_TEMPLATES_FILE, function ($list) {
+            foreach ($list as &$t) {
+                if (($t['id'] ?? '') === self::FALLBACK_ID) {
+                    $t['isFallback'] = true;
+                    return $list;
+                }
+            }
+            array_unshift($list, self::fallbackDefaults());
+            return $list;
+        }, []);
+    }
+
     public static function listAll(): array
     {
-        return Storage::read(TEXT_TEMPLATES_FILE, []);
+        $list = Storage::read(TEXT_TEMPLATES_FILE, []);
+        usort($list, function ($a, $b) {
+            $aFallback = self::isFallback((string)($a['id'] ?? ''));
+            $bFallback = self::isFallback((string)($b['id'] ?? ''));
+            if ($aFallback !== $bFallback) {
+                return $aFallback ? -1 : 1;
+            }
+            return 0;
+        });
+        return $list;
     }
 
     public static function find(string $id): ?array
     {
-        foreach (self::listAll() as $t) {
+        foreach (Storage::read(TEXT_TEMPLATES_FILE, []) as $t) {
             if ($t['id'] === $id) {
                 return $t;
             }
         }
         return null;
+    }
+
+    /** @return array<string, mixed>|null */
+    public static function resolve(?string $id): ?array
+    {
+        if ($id !== null && $id !== '') {
+            $tpl = self::find($id);
+            if ($tpl) {
+                return $tpl;
+            }
+        }
+        return self::find(self::FALLBACK_ID);
     }
 
     public static function create(array $fields): array
@@ -60,6 +124,9 @@ class TextTemplate
 
     public static function delete(string $id): void
     {
+        if (self::isFallback($id)) {
+            return;
+        }
         Storage::update(TEXT_TEMPLATES_FILE, function ($list) use ($id) {
             return array_values(array_filter($list, fn($t) => $t['id'] !== $id));
         }, []);
@@ -68,6 +135,9 @@ class TextTemplate
     /** Dupliziert eine Textvorlage direkt neben dem Original in der Liste. */
     public static function duplicate(string $id): ?array
     {
+        if (self::isFallback($id)) {
+            return null;
+        }
         $source = self::find($id);
         if (!$source) return null;
         $copy = $source;
@@ -95,13 +165,16 @@ class TextTemplate
                 $byId[$t['id']] = $t;
             }
             $new = [];
-            foreach ($orderedIds as $id) {
+            $ids = array_values(array_unique(array_merge(
+                [self::FALLBACK_ID],
+                array_filter(array_map('strval', $orderedIds), fn($id) => $id !== self::FALLBACK_ID)
+            )));
+            foreach ($ids as $id) {
                 if (isset($byId[$id])) {
                     $new[] = $byId[$id];
                     unset($byId[$id]);
                 }
             }
-            // Falls IDs fehlen sollten (z.B. gleichzeitig gelöscht), Rest anhängen statt zu verlieren
             foreach ($byId as $t) {
                 $new[] = $t;
             }

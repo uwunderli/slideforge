@@ -1,16 +1,16 @@
-# SlideForge – Release v3.0.0 (Briefing)
+# SlideForge – Release v3.1.0 (Briefing)
 
-> **Handoff:** *„Lies `docs/RELEASE_v3.0.0.md` und setze die Release um — ausser „Nicht in dieser Release“ und ggf. dokumentierte Unterphasen.“*
+> **Handoff:** *„Lies `docs/RELEASE_v3.1.0.md` und setze die Release um — ausser „Nicht in dieser Release“ und ggf. dokumentierte Unterphasen.“*
 
-Stand: Juli 2026 · Basis: **v2.3.0** (letzte v2.x) · **Major Release** — slides.com-artiger **Editor v2**
+Stand: Juli 2026 · Basis: **v2.4.0** (letzte v2.x) · **Major Release** — slides.com-artiger **Editor v2**
 
-> **Versionierung:** **v3.0.0** = neuer visueller Editor; **v2.x** (2.0–2.3) = Mobile, church.tools, Medien, Auto-Animate; **v1.x** = Konva-Editor-Ära (endet mit v1.0.4).
+> **Versionierung:** **v3.1.0** = neuer visueller Editor; **v2.x** (2.0–2.4) = Mobile, Folien-Sets/Logos, church.tools, Medien, Auto-Animate; **v1.x** = Konva-Editor-Ära (endet mit v1.0.4).
 
 ---
 
 ## Ziel
 
-SlideForge **3.0** bekommt einen **neuen, slides.com-artigen visuellen Editor** („**Editor v2**“): Die Folie wirkt **während der Bearbeitung wie die fertige Präsentation** — kein Markdown-Rohtext, kein „Design-Tool“-Gefühl mit versteckter Vorschau. Text **inline** bearbeiten, Elemente per **+ Inhalt** einfügen, **Layouts** wählen, Markenfarben/Themes sichtbar anwenden. **reveal.js-Export**, bestehende Präsentationen und Medien-Integrationen (Pixabay, WebDAV …) bleiben; der **Konva-Editor (v1)** bleibt als **Klassischer Editor** erreichbar.
+SlideForge **3.1** bekommt einen **neuen, slides.com-artigen visuellen Editor** („**Editor v2**“): Die Folie wirkt **während der Bearbeitung wie die fertige Präsentation** — kein Markdown-Rohtext, kein „Design-Tool“-Gefühl mit versteckter Vorschau. Text **inline** bearbeiten, Elemente per **+ Inhalt** einfügen, **Layouts** wählen, Markenfarben/Themes sichtbar anwenden. **reveal.js-Export**, bestehende Präsentationen und Medien-Integrationen (Pixabay, WebDAV …) bleiben; der **Konva-Editor (v1)** bleibt als **Klassischer Editor** erreichbar.
 
 ---
 
@@ -26,7 +26,7 @@ Was Nutzer von slides.com erwarten (Zielbild):
 - **Theme/Markenfarben** greifen sichtbar in die UI ein
 - Present/Export = **1:1** das, was im Editor stand
 
-Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Try slides.com“* — SlideForge 3.0 soll **diesen Komfort self-hosted** liefern.
+Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Try slides.com“* — SlideForge 3.1 soll **diesen Komfort self-hosted** liefern.
 
 ---
 
@@ -48,7 +48,7 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 | **Migration** | Bestehende Decks: **„Im visuellen Editor öffnen“** — Konva → v2 (best-effort); v1 = **„Klassischer Editor“** |
 | **Export** | `SlideRenderer` / Present kompatibel erweitern |
 
-**Implementierung:** In **Unterphasen** (3.0-alpha → 3.0-rc → 3.0.0), Briefing = Gesamtziel.
+**Implementierung:** In **Unterphasen** (3.1-alpha → 3.1-rc → 3.1.0), Briefing = Gesamtziel.
 
 ---
 
@@ -82,9 +82,9 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 
 | Phase | Inhalt | Lieferbar als |
 |-------|--------|----------------|
-| **3.0-alpha** | Editor-v2-Shell, WYSIWYG-Text, Folienleiste, +Text, Speichern, Present-Export | Feature-Flag / Beta |
-| **3.0-rc** | Layouts, Medien-Insert, Objekt-Toolbar | Release Candidate |
-| **3.0.0** | Migration v1→v2, Animationen in v2, PPTX-Smoke, Doku | **v3.0.0** final |
+| **3.1-alpha** | Editor-v2-Shell, WYSIWYG-Text, Folienleiste, +Text, Speichern, Present-Export | Feature-Flag / Beta |
+| **3.1-rc** | Layouts, Medien-Insert, Objekt-Toolbar | Release Candidate |
+| **3.1.0** | Migration v1→v2, Animationen in v2, PPTX-Smoke, Doku | **v3.1.0** final |
 
 ---
 
@@ -167,8 +167,8 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 ## Dokumentation & Demo
 
 - [ ] README — SlideForge **2.0**, zwei Editoren
-- [ ] CHANGELOG.md → `[2.0.0]`
-- [ ] `.github/RELEASE_v3.0.0.md`
+- [ ] CHANGELOG.md → `[3.1.0]`
+- [ ] `.github/RELEASE_v3.1.0.md`
 - [ ] Demo-Showcase im visuellen Editor
 - [ ] Feature-Tour: „Visueller Editor“
 - [ ] Optional: `docs/EDITOR_V2.md`
@@ -178,7 +178,7 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 ## Release-Checkliste (am Ende)
 
 - [ ] Editor v2 Kern + Migration + Export
-- [ ] PR → main · Tag **`v3.0.0`** · Deploy Prod + Demo
+- [ ] PR → main · Tag **`v3.1.0`** · Deploy Prod + Demo
 
 ---
 
@@ -190,7 +190,7 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 | 2 | v1 Konva | **Behalten** als „Klassischer Editor“ | Power-User, Fallback. |
 | 3 | Datenformat | **`slides.json` erweitern** | Backup, Migration. |
 | 4 | Default neue Decks | **Editor v2** (SOLL) | Einstieg für Neulinge. |
-| 5 | Versionsnummer | **`v3.0.0`** (Major) | User: Versionsprung; Editor-Neugeneration. |
+| 5 | Versionsnummer | **`v3.1.0`** (Major) | User: Versionsprung; Editor-Neugeneration. |
 
 ---
 
@@ -203,4 +203,4 @@ Reveal.js-Hinweis in der [Demo](https://revealjs.com/demo/): *„Not a coder? Tr
 
 ## Ursprüngliche Idee (Rohtext)
 
-> WYSIWYG-Editor → **grösserer slides.com-Editor** → **SlideForge v3.0.0**
+> WYSIWYG-Editor → **grösserer slides.com-Editor** → **SlideForge v3.1.0**

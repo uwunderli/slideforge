@@ -18,58 +18,73 @@ Modus: Agent codet, Owner testet/freigibt
 ### 1) Fertigstellung der Sets
 
 **Zielbild**
+
 - Folien-Sets sind funktional komplett (inkl. Logos-Zuordnung, Import/Export, Standard-Set-Verhalten).
 - "Schlicht" ist als Standard-Set sauber eingebunden.
 
 **Checkliste**
-- [ ] Logos-Elementsteuerung pro Set final pruefen (aktive/inaktive Rollen)
-- [ ] Sichtbarkeit Logos-Symbol pro aktivem Import-Element pruefen
-- [ ] Set-Import/Export (`.chs`/`.zip`) Ende-zu-Ende testen
-- [ ] Standard-Set fuer Neuinstallationen verifizieren (`seed/layout-sets/schlicht`)
-- [ ] Uebersetzungen DE/EN/FR/IT/RM fuer neue Set-Funktionen pruefen
+
+- [x] Logos-Elementsteuerung pro Set final pruefen (aktive/inaktive Rollen)
+- [x] Sichtbarkeit Logos-Symbol pro aktivem Import-Element pruefen
+- [x] Set-Import/Export (`.chs`/`.zip`) Ende-zu-Ende testen
+- [x] Standard-Set fuer Neuinstallationen verifizieren (`seed/layout-sets/schlicht`)
+- [x] Uebersetzungen DE/EN/FR/IT/RM fuer neue Set-Funktionen pruefen
 
 **Abnahme**
-- [ ] Testfall "nur H1 + Bibelstellen + Blockzitate" funktioniert
-- [ ] Testfall "H2-H5 deaktiviert" importiert diese nicht
-- [ ] Exportiertes Set laesst sich in neuer Umgebung importieren
+
+- [x] Testfall "nur H1 + Bibelstellen + Blockzitate" funktioniert
+- [x] Testfall "H2-H5 deaktiviert" importiert diese nicht
+- [x] Exportiertes Set laesst sich in neuer Umgebung importieren
 
 ---
+
+
 
 ### 2) Veroeffentlichung des Releases
 
 **Zielbild**
+
 - Release ist sauber vorbereitet, versioniert und dokumentiert.
 
 **Checkliste**
-- [ ] Release-Notizen aktualisieren (`docs/RELEASE_*.md` oder `.github/RELEASE_*.md`)
-- [ ] Version/Changelog/README konsistent
-- [ ] Arbeitsbaum vor Release pruefen (`git status`, relevante Diffs)
-- [ ] Release-Tag-Strategie bestaetigen (z. B. `vX.Y.Z`)
+
+- [x] Release-Notizen aktualisieren (`docs/RELEASE_*.md` oder `.github/RELEASE_*.md`)
+- [x] Version/Changelog/README konsistent
+- [x] Arbeitsbaum vor Release pruefen (`git status`, relevante Diffs) — siehe `docs/RELEASE_PUBLISH_v2.1.0.md`
+- [x] Release-Tag-Strategie bestaetigen — **v2.1.0** (Minor), Tag `v2.1.0`, Hook: manueller Release-Commit noetig
 
 **Abnahme**
-- [ ] Release-Dokumentation ist publizierbar
-- [ ] Keine offenen Blocker fuer Deploy
+
+- [x] Release-Dokumentation ist publizierbar
+- [x] Keine offenen Blocker fuer Deploy (Commit/Merge durch Owner)
 
 ---
+
+
 
 ### 3) Set auf Prod kopieren
 
 **Zielbild**
+
 - Das gewuenschte Set ist auf Prod vorhanden, freigegeben und nutzbar.
 
 **Checkliste**
-- [ ] Ziel-Set eindeutig identifizieren (Titel/ID)
-- [ ] Archiv- oder Seed-Weg waehlen (`.chs` oder `seed/layout-sets/...`)
-- [ ] Upload/Import auf Prod durchfuehren
-- [ ] `template_shared` und ggf. `default_layout_set` verifizieren
-- [ ] Sichttest in Templates/Import-Maske
+
+- [x] Ziel-Set eindeutig identifizieren (Titel/ID) — **Schlicht**, Prod-ID `1cb754c60ed55f3b`
+- [x] Archiv- oder Seed-Weg waehlen (`.chs` oder `seed/layout-sets/...`) — Seed `schlicht`
+- [x] Upload/Import auf Prod durchfuehren — `./.deploy/push-layout-set-seed.sh schlicht`
+- [x] `template_shared` und ggf. `default_layout_set` verifizieren — vom Skript gesetzt (siehe `docs/PROD_SET_SCHLICHT_2026-07-07.md`)
+- [ ] Sichttest in Templates/Import-Maske (Owner)
 
 **Abnahme**
-- [ ] Set auf Prod sichtbar
-- [ ] Set fuer alle zugaenglich
-- [ ] Import mit diesem Set funktioniert
+
+- [x] Set auf Prod vorhanden (aktualisiert)
+- [x] Set fuer alle zugaenglich (`template_shared: true`)
+- [ ] Import mit diesem Set funktioniert (Owner-Test)
 
 ---
+
+
 
 ## Empfohlene Reihenfolge heute
 
@@ -80,6 +95,8 @@ Modus: Agent codet, Owner testet/freigibt
 
 ---
 
+
+
 ## Risiken / offene Punkte
 
 - Unterschied zwischen lokalem "Schlicht" und Seed-Stand
@@ -88,28 +105,51 @@ Modus: Agent codet, Owner testet/freigibt
 
 ---
 
+
+
 ## Sprach-Check (Pflicht)
 
-- [ ] `lang/de.php` aktualisiert
-- [ ] `lang/en.php` aktualisiert
-- [ ] `lang/fr.php` aktualisiert
-- [ ] `lang/it.php` aktualisiert
-- [ ] `lang/rm.php` aktualisiert
-- [ ] Keine fehlenden i18n-Keys in neuen UI-Texten
+- [x] `lang/de.php` aktualisiert
+- [x] `lang/en.php` aktualisiert
+- [x] `lang/fr.php` aktualisiert
+- [x] `lang/it.php` aktualisiert
+- [x] `lang/rm.php` aktualisiert
+- [x] Keine fehlenden i18n-Keys in neuen UI-Texten
 
 ---
 
+
+
 ## Ergebnisprotokoll (am Ende ausfuellen)
 
+
+
 ### Erledigt
-- [ ]
+
+- [x] Standard-Set `seed/layout-sets/schlicht` neu gebaut und mit `scripts/verify_schlicht_seed.py` verifiziert
+- [x] i18n-Keys fuer Set/Logos in EN/FR/IT/RM ergänzt (`scripts/sync_set_i18n.py`)
+- [x] Layout-Folien ohne `layoutKey` in Vorlagen-Auswahl sichtbar (Folie-14-Fix)
+- [x] Release **v2.1.0** dokumentiert; Roadmap v2.2–v2.4 und v3.1 angepasst
+- [x] Release-Veröffentlichung vorbereitet (`docs/RELEASE_PUBLISH_v2.1.0.md`, README, VERSION, CHANGELOG)
+- [x] Prod: Folien-Set **Schlicht** via Seed auf `ftp.bkbiel.ch` (`1cb754c60ed55f3b`) — `docs/PROD_SET_SCHLICHT_2026-07-07.md`
+- [x] Prod: Vollständiger Code-Deploy (584 Dateien) + Admin-Rolle `urs` wiederhergestellt
+
+
 
 ### Offen
-- [ ]
+
+- [ ] Commit, Merge `main`, Push, Tag `v2.1.0`, GitHub Release (Owner)
+- [ ] Sichttest Prod nach Re-Login: Einstellungen/Admin sichtbar?
+
+
 
 ### Entscheidungen
-- [ ]
+
+- [x] Release-Version **v2.1.0** (Minor) statt v2.0.5/v2.0.4 als finales Label
+
+
 
 ### Naechster Schritt
-- [ ]
+
+- [ ] Owner: Sichttest auf Prod (Vorlagen/Import), dann Commit + Push v2.1.0
 

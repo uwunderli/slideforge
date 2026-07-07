@@ -72,6 +72,10 @@ switch ($action) {
 
     case 'slide_thumbnails':
         $slidesData = Presentation::getSlides($id);
+        $meta = Presentation::getMeta($id) ?? [];
+        $slideW = max(1, (int)($meta['width'] ?? 1920));
+        $slideH = max(1, (int)($meta['height'] ?? 1080));
+        $schematic = !empty($_GET['schematic']);
         $thumbnails = [];
         foreach ($slidesData['slides'] ?? [] as $slide) {
             $bg = $slide['background'] ?? null;
@@ -85,7 +89,9 @@ switch ($action) {
             }
             $thumbnails[] = [
                 'id' => $slide['id'],
-                'html' => SlideRenderer::renderSlideThumbnailHtml($slide, null),
+                'html' => $schematic
+                    ? SlideRenderer::renderSlideSchematicThumbnailHtml($slide, $slideW, $slideH)
+                    : SlideRenderer::renderSlideThumbnailHtml($slide, null),
                 'color' => $color,
             ];
         }
@@ -163,7 +169,30 @@ switch ($action) {
 
     case 'list_slide_templates':
         [$mine, $shared] = Presentation::listTemplatesForUser($me['id']);
-        json_ok(['mine' => $mine, 'shared' => $shared]);
+        $enrichTemplateThumb = static function (array $meta): array {
+            $slides = Presentation::getSlides($meta['id'])['slides'] ?? [];
+            $slide = $slides[0] ?? null;
+            if ($slide) {
+                $bg = $slide['background'] ?? null;
+                $color = '#333333';
+                if ($bg) {
+                    if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
+                        $color = $bg['value'] ?? '#333333';
+                    } elseif (($bg['type'] ?? '') === 'image') {
+                        $color = '#222222';
+                    }
+                }
+                $slideW = max(100, (int)($meta['width'] ?? 1920));
+                $slideH = max(100, (int)($meta['height'] ?? 1080));
+                $meta['thumbHtml'] = SlideRenderer::renderSlideSchematicThumbnailHtml($slide, $slideW, $slideH);
+                $meta['thumbColor'] = $color;
+            }
+            return $meta;
+        };
+        json_ok([
+            'mine' => array_map($enrichTemplateThumb, $mine),
+            'shared' => array_map($enrichTemplateThumb, $shared),
+        ]);
         break;
 
     case 'list_layout_sets':
@@ -176,17 +205,31 @@ switch ($action) {
         if (!LayoutSet::isLayoutSet($setId) || !Presentation::canUseTemplate($setId, $me['id'])) {
             json_fail('Keine Berechtigung für dieses Folien-Set.', 403);
         }
+        $setMeta = Presentation::getMeta($setId);
+        $slideW = max(100, (int)($setMeta['width'] ?? 1920));
+        $slideH = max(100, (int)($setMeta['height'] ?? 1080));
         $layouts = [];
         foreach (Presentation::getSlides($setId)['slides'] ?? [] as $slide) {
-            $key = $slide['layoutKey'] ?? '';
+            $key = LayoutSet::resolveSlideLayoutKey($slide);
             if ($key === '') {
                 continue;
+            }
+            $bg = $slide['background'] ?? null;
+            $color = '#333333';
+            if ($bg) {
+                if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
+                    $color = $bg['value'] ?? '#333333';
+                } elseif (($bg['type'] ?? '') === 'image') {
+                    $color = '#222222';
+                }
             }
             $layouts[] = [
                 'slideId' => (string)($slide['id'] ?? ''),
                 'layoutKey' => $key,
                 'title' => LayoutSet::slideLabel($slide),
                 'slide' => $slide,
+                'thumbHtml' => SlideRenderer::renderSlideThumbnailHtml($slide, null),
+                'thumbColor' => $color,
             ];
         }
         json_ok(['layouts' => $layouts, 'layout_set_id' => $setId]);

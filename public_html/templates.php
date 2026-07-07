@@ -178,8 +178,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('tpl.text_saved');
     }
     if ($action === 'delete_text_template' && $isAdmin) {
-        TextTemplate::delete($_POST['id'] ?? '');
-        $msg = t('tpl.text_deleted');
+        $deleteId = (string)($_POST['id'] ?? '');
+        if (TextTemplate::isFallback($deleteId)) {
+            $error = t('tpl.text_fallback_cannot_delete');
+        } else {
+            TextTemplate::delete($deleteId);
+            $msg = t('tpl.text_deleted');
+        }
     }
     if ($action === 'duplicate_text_template' && $isAdmin) {
         TextTemplate::duplicate($_POST['id'] ?? '');
@@ -269,17 +274,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $file = $_FILES['layout_set_archive'] ?? null;
         if (!$file || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
             $error = t('tpl.layout_set_import_no_file');
+        } elseif (!LayoutSet::isAllowedArchiveUpload((string)($file['tmp_name'] ?? ''), (string)($file['name'] ?? ''))) {
+            $error = t('tpl.layout_set_import_invalid_type');
         } else {
-            $name = strtolower((string)($file['name'] ?? ''));
-            if (!(str_ends_with($name, '.zip') || str_ends_with($name, '.chs'))) {
-                $error = t('tpl.layout_set_import_invalid_type');
-            } else {
-                try {
-                    LayoutSet::importArchive($me['id'], (string)$file['tmp_name']);
-                    $msg = t('tpl.layout_set_imported');
-                } catch (Throwable $e) {
-                    $error = $e->getMessage();
-                }
+            try {
+                LayoutSet::importArchive($me['id'], (string)$file['tmp_name']);
+                $msg = t('tpl.layout_set_imported');
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
             }
         }
     }
@@ -326,8 +328,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tid = $_POST['id'] ?? '';
         $meta = Presentation::getMeta($tid);
         if ($meta && !empty($meta['is_template']) && ($meta['owner_id'] === $me['id'] || $isAdmin)) {
-            Presentation::delete($tid);
-            $msg = t('tpl.slide_deleted');
+            if (Presentation::delete($tid)) {
+                $msg = t('tpl.slide_deleted');
+            } else {
+                $error = t('tpl.delete_failed');
+            }
         } else {
             $error = t('tpl.no_permission');
         }
@@ -362,8 +367,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $setId = $_POST['id'] ?? '';
         $meta = Presentation::getMeta($setId);
         if ($meta && LayoutSet::isLayoutSet($setId) && ($meta['owner_id'] === $me['id'] || $isAdmin)) {
-            Presentation::delete($setId);
-            $msg = t('tpl.layout_set_deleted');
+            if (Presentation::delete($setId)) {
+                $msg = t('tpl.layout_set_deleted');
+            } else {
+                $error = t('tpl.delete_failed');
+            }
         } else {
             $error = t('tpl.no_permission');
         }
@@ -599,12 +607,19 @@ require __DIR__ . '/includes/header.php';
 
     <div id="textTemplatesList">
     <?php foreach ($textTemplates as $t): ?>
-      <details class="text-template-row" <?= $isAdmin ? 'draggable="true" data-tpl-id="' . h($t['id']) . '"' : '' ?>>
+      <?php $isFallbackTpl = TextTemplate::isFallback((string)($t['id'] ?? '')); ?>
+      <details class="text-template-row<?= $isFallbackTpl ? ' text-template-row--fallback' : '' ?>" <?= ($isAdmin && !$isFallbackTpl) ? 'draggable="true" data-tpl-id="' . h($t['id']) . '"' : '' ?>>
         <summary class="text-template-summary">
-          <?php if ($isAdmin): ?><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span><?php endif; ?>
+          <?php if ($isAdmin && !$isFallbackTpl): ?><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span><?php endif; ?>
           <span class="text-template-preview" style="font-family:'<?= h($t['fontFamily']) ?>',sans-serif; font-weight:<?= h($t['fontWeight']) ?>; color:<?= h($t['color']) ?>;"><?= h($t['name']) ?></span>
+          <?php if ($isFallbackTpl): ?>
+            <span class="perm-tag edit"><?= h(t('tpl.text_fallback_badge')) ?></span>
+          <?php endif; ?>
           <span class="text-template-meta"><?= (int)$t['fontSize'] ?>px &middot; <?= h($t['fontFamily']) ?></span>
         </summary>
+        <?php if ($isFallbackTpl): ?>
+          <p class="text-template-fallback-hint"><?= h(t('tpl.text_fallback_desc')) ?></p>
+        <?php endif; ?>
         <form method="post" style="margin-top:14px;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="update_text_template">
@@ -670,8 +685,10 @@ require __DIR__ . '/includes/header.php';
         <?php if ($isAdmin): ?>
         <div style="display:flex; gap:8px; margin-top:12px;">
           <button type="submit" class="button button-sm"><?= h(t('tpl.save')) ?></button>
+          <?php if (!$isFallbackTpl): ?>
           <button type="submit" name="action" value="duplicate_text_template" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
           <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm" onclick="return confirm('<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>')"><?= h(t('tpl.delete')) ?></button>
+          <?php endif; ?>
         </div>
         <?php endif; ?>
         </form>
@@ -705,7 +722,7 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="action" value="import_layout_set_archive">
       <div style="flex:1; min-width:240px;">
         <label style="margin-top:0;"><?= h(t('tpl.layout_set_import_label')) ?></label>
-        <input type="file" name="layout_set_archive" accept=".chs,.zip,application/zip" required>
+        <input type="file" name="layout_set_archive" required>
       </div>
       <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_import_submit')) ?></button>
     </form>

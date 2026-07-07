@@ -574,7 +574,7 @@ class LogosSermonImporter
 
         $style = $placement;
         if (!empty($placement['textTemplateId'])) {
-            $tpl = TextTemplate::find($placement['textTemplateId']);
+            $tpl = TextTemplate::resolve($placement['textTemplateId']);
             if ($tpl) {
                 $style = array_merge($tpl, $placement);
             }

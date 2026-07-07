@@ -126,9 +126,9 @@ def main():
         ],
         "elementZones": {
             "slides": ["document_title", "heading1", "heading2", "heading3", "heading4", "heading5", "normal", "list_item"],
-            "footer": ["scripture_ref", "scripture_verse"],
+            "footer": [],
             "custom": ["lighttext", "prompt"],
-            "unused": ["meta"],
+            "unused": ["meta", "scripture_ref", "scripture_verse"],
         },
         "safe_margin": 100,
     }

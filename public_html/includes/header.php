@@ -101,6 +101,7 @@ $manifestUrl = $webPrefix . '/manifest.php';
       <div class="user-menu-dropdown" id="userMenuDropdown">
         <div class="user-menu-name"><?= h($currentUser['username']) ?></div>
         <a href="templates.php"><?= h(t('nav.templates')) ?></a>
+        <a href="import.php"><?= h(t('nav.import')) ?></a>
         <div class="user-menu-sep"></div>
         <a href="profile.php"><?= h(t('nav.profile')) ?></a>
         <?php if (Auth::isAdmin()): ?>

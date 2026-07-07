@@ -139,7 +139,15 @@ class Auth
         if (!self::isLoggedIn()) {
             return null;
         }
-        return self::findById($_SESSION['user_id']);
+        $user = self::findById($_SESSION['user_id']);
+        // Session-ID veraltet (z.B. nach Restore/Migration von users.json): per Benutzername neu verknüpfen.
+        if ($user === null && !empty($_SESSION['username'])) {
+            $user = self::findByUsername((string)$_SESSION['username']);
+            if ($user !== null) {
+                $_SESSION['user_id'] = $user['id'];
+            }
+        }
+        return $user;
     }
 
     public static function findById(string $id): ?array

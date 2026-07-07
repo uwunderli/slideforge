@@ -77,6 +77,9 @@ class LayoutSet
 
     public const ELEMENT_ZONES = ['slides', 'footer', 'custom', 'unused'];
 
+    /** Zonen im Logos-Zuordnungsdialog (ohne Fußzeile). */
+    public const ELEMENT_ZONE_UI_KEYS = ['slides', 'custom', 'unused'];
+
     /** @deprecated use STANDARD_ELEMENT_ROLES */
     public const SLIDE_ELEMENT_ROLES = [
         'document_title',
@@ -119,9 +122,9 @@ class LayoutSet
     /** Standard-Zuordnung Logos-Element → Import-Zone. */
     public const DEFAULT_ELEMENT_ZONES = [
         'slides' => ['document_title', 'heading1', 'heading2', 'heading3', 'heading4', 'heading5', 'lighttext', 'scripture_block'],
-        'footer' => ['scripture_ref', 'scripture_verse'],
+        'footer' => [],
         'custom' => ['normal', 'list_item', 'prompt', 'scripture_inline'],
-        'unused' => ['meta'],
+        'unused' => ['meta', 'scripture_ref', 'scripture_verse'],
     ];
 
     public static function isLayoutSet(string $id): bool
@@ -256,7 +259,7 @@ class LayoutSet
             return null;
         }
         foreach (Presentation::getSlides($setId)['slides'] ?? [] as $slide) {
-            if ((string)($slide['id'] ?? '') === $slideId && ($slide['layoutKey'] ?? '') !== '') {
+            if ((string)($slide['id'] ?? '') === $slideId) {
                 return $slide;
             }
         }
@@ -266,13 +269,10 @@ class LayoutSet
     /** Layout-Folien in Filmstreifen-Reihenfolge (oben → unten). */
     public static function layoutsInOrder(string $setId): array
     {
-        $out = [];
-        foreach (Presentation::getSlides($setId)['slides'] ?? [] as $slide) {
-            if (!empty($slide['layoutKey'])) {
-                $out[] = $slide;
-            }
+        if (!self::isLayoutSet($setId)) {
+            return [];
         }
-        return $out;
+        return Presentation::getSlides($setId)['slides'] ?? [];
     }
 
     /** Findet die passende Layout-Folie für eine Logos-Rolle (Filmstreifen + eindeutige slide.id). */
@@ -797,6 +797,40 @@ class LayoutSet
     }
 
     /** Exportiert ein Folien-Set als ZIP-Archiv (Dateiendung kann frei gewählt werden, z. B. .chs). */
+    public static function isZipArchiveFile(string $path): bool
+    {
+        $fh = @fopen($path, 'rb');
+        if (!$fh) {
+            return false;
+        }
+        $magic = fread($fh, 4);
+        fclose($fh);
+        return in_array($magic, ["PK\x03\x04", "PK\x05\x06", "PK\x07\x08"], true);
+    }
+
+    public static function isAllowedArchiveUpload(string $path, string $originalName = ''): bool
+    {
+        $name = strtolower(trim($originalName));
+        if ($name !== '' && (str_ends_with($name, '.zip') || str_ends_with($name, '.chs'))) {
+            return true;
+        }
+        return self::isZipArchiveFile($path);
+    }
+
+    public static function isLayoutSetArchiveFile(string $path): bool
+    {
+        if (!self::isZipArchiveFile($path) || !class_exists('ZipArchive')) {
+            return false;
+        }
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            return false;
+        }
+        $ok = $zip->locateName('meta.json') !== false && $zip->locateName('slides.json') !== false;
+        $zip->close();
+        return $ok;
+    }
+
     public static function exportArchive(string $setId, string $archivePath): void
     {
         if (!self::isLayoutSet($setId)) {
@@ -962,6 +996,53 @@ class LayoutSet
         return $key !== '' ? $key : 'layout';
     }
 
+    /** Effektiver Layout-Schlüssel (gespeichert, aus Label oder slide.id). */
+    public static function resolveSlideLayoutKey(array $slide): string
+    {
+        $key = trim((string)($slide['layoutKey'] ?? ''));
+        if ($key !== '') {
+            return $key;
+        }
+        $label = trim((string)($slide['label'] ?? ''));
+        if ($label !== '') {
+            return self::layoutKeyFromTitle($label);
+        }
+        $id = trim((string)($slide['id'] ?? ''));
+        return $id !== '' ? 'slide_' . $id : '';
+    }
+
+    /** Eindeutigen layoutKey für eine neue Layout-Folie vergeben. */
+    public static function assignLayoutKeyForSlide(string $setId, array $slide, ?string $preferredKey = null): string
+    {
+        $existing = [];
+        $slideId = (string)($slide['id'] ?? '');
+        foreach (Presentation::getSlides($setId)['slides'] ?? [] as $s) {
+            if ($slideId !== '' && (string)($s['id'] ?? '') === $slideId) {
+                continue;
+            }
+            $key = self::resolveSlideLayoutKey($s);
+            if ($key !== '') {
+                $existing[] = $key;
+            }
+        }
+        $base = trim((string)($preferredKey ?? ''));
+        if ($base === '') {
+            $label = trim((string)($slide['label'] ?? ''));
+            $base = $label !== '' ? self::layoutKeyFromTitle($label) : '';
+        }
+        if ($base === '') {
+            $id = trim((string)($slide['id'] ?? ''));
+            $base = $id !== '' ? 'slide_' . $id : 'layout';
+        }
+        $key = $base;
+        $suffix = 2;
+        while (in_array($key, $existing, true)) {
+            $key = $base . '_' . $suffix;
+            $suffix++;
+        }
+        return $key;
+    }
+
     public static function layoutMap(array $setMeta): array
     {
         return array_merge(self::DEFAULT_LAYOUT_MAP, $setMeta['logosLayoutMap'] ?? []);
@@ -1036,6 +1117,14 @@ class LayoutSet
                 $result['unused'][] = $role;
             }
         }
+        if (!empty($result['footer'])) {
+            foreach ($result['footer'] as $role) {
+                if (!in_array($role, $result['unused'], true)) {
+                    $result['unused'][] = $role;
+                }
+            }
+            $result['footer'] = [];
+        }
         return $result;
     }
 
@@ -1084,12 +1173,9 @@ class LayoutSet
     public static function styleForRole(string $role, array $placement = [], ?array $setMeta = null): array
     {
         $style = $placement;
-        $tplId = self::textTemplateIdForRole($role, $setMeta);
-        if ($tplId) {
-            $tpl = TextTemplate::find($tplId);
-            if ($tpl) {
-                $style = array_merge($tpl, $placement);
-            }
+        $tpl = TextTemplate::resolve(self::textTemplateIdForRole($role, $setMeta));
+        if ($tpl) {
+            $style = array_merge($tpl, $placement);
         }
         return $style;
     }
@@ -1859,12 +1945,9 @@ class LayoutSet
             'h' => (int)($def['h'] ?? 100),
         ];
         $style = $placement;
-        $tplId = $def['textTemplateId'] ?? ElementLink::textTemplateId($role);
-        if ($tplId) {
-            $tpl = TextTemplate::find($tplId);
-            if ($tpl) {
-                $style = array_merge($tpl, $placement);
-            }
+        $tpl = TextTemplate::resolve($def['textTemplateId'] ?? ElementLink::textTemplateId($role));
+        if ($tpl) {
+            $style = array_merge($tpl, $placement);
         }
         if (!empty($def['italic'])) {
             $style['italic'] = true;

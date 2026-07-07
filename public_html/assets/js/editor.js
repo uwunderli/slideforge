@@ -25,6 +25,9 @@
     activePropsTab: 'form',
     activeFormatGroup: null,
     layersPanelOpen: localStorage.getItem('sf_layers_open') === '1',
+    objectPanelOpen: localStorage.getItem('sf_object_open') !== '0',
+    templatesPanelOpen: localStorage.getItem('sf_templates_open') === '1',
+    editorViewMode: 'slide',
     brandColors: boot.brandColors || [],
     textTemplates: boot.textTemplates || [],
     templateMode: !!boot.templateMode,
@@ -365,29 +368,130 @@
     document.getElementById('zoomFitBtn')?.addEventListener('click', () => zoomFit());
   }
 
-  function bindTemplatePicker() {
-    const btn = document.getElementById('applyTemplateBtn');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-      const listEl = document.getElementById('templateList');
-      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">' + SF.i18n.loading + '</p>';
-      document.getElementById('templateModal').classList.add('open');
-      try {
-        const setId = SF.meta.layout_set_id;
-        if (setId) {
-          const res = await fetch(
-            'api.php?action=list_layout_set_layouts&id=' + encodeURIComponent(SF.id) +
-            '&layout_set_id=' + encodeURIComponent(setId)
-          ).then(r => r.json());
-          if (!res.ok) throw new Error(res.error || 'Fehler');
-          renderLayoutSetPicker(res.layouts || [], setId);
-        } else {
-          const res = await apiGet('list_slide_templates');
-          renderTemplatePicker(res.mine, res.shared);
-        }
-      } catch (e) {
-        listEl.innerHTML = '<p style="color:var(--danger); font-size:0.85rem;">' + SF.i18n.error + '</p>';
-      }
+  function closeEditorSettingsMenu() {
+    const wrap = document.querySelector('[data-settings-menu]');
+    if (!wrap) return;
+    wrap.querySelectorAll('[data-settings-panel]').forEach((p) => { p.hidden = true; });
+    const submenu = wrap.querySelector('[data-settings-submenu]');
+    if (submenu) submenu.hidden = true;
+    const btn = wrap.querySelector('[data-menu-btn]');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.classList.remove('open');
+    }
+  }
+
+  function layoutPickerScale() {
+    const listEl = document.getElementById('templatePickerList');
+    const host = listEl?.closest('.props-templates-scroll') || listEl;
+    const cellW = host ? Math.max(72, (host.clientWidth - 10) / 2) : 100;
+    return cellW / SF.meta.width;
+  }
+
+  function updateTemplatesPickerLayout() {
+    const scroll = document.querySelector('.props-templates-scroll');
+    const listEl = document.getElementById('templatePickerList');
+    if (!scroll || !listEl || !SF.templatesPanelOpen) return;
+    const innerW = Math.max(160, scroll.clientWidth);
+    const cellW = Math.max(72, (innerW - 10) / 2);
+    const thumbH = cellW * (SF.meta.height / Math.max(1, SF.meta.width));
+    const rowH = thumbH + 22 + 8;
+    const minH = Math.ceil(36 + rowH * 2);
+    scroll.style.minHeight = minH + 'px';
+    scroll.style.maxHeight = '';
+    const scale = cellW / SF.meta.width;
+    listEl.querySelectorAll('.layout-picker-thumb-scale').forEach((el) => {
+      el.style.width = SF.meta.width + 'px';
+      el.style.height = SF.meta.height + 'px';
+      el.style.transform = 'scale(' + scale + ')';
+    });
+  }
+
+  function layoutPickerThumbBlock(thumbHtml, thumbColor) {
+    const scale = layoutPickerScale();
+    return '<span class="layout-picker-thumb" style="--lp-color:' + escapeHtml(thumbColor || '#111') + '">' +
+      '<span class="layout-picker-thumb-scale" style="width:' + SF.meta.width + 'px;height:' + SF.meta.height + 'px;transform:scale(' + scale + ');">' +
+      (thumbHtml || '') + '</span></span>';
+  }
+
+  async function loadTemplatePickerPanel() {
+    const listEl = document.getElementById('templatePickerList');
+    if (!listEl) return;
+    const setId = SF.meta.layout_set_id;
+    if (!setId) {
+      listEl.innerHTML = '<p class="props-video-note">' + escapeHtml(SF.i18n.empty) + '</p>';
+      return;
+    }
+    listEl.innerHTML = '<p class="props-video-note">' + escapeHtml(SF.i18n.loading) + '</p>';
+    try {
+      const res = await fetch(
+        'api.php?action=list_layout_set_layouts&id=' + encodeURIComponent(SF.id) +
+        '&layout_set_id=' + encodeURIComponent(setId)
+      ).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || 'Fehler');
+      renderLayoutPickerInSettings(res.layouts || [], setId);
+    } catch (e) {
+      listEl.innerHTML = '<p class="props-video-note" style="color:var(--danger);">' + escapeHtml(SF.i18n.error) + '</p>';
+    }
+  }
+
+  function renderLayoutPickerInSettings(layouts, setId) {
+    const listEl = document.getElementById('templatePickerList');
+    if (!listEl) return;
+    if (!layouts.length) {
+      listEl.innerHTML = '<p class="props-video-note">' + escapeHtml(SF.i18n.empty) + '</p>';
+      return;
+    }
+    const currentSlide = SF.slides[SF.currentIndex] || {};
+    listEl.innerHTML = layouts.map((l) => {
+      const selected = l.layoutKey === currentSlide.layoutKey
+        && (!currentSlide.layoutSetSlideId || l.slideId === currentSlide.layoutSetSlideId);
+      return '<button type="button" class="layout-picker-item' + (selected ? ' selected' : '') + '" role="option"' +
+        ' data-layout-key="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' +
+        '<span class="layout-picker-label">' + escapeHtml(l.title || l.layoutKey) + '</span>' +
+        layoutPickerThumbBlock(l.thumbHtml, l.thumbColor) +
+        '</button>';
+    }).join('');
+    listEl.querySelectorAll('.layout-picker-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyLayoutFromSet(setId, btn.dataset.layoutKey, btn.getAttribute('data-layout-slide-id') || '');
+      });
+    });
+    syncTemplatePickerSelection();
+    requestAnimationFrame(updateTemplatesPickerLayout);
+  }
+
+  function syncTemplatePickerSelection() {
+    const listEl = document.getElementById('templatePickerList');
+    if (!listEl) return;
+    const currentSlide = SF.slides[SF.currentIndex] || {};
+    listEl.querySelectorAll('.layout-picker-item').forEach((btn) => {
+      const selected = btn.dataset.layoutKey === currentSlide.layoutKey
+        && (!currentSlide.layoutSetSlideId || btn.getAttribute('data-layout-slide-id') === currentSlide.layoutSetSlideId);
+      btn.classList.toggle('selected', !!selected);
+    });
+  }
+
+  function renderSlideTemplatePickerInSettings(mine, shared) {
+    const listEl = document.getElementById('templatePickerList');
+    if (!listEl) return;
+    if (!mine.length && !shared.length) {
+      listEl.innerHTML = '<p class="props-video-note">' + escapeHtml(SF.i18n.empty) + '</p>';
+      return;
+    }
+    const renderGroup = (title, items) => {
+      if (!items.length) return '';
+      return '<div class="layout-picker-group-title">' + escapeHtml(title) + '</div>' +
+        items.map((t) =>
+          '<button type="button" class="layout-picker-item" role="option" data-template-id="' + escapeHtml(t.id) + '">' +
+            '<span class="layout-picker-label">' + escapeHtml(t.title) + '</span>' +
+            layoutPickerThumbBlock(t.thumbHtml, t.thumbColor) +
+          '</button>'
+        ).join('');
+    };
+    listEl.innerHTML = renderGroup(SF.i18n.own, mine) + renderGroup(SF.i18n.shared, shared);
+    listEl.querySelectorAll('[data-template-id]').forEach((btn) => {
+      btn.addEventListener('click', () => applySlideTemplate(btn.dataset.templateId));
     });
   }
 
@@ -423,7 +527,8 @@
       loadSlideIntoStage(SF.currentIndex, true);
       pushHistory();
       await renderSlideFilmstrip();
-      document.getElementById('templateModal').classList.remove('open');
+      closeEditorSettingsMenu();
+      if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
       reloadPreviewWindow();
     } catch (e) {
@@ -464,7 +569,8 @@
       loadSlideIntoStage(SF.currentIndex, true);
       pushHistory();
       await renderSlideFilmstrip();
-      document.getElementById('templateModal').classList.remove('open');
+      closeEditorSettingsMenu();
+      if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
       reloadPreviewWindow();
     } catch (e) {
@@ -516,6 +622,7 @@
     buildStage();
     initTransitionPicker();
     loadSlideIntoStage(SF.currentIndex);
+    renderTemplatesPanel();
     if (!SF.templateMode || SF.layoutSetMode) {
       updateFilmstripActive();
       const filmstrip = document.getElementById('slideFilmstrip');
@@ -532,10 +639,13 @@
     initMediaSearchButtons();
     initMediaLibraryPanel();
     bindZoomUI();
-    bindTemplatePicker();
     initElementsPanel();
     updatePresentLinkOnSlideChange();
     window.addEventListener('resize', resizeStageToFit);
+    window.addEventListener('resize', updateTemplatesPickerLayout);
+    window.addEventListener('resize', () => {
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+    });
     const canvasScrollEl = document.querySelector('.canvas-scroll');
     if (canvasScrollEl && window.ResizeObserver) {
       let resizeRaf = null;
@@ -948,8 +1058,13 @@
     }
   }
 
+  function slideThumbnailsUrl() {
+    return 'api.php?action=slide_thumbnails&id=' + encodeURIComponent(SF.id);
+  }
+
   async function fetchSlideThumbnails() {
-    const res = await apiGet('slide_thumbnails');
+    const res = await fetch(slideThumbnailsUrl()).then((r) => r.json());
+    if (!res.ok) throw new Error(res.error || 'Unbekannter Fehler');
     SF.thumbnails = {};
     (res.thumbnails || []).forEach((t) => { SF.thumbnails[t.id] = t; });
     return SF.thumbnails;
@@ -959,7 +1074,8 @@
     const container = document.getElementById('slideFilmstrip');
     if (!container) return;
     try {
-      const res = await apiGet('slide_thumbnails');
+      const res = await fetch(slideThumbnailsUrl()).then((r) => r.json());
+      if (!res.ok) throw new Error(res.error || 'Unbekannter Fehler');
       const slide = SF.slides[SF.currentIndex];
       if (!slide) return;
       const thumb = (res.thumbnails || []).find((t) => t.id === slide.id);
@@ -1057,7 +1173,7 @@
     const fsScale = filmstripScale();
     const itemHeight = filmstripItemHeight();
 
-    const showSlideLabels = SF.layoutSetMode || SF.hasLayoutSet;
+    const showSlideLabels = SF.layoutSetMode;
     SF.slides.forEach((slide, i) => {
       const thumb = SF.thumbnails[slide.id] || {};
       const hasNotes = slideHasNotes(slide);
@@ -1218,6 +1334,7 @@
     syncPreviewSlideIndex();
     updateEditorContextTitle();
     renderLayersPanel();
+    syncTemplatePickerSelection();
   }
 
   // ---------- Hintergrund ----------
@@ -1421,7 +1538,66 @@
   }
 
   function gridCellScale() {
-    return 168 / SF.meta.width;
+    const grid = document.getElementById('slideGrid');
+    if (!grid || !grid.clientWidth) return 168 / SF.meta.width;
+    const cols = Math.max(1, Math.floor((grid.clientWidth + 14) / (168 + 14)));
+    const cellW = (grid.clientWidth - (cols - 1) * 14) / cols;
+    return Math.max(120, cellW) / SF.meta.width;
+  }
+
+  function syncEditorViewModeUi() {
+    const isGrid = SF.editorViewMode === 'grid';
+    const canvasArea = document.getElementById('canvasArea');
+    const slideView = document.getElementById('canvasSlideView');
+    const gridView = document.getElementById('canvasGridView');
+    const gridBtn = document.getElementById('slideGridViewBtn');
+    if (canvasArea) canvasArea.classList.toggle('grid-view-active', isGrid);
+    if (slideView) slideView.hidden = isGrid;
+    if (gridView) gridView.hidden = !isGrid;
+    if (gridBtn) gridBtn.classList.toggle('active', isGrid);
+    if (isGrid) {
+      document.querySelectorAll('.obj-tab-btn[data-objtab]').forEach((b) => b.classList.remove('active'));
+    } else if (gridBtn) {
+      gridBtn.classList.remove('active');
+      const slidesTab = document.querySelector('.obj-tab-btn[data-objtab="slides"]');
+      const activeObjTab = document.querySelector('.obj-tab-btn[data-objtab].active');
+      if (slidesTab && !activeObjTab) {
+        slidesTab.classList.add('active');
+        document.querySelectorAll('.obj-tab-panel').forEach((p) => {
+          p.classList.toggle('active', p.dataset.objtab === 'slides');
+        });
+      }
+    }
+  }
+
+  function setEditorViewMode(mode) {
+    const next = mode === 'grid' ? 'grid' : 'slide';
+    if (next === SF.editorViewMode) return;
+    if (next === 'grid') {
+      if (!document.getElementById('canvasGridView')) return;
+      gridSelectedIndices.clear();
+      gridSelectedIndices.add(SF.currentIndex);
+      gridLastClickedIndex = SF.currentIndex;
+      initGridFields();
+      SF.editorViewMode = 'grid';
+      syncEditorViewModeUi();
+      renderSlideGrid();
+      return;
+    }
+    SF.editorViewMode = 'slide';
+    syncEditorViewModeUi();
+  }
+
+  function toggleSlideGridView() {
+    setEditorViewMode(SF.editorViewMode === 'grid' ? 'slide' : 'grid');
+  }
+
+  function openSlideGridView() {
+    setEditorViewMode('grid');
+  }
+
+  function closeSlideGridView() {
+    setEditorViewMode('slide');
   }
 
   function gridAutoAdvanceValue() {
@@ -1545,22 +1721,6 @@
     } else {
       setGridTransitionPickerValue(hidden.value);
     }
-  }
-
-  function openSlideGridView() {
-    const overlay = document.getElementById('slideGridOverlay');
-    if (!overlay) return;
-    gridSelectedIndices.clear();
-    gridSelectedIndices.add(SF.currentIndex);
-    gridLastClickedIndex = SF.currentIndex;
-    initGridFields();
-    renderSlideGrid();
-    overlay.hidden = false;
-  }
-
-  function closeSlideGridView() {
-    const overlay = document.getElementById('slideGridOverlay');
-    if (overlay) overlay.hidden = true;
   }
 
   async function applyTransitionToIndices(indices) {
@@ -2893,7 +3053,36 @@
   }
 
   function syncLayersPropsLayout() {
-    document.getElementById('propsPanelWrap')?.classList.toggle('layers-menu-open', !!SF.layersPanelOpen);
+    const wrap = document.getElementById('propsPanelWrap');
+    if (!wrap) return;
+    wrap.classList.toggle('layers-menu-open', !!SF.layersPanelOpen);
+    wrap.classList.toggle('templates-menu-open', !!SF.templatesPanelOpen);
+    wrap.classList.toggle('object-menu-open', !!SF.objectPanelOpen && !!SF.selectedNode);
+  }
+
+  function objectPanelTitle(node) {
+    const prefix = I.objectsTitle || 'Objekte';
+    if (!node) return prefix;
+    return prefix + ' – ' + layerItemLabel(node);
+  }
+
+  function wrapObjectPanelContent(title, innerHtml) {
+    const isOpen = SF.objectPanelOpen !== false;
+    return '<div class="props-object-accordion' + (isOpen ? ' open' : '') + '" id="propsObjectAccordion">' +
+      '<button type="button" class="props-layers-header" id="propsObjectToggle">' +
+      '<span>' + escapeHtml(title) + '</span>' +
+      '<span class="props-accordion-chevron">▾</span></button>' +
+      '<div class="props-object-body">' + innerHtml + '</div></div>';
+  }
+
+  function bindObjectPanelToggle() {
+    document.getElementById('propsObjectToggle')?.addEventListener('click', () => {
+      SF.objectPanelOpen = !SF.objectPanelOpen;
+      localStorage.setItem('sf_object_open', SF.objectPanelOpen ? '1' : '0');
+      document.getElementById('propsObjectAccordion')?.classList.toggle('open', SF.objectPanelOpen);
+      syncLayersPropsLayout();
+      requestAnimationFrame(updateTemplatesPickerLayout);
+    });
   }
 
   function renderLayersPanel() {
@@ -2941,6 +3130,7 @@
         });
       }
       syncLayersPropsLayout();
+      requestAnimationFrame(updateTemplatesPickerLayout);
     });
 
     panel.querySelectorAll('button.props-layer-item').forEach((btn) => {
@@ -2956,6 +3146,45 @@
 
     bindLayersListDrag(panel.querySelector('.props-layers-list'));
     syncLayersPropsLayout();
+  }
+
+  function renderTemplatesPanel() {
+    const panel = document.getElementById('propsTemplatesPanel');
+    if (!panel) return;
+
+    const setId = SF.meta.layout_set_id;
+    if (!setId || SF.layoutSetMode || SF.templateMode || !SF.canEdit) {
+      panel.hidden = true;
+      panel.innerHTML = '';
+      syncLayersPropsLayout();
+      return;
+    }
+
+    panel.hidden = false;
+    const isOpen = !!SF.templatesPanelOpen;
+    let html = '<div class="props-templates-accordion' + (isOpen ? ' open' : '') + '" id="propsTemplatesAccordion">' +
+      '<button type="button" class="props-layers-header" id="propsTemplatesToggle">' +
+      '<span>' + escapeHtml(I.settingsTemplates || 'Vorlagen') + '</span>' +
+      '<span class="props-accordion-chevron">▾</span></button>' +
+      '<div class="props-templates-body">';
+    if (isOpen) {
+      html += '<p class="props-video-note props-templates-hint">' + escapeHtml(I.templatePickerHint || '') + '</p>';
+      html += '<div class="props-templates-scroll"><div class="editor-layout-picker" id="templatePickerList" role="listbox">';
+      html += '<p class="props-video-note">' + escapeHtml(SF.i18n.loading) + '</p>';
+      html += '</div></div>';
+    }
+    html += '</div></div>';
+    panel.innerHTML = html;
+
+    document.getElementById('propsTemplatesToggle')?.addEventListener('click', () => {
+      SF.templatesPanelOpen = !SF.templatesPanelOpen;
+      localStorage.setItem('sf_templates_open', SF.templatesPanelOpen ? '1' : '0');
+      renderTemplatesPanel();
+    });
+
+    if (isOpen) loadTemplatePickerPanel();
+    syncLayersPropsLayout();
+    requestAnimationFrame(updateTemplatesPickerLayout);
   }
 
   function selectNodes(nodes) {
@@ -3123,18 +3352,19 @@
       const obj = nodeToObject(node);
       const childCount = (obj.children || []).length;
       const countLabel = (I.groupChildCount || '{n} Objekte').replace('{n}', String(childCount));
-      let html = '<div class="props-title">' + (I.typeGroup || 'Gruppe') + '</div>';
-      html += '<p class="props-video-note">' + escapeHtml(countLabel) + '</p>';
-      html += '<div class="props-section">';
-      html += '<div class="options-subtitle" style="margin-top:0;">' + I.alignToSlide + '</div>';
-      html += alignGridButtonsHtml();
-      html += propsTransferRowHtml('copyPositionBtn', 'pastePositionBtn', I.positionCopy, I.positionPaste, !!SF.positionClipboard);
-      html += '<div class="options-subtitle">' + I.advanced + '</div>';
-      html += '<div class="row">' + fieldNumber('p_x', 'X', obj.x) + fieldNumber('p_y', 'Y', obj.y) + '</div>';
-      html += fieldNumber('p_rotation', I.rotation, obj.rotation || 0);
-      html += fieldRange('p_opacity', I.opacity, Math.round((obj.opacity || 1) * 100));
-      html += '</div>';
-      panel.innerHTML = html;
+      let inner = '<p class="props-video-note">' + escapeHtml(countLabel) + '</p>';
+      inner += '<div class="props-section">';
+      inner += '<div class="options-subtitle" style="margin-top:0;">' + I.alignToSlide + '</div>';
+      inner += alignGridButtonsHtml();
+      inner += propsTransferRowHtml('copyPositionBtn', 'pastePositionBtn', I.positionCopy, I.positionPaste, !!SF.positionClipboard);
+      inner += '<div class="options-subtitle">' + I.advanced + '</div>';
+      inner += '<div class="row">' + fieldNumber('p_x', 'X', obj.x) + fieldNumber('p_y', 'Y', obj.y) + '</div>';
+      inner += fieldNumber('p_rotation', I.rotation, obj.rotation || 0);
+      inner += fieldRange('p_opacity', I.opacity, Math.round((obj.opacity || 1) * 100));
+      inner += '</div>';
+      panel.innerHTML = wrapObjectPanelContent(objectPanelTitle(node), inner);
+      bindObjectPanelToggle();
+      syncLayersPropsLayout();
       wirePropsPanel(node, obj);
       return;
     }
@@ -3153,8 +3383,7 @@
     if (!tabs.includes(SF.activePropsTab)) SF.activePropsTab = tabs[0];
     const tabLabels = { format: I.tabFormat, form: I.tabForm, position: I.tabPosition, effect: I.tabEffect };
 
-    let html = '<div class="props-title">' + typeLabel + '</div>';
-    html += '<div class="page-tabs props-tabs">' + tabs.map(t =>
+    let html = '<div class="page-tabs props-tabs">' + tabs.map(t =>
       '<button type="button" class="page-tab-btn props-tab-btn' + (SF.activePropsTab === t ? ' active' : '') + '" data-propstab="' + t + '">' + tabLabels[t] + '</button>'
     ).join('') + '</div>';
 
@@ -3332,7 +3561,10 @@
     html += '</div>';
     html += '<button type="button" class="button button-danger button-sm" id="deleteObjBtn" style="width:100%; margin-top:14px;">' + I.deleteObject + '</button>';
 
-    panel.innerHTML = html;
+    panel.innerHTML = wrapObjectPanelContent(objectPanelTitle(node), html);
+    bindObjectPanelToggle();
+    syncLayersPropsLayout();
+    requestAnimationFrame(updateTemplatesPickerLayout);
     wirePropsPanel(node, obj);
     if (node && node.getAttr('objType') === 'text') {
       applySpellcheckAttrs(document.getElementById('p_text'));
@@ -3401,10 +3633,10 @@
   }
   function accordionGroup(id, label, bodyHtml) {
     const isOpen = SF.activeFormatGroup === id;
-    return '<div class="props-accordion-group' + (isOpen ? ' open' : '') + '" data-accordion-group="' + id + '">' +
-      '<button type="button" class="props-accordion-header">' + label + '<span class="props-accordion-chevron">▾</span></button>' +
-      '<div class="props-accordion-body">' + bodyHtml + '</div>' +
-    '</div>';
+    return '<div class="props-accordion-group props-panel-accordion' + (isOpen ? ' open' : '') + '" data-accordion-group="' + id + '">' +
+      '<button type="button" class="props-layers-header props-panel-accordion-header">' + escapeHtml(label) + '<span class="props-accordion-chevron">▾</span></button>' +
+      '<div class="props-accordion-body props-panel-accordion-body">' + bodyHtml + '</div>' +
+      '</div>';
   }
   function fieldIconPicker(id, label, options, selected, groupClass) {
     const cls = 'format-toggle-group effect-icon-grid' + (groupClass ? ' ' + groupClass : '');
@@ -5274,7 +5506,9 @@
 
     document.querySelectorAll('.obj-tab-btn[data-objtab]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (SF.editorViewMode === 'grid') setEditorViewMode('slide');
         document.querySelectorAll('.obj-tab-btn[data-objtab]').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('slideGridViewBtn')?.classList.remove('active');
         document.querySelectorAll('.obj-tab-panel').forEach(p => {
           p.classList.toggle('active', p.dataset.objtab === btn.dataset.objtab);
         });
@@ -5532,11 +5766,7 @@
       }
     });
 
-    document.getElementById('slideGridViewBtn')?.addEventListener('click', openSlideGridView);
-    document.getElementById('slideGridCloseBtn')?.addEventListener('click', closeSlideGridView);
-    document.getElementById('slideGridOverlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'slideGridOverlay') closeSlideGridView();
-    });
+    document.getElementById('slideGridViewBtn')?.addEventListener('click', toggleSlideGridView);
     document.getElementById('slideGridSelectAllBtn')?.addEventListener('click', () => {
       gridSelectedIndices.clear();
       SF.slides.forEach((_, i) => gridSelectedIndices.add(i));
@@ -5565,7 +5795,7 @@
     // gleichermassen für das Eigenschaften-Panel (Text) und den Folien-Eigenschaften-Dialog,
     // ohne dass sich mehrere Akkordeons auf der Seite gegenseitig zuklappen.
     document.addEventListener('click', (e) => {
-      const header = e.target.closest('.props-accordion-header');
+      const header = e.target.closest('.props-accordion-header, .props-panel-accordion-header');
       if (!header) return;
       const container = header.closest('.props-accordion');
       const group = header.closest('.props-accordion-group');
@@ -5596,8 +5826,7 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        const gridOverlay = document.getElementById('slideGridOverlay');
-        if (gridOverlay && !gridOverlay.hidden) {
+        if (SF.editorViewMode === 'grid') {
           e.preventDefault();
           closeSlideGridView();
           return;

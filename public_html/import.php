@@ -144,6 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
+            if (str_ends_with($origName, '.chs') || LayoutSet::isLayoutSetArchiveFile($file['tmp_name'])) {
+                $newId = LayoutSet::importArchive($me['id'], $file['tmp_name']);
+                redirect('editor.php?id=' . urlencode($newId));
+                exit;
+            }
+
             if (str_ends_with($origName, '.zip')) {
                 $zip = new ZipArchive();
                 if ($zip->open($file['tmp_name']) !== true) {
@@ -254,7 +260,7 @@ require __DIR__ . '/includes/header.php';
   <form method="post" enctype="multipart/form-data" style="margin-top:20px;">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <label for="import_file"><?= h(t('import.file_label')) ?></label>
-    <input type="file" id="import_file" name="import_file" accept=".html,.htm,.zip,.pdf,.pptx,.odp" required>
+    <input type="file" id="import_file" name="import_file" required>
     <?php if ($logosImporterEnabled): ?>
     <?php if ($layoutSets): ?>
     <div id="logosLayoutSetBlock" hidden>
@@ -272,6 +278,7 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
     <div class="props-video-note" style="margin-top:8px;"><?= t('import.logos_hint') ?></div>
     <?php endif; ?>
+    <div class="props-video-note" style="margin-top:6px;"><?= t('import.chs_hint') ?></div>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.pptx_hint') ?></div>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.odp_hint') ?></div>
     <button type="submit" class="button" style="margin-top:16px;"><?= h(t('import.submit')) ?></button>

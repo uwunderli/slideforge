@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lädt seed/layout-sets/<name>/ auf den Prod-Server (data/presentations/).
-# Ersetzt ein vorhandenes freigegebenes Set gleichen Titels.
+# Schreibt Dateien per PHP (www-data), nicht per SFTP — sonst keine Schreibrechte im Editor.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,6 +13,7 @@ source "$ENV_FILE"
 
 REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}:${SSH_PORT:-22}}"
 AUTH="${SSH_USER}:${SSH_PASS}"
+PROD_URL="${PROD_URL:-https://slides.bkbiel.ch}"
 SEED_DIR="$ROOT/seed/layout-sets/$SEED_NAME"
 
 if [[ ! -f "$SEED_DIR/meta.json" || ! -f "$SEED_DIR/slides.json" ]]; then
@@ -22,6 +23,22 @@ fi
 
 curl_sftp() {
   SSH_AUTH_SOCK= curl -sS --ftp-method nocwd --ftp-create-dirs --user "$AUTH" "$@"
+}
+
+sftp_rm_presentation() {
+  local id="$1"
+  local base="data/presentations/${id}"
+  for f in meta.json slides.json acl.json; do
+    curl_sftp -Q "rm ${base}/${f}" "${REMOTE}/" >/dev/null 2>&1 || true
+  done
+  if mapfile -t ASSETS < <(curl_sftp --list-only "${REMOTE}/${base}/assets/" 2>/dev/null | grep -v '^\.\.?$' || true); then
+    for asset in "${ASSETS[@]}"; do
+      [[ -z "$asset" || "$asset" == "." || "$asset" == ".." ]] && continue
+      curl_sftp -Q "rm ${base}/assets/${asset}" "${REMOTE}/" >/dev/null 2>&1 || true
+    done
+  fi
+  curl_sftp -Q "rmdir ${base}/assets" "${REMOTE}/" >/dev/null 2>&1 || true
+  curl_sftp -Q "rmdir ${base}" "${REMOTE}/" >/dev/null 2>&1 || true
 }
 
 echo "Admin auf dem Server ermitteln …"
@@ -69,13 +86,20 @@ done
 if [[ -n "$EXISTING_ID" ]]; then
   TARGET_ID="$EXISTING_ID"
   echo "Aktualisiere vorhandenes Set: $TARGET_ID"
+  echo "Alte Dateien per SFTP entfernen …"
+  sftp_rm_presentation "$TARGET_ID"
 else
   TARGET_ID="$(python3 -c 'import secrets; print(secrets.token_hex(8))')"
   echo "Neues Set anlegen: $TARGET_ID"
 fi
 
 PACK="$(mktemp -d)"
-trap 'rm -rf "$PACK"' EXIT
+ZIP="$(mktemp --suffix=.zip)"
+TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+REMOTE_SCRIPT="public_html/_install_layout_set_$$.php"
+REMOTE_BASENAME="_install_layout_set_$$.php"
+TMPPHP="$(mktemp)"
+trap 'rm -rf "$PACK" "$ZIP" "$TMPPHP"' EXIT
 
 python3 - "$SEED_DIR" "$PACK" "$TARGET_ID" "$ADMIN_ID" <<'PY'
 import json, sys, shutil
@@ -136,15 +160,71 @@ else:
     (out / "assets").mkdir()
 PY
 
-REMOTE_BASE="data/presentations/${TARGET_ID}"
-for file in meta.json slides.json acl.json; do
-  curl_sftp -T "$PACK/$file" "${REMOTE}/${REMOTE_BASE}/${file}"
-done
-if [[ -d "$PACK/assets" ]]; then
-  for asset in "$PACK/assets"/*; do
-    [[ -f "$asset" ]] || continue
-    curl_sftp -T "$asset" "${REMOTE}/${REMOTE_BASE}/assets/$(basename "$asset")"
-  done
+python3 - "$PACK" "$ZIP" <<'PY'
+import sys, zipfile
+from pathlib import Path
+pack, zpath = Path(sys.argv[1]), sys.argv[2]
+with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as zf:
+    for path in pack.rglob('*'):
+        if path.is_file():
+            zf.write(path, path.relative_to(pack).as_posix())
+PY
+
+STAGING_ZIP="data/cache/layout-push-${TOKEN}.zip"
+echo "Installiere per PHP (${TARGET_ID}) …"
+curl_sftp -T "$ZIP" "${REMOTE}/${STAGING_ZIP}"
+
+cat > "$TMPPHP" <<PHP
+<?php
+require __DIR__ . '/../config.php';
+header('Content-Type: application/json; charset=utf-8');
+\$token = \$_POST['token'] ?? '';
+if (!hash_equals('${TOKEN}', \$token)) {
+    http_response_code(403);
+    echo json_encode(['ok' => false, 'error' => 'forbidden']);
+    exit;
+}
+\$id = trim(\$_POST['id'] ?? '');
+\$zipPath = DATA_PATH . '/cache/layout-push-${TOKEN}.zip';
+if (\$id === '' || !preg_match('/^[a-f0-9]{16}\$/', \$id) || !is_file(\$zipPath)) {
+    http_response_code(400);
+    echo json_encode(['ok' => false, 'error' => 'invalid_request']);
+    exit;
+}
+\$dir = Presentation::dir(\$id);
+if (is_dir(\$dir)) {
+    Presentation::delete(\$id);
+}
+mkdir(\$dir, 0770, true);
+mkdir(\$dir . '/assets', 0770, true);
+\$zip = new ZipArchive();
+if (\$zip->open(\$zipPath) !== true) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'zip_open_failed']);
+    exit;
+}
+\$zip->extractTo(\$dir);
+\$zip->close();
+@unlink(\$zipPath);
+echo json_encode(['ok' => true, 'id' => \$id, 'dir' => \$dir], JSON_UNESCAPED_UNICODE);
+PHP
+
+cleanup_remote() {
+  curl_sftp -Q "RM /${REMOTE_SCRIPT}" "${REMOTE}/" 2>/dev/null || true
+  curl_sftp -Q "rm ${STAGING_ZIP}" "${REMOTE}/" 2>/dev/null || true
+}
+trap cleanup_remote EXIT
+
+curl_sftp -T "$TMPPHP" "${REMOTE}/${REMOTE_SCRIPT}"
+BODY="$(curl -sS -X POST "${PROD_URL}/${REMOTE_BASENAME}" \
+  --data-urlencode "token=${TOKEN}" \
+  --data-urlencode "id=${TARGET_ID}")"
+echo "$BODY" | python3 -m json.tool
+
+OK="$(echo "$BODY" | python3 -c "import json,sys; print('yes' if json.load(sys.stdin).get('ok') else 'no')" 2>/dev/null || echo no)"
+if [[ "$OK" != "yes" ]]; then
+  echo "FEHLER: PHP-Installation fehlgeschlagen." >&2
+  exit 1
 fi
 
 echo "Fertig: Folien-Set „${TITLE}“ auf ${SSH_HOST} (${TARGET_ID}), freigegeben für alle."

@@ -664,6 +664,93 @@ class SlideRenderer
      * Hintergrund-Video wird aus Performance-Gründen nicht abgespielt, nur ein
      * dunkler Platzhalter gezeigt.
      */
+    /**
+     * Schematische Vorschau für Layout-Picker: Strich = einzeiliger Text / Linie,
+     * Rechteck = Textblock oder Objekt.
+     */
+    public static function renderSlideSchematicThumbnailHtml(array $slide, int $slideW = 1920, int $slideH = 1080): string
+    {
+        $bg = $slide['background'] ?? null;
+        $bgStyle = 'background:#161a12;';
+        if ($bg) {
+            if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
+                $bgStyle = 'background:' . h($bg['value'] ?? '#161a12') . ';';
+            } elseif (($bg['type'] ?? '') === 'image' && !empty($bg['value'])) {
+                $bgStyle = 'background:#222;';
+            }
+        }
+        $html = '<div style="position:relative;width:100%;height:100%;box-sizing:border-box;' . $bgStyle . 'overflow:hidden;">';
+        foreach ($slide['objects'] ?? [] as $obj) {
+            $html .= self::renderSchematicObject($obj, $slideW, $slideH);
+        }
+        $html .= '</div>';
+        return $html;
+    }
+
+    private static function isSingleLineTextObject(array $obj): bool
+    {
+        $text = str_replace("\r\n", "\n", (string)($obj['text'] ?? ''));
+        if (str_contains($text, "\n")) {
+            return false;
+        }
+        $fontSize = max(8, (int)($obj['fontSize'] ?? 32));
+        $h = max(1, (int)($obj['h'] ?? (int)round($fontSize * 1.2)));
+        return $h <= (int)ceil($fontSize * 1.75);
+    }
+
+    private static function renderSchematicObject(array $obj, int $slideW, int $slideH): string
+    {
+        if (($obj['type'] ?? '') === 'group') {
+            $out = '';
+            foreach ($obj['children'] ?? [] as $child) {
+                if (!is_array($child)) {
+                    continue;
+                }
+                $gx = (float)($obj['x'] ?? 0);
+                $gy = (float)($obj['y'] ?? 0);
+                $child['x'] = $gx + (float)($child['x'] ?? 0);
+                $child['y'] = $gy + (float)($child['y'] ?? 0);
+                $out .= self::renderSchematicObject($child, $slideW, $slideH);
+            }
+            return $out;
+        }
+
+        $x = max(0, (float)($obj['x'] ?? 0));
+        $y = max(0, (float)($obj['y'] ?? 0));
+        $w = max(2, (float)($obj['w'] ?? 40));
+        $h = max(2, (float)($obj['h'] ?? 20));
+        $left = $x / $slideW * 100;
+        $top = $y / $slideH * 100;
+        $width = $w / $slideW * 100;
+        $height = $h / $slideH * 100;
+        $box = sprintf(
+            'position:absolute;left:%.3f%%;top:%.3f%%;width:%.3f%%;height:%.3f%%;box-sizing:border-box;',
+            $left,
+            $top,
+            $width,
+            $height
+        );
+
+        $type = $obj['type'] ?? '';
+        $lineStyle = 'width:100%;height:3px;background:rgba(220,235,248,0.96);border-radius:2px;box-shadow:0 0 2px rgba(0,0,0,0.5);';
+        $rectStyle = 'border:1.5px solid rgba(186,220,240,0.95);background:rgba(148,194,220,0.28);border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,0.45);';
+        if ($type === 'text') {
+            if (self::isSingleLineTextObject($obj)) {
+                return '<div style="' . $box . 'display:flex;align-items:center;padding:0 1px;">' .
+                    '<div style="' . $lineStyle . '"></div></div>';
+            }
+            return '<div style="' . $box . $rectStyle . '"></div>';
+        }
+        if ($type === 'shape') {
+            $shapeType = $obj['shapeType'] ?? 'triangle';
+            if (!empty(self::SHAPE_OPEN[$shapeType]) || $shapeType === 'line') {
+                return '<div style="' . $box . 'display:flex;align-items:center;padding:0 1px;">' .
+                    '<div style="' . $lineStyle . '"></div></div>';
+            }
+        }
+        return '<div style="' . $box . $rectStyle . '"></div>';
+    }
+
     public static function renderSlideThumbnailHtml(array $slide, ?string $publicToken = null): string
     {
         $bg = $slide['background'] ?? null;
