@@ -38,9 +38,7 @@ _Noch nicht priorisiert._
 
 | Typ | Thema | Beschreibung | Änderung |
 |-----|-------|--------------|----------|
-| Feature | Editor / Rasteransicht | Bei Auswahl einer Folie sollen Übergang und automatische Weiterschaltung pro Kachel sichtbar sein. | Übergang und Auto-Zeit bei jeder Kachel neben der Folinummer anzeigen (nicht nur in der Toolbar oben). |
-
-_Hinweis:_ In v2.1.1 werden Übergang und Zeit bereits unter jeder Kachel angezeigt — ggf. prüfen, ob noch etwas fehlt, dann nach B oder streichen.
+|     |       |              |          |
 
 ---
 
@@ -67,3 +65,4 @@ _Bereit zur Umsetzung (Prio niedrig zuerst)._
 | 4 | Feature | Raster — Sortieren | Drag & Drop (`bindGridReorder`). | 2026-07-08 · v2.1.1 |
 | 9 | Feature | Raster — Steuerung | Präsentieren/Duplizieren/Löschen pro Kachel. | 2026-07-08 · v2.1.1 |
 | 10 | Feature | Raster — Miniatur-Grösse | Schieberegler, pro User gespeichert. | 2026-07-08 · v2.1.1 |
+| 11 | Feature | Raster — Effekt pro Kachel | Layout: ID \| Icon \| Zeit … Effektname rechts (`gridSlideMetaHtml`). | 2026-07-08 · v2.1.2 |

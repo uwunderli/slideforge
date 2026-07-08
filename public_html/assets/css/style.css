@@ -2476,22 +2476,57 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .editor-slide-grid-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 6px 8px;
-  font-size: 0.75rem;
+  gap: 5px;
+  padding: 5px 7px;
+  font-size: 0.72rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border);
+  min-height: 2em;
+  overflow: hidden;
 }
-.editor-slide-grid-meta strong {
+.editor-slide-grid-id {
+  flex-shrink: 0;
+  min-width: 1.1em;
   color: var(--text);
   font-weight: 600;
+  font-family: var(--font-mono);
+  text-align: center;
 }
-.editor-slide-grid-transition {
+.editor-slide-grid-sep {
+  flex-shrink: 0;
+  opacity: 0.28;
+  color: var(--text-muted);
+  user-select: none;
+  font-weight: 300;
+}
+.editor-slide-grid-autoadvance {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.editor-slide-grid-effect-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.editor-slide-grid-effect-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+.editor-slide-grid-effect-label {
+  margin-left: auto;
+  flex-shrink: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 60%;
+  font-size: 0.72rem;
+  color: var(--text);
   text-align: right;
 }
 

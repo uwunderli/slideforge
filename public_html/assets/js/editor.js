@@ -1305,7 +1305,7 @@
 
   function updateGridNumbers(container) {
     container.querySelectorAll('.editor-slide-grid-item').forEach((item, i) => {
-      const num = item.querySelector('.editor-slide-grid-meta strong');
+      const num = item.querySelector('.editor-slide-grid-id');
       if (num) num.textContent = String(i + 1);
       item.dataset.index = String(i);
     });
@@ -1718,8 +1718,31 @@
   }
 
   function transitionOptionLabel(value) {
-    const opt = TRANSITION_OPTIONS.find((o) => o.value === (value || 'slide'));
+    const opt = transitionOption(value);
     return opt ? opt.label : (value || 'slide');
+  }
+
+  function transitionOption(value) {
+    const v = value || 'slide';
+    return TRANSITION_OPTIONS.find((o) => o.value === v)
+      || TRANSITION_OPTIONS.find((o) => o.value === 'slide')
+      || TRANSITION_OPTIONS[0];
+  }
+
+  function gridSlideMetaHtml(slide, index) {
+    const opt = transitionOption(slide.transition);
+    const label = opt.label || (slide.transition || 'slide');
+    const icon = opt.icon || TRANSITION_ICONS.slide;
+    const aa = Math.max(0, parseInt(slide.autoAdvance, 10) || 0);
+    const timeText = aa > 0 ? (aa + 's') : '—';
+    return '<div class="editor-slide-grid-meta">' +
+      '<span class="editor-slide-grid-id">' + (index + 1) + '</span>' +
+      '<span class="editor-slide-grid-sep" aria-hidden="true">|</span>' +
+      '<span class="editor-slide-grid-effect-icon" title="' + escapeHtml(I.transitionTitle || 'Übergang') + ': ' + escapeHtml(label) + '" aria-hidden="true">' + icon + '</span>' +
+      '<span class="editor-slide-grid-sep" aria-hidden="true">|</span>' +
+      '<span class="editor-slide-grid-autoadvance" title="' + escapeHtml(I.autoAdvanceLabel || 'Zeit') + '">' + escapeHtml(timeText) + '</span>' +
+      '<span class="editor-slide-grid-effect-label" title="' + escapeHtml(label) + '">' + escapeHtml(label) + '</span>' +
+    '</div>';
   }
 
   function gridCellScale() {
@@ -1851,13 +1874,7 @@
             (thumb.html || '') +
           '</div>' +
         '</div>' +
-        '<div class="editor-slide-grid-meta">' +
-          '<strong>' + (i + 1) + '</strong>' +
-          '<span class="editor-slide-grid-transition">' +
-            escapeHtml(transitionOptionLabel(slide.transition)) +
-            (slide.autoAdvance ? (' · ' + slide.autoAdvance + 's') : '') +
-          '</span>' +
-        '</div>';
+        gridSlideMetaHtml(slide, i);
       card.addEventListener('click', (e) => {
         if (gridSuppressClick) return;
         if (e.target.closest('[data-act]')) return;
