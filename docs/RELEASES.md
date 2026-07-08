@@ -10,6 +10,7 @@
 | — | **v2.0.3** | Folien-Raster, Live-Sync, Release-Deploy-Hooks | ✔️ shipped | CHANGELOG |
 | **2** | **v2.1.0** | **Folien-Sets & Logos-Import** — Layout-Sets, `.chs`, Schlicht-Seed | ✔️ shipped | [RELEASE_v2.1.0.md](RELEASE_v2.1.0.md) · [GitHub](../.github/RELEASE_v2.1.0.md) |
 | — | **v2.1.1** | Editor-Fixes & Raster-Ansicht (Sortieren, Steuerung, Miniatur-Grösse) | ✔️ shipped | CHANGELOG |
+| — | **v2.1.2** | Raster-Kachel: Übergang/Zeit/Effektname Layout | ✔️ shipped | CHANGELOG |
 | **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
 | **4** | **v2.3.0** | Integrierter **Medien-Editor** (Trim, Bild, SVG) | ✅ Briefing fertig | [RELEASE_v2.3.0.md](RELEASE_v2.3.0.md) |
 | **5** | **v2.4.0** | reveal.js **Auto-Animate** — Objekte zwischen Folien morphen | ✅ Briefing fertig | [RELEASE_v2.4.0.md](RELEASE_v2.4.0.md) |
@@ -39,6 +40,7 @@ v2.0.2   ✔️ shipped — PWA
 v2.0.3   ✔️ shipped — Folien-Raster, Live-Sync
 v2.1.0   ✔️ shipped — Folien-Sets & Logos-Import
 v2.1.1   ✔️ shipped — Editor-Fixes, Raster-Sort/Steuerung/Miniatur-Grösse
+v2.1.2   ✔️ shipped — Raster-Kachel Meta-Layout
 v2.2.0   church.tools
 v2.3.0   Medien-Editor
 v2.4.0   Auto-Animate
