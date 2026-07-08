@@ -18,6 +18,10 @@ public_html/uploads/fonts/*
 # Local test exports in project root
 /*.html
 
+# Local doc samples (HTML etc. — README bleibt im Repo)
+docs/samples/*
+!docs/samples/README.md
+
 # Environment and logs
 .env
 .env.*

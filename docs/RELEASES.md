@@ -48,7 +48,8 @@ v3.1.0   Visueller Editor (slides.com)
 **Nächster Schritt:** **v2.2.0** church.tools (Basis: **v2.1.0** auf `main`).
 
 **Backlog (ohne Release):** [BACKLOG.md](BACKLOG.md)  
-**Änderungen Bugs & Features (A → B → C):** [AENDERUNGEN.md](AENDERUNGEN.md)
+**Änderungen Bugs & Features (A → B → C):** [AENDERUNGEN.md](AENDERUNGEN.md)  
+**Doku-Übersicht:** [README.md](README.md)
 
 ---
 

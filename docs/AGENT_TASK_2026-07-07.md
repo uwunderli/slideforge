@@ -1,5 +1,7 @@
 # SlideForge – Agent Task (2026-07-07)
 
+> **Archiv** — abgeschlossen am 2026-07-07. Laufende Arbeit: [AENDERUNGEN.md](AENDERUNGEN.md)
+
 Stand: 2026-07-07  
 Modus: Agent codet, Owner testet/freigibt
 

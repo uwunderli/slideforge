@@ -1,5 +1,7 @@
 # Release v2.1.0 veröffentlichen
 
+> **Historisch** — v2.1.0 wurde am 2026-07-07 veröffentlicht. Für neue Releases: `CHANGELOG.md`, `VERSION`, pre-push-Hook.
+
 Stand: 2026-07-07 · Tag: **`v2.1.0`** (Minor — Folien-Sets & Logos-Import)
 
 ---
@@ -64,7 +66,7 @@ Ohne Deploy: `SKIP_RELEASE_DEPLOY=1 git push`
 **Nicht committen** (optional / lokal)
 
 - `.githooks/pre-push` (nur wenn bewusst geändert)
-- `docs/ADJUSTMENTS_2026-07-05.md`, `docs/samples/` (Arbeitsnotizen)
+- `docs/samples/*.html` (siehe `docs/samples/README.md`)
 
 ---
 
