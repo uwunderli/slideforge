@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.1] - 2026-07-08
+
+### Added
+
+- **Raster-Ansicht:** Folien per Drag & Drop sortieren (wie Filmstreifen)
+- **Raster-Ansicht:** Steuerung pro Kachel — Präsentieren ein/aus, Duplizieren, Löschen
+- **Raster-Ansicht:** Miniatur-Grösse per Schieberegler (Statusleiste), gespeichert pro Benutzer
+- **Dokumentation:** `docs/AENDERUNGEN.md` (Bugs & Features A→B→C), `docs/BACKLOG.md`
+
+### Fixed
+
+- Vorlageelemente: Speichern schliesst den Dialog nach erfolgreichem Speichern
+- Editor-Ebenen: keine „Ghost-Ebenen“ mehr beim Sortieren (Layer-Reorder korrigiert)
+- Editor: leere Zustände im Objekte-/Elemente-Bereich zentriert dargestellt
+
 ## [2.1.0] - 2026-07-07
 
 ### Added
