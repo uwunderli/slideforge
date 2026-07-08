@@ -204,6 +204,7 @@ return [
     'editor.slide_grid_selected' => '{n} sélectionnée(s)',
     'editor.slide_grid_select_all' => 'Toutes',
     'editor.slide_grid_select_none' => 'Aucune',
+    'editor.slide_grid_thumb_size' => 'Taille des miniatures',
     'editor.apply_transition_selected' => 'Appliquer à la sélection',
     'editor.tab_text' => 'Texte',
     'editor.tab_objects' => 'Objets',

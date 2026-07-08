@@ -207,6 +207,7 @@ return [
     'editor.slide_grid_selected' => '{n} selected',
     'editor.slide_grid_select_all' => 'All',
     'editor.slide_grid_select_none' => 'None',
+    'editor.slide_grid_thumb_size' => 'Thumbnail size',
     'editor.apply_transition_selected' => 'Apply to selection',
     'editor.tab_text' => 'Text',
     'editor.tab_objects' => 'Objects',

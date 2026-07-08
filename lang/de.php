@@ -213,6 +213,7 @@ return [
     'editor.slide_grid_selected' => '{n} ausgewählt',
     'editor.slide_grid_select_all' => 'Alle',
     'editor.slide_grid_select_none' => 'Keine',
+    'editor.slide_grid_thumb_size' => 'Miniatur-Grösse',
     'editor.apply_transition_selected' => 'Auf Auswahl anwenden',
     'editor.tab_text' => 'Texte',
     'editor.tab_objects' => 'Objekte',

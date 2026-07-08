@@ -58,6 +58,15 @@ switch ($action) {
         user_json_ok(['before_present' => $beforePresent]);
         break;
 
+    case 'set_editor_grid_thumb_min':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        $thumbMin = Auth::setEditorGridThumbMin($me['id'], (int)($body['thumb_min'] ?? 168));
+        user_json_ok(['thumb_min' => $thumbMin]);
+        break;
+
     case 'save_webdav_drive':
         $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {

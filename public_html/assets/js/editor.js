@@ -28,6 +28,7 @@
     objectPanelOpen: localStorage.getItem('sf_object_open') !== '0',
     templatesPanelOpen: localStorage.getItem('sf_templates_open') === '1',
     editorViewMode: 'slide',
+    gridThumbMin: boot.editorGridThumbMin || 168,
     brandColors: boot.brandColors || [],
     textTemplates: boot.textTemplates || [],
     templateMode: !!boot.templateMode,
@@ -1272,17 +1273,145 @@
     const container = document.getElementById('slideFilmstrip');
     if (!container) return;
     const newOrderIds = [...container.querySelectorAll('.filmstrip-item')].map((el) => el.dataset.id);
+    await commitSlideOrder(newOrderIds);
+  }
+
+  function getGridAfterElement(container, x, y) {
+    const items = [...container.querySelectorAll('.editor-slide-grid-item:not(.dragging)')];
+    if (!items.length) return null;
+
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    items.forEach((child, i) => {
+      const box = child.getBoundingClientRect();
+      const cx = box.left + box.width / 2;
+      const cy = box.top + box.height / 2;
+      const dist = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIdx = i;
+      }
+    });
+
+    const nearest = items[nearestIdx];
+    const box = nearest.getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
+    const sameRow = Math.abs(y - cy) <= box.height / 2;
+    const insertAfter = sameRow ? (x > cx) : (y > cy);
+    if (insertAfter) return items[nearestIdx + 1] || null;
+    return nearest;
+  }
+
+  function updateGridNumbers(container) {
+    container.querySelectorAll('.editor-slide-grid-item').forEach((item, i) => {
+      const num = item.querySelector('.editor-slide-grid-meta strong');
+      if (num) num.textContent = String(i + 1);
+      item.dataset.index = String(i);
+    });
+  }
+
+  function bindGridReorder(container) {
+    if (!container || container.dataset.reorderBound) return;
+    container.dataset.reorderBound = '1';
+
+    let dragItem = null;
+    let dragMoved = false;
+    let startX = 0;
+    let startY = 0;
+    let dragging = false;
+
+    container.addEventListener('mousedown', (e) => {
+      if (!SF.canEdit || e.button !== 0) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const item = e.target.closest('.editor-slide-grid-item');
+      if (!item || e.target.closest('.tab-action')) return;
+
+      dragItem = item;
+      dragMoved = false;
+      dragging = false;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const onMove = (ev) => {
+        if (!dragItem) return;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!dragging) {
+          if (dx * dx + dy * dy < 25) return;
+          dragging = true;
+          dragItem.classList.add('dragging');
+          document.body.classList.add('editor-grid-dragging');
+        }
+        const after = getGridAfterElement(container, ev.clientX, ev.clientY);
+        const prev = [...container.querySelectorAll('.editor-slide-grid-item')].map((el) => el.dataset.id);
+        if (after == null) container.appendChild(dragItem);
+        else if (after !== dragItem) container.insertBefore(dragItem, after);
+        const next = [...container.querySelectorAll('.editor-slide-grid-item')].map((el) => el.dataset.id);
+        if (prev.join(',') !== next.join(',')) {
+          dragMoved = true;
+          updateGridNumbers(container);
+        }
+      };
+
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('editor-grid-dragging');
+        if (!dragItem) return;
+        dragItem.classList.remove('dragging');
+        dragItem = null;
+        if (dragMoved) {
+          gridSuppressClick = true;
+          commitGridOrder();
+          setTimeout(() => { gridSuppressClick = false; }, 100);
+        }
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  async function commitSlideOrder(newOrderIds) {
     const oldOrderIds = SF.slides.map((s) => s.id);
     if (JSON.stringify(newOrderIds) === JSON.stringify(oldOrderIds)) return;
 
     const currentId = SF.slides[SF.currentIndex] ? SF.slides[SF.currentIndex].id : null;
+    const selectedIds = [...gridSelectedIndices]
+      .map((i) => SF.slides[i] && SF.slides[i].id)
+      .filter(Boolean);
+
     setSaveStatus('Speichere…');
-    const res = await api('reorder_slides', { order: newOrderIds });
-    SF.slides = res.slides;
-    if (currentId) SF.currentIndex = SF.slides.findIndex((s) => s.id === currentId);
-    setSaveStatus('Gespeichert');
-    await renderSlideFilmstrip();
-    reloadPreviewWindow();
+    try {
+      const res = await api('reorder_slides', { order: newOrderIds });
+      SF.slides = res.slides;
+      if (currentId) {
+        const idx = SF.slides.findIndex((s) => s.id === currentId);
+        if (idx >= 0) SF.currentIndex = idx;
+      }
+      gridSelectedIndices.clear();
+      selectedIds.forEach((id) => {
+        const idx = SF.slides.findIndex((s) => s.id === id);
+        if (idx >= 0) gridSelectedIndices.add(idx);
+      });
+      setSaveStatus('Gespeichert');
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      reloadPreviewWindow();
+    } catch (e) {
+      setSaveStatus('Fehler', true);
+      console.error(e);
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+    }
+  }
+
+  async function commitGridOrder() {
+    const grid = document.getElementById('slideGrid');
+    if (!grid) return;
+    const newOrderIds = [...grid.querySelectorAll('.editor-slide-grid-item')].map((el) => el.dataset.id);
+    await commitSlideOrder(newOrderIds);
   }
 
   async function switchToSlide(index) {
@@ -1491,6 +1620,7 @@
     const res = await api('duplicate_slide', { index });
     SF.slides = res.slides;
     await renderSlideFilmstrip();
+    if (SF.editorViewMode === 'grid') renderSlideGrid();
     setSaveStatus('Gespeichert');
     reloadPreviewWindow();
   }
@@ -1506,8 +1636,12 @@
       const res = await api('delete_slide', { index });
       SF.slides = res.slides;
       if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
+      gridSelectedIndices.clear();
+      gridSelectedIndices.add(SF.currentIndex);
+      gridLastClickedIndex = SF.currentIndex;
       loadSlideIntoStage(SF.currentIndex);
       await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
       reloadPreviewWindow();
       setSaveStatus('Gespeichert');
     } catch (e) {
@@ -1523,6 +1657,7 @@
     const res = await api('toggle_slide_present_disabled', { index });
     SF.slides = res.slides;
     await renderSlideFilmstrip();
+    if (SF.editorViewMode === 'grid') renderSlideGrid();
     setSaveStatus('Gespeichert');
     reloadPreviewWindow();
   }
@@ -1531,6 +1666,56 @@
   const gridSelectedIndices = new Set();
   let gridLastClickedIndex = null;
   let gridTransitionPickerBound = false;
+  let gridSuppressClick = false;
+  let gridThumbSaveTimer = null;
+  let gridThumbSliderBound = false;
+
+  function gridThumbMinPx() {
+    return SF.gridThumbMin || 168;
+  }
+
+  function applyGridThumbMin(px, opts = {}) {
+    const min = Math.max(100, Math.min(360, Math.round(px) || 168));
+    SF.gridThumbMin = min;
+    const grid = document.getElementById('slideGrid');
+    if (grid) grid.style.setProperty('--grid-thumb-min', min + 'px');
+    const slider = document.getElementById('gridThumbSizeSlider');
+    const label = document.getElementById('gridThumbSizeLabel');
+    if (slider && !opts.fromSlider) slider.value = String(min);
+    if (label) label.textContent = min + ' px';
+    if (opts.rerender !== false && SF.editorViewMode === 'grid') renderSlideGrid();
+    if (opts.save) scheduleGridThumbSave();
+  }
+
+  function scheduleGridThumbSave() {
+    if (gridThumbSaveTimer) clearTimeout(gridThumbSaveTimer);
+    gridThumbSaveTimer = setTimeout(saveGridThumbMin, 400);
+  }
+
+  async function saveGridThumbMin() {
+    try {
+      const res = await fetch('user_api.php?action=set_editor_grid_thumb_min', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csrf_token: SF.csrfToken, thumb_min: gridThumbMinPx() }),
+      });
+      const data = await res.json();
+      if (data.thumb_min) applyGridThumbMin(data.thumb_min, { save: false, rerender: false });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function initGridThumbSlider() {
+    if (gridThumbSliderBound) return;
+    const slider = document.getElementById('gridThumbSizeSlider');
+    if (!slider) return;
+    gridThumbSliderBound = true;
+    applyGridThumbMin(gridThumbMinPx(), { save: false, rerender: false });
+    slider.addEventListener('input', () => {
+      applyGridThumbMin(parseInt(slider.value, 10) || 168, { fromSlider: true, save: true });
+    });
+  }
 
   function transitionOptionLabel(value) {
     const opt = TRANSITION_OPTIONS.find((o) => o.value === (value || 'slide'));
@@ -1538,11 +1723,13 @@
   }
 
   function gridCellScale() {
+    const min = gridThumbMinPx();
     const grid = document.getElementById('slideGrid');
-    if (!grid || !grid.clientWidth) return 168 / SF.meta.width;
-    const cols = Math.max(1, Math.floor((grid.clientWidth + 14) / (168 + 14)));
-    const cellW = (grid.clientWidth - (cols - 1) * 14) / cols;
-    return Math.max(120, cellW) / SF.meta.width;
+    if (!grid || !grid.clientWidth) return min / SF.meta.width;
+    const gap = 14;
+    const cols = Math.max(1, Math.floor((grid.clientWidth + gap) / (min + gap)));
+    const cellW = (grid.clientWidth - (cols - 1) * gap) / cols;
+    return Math.max(80, cellW) / SF.meta.width;
   }
 
   function syncEditorViewModeUi() {
@@ -1579,7 +1766,9 @@
       gridSelectedIndices.add(SF.currentIndex);
       gridLastClickedIndex = SF.currentIndex;
       initGridFields();
+      initGridThumbSlider();
       SF.editorViewMode = 'grid';
+      applyGridThumbMin(gridThumbMinPx(), { save: false, rerender: false });
       syncEditorViewModeUi();
       renderSlideGrid();
       return;
@@ -1637,15 +1826,27 @@
     SF.slides.forEach((slide, i) => {
       const thumb = SF.thumbnails[slide.id] || {};
       const presentOff = !!slide.presentDisabled;
-      const card = document.createElement('button');
-      card.type = 'button';
+      const card = document.createElement('div');
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
       card.className = 'editor-slide-grid-item'
         + (gridSelectedIndices.has(i) ? ' selected' : '')
         + (i === SF.currentIndex ? ' is-current' : '')
         + (presentOff ? ' is-present-disabled' : '');
       card.dataset.index = String(i);
+      card.dataset.id = slide.id;
+      const actionsHtml = SF.canEdit
+        ? '<span class="editor-slide-grid-actions">' +
+            '<button type="button" class="tab-action' + (presentOff ? ' is-present-off' : '') + '" data-act="toggle-present" title="' +
+              (presentOff ? (SF.i18n.slidePresentEnabled || 'Beim Präsentieren einblenden') : (SF.i18n.togglePresentDisabled || 'Beim Präsentieren überspringen')) + '">' +
+              (presentOff ? '◉' : '⊘') + '</button>' +
+            '<button type="button" class="tab-action" data-act="dup" title="' + (SF.i18n.duplicateSlide || 'Duplizieren') + '">⧉</button>' +
+            (SF.slides.length > 1 ? '<button type="button" class="tab-action" data-act="del" title="' + (SF.i18n.deleteSlide || 'Löschen') + '">✕</button>' : '') +
+          '</span>'
+        : '';
       card.innerHTML =
         '<div class="editor-slide-grid-thumb">' +
+          actionsHtml +
           '<div class="filmstrip-thumb-scale" style="width:' + SF.meta.width + 'px;height:' + SF.meta.height + 'px;transform:scale(' + scale + ');">' +
             (thumb.html || '') +
           '</div>' +
@@ -1658,6 +1859,8 @@
           '</span>' +
         '</div>';
       card.addEventListener('click', (e) => {
+        if (gridSuppressClick) return;
+        if (e.target.closest('[data-act]')) return;
         if (e.detail === 2) {
           switchToSlide(i);
           closeSlideGridView();
@@ -1665,8 +1868,33 @@
         }
         handleGridSelectionClick(e, i);
       });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (e.target.closest('[data-act]')) return;
+          handleGridSelectionClick(e, i);
+        }
+      });
+      if (SF.canEdit) {
+        const togglePresentBtn = card.querySelector('[data-act="toggle-present"]');
+        if (togglePresentBtn) togglePresentBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSlidePresentDisabled(i);
+        });
+        const dupBtn = card.querySelector('[data-act="dup"]');
+        if (dupBtn) dupBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          duplicateSlide(i);
+        });
+        const delBtn = card.querySelector('[data-act="del"]');
+        if (delBtn) delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteSlide(i);
+        });
+      }
       grid.appendChild(card);
     });
+    bindGridReorder(grid);
     updateGridSelectionUi();
   }
 
@@ -2919,19 +3147,54 @@
     return [...list.querySelectorAll('li[data-layer-id]')].map((li) => li.dataset.layerId).filter(Boolean);
   }
 
-  function applyLayerOrder(topFirstIds) {
-    if (!SF.layer || !topFirstIds.length) return;
-    const n = topFirstIds.length;
-    topFirstIds.forEach((id, i) => {
-      const node = findNodeById(id);
-      if (node) node.zIndex(n - 1 - i);
+  /** Content nodes only (excludes bgRect, badges, transformer) — avoids “ghost layers”. */
+  function restackContentNodes(bottomToTop) {
+    if (!SF.layer) return;
+    if (SF.bgRect) SF.bgRect.moveToBottom();
+    bottomToTop.forEach((node) => {
+      if (node && node.getParent() === SF.layer) node.moveToTop();
     });
     getTopLevelNodes().forEach((node) => {
       if (node._sfBadge) node._sfBadge.moveToTop();
     });
     if (SF.transformer) SF.transformer.moveToTop();
     SF.layer.draw();
+  }
+
+  function contentNodesBottomToTop() {
+    return getTopLevelNodes().slice().sort((a, b) => a.zIndex() - b.zIndex());
+  }
+
+  function applyLayerOrder(topFirstIds) {
+    if (!SF.layer || !topFirstIds.length) return;
+    const bottomToTop = topFirstIds.slice().reverse()
+      .map((id) => findNodeById(id))
+      .filter(Boolean);
+    restackContentNodes(bottomToTop);
     scheduleSave();
+  }
+
+  function nudgeContentLayer(node, action) {
+    if (!node || !isTopLevelNode(node)) return;
+    const ordered = contentNodesBottomToTop();
+    const idx = ordered.indexOf(node);
+    if (idx < 0) return;
+    if (action === 'up' && idx < ordered.length - 1) {
+      ordered.splice(idx, 1);
+      ordered.splice(idx + 1, 0, node);
+    } else if (action === 'down' && idx > 0) {
+      ordered.splice(idx, 1);
+      ordered.splice(idx - 1, 0, node);
+    } else if (action === 'front') {
+      ordered.splice(idx, 1);
+      ordered.push(node);
+    } else if (action === 'back') {
+      ordered.splice(idx, 1);
+      ordered.unshift(node);
+    } else {
+      return;
+    }
+    restackContentNodes(ordered);
   }
 
   function bindLayersListDrag(listEl) {
@@ -4236,12 +4499,11 @@
 
     document.querySelectorAll('[data-layer]').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (btn.dataset.layer === 'up') node.moveUp();
-        else if (btn.dataset.layer === 'down') node.moveDown();
-        else if (btn.dataset.layer === 'front') node.moveToTop();
-        else node.moveToBottom();
-        if (node._sfBadge) node._sfBadge.moveToTop();
-        if (SF.transformer) SF.transformer.moveToTop();
+        const action = btn.dataset.layer === 'up' ? 'up'
+          : btn.dataset.layer === 'down' ? 'down'
+          : btn.dataset.layer === 'front' ? 'front'
+          : 'back';
+        nudgeContentLayer(node, action);
         refreshCanvas(); scheduleSave(); renderLayersPanel();
       });
     });
@@ -4610,8 +4872,11 @@
     const icons = SF.elementIconHtml || {};
     const badge = SF.logosBadgeHtml || '';
     if (!roles.length) {
-      container.innerHTML = '';
-      if (section) section.style.display = 'none';
+      const emptyText = SF.i18n.logosInsertEmpty || '';
+      container.innerHTML = emptyText
+        ? '<p class="elements-panel-hint elements-panel-hint-empty">' + escapeHtml(emptyText) + '</p>'
+        : '';
+      if (section) section.style.display = emptyText ? '' : 'none';
       return;
     }
     if (section) section.style.display = '';
@@ -4814,6 +5079,7 @@
         refreshStandardElementBadges();
         renderLogosSlideInsertButtons(SF.elementZones || {});
         setSaveStatus(I.elementLinksSaved || 'Gespeichert');
+        closeModal();
       } catch (e) {
         setSaveStatus('Fehler', true);
         console.error(e);

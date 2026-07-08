@@ -657,6 +657,36 @@ class Auth
         }, []);
     }
 
+    /** Mindestbreite der Raster-Miniaturen im Editor (px, pro Benutzer). */
+    public static function editorGridThumbMin(?array $user = null): int
+    {
+        $user = $user ?? self::currentUser();
+        if (!$user) {
+            return 168;
+        }
+        return self::normalizeEditorGridThumbMin($user['editor_grid_thumb_min'] ?? null);
+    }
+
+    public static function normalizeEditorGridThumbMin($value): int
+    {
+        $n = is_numeric($value) ? (int)$value : 168;
+        return max(100, min(360, $n));
+    }
+
+    public static function setEditorGridThumbMin(string $userId, int $thumbMin): int
+    {
+        $normalized = self::normalizeEditorGridThumbMin($thumbMin);
+        Storage::update(USERS_FILE, function ($users) use ($userId, $normalized) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['editor_grid_thumb_min'] = $normalized;
+                }
+            }
+            return $users;
+        }, []);
+        return $normalized;
+    }
+
     /** @return list<array{id:string,label:string,url:string,username:string,root_path:string}> */
     public static function listWebdavDrivesPublic(array $user): array
     {

@@ -196,6 +196,7 @@ return [
     'editor.slide_grid_selected' => '{n} tschernidas',
     'editor.slide_grid_select_all' => 'Tut',
     'editor.slide_grid_select_none' => 'Naginas',
+    'editor.slide_grid_thumb_size' => 'Grondezza da las miniaturas',
     'editor.apply_transition_selected' => 'Applitgar a la selecziun',
     'editor.tab_text' => 'Text',
     'editor.tab_objects' => 'Objects',

@@ -143,6 +143,7 @@ $bootstrap = [
     'logosImportedRoles' => LayoutSet::LOGOS_IMPORTED_ROLES,
     'logosExtraRoles' => LayoutSet::LOGOS_ZONE_ROLES,
     'logosZonesAccordionOpen' => Auth::logosZonesAccordionOpen($me),
+    'editorGridThumbMin' => Auth::editorGridThumbMin($me),
     'logosRoles' => LayoutSet::LOGOS_ROLES,
     'logosNotesOrder' => $isLayoutSetMode ? LayoutSet::notesOrder($meta) : [],
     'elementZones' => $isLayoutSetMode ? LayoutSet::elementZones($meta) : [],
@@ -370,6 +371,7 @@ $bootstrap = [
         'slideGridSelected' => t('editor.slide_grid_selected'),
         'slideGridSelectAll' => t('editor.slide_grid_select_all'),
         'slideGridSelectNone' => t('editor.slide_grid_select_none'),
+        'slideGridThumbSize' => t('editor.slide_grid_thumb_size'),
         'applyTransitionSelected' => t('editor.apply_transition_selected'),
         'applyTransitionAll' => t('bg.apply_transition_all'),
         'transitionTitle' => t('bg.transition_title'),
@@ -1186,6 +1188,11 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         </div>
         <div class="editor-slide-grid-scroll">
           <div class="editor-slide-grid" id="slideGrid"></div>
+        </div>
+        <div class="editor-grid-statusbar" id="slideGridStatusBar">
+          <label class="editor-grid-statusbar-label" for="gridThumbSizeSlider"><?= h(t('editor.slide_grid_thumb_size')) ?></label>
+          <input type="range" id="gridThumbSizeSlider" class="editor-grid-thumb-slider" min="100" max="360" step="4" value="<?= (int)Auth::editorGridThumbMin($me) ?>">
+          <span class="editor-grid-thumb-size-value" id="gridThumbSizeLabel"><?= (int)Auth::editorGridThumbMin($me) ?> px</span>
         </div>
       </div>
     </div>
