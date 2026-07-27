@@ -1,0 +1,41 @@
+---
+description: Einheitliche Abschnitts-Titel in der rechten Editor-Sidebar
+globs: public_html/assets/css/style.css,public_html/assets/js/editor.js,public_html/editor.php,public_html/includes/**/*.php
+alwaysApply: false
+---
+
+# Sidebar-Abschnittstitel (rechts)
+
+Alle Abschnitts-Titel im rechten Bearbeitungsfenster (`#propsPanelWrap`) müssen **gleich** aussehen — Format, Position, Effekte, Text, Vorlagen, Vorlagen-Picker.
+
+## Kanonisch (CSS)
+
+Eine Stelle in `style.css`:
+
+```css
+#propsPanelWrap .ribbon-group-label,
+#propsPanelWrap .props-section-title,
+#propsPanelWrap .layout-picker-group-title,
+…
+```
+
+Werte:
+
+- Satzschreibweise (`text-transform: none`) — **kein** Uppercase wie im Ribbon
+- `font-size: 0.85rem`, `font-weight: 700`, `color: var(--text)`
+- `letter-spacing: 0`, `margin: 0 0 10px`, kein `border-top`
+
+Tokens: `--props-section-title-size` / `-weight` / `-color` auf `#propsPanelWrap`.
+
+## Nicht vermischen
+
+| Element | Stil |
+|---------|------|
+| Panel-Kopf (`.props-side-panel-title`) | etwas grösser (0.92rem / 600) — bleibt so |
+| Subtabs (Text / Vorlagen / Format) | Tab-Leiste, keine Abschnittstitel |
+| Feld-Labels (`.ribbon-position-field-label`, `.options-subtitle`) | kleiner / muted — keine Abschnittstitel |
+| Ribbon-Gruppenlabels **oben** | Uppercase OK (Ribbon-Look) |
+
+## Bei neuen Abschnitten
+
+Klasse `.ribbon-group-label` oder `.props-section-title` nutzen — **keine** eigenen Uppercase-/Muted-Titel-Styles erfinden.

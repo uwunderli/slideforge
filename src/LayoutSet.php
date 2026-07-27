@@ -127,6 +127,13 @@ class LayoutSet
         'unused' => ['meta', 'scripture_ref', 'scripture_verse'],
     ];
 
+    public const DEFAULT_LOGOS_IMPORT_SETTINGS = [
+        'h1Opener' => 'always_separate',
+        'scriptureHeading' => 'combine_if_layout_fits',
+        'listGrouping' => 'layout',
+        'textMaxCharacters' => 500,
+    ];
+
     public static function isLayoutSet(string $id): bool
     {
         $meta = Presentation::getMeta($id);
@@ -142,6 +149,7 @@ class LayoutSet
             'logosLayoutSlideIds' => [],
             'logosNotesOrder' => self::DEFAULT_NOTES_ORDER,
             'elementZones' => self::DEFAULT_ELEMENT_ZONES,
+            'logosImportSettings' => self::DEFAULT_LOGOS_IMPORT_SETTINGS,
         ]);
         self::seedDefaultLayouts($id);
         return $id;
@@ -175,7 +183,7 @@ class LayoutSet
             'is_layout_set' => true,
             'template_shared' => false,
         ];
-        foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks', 'safe_margin'] as $key) {
+        foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks', 'logosImportSettings', 'safe_margin'] as $key) {
             if (array_key_exists($key, $meta)) {
                 $copyMeta[$key] = $meta[$key];
             }
@@ -436,13 +444,16 @@ class LayoutSet
             }
 
             $role = self::readSetRole($obj);
+            $text = trim((string)($obj['text'] ?? ''));
             if ($role !== '') {
                 $obj['setRole'] = $role;
+                if (!self::isPlaceholderText($text)) {
+                    $obj['text'] = self::rolePlaceholderText($role);
+                }
                 $out[] = $obj;
                 continue;
             }
 
-            $text = trim((string)($obj['text'] ?? ''));
             $inferred = self::inferRoleFromText($text);
             if ($inferred !== null && empty($assignedRoles[$inferred])) {
                 $obj['setRole'] = $inferred;
@@ -729,6 +740,47 @@ class LayoutSet
      */
     public static function importSlideTemplate(string $setId, string $templateId, string $layoutKey): void
     {
+        $meta = Presentation::getMeta($templateId);
+        if (!$meta || empty($meta['is_template']) || !empty($meta['is_layout_set'])) {
+            throw new RuntimeException(t('tpl.import_template_invalid'));
+        }
+        $slide = Presentation::getTemplateSlideContent($templateId);
+        if (!$slide) {
+            throw new RuntimeException(t('tpl.import_template_empty'));
+        }
+        $importTitle = trim((string)($meta['title'] ?? ''));
+        self::importSlideIntoSet($setId, $templateId, $slide, $layoutKey, $importTitle);
+    }
+
+    /**
+     * Übernimmt eine Folie aus einer Präsentation als Layout-Folie in ein Folien-Set.
+     */
+    public static function importPresentationSlide(string $setId, string $presentationId, int $slideIndex, string $layoutKey): void
+    {
+        $meta = Presentation::getMeta($presentationId);
+        if (!$meta || !empty($meta['is_template'])) {
+            throw new RuntimeException(t('editor.import_slide_to_set_invalid'));
+        }
+        $slidesData = Presentation::getSlides($presentationId);
+        $slide = $slidesData['slides'][$slideIndex] ?? null;
+        if (!$slide) {
+            throw new RuntimeException(t('editor.import_slide_to_set_empty'));
+        }
+        $importTitle = trim((string)($slide['label'] ?? ''));
+        if ($importTitle === '') {
+            $importTitle = self::slideLabel($slide);
+        }
+        self::importSlideIntoSet($setId, $presentationId, $slide, $layoutKey, $importTitle);
+    }
+
+    /** @param array<string, mixed> $slide */
+    private static function importSlideIntoSet(
+        string $setId,
+        string $sourceId,
+        array $slide,
+        string $layoutKey,
+        string $importTitle = ''
+    ): void {
         if (!self::isLayoutSet($setId)) {
             throw new RuntimeException(t('tpl.layout_set_invalid'));
         }
@@ -737,17 +789,7 @@ class LayoutSet
             throw new RuntimeException(t('tpl.layout_key_required'));
         }
 
-        $meta = Presentation::getMeta($templateId);
-        if (!$meta || empty($meta['is_template']) || !empty($meta['is_layout_set'])) {
-            throw new RuntimeException(t('tpl.import_template_invalid'));
-        }
-
-        $slide = Presentation::getTemplateSlideContent($templateId);
-        if (!$slide) {
-            throw new RuntimeException(t('tpl.import_template_empty'));
-        }
-
-        $srcAssets = Presentation::dir($templateId) . '/assets';
+        $srcAssets = Presentation::dir($sourceId) . '/assets';
         $dstAssets = Presentation::dir($setId) . '/assets';
         if (is_dir($srcAssets)) {
             if (!is_dir($dstAssets)) {
@@ -763,14 +805,13 @@ class LayoutSet
 
         $json = json_encode($slide, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $json = str_replace(
-            'asset.php?id=' . urlencode($templateId) . '&',
+            'asset.php?id=' . urlencode($sourceId) . '&',
             'asset.php?id=' . urlencode($setId) . '&',
             $json
         );
         $slide = json_decode($json, true) ?? [];
         $slide['id'] = Storage::generateId(4);
         $slide['layoutKey'] = $layoutKey;
-        $importTitle = trim((string)($meta['title'] ?? ''));
         if ($importTitle !== '') {
             $slide['label'] = $importTitle;
         } elseif (empty($slide['label'])) {
@@ -857,7 +898,7 @@ class LayoutSet
                 'template_shared' => !empty($meta['template_shared']),
                 'safe_margin' => (int)($meta['safe_margin'] ?? 100),
             ];
-            foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks'] as $key) {
+            foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks', 'logosImportSettings'] as $key) {
                 if (array_key_exists($key, $meta)) {
                     $exportMeta[$key] = $meta[$key];
                 }
@@ -960,7 +1001,7 @@ class LayoutSet
                 'template_shared' => false,
                 'template_order' => microtime(true),
             ];
-            foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks', 'safe_margin'] as $key) {
+            foreach (['logosLayoutMap', 'logosLayoutSlideIds', 'logosNotesOrder', 'elementZones', 'elementTextLinks', 'logosImportSettings', 'safe_margin'] as $key) {
                 if (array_key_exists($key, $importMeta)) {
                     $metaUpdates[$key] = $importMeta[$key];
                 }
@@ -1126,6 +1167,40 @@ class LayoutSet
             $result['footer'] = [];
         }
         return $result;
+    }
+
+    /** @return array{h1Opener: string, scriptureHeading: string, listGrouping: string|int, textMaxCharacters: string|int} */
+    public static function logosImportSettings(array $setMeta): array
+    {
+        $stored = $setMeta['logosImportSettings'] ?? [];
+        return self::normalizeLogosImportSettings(is_array($stored) ? $stored : []);
+    }
+
+    /** @param array<string, mixed> $raw */
+    public static function normalizeLogosImportSettings(array $raw): array
+    {
+        $out = self::DEFAULT_LOGOS_IMPORT_SETTINGS;
+        $h1 = (string)($raw['h1Opener'] ?? $out['h1Opener']);
+        if (in_array($h1, ['always_separate', 'combine_with_first'], true)) {
+            $out['h1Opener'] = $h1;
+        }
+        $sh = (string)($raw['scriptureHeading'] ?? $out['scriptureHeading']);
+        if (in_array($sh, ['scripture_always_separate', 'combine_if_layout_fits', 'always_combined'], true)) {
+            $out['scriptureHeading'] = $sh;
+        }
+        $lg = $raw['listGrouping'] ?? $out['listGrouping'];
+        if ($lg === 'layout' || $lg === 0 || $lg === '0') {
+            $out['listGrouping'] = $lg === 0 || $lg === '0' ? 0 : 'layout';
+        } elseif (in_array((int)$lg, [1, 3, 5], true)) {
+            $out['listGrouping'] = (int)$lg;
+        }
+        $tc = $raw['textMaxCharacters'] ?? $out['textMaxCharacters'];
+        if ($tc === 'layout' || $tc === 0 || $tc === '0') {
+            $out['textMaxCharacters'] = $tc === 0 || $tc === '0' ? 0 : 'layout';
+        } elseif (is_numeric($tc) && (int)$tc > 0) {
+            $out['textMaxCharacters'] = (int)$tc;
+        }
+        return $out;
     }
 
     public static function zoneForRole(array $setMeta, string $role): string
@@ -1418,10 +1493,119 @@ class LayoutSet
         return null;
     }
 
+    /** @param list<array> $layoutObjects */
+    private static function findUnroledContentTextObject(array $layoutObjects): ?array
+    {
+        foreach ($layoutObjects as $layoutObj) {
+            if (($layoutObj['type'] ?? '') !== 'text') {
+                continue;
+            }
+            if (self::readSetRole($layoutObj) !== '') {
+                continue;
+            }
+            return $layoutObj;
+        }
+        return null;
+    }
+
+    public static function rolePlaceholderText(string $role): string
+    {
+        $role = self::canonicalLogosRole($role);
+        return '«' . t('logos.role_' . $role) . '»';
+    }
+
     private static function isPlaceholderText(string $text): bool
     {
         $text = trim($text);
         return $text !== '' && preg_match('/^«.+»$/u', $text) === 1;
+    }
+
+    /**
+     * Wählt die Layout-Folie mit dem besten Rollen-Match für mehrere Inhaltsrollen (Layout-Scoring).
+     *
+     * @param array<string, string> $contentByRole
+     */
+    public static function bestLayoutForContent(string $setId, array $contentByRole, ?array $setMeta = null): ?array
+    {
+        $roles = [];
+        foreach ($contentByRole as $role => $text) {
+            if (trim((string)$text) === '') {
+                continue;
+            }
+            $canonical = self::canonicalLogosRole((string)$role);
+            if ($canonical !== '') {
+                $roles[] = $canonical;
+            }
+        }
+        $roles = array_values(array_unique($roles));
+        if ($roles === []) {
+            return null;
+        }
+
+        $best = null;
+        $bestScore = PHP_INT_MIN;
+        foreach (self::layoutsInOrder($setId) as $slide) {
+            $prepared = self::prepareLayoutSlide($slide);
+            $score = self::scoreLayoutForRoles($prepared, $roles);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $prepared;
+            }
+        }
+        if ($best === null || $bestScore < count($roles) * 10) {
+            return null;
+        }
+        return $best;
+    }
+
+    /** @param list<string> $roles */
+    private static function scoreLayoutForRoles(array $layoutSlide, array $roles): int
+    {
+        $layoutRoles = [];
+        foreach ($layoutSlide['objects'] ?? [] as $obj) {
+            $role = self::readSetRole($obj);
+            if ($role !== '') {
+                $layoutRoles[$role] = true;
+            }
+        }
+        $layoutKey = (string)($layoutSlide['layoutKey'] ?? '');
+        foreach (self::rolesForLayoutKey($layoutKey) ?? [] as $expectedRole) {
+            if ($expectedRole !== 'subtitle') {
+                $layoutRoles[self::canonicalLogosRole($expectedRole)] = true;
+            }
+        }
+        $score = 0;
+        foreach ($roles as $role) {
+            if (!empty($layoutRoles[$role])) {
+                $score += 10;
+            } elseif ($role === 'list_item' && !empty($layoutRoles['normal'])) {
+                $score += 10;
+            } elseif ($role === 'normal' && !empty($layoutRoles['list_item'])) {
+                $score += 10;
+            } else {
+                return PHP_INT_MIN;
+            }
+        }
+        $matchedRoles = [];
+        foreach ($roles as $role) {
+            $matchedRoles[$role] = true;
+            if ($role === 'list_item') {
+                $matchedRoles['normal'] = true;
+            }
+            if ($role === 'normal') {
+                $matchedRoles['list_item'] = true;
+            }
+        }
+        $extra = 0;
+        foreach (array_keys($layoutRoles) as $layoutRole) {
+            if (empty($matchedRoles[$layoutRole]) && $layoutRole !== 'subtitle') {
+                $extra++;
+            }
+        }
+        if ($extra > 0) {
+            $score -= $extra * 2;
+        }
+        return $score;
     }
 
     /**
@@ -1489,14 +1673,31 @@ class LayoutSet
     /** @param array<string, string|array> $contentByRole */
     private static function contentTextFromRoleMap(array $contentByRole, string $role): string
     {
-        if (!array_key_exists($role, $contentByRole)) {
-            return '';
+        if (array_key_exists($role, $contentByRole)) {
+            $value = $contentByRole[$role];
+            if (is_array($value)) {
+                return trim((string)($value['text'] ?? ''));
+            }
+            return trim((string)$value);
         }
-        $value = $contentByRole[$role];
-        if (is_array($value)) {
-            return trim((string)($value['text'] ?? ''));
+        if ($role === 'normal' && array_key_exists('list_item', $contentByRole)) {
+            return trim((string)$contentByRole['list_item']);
         }
-        return trim((string)$value);
+        if ($role === 'list_item' && array_key_exists('normal', $contentByRole)) {
+            return trim((string)$contentByRole['normal']);
+        }
+        if (str_starts_with($role, 'heading')) {
+            foreach ($contentByRole as $contentRole => $value) {
+                if (!str_starts_with((string)$contentRole, 'heading')) {
+                    continue;
+                }
+                if (is_array($value)) {
+                    return trim((string)($value['text'] ?? ''));
+                }
+                return trim((string)$value);
+            }
+        }
+        return '';
     }
 
     /**
@@ -1804,6 +2005,9 @@ class LayoutSet
                 continue;
             }
             $layoutObj = self::findLayoutObjectForRole($layoutObjects, $role);
+            if ($layoutObj === null && in_array($role, ['normal', 'list_item'], true)) {
+                $layoutObj = self::findUnroledContentTextObject($layoutObjects);
+            }
             if ($layoutObj) {
                 $objects[] = self::mergePlaceholderObject($layoutObj, ['text' => $text, 'setRole' => $role]);
             } else {

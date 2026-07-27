@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lädt seed/layout-sets/<name>/ auf den Prod-Server (data/presentations/).
-# Schreibt Dateien per PHP (www-data), nicht per SFTP — sonst keine Schreibrechte im Editor.
+# Schreibt Dateien per PHP (www-data), nicht per direktem Datei-Upload — sonst keine Schreibrechte im Editor.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,9 +10,9 @@ SEED_NAME="${1:-schlicht}"
 ENV_FILE="${DEPLOY_ENV:-$SCRIPT_DIR/ssh.env}"
 # shellcheck source=/dev/null
 source "$ENV_FILE"
+# shellcheck source=ssh-common.sh
+source "$SCRIPT_DIR/ssh-common.sh"
 
-REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}:${SSH_PORT:-22}}"
-AUTH="${SSH_USER}:${SSH_PASS}"
 PROD_URL="${PROD_URL:-https://slides.bkbiel.ch}"
 SEED_DIR="$ROOT/seed/layout-sets/$SEED_NAME"
 
@@ -21,29 +21,14 @@ if [[ ! -f "$SEED_DIR/meta.json" || ! -f "$SEED_DIR/slides.json" ]]; then
   exit 1
 fi
 
-curl_sftp() {
-  SSH_AUTH_SOCK= curl -sS --ftp-method nocwd --ftp-create-dirs --user "$AUTH" "$@"
-}
-
-sftp_rm_presentation() {
+ssh_rm_presentation() {
   local id="$1"
-  local base="data/presentations/${id}"
-  for f in meta.json slides.json acl.json; do
-    curl_sftp -Q "rm ${base}/${f}" "${REMOTE}/" >/dev/null 2>&1 || true
-  done
-  if mapfile -t ASSETS < <(curl_sftp --list-only "${REMOTE}/${base}/assets/" 2>/dev/null | grep -v '^\.\.?$' || true); then
-    for asset in "${ASSETS[@]}"; do
-      [[ -z "$asset" || "$asset" == "." || "$asset" == ".." ]] && continue
-      curl_sftp -Q "rm ${base}/assets/${asset}" "${REMOTE}/" >/dev/null 2>&1 || true
-    done
-  fi
-  curl_sftp -Q "rmdir ${base}/assets" "${REMOTE}/" >/dev/null 2>&1 || true
-  curl_sftp -Q "rmdir ${base}" "${REMOTE}/" >/dev/null 2>&1 || true
+  deploy_ssh "rm -rf '$(deploy_remote_path "data/presentations/${id}")'" 2>/dev/null || true
 }
 
 echo "Admin auf dem Server ermitteln …"
 USERS_TMP="$(mktemp)"
-curl_sftp -f "${REMOTE}/data/users.json" -o "$USERS_TMP"
+deploy_scp_pull "$(deploy_remote_path data/users.json)" "$USERS_TMP"
 ADMIN_ID="$(python3 - "$USERS_TMP" <<'PY'
 import json, sys
 users = json.load(open(sys.argv[1]))
@@ -63,10 +48,10 @@ TITLE="$(python3 -c "import json; print(json.load(open('$SEED_DIR/meta.json')).g
 echo "Suche vorhandenes Set „${TITLE}“ …"
 
 EXISTING_ID=""
-mapfile -t REMOTE_IDS < <(curl_sftp --list-only "${REMOTE}/data/presentations/" 2>/dev/null | grep -E '^[a-f0-9]+$' || true)
+mapfile -t REMOTE_IDS < <(deploy_ssh "ls -1 '$(deploy_remote_path data/presentations)' 2>/dev/null" | grep -E '^[a-f0-9]+$' || true)
 for id in "${REMOTE_IDS[@]}"; do
   META_TMP="$(mktemp)"
-  if curl_sftp -f "${REMOTE}/data/presentations/${id}/meta.json" -o "$META_TMP" 2>/dev/null; then
+  if deploy_scp_pull "$(deploy_remote_path "data/presentations/${id}/meta.json")" "$META_TMP" 2>/dev/null; then
     MATCH="$(python3 - "$META_TMP" "$TITLE" <<'PY'
 import json, sys
 m = json.load(open(sys.argv[1]))
@@ -86,8 +71,8 @@ done
 if [[ -n "$EXISTING_ID" ]]; then
   TARGET_ID="$EXISTING_ID"
   echo "Aktualisiere vorhandenes Set: $TARGET_ID"
-  echo "Alte Dateien per SFTP entfernen …"
-  sftp_rm_presentation "$TARGET_ID"
+  echo "Alte Dateien entfernen …"
+  ssh_rm_presentation "$TARGET_ID"
 else
   TARGET_ID="$(python3 -c 'import secrets; print(secrets.token_hex(8))')"
   echo "Neues Set anlegen: $TARGET_ID"
@@ -172,7 +157,7 @@ PY
 
 STAGING_ZIP="data/cache/layout-push-${TOKEN}.zip"
 echo "Installiere per PHP (${TARGET_ID}) …"
-curl_sftp -T "$ZIP" "${REMOTE}/${STAGING_ZIP}"
+deploy_scp "$ZIP" "$(deploy_remote_path "$STAGING_ZIP")"
 
 cat > "$TMPPHP" <<PHP
 <?php
@@ -210,12 +195,11 @@ echo json_encode(['ok' => true, 'id' => \$id, 'dir' => \$dir], JSON_UNESCAPED_UN
 PHP
 
 cleanup_remote() {
-  curl_sftp -Q "RM /${REMOTE_SCRIPT}" "${REMOTE}/" 2>/dev/null || true
-  curl_sftp -Q "rm ${STAGING_ZIP}" "${REMOTE}/" 2>/dev/null || true
+  deploy_ssh "rm -f '$(deploy_remote_path "$REMOTE_SCRIPT")' '$(deploy_remote_path "$STAGING_ZIP")'" 2>/dev/null || true
 }
 trap cleanup_remote EXIT
 
-curl_sftp -T "$TMPPHP" "${REMOTE}/${REMOTE_SCRIPT}"
+deploy_scp "$TMPPHP" "$(deploy_remote_path "$REMOTE_SCRIPT")"
 BODY="$(curl -sS -X POST "${PROD_URL}/${REMOTE_BASENAME}" \
   --data-urlencode "token=${TOKEN}" \
   --data-urlencode "id=${TARGET_ID}")"
@@ -227,4 +211,4 @@ if [[ "$OK" != "yes" ]]; then
   exit 1
 fi
 
-echo "Fertig: Folien-Set „${TITLE}“ auf ${SSH_HOST} (${TARGET_ID}), freigegeben für alle."
+echo "Fertig: Folien-Set „${TITLE}“ auf $(deploy_label) (${TARGET_ID}), freigegeben für alle."

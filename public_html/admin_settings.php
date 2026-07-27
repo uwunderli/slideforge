@@ -467,7 +467,7 @@ require __DIR__ . '/includes/header.php';
               </select>
             </form>
             <?php if ($u['id'] !== $me['id']): ?>
-              <form method="post" class="inline-form" onsubmit="return confirm('<?= h(t('admin.delete_user_confirm', ['name' => $u['username']])) ?>');">
+              <form method="post" class="inline-form" data-sf-confirm="<?= h(t('admin.delete_user_confirm', ['name' => $u['username']])) ?>" data-sf-confirm-danger>
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete_user">
                 <input type="hidden" name="user_id" value="<?= h($u['id']) ?>">
@@ -487,9 +487,9 @@ require __DIR__ . '/includes/header.php';
 
 <div class="modal-backdrop" id="pixabayHelpModal" aria-hidden="true">
   <div class="modal admin-help-modal" role="dialog" aria-modal="true" aria-labelledby="pixabayHelpTitle">
-    <div class="admin-help-modal-header">
-      <h2 id="pixabayHelpTitle" style="font-size:1.15rem; text-transform:none; margin:0;"><?= h(t('admin.pixabay_help_title')) ?></h2>
-      <button type="button" class="button button-ghost button-sm" id="pixabayHelpClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header admin-help-modal-header">
+      <h2 id="pixabayHelpTitle" class="sf-dialog-title"><?= h(t('admin.pixabay_help_title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="pixabayHelpClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
     <div class="admin-help-modal-body">
       <?= str_replace('assets/images/pixabay-api-key-help.png', 'assets/images/pixabay-api-key-help.png?v=' . ASSET_VERSION, t('admin.pixabay_help_body')) ?>
@@ -519,9 +519,7 @@ if (pixabayHelpBtn && pixabayHelpModal) {
   pixabayHelpBtn.addEventListener('click', openPixabayHelpModal);
   document.getElementById('pixabayHelpClose')?.addEventListener('click', closePixabayHelpModal);
   document.getElementById('pixabayHelpOk')?.addEventListener('click', closePixabayHelpModal);
-  pixabayHelpModal.addEventListener('click', (e) => {
-    if (e.target === pixabayHelpModal) closePixabayHelpModal();
-  });
+  SFModalBackdrop?.bindDismiss(pixabayHelpModal, closePixabayHelpModal);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && pixabayHelpModal.classList.contains('open')) closePixabayHelpModal();
   });

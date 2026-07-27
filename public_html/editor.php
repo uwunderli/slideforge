@@ -44,8 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
         } else {
             Presentation::updateMeta($id, array_merge($baseUpdates, [
                 'presentation_duration' => max(1, (int)($_POST['presentation_duration'] ?? 30)),
-                'show_progress' => isset($_POST['show_progress']),
-                'show_controls' => isset($_POST['show_controls']),
                 'layout_set_id' => trim((string)($_POST['layout_set_id'] ?? '')),
             ]));
         }
@@ -127,6 +125,26 @@ if ($isLayoutSetMode) {
     $masterSlideSetId = $assignedLayoutSetId;
 }
 
+$canImportSlideToSet = !$isTemplateMode && $assignedLayoutSetId !== ''
+    && LayoutSet::isLayoutSet($assignedLayoutSetId)
+    && $linkedLayoutSetMeta !== null
+    && (($linkedLayoutSetMeta['owner_id'] ?? '') === $me['id'] || Auth::isAdmin());
+
+$ribbonContext = RibbonLayout::buildContext([
+    'canEdit' => $canEdit,
+    'isTemplateMode' => $isTemplateMode,
+    'isLayoutSetMode' => $isLayoutSetMode,
+    'masterSlideEditing' => $masterSlideNavActive,
+    'spellcheckEnabled' => Config::languageToolEnabled(),
+    'pixabayEnabled' => Config::pixabayEnabled(),
+    'iconifyEnabled' => Config::iconifyEnabled(),
+    'openclipartEnabled' => Config::openclipartEnabled(),
+    'showMasterSlideNav' => $showMasterSlideNav,
+    /* Bei Masterfolie-Bearbeitung: Owner der Ausgangspräsentation, damit Teilen sichtbar bleibt (disabled). */
+    'isOwner' => $masterSlideNavActive ? (($returnPerm ?? '') === 'owner') : ($perm === 'owner'),
+]);
+$ribbonUserLayout = $canEdit ? RibbonLayout::getLayout($me['id'], $ribbonContext) : null;
+
 $bootstrap = [
     'id' => $id,
     'meta' => $meta,
@@ -138,7 +156,10 @@ $bootstrap = [
     'textTemplates' => TextTemplate::listAll(),
     'templateMode' => $isTemplateMode,
     'layoutSetMode' => $isLayoutSetMode,
+    'masterSlideEditing' => $masterSlideNavActive,
     'hasLayoutSet' => $hasLayoutSet,
+    'canImportSlideToSet' => $canImportSlideToSet,
+    'importLayoutSetId' => $canImportSlideToSet ? $assignedLayoutSetId : '',
     'logosImporterEnabled' => $logosImporterEnabled,
     'logosImportedRoles' => LayoutSet::LOGOS_IMPORTED_ROLES,
     'logosExtraRoles' => LayoutSet::LOGOS_ZONE_ROLES,
@@ -147,6 +168,7 @@ $bootstrap = [
     'logosRoles' => LayoutSet::LOGOS_ROLES,
     'logosNotesOrder' => $isLayoutSetMode ? LayoutSet::notesOrder($meta) : [],
     'elementZones' => $isLayoutSetMode ? LayoutSet::elementZones($meta) : [],
+    'logosImportSettings' => $isLayoutSetMode ? LayoutSet::logosImportSettings($meta) : LayoutSet::DEFAULT_LOGOS_IMPORT_SETTINGS,
     'logosLayoutMap' => $linkedLayoutSetMeta ? LayoutSet::layoutMap($linkedLayoutSetMeta) : [],
     'logosLayoutSlideIds' => $linkedLayoutSetMeta ? LayoutSet::layoutSlideIdMap($linkedLayoutSetMeta) : [],
     'elementTextLinks' => $elementTextLinks,
@@ -166,6 +188,8 @@ $bootstrap = [
     'i18n' => [
         'loading' => t('template_modal.loading'),
         'saved' => t('editor.saved'),
+        'exportPreparing' => t('export.preparing'),
+        'exportStarted' => t('export.started'),
         'logosInsertEmpty' => t('elements.logos_insert_empty'),
         'error' => t('template_modal.error'),
         'empty' => t('template_modal.empty'),
@@ -176,6 +200,8 @@ $bootstrap = [
         'layersTitle' => t('props.layers_title'),
         'objectsTitle' => t('props.objects_title'),
         'settingsTemplates' => t('editor.settings_templates'),
+        'mediaTitle' => t('editor.tab_media'),
+        'textFieldDefault' => t('shape.text_field'),
         'templatePickerHint' => t('editor.template_picker_hint'),
         'layersEmpty' => t('props.layers_empty'),
         'layersHint' => t('props.layers_hint'),
@@ -184,6 +210,20 @@ $bootstrap = [
         'tabForm' => t('props.tab_form'),
         'tabPosition' => t('props.tab_position'),
         'tabEffect' => t('props.tab_effect'),
+        'sideTabTemplates' => t('props.side_tab_templates'),
+        'sideTabFormat' => t('props.side_tab_format'),
+        'sideTabPosition' => t('props.side_tab_position'),
+        'sideTabEffects' => t('props.side_tab_effects'),
+        'sideTabSpell' => t('props.side_tab_spell'),
+        'sideTabMedia' => t('props.side_tab_media'),
+        'sidePosLayout' => t('props.side_pos_layout'),
+        'sidePosLayers' => t('props.side_pos_layers'),
+        'sideTemplatesEmpty' => t('props.side_templates_empty'),
+        'positionAlign' => t('ribbon.group_position_align'),
+        'positionSize' => t('ribbon.group_position_size'),
+        'positionLayer' => t('ribbon.group_position_layer'),
+        'positionTransfer' => t('ribbon.group_position_transfer'),
+        'align' => t('props.align'),
         'typeShape' => t('props.type_shape'),
         'typeText' => t('props.type_text'),
         'typeEllipse' => t('props.type_ellipse'),
@@ -204,7 +244,9 @@ $bootstrap = [
         'markColorPick' => t('props.mark_color_pick'),
         'textColorPick' => t('props.text_color_pick'),
         'selectionHint' => t('props.selection_hint'),
+        'selectionHintTitle' => t('props.selection_hint_title'),
         'markdownHint' => t('props.markdown_hint'),
+        'markdownHintTitle' => t('props.markdown_hint_title'),
         'font' => t('props.font'),
         'size' => t('props.size'),
         'lineHeight' => t('props.line_height'),
@@ -229,6 +271,7 @@ $bootstrap = [
         'iconColor' => t('props.icon_color'),
         'borderWidth' => t('props.border_width'),
         'starPoints' => t('props.star_points'),
+        'starPointsLabel' => t('props.star_points_short'),
         'arrowStyle' => t('props.arrow_style'),
         'bubbleStyle' => t('props.bubble_style'),
         'replaceImage' => t('props.replace_image'),
@@ -254,6 +297,8 @@ $bootstrap = [
         'groupChildCount' => t('props.group_child_count'),
         'multiSelect' => t('editor.multi_select'),
         'applyTextStyle' => t('props.apply_text_style'),
+        'templateStyleSample' => t('ribbon.template_style_sample'),
+        'templateNone' => t('ribbon.template_none'),
         'groupEdit' => t('props.group_edit'),
         'groupFormat' => t('props.group_format'),
         'groupFont' => t('props.group_font'),
@@ -276,6 +321,19 @@ $bootstrap = [
         'elementLinksColLogos' => t('elements.logos_zones_heading'),
         'elementLinksTabStandard' => t('elements.element_links_tab_standard'),
         'elementLinksTabLogos' => t('elements.element_links_tab_logos'),
+        'elementLinksTabAssignments' => t('elements.element_links_tab_assignments'),
+        'elementLinksTabLogosImport' => t('elements.element_links_tab_logos_import'),
+        'logosImportH1Opener' => t('elements.logos_import_h1_opener'),
+        'logosImportH1Separate' => t('elements.logos_import_h1_separate'),
+        'logosImportH1Combine' => t('elements.logos_import_h1_combine'),
+        'logosImportScriptureHeading' => t('elements.logos_import_scripture_heading'),
+        'logosImportScriptureSeparate' => t('elements.logos_import_scripture_separate'),
+        'logosImportScriptureCombineFit' => t('elements.logos_import_scripture_combine_fit'),
+        'logosImportScriptureCombineAlways' => t('elements.logos_import_scripture_combine_always'),
+        'logosImportListGrouping' => t('elements.logos_import_list_grouping'),
+        'logosImportTextMaxChars' => t('elements.logos_import_text_max_chars'),
+        'logosImportListUnlimited' => t('elements.logos_import_list_unlimited'),
+        'logosImportListLayout' => t('elements.logos_import_list_layout'),
         'elementLinksColLogosElements' => t('elements.element_links_col_logos_elements'),
         'elementLinksColLogosMapping' => t('elements.element_links_col_logos_mapping'),
         'elementLinksColLogosDesc' => t('elements.element_links_col_logos_desc'),
@@ -304,6 +362,7 @@ $bootstrap = [
         'height' => t('props.height'),
         'aspectLock' => t('props.aspect_lock'),
         'rotation' => t('props.rotation'),
+        'rotationShort' => t('props.rotation_short'),
         'layerUp' => t('props.layer_up'),
         'layerDown' => t('props.layer_down'),
         'layerFront' => t('props.layer_front'),
@@ -317,6 +376,14 @@ $bootstrap = [
         'animPerLineHint' => t('props.anim_per_line_hint'),
         'positionCopy' => t('props.position_copy'),
         'positionPaste' => t('props.position_paste'),
+        'positionCopyShort' => t('ribbon.position_copy_short'),
+        'positionPasteShort' => t('ribbon.position_paste_short'),
+        'alVCenterShort' => t('ribbon.align_v_short'),
+        'alHCenterShort' => t('ribbon.align_h_short'),
+        'layerUpShort' => t('ribbon.layer_up_short'),
+        'layerDownShort' => t('ribbon.layer_down_short'),
+        'layerFrontShort' => t('ribbon.layer_front_short'),
+        'layerBackShort' => t('ribbon.layer_back_short'),
         'animationCopy' => t('props.animation_copy'),
         'animationPaste' => t('props.animation_paste'),
         'propsCopied' => t('props.copied'),
@@ -359,6 +426,9 @@ $bootstrap = [
         'shapeLine' => t('shape.line'),
         'newSlide' => t('editor.new_slide'),
         'duplicateSlide' => t('editor.duplicate_slide'),
+        'importSlideToSet' => t('editor.import_slide_to_set'),
+        'importSlideToSetPrompt' => t('editor.import_slide_to_set_prompt'),
+        'importSlideToSetDone' => t('editor.import_slide_to_set_done'),
         'deleteSlide' => t('editor.delete_slide'),
         'reorderSlide' => t('editor.reorder_slide'),
         'filmstripLabelPlaceholder' => t('editor.filmstrip_label_placeholder'),
@@ -376,6 +446,18 @@ $bootstrap = [
         'applyTransitionAll' => t('bg.apply_transition_all'),
         'transitionTitle' => t('bg.transition_title'),
         'autoAdvanceLabel' => t('bg.autoadvance_label'),
+        'bgImage' => t('bg.image'),
+        'bgVideo' => t('bg.video'),
+        'bgRemove' => t('bg.remove'),
+        'bgColor' => t('bg.color'),
+        'bgGradient' => t('bg.gradient'),
+        'bgNonePreview' => t('bg.none_preview'),
+        'slideBgPreview' => t('ribbon.slide_bg_preview'),
+        'slideUpload' => t('ribbon.slide_upload'),
+        'slideMediaChange' => t('ribbon.slide_media_change'),
+        'slideMediaHint' => t('ribbon.slide_media_hint'),
+        'slideMediaExisting' => t('ribbon.slide_media_existing'),
+        'slideMediaExistingEmpty' => t('ribbon.slide_media_existing_empty'),
         'notesTitle' => t('present.notes'),
     ],
     'presentConfig' => [
@@ -392,6 +474,20 @@ $bootstrap = [
             'screenMultiHint' => t('present.screen_multi_hint'),
             'localStart' => t('present.local_start'),
             'localReopen' => t('present.local_reopen'),
+        ],
+    ],
+    'share' => [
+        'enabled' => $perm === 'owner' && !$isTemplateMode,
+        'i18n' => [
+            'noneYet' => t('share.none_yet'),
+            'pleaseChoose' => t('share.please_choose'),
+            'noOtherUsers' => t('share.no_other_users'),
+            'alreadyShared' => t('share.already_shared'),
+            'permEdit' => t('dashboard.permission_edit'),
+            'permView' => t('dashboard.permission_view'),
+            'remove' => t('common.remove'),
+            'resetConfirm' => t('share.reset_confirm'),
+            'copied' => t('present.copied'),
         ],
     ],
     'spellcheck' => [
@@ -457,6 +553,9 @@ $bootstrap = [
             'videoTypeAnimation' => t('pixabay.video_type_animation'),
             'previewHint' => t('pixabay.preview_hint'),
             'previewBy' => t('pixabay.preview_by'),
+            'searchEnglish' => t('media.search_english'),
+            'searchEnglishHint' => t('media.search_english_hint'),
+            'translating' => t('media.translating'),
         ],
     ],
     'iconify' => [
@@ -491,6 +590,9 @@ $bootstrap = [
             'previewHint' => t('iconify.preview_hint'),
             'targetObject' => t('iconify.target_object'),
             'iconColor' => t('iconify.icon_color'),
+            'searchEnglish' => t('media.search_english'),
+            'searchEnglishHint' => t('media.search_english_hint'),
+            'translating' => t('media.translating'),
         ],
     ],
     'openclipart' => [
@@ -511,6 +613,9 @@ $bootstrap = [
             'next' => t('openclipart.next'),
             'previewHint' => t('openclipart.preview_hint'),
             'targetObject' => t('openclipart.target_object'),
+            'searchEnglish' => t('media.search_english'),
+            'searchEnglishHint' => t('media.search_english_hint'),
+            'translating' => t('media.translating'),
         ],
     ],
     'webdav' => [
@@ -563,6 +668,84 @@ $bootstrap = [
             'cleanupNone' => t('media_lib.cleanup_none'),
         ],
     ],
+    'ribbon' => $canEdit ? [
+        'layout' => RibbonLayout::layoutForClient($ribbonUserLayout, $ribbonContext),
+        'catalog' => RibbonLayout::catalogForClient($ribbonContext),
+        'commands' => RibbonLayout::commandDefsForClient($ribbonContext),
+        'apiUrl' => 'ribbon.php',
+        'meta' => [
+            'urls' => [
+                'present' => 'present.php?id=' . urlencode($id),
+                'preview' => 'preview.php?id=' . urlencode($id),
+                'share' => 'presentation_share.php?id=' . urlencode($id),
+                'export' => 'export.php?id=' . urlencode($id),
+            ],
+            'masterSlideNav' => $showMasterSlideNav ? [
+                'active' => $masterSlideNavActive,
+                'setId' => $masterSlideSetId,
+                'presentationId' => $masterSlideNavActive ? $masterSlideReturnId : $id,
+                'returnId' => $masterSlideReturnId,
+                'returnSlide' => $masterSlideReturnSlide,
+                'title' => t($masterSlideNavActive ? 'editor.master_slide_back' : 'editor.master_slide_open'),
+            ] : null,
+            'masterSlideEditing' => $masterSlideNavActive,
+            'masterSlideCommandsDisabled' => t('editor.master_slide_commands_disabled'),
+        ],
+        'i18n' => [
+            'title' => t('ribbon.customize_title'),
+            'search' => t('ribbon.customize_search'),
+            'categoryAll' => t('ribbon.customize_category_all'),
+            'tabAdd' => t('ribbon.customize_tab_add'),
+            'tabRename' => t('ribbon.customize_tab_rename'),
+            'tabDelete' => t('ribbon.customize_tab_delete'),
+            'tabNamePrompt' => t('ribbon.customize_tab_name'),
+            'groupAdd' => t('ribbon.customize_group_add'),
+            'groupRename' => t('ribbon.customize_group_rename'),
+            'groupDelete' => t('ribbon.customize_group_delete'),
+            'groupNamePrompt' => t('ribbon.customize_group_name'),
+            'newTab' => t('ribbon.customize_new_tab'),
+            'newGroup' => t('ribbon.customize_new_group'),
+            'reset' => t('ribbon.customize_reset'),
+            'resetConfirm' => t('ribbon.customize_reset_confirm'),
+            'save' => t('ribbon.customize_save'),
+            'cancel' => t('common.cancel'),
+            'remove' => t('ribbon.customize_remove'),
+            'livePreviewHint' => t('ribbon.customize_live_preview'),
+            'emptyLayout' => t('ribbon.customize_empty_layout'),
+            'toggleTab' => t('ribbon.customize_toggle_tab'),
+            'toggleGroup' => t('ribbon.customize_toggle_group'),
+            'appearanceIconSize' => t('ribbon.appearance_icon_size'),
+            'appearanceIconSmall' => t('ribbon.appearance_icon_small'),
+            'appearanceIconMedium' => t('ribbon.appearance_icon_medium'),
+            'appearanceIconLarge' => t('ribbon.appearance_icon_large'),
+            'appearanceLabelsShow' => t('ribbon.appearance_labels_show'),
+            'appearanceLabelsHide' => t('ribbon.appearance_labels_hide'),
+            'appearanceGroupRows' => t('ribbon.appearance_group_rows'),
+            'appearanceGroupRows1' => t('ribbon.appearance_group_rows_1'),
+            'appearanceGroupRows2' => t('ribbon.appearance_group_rows_2'),
+            'separatorAdd' => t('ribbon.customize_separator_add'),
+            'rowSeparatorAdd' => t('ribbon.customize_row_separator_add'),
+            'itemTileSmall' => t('ribbon.item_tile_small'),
+            'itemTileLarge' => t('ribbon.item_tile_large'),
+            'itemTileLargeNeedsRows' => t('ribbon.item_tile_large_needs_rows'),
+            'itemTileSep1' => t('ribbon.item_tile_sep_1'),
+            'itemTileSep2' => t('ribbon.item_tile_sep_2'),
+            'itemTileTransition1' => t('ribbon.item_tile_transition_1'),
+            'itemTileTransition2' => t('ribbon.item_tile_transition_2'),
+            'itemTileTransition2NeedsRows' => t('ribbon.item_tile_transition_2_needs_rows'),
+            'itemLabelShow' => t('ribbon.item_label_show'),
+            'itemLabelHide' => t('ribbon.item_label_hide'),
+            'errorSave' => t('ribbon.error_save'),
+            'errorReset' => t('ribbon.error_reset'),
+            'categories' => [
+                'start' => t('ribbon.tab_start'),
+                'insert' => t('ribbon.tab_insert'),
+                'design' => t('ribbon.tab_design'),
+                'present' => t('ribbon.tab_present'),
+                'view' => t('ribbon.tab_view'),
+            ],
+        ],
+    ] : null,
 ];
 
 $editorSlidesData = Presentation::getSlides($id);
@@ -578,221 +761,9 @@ if ($isLayoutSetMode && $editorCurrentSlide) {
 $pageTitle = 'Editor · ' . $headerPresentationTitle;
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="editor-topbar editor-topbar-grid">
+<div class="editor-topbar editor-topbar-slim">
   <div class="editor-topbar-left">
     <a href="<?= $isTemplateMode ? 'templates.php?tab=slides' : 'index.php' ?>" class="back-link">&larr; <?= $isTemplateMode ? h(t('nav.templates')) : h(t('editor.dashboard')) ?></a>
-  </div>
-  <div class="editor-topbar-canvas">
-  <div class="editor-topbar-icons">
-    <button type="button" class="button button-ghost button-sm icon-only" id="undoBtn" title="<?= h(t('editor.undo')) ?> (Ctrl+Z)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>
-    </button>
-    <button type="button" class="button button-ghost button-sm icon-only" id="redoBtn" title="<?= h(t('editor.redo')) ?> (Ctrl+Y)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 0 0 0 8h1"/></svg>
-    </button>
-    <span class="present-toolbar-sep"></span>
-    <button type="button" class="button button-ghost button-sm icon-only" id="copyObjBtn" title="<?= h(t('props.copy')) ?> (Ctrl+C)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
-    </button>
-    <button type="button" class="button button-ghost button-sm icon-only" id="cutObjBtn" title="<?= h(t('props.cut')) ?> (Ctrl+X)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.5 15.5M8.5 8.5L20 20"/></svg>
-    </button>
-    <button type="button" class="button button-ghost button-sm icon-only" id="pasteBtn" title="<?= h(t('editor.paste')) ?> (Ctrl+V)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="4" rx="1"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>
-    </button>
-    <span class="present-toolbar-sep"></span>
-    <button type="button" class="button button-ghost button-sm icon-only" id="dupObjBtn" title="<?= h(t('props.duplicate')) ?> (Ctrl+D)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/><line x1="12" y1="14" x2="18" y2="14"/><line x1="15" y1="11" x2="15" y2="17"/></svg>
-    </button>
-    <button type="button" class="button button-ghost button-sm icon-only" id="groupObjBtn" title="<?= h(t('editor.group')) ?> (Ctrl+G)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-    </button>
-    <button type="button" class="button button-ghost button-sm icon-only" id="ungroupObjBtn" title="<?= h(t('editor.ungroup')) ?> (Ctrl+Shift+G)" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M10 6h4M6 10v4M18 10v4M10 18h4"/></svg>
-    </button>
-    <?php if ($canEdit && Config::languageToolEnabled()): ?>
-    <span class="present-toolbar-sep"></span>
-    <button type="button" class="button button-ghost button-sm icon-only" id="spellcheckBtn" title="<?= h(t('spell.menu')) ?>">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M6 16l6-10 6 10"/><path d="M8.5 13h7"/><path d="M16 18l2 2 4-4"/></svg>
-    </button>
-    <?php endif; ?>
-  </div>
-  <div class="editor-topbar-menus">
-    <?php if (!$isTemplateMode): ?>
-    <a href="present.php?id=<?= urlencode($id) ?>" class="present-config-btn editor-topbar-link" id="presentModeLink">
-      <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z"/></svg>
-      <?= h(t('editor.present_mode')) ?>
-    </a>
-    <div class="present-config-wrap" data-editor-menu data-present-menu>
-      <button type="button" class="present-config-btn" data-menu-btn aria-expanded="false" aria-haspopup="true">
-        <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8"/><path d="M12 18v4"/><path d="M7 15h10"/></svg>
-        <?= h(t('present.section_present')) ?>
-        <span class="present-config-chevron" aria-hidden="true">▾</span>
-      </button>
-      <div class="present-config-panel editor-present-panel" data-menu-panel hidden role="menu">
-        <div class="present-config-section">
-          <div class="present-config-section-title"><?= h(t('editor.menu_preview')) ?></div>
-          <a href="preview.php?id=<?= urlencode($id) ?>" target="_blank" class="dropdown-menu-item" id="previewTabLink" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            <?= h(t('editor.preview_tab')) ?>
-          </a>
-          <button type="button" class="dropdown-menu-item" id="previewWindowBtn" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="12" height="10" rx="1"/><path d="M14 3h7v7"/><path d="M21 3l-8 8"/></svg>
-            <?= h(t('editor.preview_window')) ?>
-          </button>
-        </div>
-        <?php if ($canEdit): ?>
-        <div class="present-config-section">
-          <div class="present-config-section-title"><?= h(t('present.menu_audience')) ?></div>
-          <label class="present-config-check">
-            <input type="checkbox" id="showProgressToggle" <?= ($meta['show_progress'] ?? true) ? 'checked' : '' ?>>
-            <span><?= h(t('present.progress_bar')) ?></span>
-          </label>
-          <label class="present-config-check">
-            <input type="checkbox" id="showControlsToggle" <?= ($meta['show_controls'] ?? true) ? 'checked' : '' ?>>
-            <span><?= h(t('present.controls_toggle')) ?></span>
-          </label>
-          <?php if ($perm === 'owner'): ?>
-          <div class="present-config-row">
-            <label class="present-config-check present-config-check-grow">
-              <input type="checkbox" id="publicLinkToggle" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?>>
-              <span><?= h(t('present.public_link')) ?></span>
-            </label>
-            <button type="button" class="button button-ghost button-sm" id="copyPublicLinkBtn" <?= $publicUrl ? '' : 'disabled' ?>><?= h(t('present.copy_link')) ?></button>
-          </div>
-          <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
-          <?php endif; ?>
-        </div>
-        <div class="present-config-section">
-          <div class="present-config-section-title"><?= h(t('present.local_present')) ?></div>
-          <label class="present-field-label" for="presentScreenSelect"><?= h(t('present.screen_label')) ?></label>
-          <select id="presentScreenSelect" class="present-screen-select"></select>
-          <p class="present-screen-hint" id="presentScreenHint"></p>
-          <button type="button" class="button button-primary present-local-btn" id="presentLocalBtn"><?= h(t('present.local_start')) ?></button>
-        </div>
-        <?php endif; ?>
-      </div>
-    </div>
-    <div class="present-config-wrap" data-editor-menu>
-      <button type="button" class="present-config-btn" data-menu-btn aria-expanded="false" aria-haspopup="true">
-        <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.7l7.6-4.4M8.2 13.3l7.6 4.4"/></svg>
-        <?= h(t('editor.collaboration')) ?>
-        <span class="present-config-chevron" aria-hidden="true">▾</span>
-      </button>
-      <div class="present-config-panel editor-collab-panel" data-menu-panel hidden role="menu">
-        <div class="present-config-section">
-          <?php if ($perm === 'owner'): ?>
-          <a href="presentation_share.php?id=<?= urlencode($id) ?>" class="dropdown-menu-item" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.7l7.6-4.4M8.2 13.3l7.6 4.4"/></svg>
-            <?= h(t('editor.share')) ?>
-          </a>
-          <?php endif; ?>
-          <a href="export.php?id=<?= urlencode($id) ?>" class="dropdown-menu-item" role="menuitem">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
-            <?= h(t('editor.export')) ?>
-          </a>
-        </div>
-      </div>
-    </div>
-    <?php endif; ?>
-    <?php if ($canEdit): ?>
-    <div class="present-config-wrap" data-editor-menu data-settings-menu>
-      <button type="button" class="present-config-btn" data-menu-btn aria-expanded="false" aria-haspopup="true">
-        <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/></svg>
-        <?= h(t('editor.settings_menu')) ?>
-        <span class="present-config-chevron" aria-hidden="true">▾</span>
-      </button>
-      <div class="present-config-panel editor-settings-submenu" data-settings-submenu hidden>
-        <button type="button" class="dropdown-menu-item" data-settings-open="slides">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="1.5"/><path d="M17 10l4 2-4 2v-4z"/></svg>
-          <?= h(t('editor.tab_slides')) ?>
-        </button>
-        <?php if (!$isTemplateMode): ?>
-        <button type="button" class="dropdown-menu-item" data-settings-open="presentation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg>
-          <?= h(t('modal.group_presentation')) ?>
-        </button>
-        <button type="button" class="dropdown-menu-item" data-settings-open="navigation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h16"/><circle cx="19" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
-          <?= h(t('modal.group_navigation')) ?>
-        </button>
-        <?php endif; ?>
-      </div>
-      <div class="present-config-panel editor-settings-panel" data-settings-panel="slides" hidden>
-        <div class="present-config-section">
-          <label for="edTitle"><?= h(t('modal.title_label')) ?></label>
-          <input type="text" id="edTitle" name="title" form="metaSettingsForm" value="<?= h($meta['title']) ?>">
-          <div class="row" style="display:flex; gap:12px; margin-top:10px;">
-            <div style="flex:1;">
-              <label for="edWidth"><?= h(t('modal.width_label')) ?></label>
-              <input type="number" id="edWidth" name="width" form="metaSettingsForm" value="<?= (int)$meta['width'] ?>">
-            </div>
-            <div style="flex:1;">
-              <label for="edHeight"><?= h(t('modal.height_label')) ?></label>
-              <input type="number" id="edHeight" name="height" form="metaSettingsForm" value="<?= (int)$meta['height'] ?>">
-            </div>
-          </div>
-          <label for="edSafeMargin" style="margin-top:10px;"><?= h(t('modal.safe_margin_label')) ?></label>
-          <input type="number" id="edSafeMargin" name="safe_margin" form="metaSettingsForm" min="0" value="<?= (int)($meta['safe_margin'] ?? 100) ?>">
-          <div class="props-video-note" style="margin-top:4px;"><?= h(t('modal.safe_margin_hint')) ?></div>
-          <?php if (!$isTemplateMode): ?>
-          <label for="edLayoutSet" style="margin-top:14px;"><?= h(t('editor.layout_set_label')) ?></label>
-          <select id="edLayoutSet" name="layout_set_id" form="metaSettingsForm">
-            <option value=""><?= h(t('editor.layout_set_none')) ?></option>
-            <?php foreach ($editorLayoutSets as $set): ?>
-              <option value="<?= h($set['id']) ?>" <?= ($meta['layout_set_id'] ?? '') === $set['id'] ? 'selected' : '' ?>><?= h($set['title']) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.layout_set_hint')) ?></div>
-          <?php endif; ?>
-        </div>
-        <div class="present-config-panel-footer">
-          <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          <button type="button" class="button button-ghost button-sm" data-menu-close><?= h(t('modal.cancel')) ?></button>
-          <button type="submit" class="button button-sm" form="metaSettingsForm"><?= h(t('modal.save')) ?></button>
-        </div>
-      </div>
-      <?php if (!$isTemplateMode): ?>
-      <div class="present-config-panel editor-settings-panel" data-settings-panel="presentation" hidden>
-        <div class="present-config-section">
-          <label for="edDuration"><?= h(t('editor.duration_label')) ?></label>
-          <input type="number" id="edDuration" name="presentation_duration" form="metaSettingsForm" min="1" value="<?= (int)($meta['presentation_duration'] ?? 30) ?>">
-          <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.duration_hint')) ?></div>
-          <?php if (Config::languageToolEnabled()): ?>
-          <label class="present-config-check" style="margin-top:14px;">
-            <input type="checkbox" id="spellcheckBeforePresentToggle" style="width:auto;" <?= Auth::spellcheckBeforePresent($me) ? 'checked' : '' ?>>
-            <span><?= h(t('editor.spellcheck_before_present')) ?></span>
-          </label>
-          <div class="props-video-note" style="margin-top:4px;"><?= h(t('editor.spellcheck_before_present_hint')) ?></div>
-          <?php endif; ?>
-        </div>
-        <div class="present-config-panel-footer">
-          <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          <button type="button" class="button button-ghost button-sm" data-menu-close><?= h(t('modal.cancel')) ?></button>
-          <button type="submit" class="button button-sm" form="metaSettingsForm"><?= h(t('modal.save')) ?></button>
-        </div>
-      </div>
-      <div class="present-config-panel editor-settings-panel" data-settings-panel="navigation" hidden>
-        <div class="present-config-section">
-          <label class="present-config-check">
-            <input type="checkbox" name="show_progress" form="metaSettingsForm" style="width:auto;" <?= ($meta['show_progress'] ?? true) ? 'checked' : '' ?>>
-            <span><?= h(t('editor.show_progress_label')) ?></span>
-          </label>
-          <label class="present-config-check">
-            <input type="checkbox" name="show_controls" form="metaSettingsForm" style="width:auto;" <?= ($meta['show_controls'] ?? true) ? 'checked' : '' ?>>
-            <span><?= h(t('editor.show_controls_label')) ?></span>
-          </label>
-        </div>
-        <div class="present-config-panel-footer">
-          <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          <button type="button" class="button button-ghost button-sm" data-menu-close><?= h(t('modal.cancel')) ?></button>
-          <button type="submit" class="button button-sm" form="metaSettingsForm"><?= h(t('modal.save')) ?></button>
-        </div>
-      </div>
-      <?php endif; ?>
-    </div>
-    <?php endif; ?>
-  </div>
   </div>
   <div class="editor-topbar-right">
     <?php if ($isTemplateMode): ?>
@@ -804,6 +775,9 @@ require __DIR__ . '/includes/header.php';
     <span id="saveStatus" class="save-status"><?= h(t('editor.saved')) ?></span>
   </div>
 </div>
+<?php if ($canEdit): ?>
+<?php require __DIR__ . '/includes/editor_ribbon.php'; ?>
+<?php endif; ?>
 
 <?php if (!$canEdit): ?>
 <div class="alert alert-success" style="margin:12px 24px;"><?= t('editor.view_only_notice') ?></div>
@@ -889,253 +863,17 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </script>
 <?php else: ?>
 
-<div class="editor-layout">
-  <aside class="options-panel">
-    <div class="obj-tabs">
-      <button type="button" class="obj-tab-btn active" data-objtab="slides" title="<?= h(t('editor.tab_slides')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        <span><?= h(t('editor.tab_slides')) ?></span>
-      </button>
-      <?php if ($isLayoutSetMode): ?>
-      <button type="button" class="obj-tab-btn" data-objtab="elements" title="<?= h(t('editor.tab_elements')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M14 14h4"/></svg>
-        <span><?= h(t('editor.tab_elements')) ?></span>
-      </button>
-      <?php endif; ?>
-      <button type="button" class="obj-tab-btn" data-objtab="text" title="<?= h(t('editor.tab_text')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
-        <span><?= h(t('editor.tab_text')) ?></span>
-      </button>
-      <button type="button" class="obj-tab-btn" data-objtab="shapes" title="<?= h(t('editor.tab_objects')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="9" height="9" rx="1.5"/><circle cx="16.5" cy="16.5" r="5.5"/></svg>
-        <span><?= h(t('editor.tab_objects')) ?></span>
-      </button>
-      <button type="button" class="obj-tab-btn" data-objtab="media" title="<?= h(t('editor.tab_media')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 8l7 4-7 4V8z"/></svg>
-        <span><?= h(t('editor.tab_media')) ?></span>
-      </button>
-      <button type="button" class="obj-tab-btn" data-objtab="background" title="<?= h(t('editor.tab_background')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>
-        <span><?= h(t('editor.tab_background')) ?></span>
-      </button>
-      <?php if (!$isTemplateMode): ?>
-      <div class="obj-tabs-separator" aria-hidden="true"></div>
-      <button type="button" class="obj-tab-btn obj-tab-btn-grid" id="slideGridViewBtn" title="<?= h(t('editor.tab_slide_grid')) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span><?= h(t('editor.tab_slide_grid')) ?></span>
-      </button>
-      <?php endif; ?>
-      <?php if ($showMasterSlideNav): ?>
-      <button type="button"
-        class="obj-tab-btn obj-tab-btn-master<?= $masterSlideNavActive ? ' active' : '' ?>"
-        id="masterSlideNavBtn"
-        title="<?= h($masterSlideNavActive ? t('editor.master_slide_back') : t('editor.master_slide_open')) ?>"
-        data-set-id="<?= h($masterSlideSetId) ?>"
-        data-presentation-id="<?= h($masterSlideNavActive ? $masterSlideReturnId : $id) ?>"
-        data-return-id="<?= h($masterSlideReturnId) ?>"
-        data-return-slide="<?= (int)$masterSlideReturnSlide ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="4" y="5" width="14" height="10" rx="1.5"/>
-          <path d="M8 19h12"/>
-          <rect x="10" y="9" width="14" height="10" rx="1.5"/>
-        </svg>
-        <span><?= h(t('editor.master_slide')) ?></span>
-      </button>
+<div class="editor-layout<?= ($isTemplateMode && !$isLayoutSetMode) ? ' editor-layout-no-filmstrip' : '' ?>">
+  <?php if (!$isTemplateMode || $isLayoutSetMode): ?>
+  <aside class="options-panel options-panel-filmstrip">
+    <div class="editor-slides-toolbar">
+      <?php if ($canEdit): ?>
+        <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>
       <?php endif; ?>
     </div>
-
-    <div class="obj-tab-content">
-    <div class="obj-tab-panel active" data-objtab="slides">
-      <div class="editor-slides-toolbar">
-        <?php if ($canEdit && (!$isTemplateMode || $isLayoutSetMode)): ?>
-          <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>
-        <?php endif; ?>
-      </div>
-      <div id="slideFilmstrip" class="editor-slide-filmstrip"></div>
-    </div>
-    <?php if ($isLayoutSetMode): ?>
-    <?php $elementZones = LayoutSet::elementZones($meta); ?>
-    <?php
-      $logosSlideInsertRoles = array_values(array_filter(
-          LayoutSet::slideInsertRolesFromZones($elementZones),
-          fn($role) => !in_array($role, LayoutSet::STANDARD_ELEMENT_ROLES, true)
-      ));
-      $activeLogosRoles = [];
-      foreach ($elementZones as $zone => $roles) {
-          if ($zone === 'unused' || !is_array($roles)) {
-              continue;
-          }
-          foreach ($roles as $role) {
-              $activeLogosRoles[$role] = true;
-          }
-      }
-    ?>
-    <div class="obj-tab-panel" data-objtab="elements">
-      <div class="elements-panel-inner">
-        <div class="options-subtitle"><?= h(t('elements.standard_heading')) ?></div>
-        <p class="elements-panel-hint"><?= h(t('elements.standard_desc')) ?></p>
-        <div class="element-rows" id="standardElementButtons">
-          <?php foreach (LayoutSet::STANDARD_ELEMENT_ROLES as $role): ?>
-          <button type="button" class="element-row-btn tool-btn-block" data-set-role="<?= h($role) ?>">
-            <span class="element-row-icon" aria-hidden="true"><?= sf_element_icon($role) ?></span>
-            <span class="element-row-label"><?= h(t('logos.role_' . $role)) ?></span>
-            <?php if ($logosImporterEnabled && !empty($activeLogosRoles[$role])): ?><?= sf_logos_badge() ?><?php endif; ?>
-          </button>
-          <?php endforeach; ?>
-        </div>
-        <?php if ($logosImporterEnabled): ?>
-        <div class="element-logos-insert-section" id="logosSlideInsertSection"<?= $logosSlideInsertRoles ? '' : ' style="display:none;"' ?>>
-          <div class="options-subtitle"><?= h(t('elements.logos_insert_heading_more')) ?></div>
-          <div id="logosSlideInsertButtons" class="element-rows">
-            <?php if ($logosSlideInsertRoles): ?>
-              <?php foreach ($logosSlideInsertRoles as $role): ?>
-              <button type="button" class="element-row-btn tool-btn-block" data-set-role="<?= h($role) ?>">
-                <span class="element-row-icon" aria-hidden="true"><?= sf_element_icon($role) ?></span>
-                <span class="element-row-label"><?= h(t('logos.role_' . $role)) ?></span>
-                <?= sf_logos_badge() ?>
-              </button>
-              <?php endforeach; ?>
-            <?php else: ?>
-              <p class="elements-panel-hint elements-panel-hint-empty"><?= h(t('elements.logos_insert_empty')) ?></p>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php endif; ?>
-        <?php if ($canEdit): ?>
-        <button type="button" class="element-row-btn tool-btn-block" id="configureElementLinksBtn" style="margin-top:14px;">
-          <span class="element-row-label"><?= h(t('elements.configure_element_links')) ?></span>
-          <?php if ($logosImporterEnabled): ?><?= sf_logos_badge() ?><?php endif; ?>
-        </button>
-        <?php endif; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-    <div class="obj-tab-panel" data-objtab="text">
-      <button type="button" class="tool-btn-block" data-tool="text"><?= h(t('shape.text')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="markdown-text"><?= h(t('shape.markdown_text')) ?></button>
-      <div id="textTemplateButtons"></div>
-    </div>
-
-    <div class="obj-tab-panel" data-objtab="shapes">
-      <button type="button" class="tool-btn-block" data-tool="line">╱ <?= h(t('shape.line')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="rect">▭ <?= h(t('shape.rect')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="triangle">△ <?= h(t('shape.triangle')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="ellipse">◯ <?= h(t('shape.ellipse')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="bracket">( <?= h(t('shape.bracket')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="arrow">→ <?= h(t('shape.arrow')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="star">★ <?= h(t('shape.star')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="speech-bubble">💬 <?= h(t('shape.speech_bubble')) ?></button>
-    </div>
-
-    <div class="obj-tab-panel" data-objtab="media">
-      <div class="media-subnav">
-        <button type="button" class="media-subnav-btn active" data-mediasub="insert"><?= h(t('media_lib.sub_insert')) ?></button>
-        <button type="button" class="media-subnav-btn" data-mediasub="library"><?= h(t('media_lib.sub_overview')) ?></button>
-      </div>
-      <div class="media-sub-panel active" data-mediasub="insert">
-      <button type="button" class="tool-btn-block" data-tool="image">🖼 <?= h(t('shape.image')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="audio"><?= h(t('shape.audio')) ?></button>
-      <button type="button" class="tool-btn-block" data-tool="video"><?= h(t('shape.video')) ?></button>
-      <input type="file" id="objImageInput" accept="image/jpeg,image/png,image/gif,image/webp" hidden>
-      <input type="file" id="objAudioInput" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4" hidden>
-      <input type="file" id="objVideoInput" accept="video/mp4,video/webm" hidden>
-      <?php if ($canEdit && Config::pixabayEnabled()): ?>
-      <button type="button" class="tool-btn-block" id="pixabayOpenBtn">📷 <?= h(t('pixabay.open_from_bg')) ?></button>
-      <?php endif; ?>
-      <?php if ($canEdit && Config::iconifyEnabled()): ?>
-      <button type="button" class="tool-btn-block" id="iconifyOpenBtn">▣ <?= h(t('iconify.open_from_media')) ?></button>
-      <?php endif; ?>
-      <?php if ($canEdit && Config::openclipartEnabled()): ?>
-      <button type="button" class="tool-btn-block" id="openclipartOpenBtn">✂️ <?= h(t('openclipart.open_from_media')) ?></button>
-      <?php endif; ?>
-      <?php if ($canEdit && count($webdavDrives) > 0): ?>
-      <div class="media-source-divider" role="separator" aria-hidden="true"></div>
-      <?php foreach ($webdavDrives as $wdDrive): ?>
-      <button type="button" class="tool-btn-block webdav-drive-btn" data-drive-id="<?= h($wdDrive['id']) ?>" data-drive-label="<?= h($wdDrive['label']) ?>">☁ <?= h($wdDrive['label']) ?></button>
-      <?php endforeach; ?>
-      <?php endif; ?>
-      </div>
-      <div class="media-sub-panel" data-mediasub="library" id="mediaLibraryPanel" hidden>
-        <div class="media-library-header">
-          <div class="options-title"><?= h(t('media_lib.title')) ?></div>
-          <div class="media-library-header-actions">
-            <button type="button" class="button button-ghost button-sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
-            <?php if ($canEdit): ?>
-            <button type="button" class="button button-ghost button-sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php if ($canEdit): ?>
-        <p class="media-library-hint"><?= h(t('media_lib.insert_hint')) ?></p>
-        <?php endif; ?>
-        <div class="media-library-status" id="mediaLibraryStatus"></div>
-        <div class="media-library-list" id="mediaLibraryList"></div>
-      </div>
-    </div>
-
-    <div class="obj-tab-panel" data-objtab="background">
-      <div class="options-section">
-        <div class="options-title"><?= h(t('bg.title')) ?></div>
-        <div class="bg-type-tabs">
-          <button type="button" class="bg-type-btn active" data-bgtype="color"><?= h(t('bg.color')) ?></button>
-          <button type="button" class="bg-type-btn" data-bgtype="gradient"><?= h(t('bg.gradient')) ?></button>
-          <button type="button" class="bg-type-btn" data-bgtype="image"><?= h(t('bg.image')) ?></button>
-          <button type="button" class="bg-type-btn" data-bgtype="video"><?= h(t('bg.video')) ?></button>
-          <button type="button" class="bg-type-btn" data-bgtype="none"><?= h(t('bg.none')) ?></button>
-        </div>
-
-        <div class="bg-panel" data-bgtype="color">
-          <input type="color" id="bgColorInput" value="#111111" style="width:100%; height:34px;">
-          <div class="options-subtitle"><?= h(t('bg.brand_colors')) ?></div>
-          <div class="brand-palette" id="brandPalette"></div>
-        </div>
-
-        <div class="bg-panel" data-bgtype="gradient" hidden>
-          <div class="row">
-            <div><label for="bgGradColor1" style="margin-top:0;"><?= h(t('bg.color1')) ?></label><input type="color" id="bgGradColor1" value="#3a6c8d"></div>
-            <div><label for="bgGradColor2" style="margin-top:0;"><?= h(t('bg.color2')) ?></label><input type="color" id="bgGradColor2" value="#87b42b"></div>
-          </div>
-          <label for="bgGradAngle"><?= h(t('bg.angle')) ?> (<span id="bgGradAngleVal">90</span>°)</label>
-          <input type="range" id="bgGradAngle" min="0" max="360" value="90">
-        </div>
-
-        <div class="bg-panel" data-bgtype="image" hidden>
-          <input type="file" id="bgImageInput" accept="image/jpeg,image/png,image/gif,image/webp">
-          <?php if ($canEdit && Config::pixabayEnabled()): ?>
-          <button type="button" class="button button-ghost button-sm pixabay-open-btn" data-pixabay-open="background-image" style="width:100%; margin-top:8px;"><?= h(t('pixabay.open_from_bg')) ?></button>
-          <?php endif; ?>
-          <div id="bgImagePreviewWrap" class="bg-asset-preview" hidden>
-            <img id="bgImagePreview" alt="Hintergrundbild">
-            <button type="button" id="bgImageRemove" class="button button-ghost button-sm"><?= h(t('bg.remove')) ?></button>
-          </div>
-        </div>
-
-        <div class="bg-panel" data-bgtype="video" hidden>
-          <input type="file" id="bgVideoInput" accept="video/mp4,video/webm">
-          <?php if ($canEdit && Config::pixabayEnabled()): ?>
-          <button type="button" class="button button-ghost button-sm pixabay-open-btn" data-pixabay-open="background-video" style="width:100%; margin-top:8px;"><?= h(t('pixabay.open_from_bg')) ?></button>
-          <?php endif; ?>
-          <div id="bgVideoPreviewWrap" class="bg-asset-preview" hidden>
-            <video id="bgVideoPreview" muted loop autoplay playsinline></video>
-            <button type="button" id="bgVideoRemove" class="button button-ghost button-sm"><?= h(t('bg.remove')) ?></button>
-          </div>
-        </div>
-        <div class="bg-panel" data-bgtype="none" hidden>
-          <div class="props-video-note" style="margin-top:0;"><?= h(t('bg.none_hint')) ?></div>
-        </div>
-      </div>
-      <div class="options-section">
-        <div class="options-title"><?= h(t('bg.transition_title')) ?></div>
-        <input type="hidden" id="transitionSelect" value="slide">
-        <div id="transitionPickerGroup" class="effect-icon-grid transition-icon-grid"></div>
-        <button type="button" class="button button-ghost button-sm" id="applyTransitionAllBtn" style="width:100%; margin-top:8px;"><?= h(t('bg.apply_transition_all')) ?></button>
-        <label for="autoAdvanceInput"><?= h(t('bg.autoadvance_label')) ?></label>
-        <input type="number" id="autoAdvanceInput" min="0" step="1" value="0">
-      </div>
-    </div>
-
-    </div>
+    <div id="slideFilmstrip" class="editor-slide-filmstrip"></div>
   </aside>
+  <?php endif; ?>
 
   <main class="canvas-area" id="canvasArea">
     <div class="canvas-slide-view" id="canvasSlideView">
@@ -1145,6 +883,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <div id="stageContainer"></div>
       </div>
     </div>
+    <?php if (!$canEdit): ?>
     <div class="zoom-bar">
       <button type="button" class="zoom-btn" id="zoomOutBtn" title="<?= h(t('zoom.out')) ?>">&minus;</button>
       <span id="zoomLabel">100%</span>
@@ -1152,6 +891,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <span class="zoom-sep"></span>
       <button type="button" class="zoom-btn zoom-btn-text" id="zoomFitBtn" title="<?= h(t('zoom.fit')) ?>"><?= h(t('zoom.fit')) ?></button>
     </div>
+    <?php endif; ?>
     <?php if ($canEdit): ?>
     <div class="notes-panel-editor">
       <div class="notes-panel-header">
@@ -1162,7 +902,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     </div>
     <?php endif; ?>
     </div>
-    <?php if ($canEdit && !$isTemplateMode): ?>
+    <?php if ($canEdit && (!$isTemplateMode || $isLayoutSetMode)): ?>
     <div class="canvas-grid-view" id="canvasGridView" hidden>
       <div class="editor-slide-grid-panel" id="slideGridPanel">
         <div class="editor-slide-grid-toolbar">
@@ -1170,20 +910,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
             <span class="editor-slide-grid-selection" id="slideGridSelectionInfo"></span>
             <button type="button" class="button button-ghost button-sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
             <button type="button" class="button button-ghost button-sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
-            <span class="present-toolbar-sep"></span>
-            <button type="button" class="button button-sm" id="applyTransitionSelectedBtn" disabled><?= h(t('editor.apply_transition_selected')) ?></button>
-            <button type="button" class="button button-ghost button-sm" id="applyTransitionAllGridBtn"><?= h(t('bg.apply_transition_all')) ?></button>
-          </div>
-          <div class="editor-slide-grid-toolbar-row editor-slide-grid-toolbar-row-settings">
-            <div class="editor-slide-grid-setting-block">
-              <span class="editor-slide-grid-toolbar-label"><?= h(t('bg.transition_title')) ?></span>
-              <input type="hidden" id="gridTransitionSelect" value="slide">
-              <div id="gridTransitionPickerGroup" class="effect-icon-grid editor-grid-transition-picker"></div>
-            </div>
-            <div class="editor-slide-grid-setting-block editor-slide-grid-autoadvance-block">
-              <label class="editor-slide-grid-toolbar-label" for="gridAutoAdvanceInput"><?= h(t('bg.autoadvance_label')) ?></label>
-              <input type="number" id="gridAutoAdvanceInput" class="editor-slide-grid-autoadvance-input" min="0" step="1" value="0">
-            </div>
+            <span class="editor-slide-grid-toolbar-hint"><?= h(t('editor.slide_grid_ribbon_hint')) ?></span>
           </div>
         </div>
         <div class="editor-slide-grid-scroll">
@@ -1200,26 +927,170 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
   </main>
 
   <?php if ($canEdit): ?>
-  <aside class="spell-panel" id="spellPanel" hidden aria-label="<?= h(t('spell.title')) ?>">
-    <div class="spell-panel-header">
-      <h2><?= h(t('spell.title')) ?></h2>
-      <button type="button" class="spell-panel-close" id="spellPanelClose" aria-label="<?= h(t('common.close')) ?>">&times;</button>
-    </div>
-    <div class="spell-panel-toolbar">
-      <button type="button" class="button button-sm" id="spellRunBtn"><?= h(t('spell.run')) ?></button>
-      <button type="button" class="button button-ghost button-sm" id="spellProceedBtn" hidden><?= h(t('spell.proceed_present')) ?></button>
-      <span class="spell-status" id="spellStatus"></span>
-    </div>
-    <div class="spell-panel-body" id="spellResults"></div>
-  </aside>
+  <?php
+  $sideTabIcon = static function (string $name): string {
+      $icons = [
+          'templates' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="14" rx="1.5"/><path d="M3 9h18"/><path d="M8 4v14"/></svg>',
+          'format' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h6"/><path d="M7 20V6.5"/><path d="M4 6.5h6"/><path d="M14 20l3.5-14h1L22 20"/><path d="M15.2 15h5.1"/></svg>',
+          'position' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M3 12h18"/><path d="M12 3l3 3M12 3L9 6"/><path d="M12 21l3-3M12 21l-3-3"/><path d="M3 12l3-3M3 12l3 3"/><path d="M21 12l-3-3M21 12l-3 3"/></svg>',
+          'effects' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M18.5 15.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z"/></svg>',
+          'spell' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V6.5A1.5 1.5 0 0 1 5.5 5H14"/><path d="M8 19h12.5A1.5 1.5 0 0 0 22 17.5V9"/><path d="M8 9h7"/><path d="M8 13h5"/><path d="M15 17l2 2 4-5"/></svg>',
+          'media' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.2"/><path d="M13 15l2.2-2.5a1 1 0 0 1 1.5 0L21 17"/></svg>',
+      ];
+      return $icons[$name] ?? '';
+  };
+  ?>
   <div class="editor-right-sidebar" id="editorRightSidebar">
-    <aside class="props-panel-wrap" id="propsPanelWrap">
-    <div class="props-layers-section" id="propsLayersPanel"></div>
-    <div class="props-object-panel" id="propsObjectPanel">
-      <div class="props-empty"><?= t('props.empty') ?></div>
-    </div>
-    <div class="props-templates-section" id="propsTemplatesPanel" hidden></div>
-  </aside>
+    <aside class="props-panel-wrap props-sidebar-a props-sidebar-tabs" id="propsPanelWrap">
+      <nav class="props-side-tabs" id="propsSideTabs" role="tablist" aria-label="<?= h(t('props.side_tabs')) ?>">
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabTemplates" data-side-tab="templates" aria-selected="true" aria-controls="propsSidePanelTemplates" title="<?= h(t('props.side_tab_templates')) ?>">
+          <?= $sideTabIcon('templates') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_templates')) ?></span>
+        </button>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabFormat" data-side-tab="format" aria-selected="false" aria-controls="propsSidePanelFormat" title="<?= h(t('props.side_tab_format')) ?>">
+          <?= $sideTabIcon('format') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_format')) ?></span>
+        </button>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabPosition" data-side-tab="position" aria-selected="false" aria-controls="propsSidePanelPosition" title="<?= h(t('props.side_tab_position')) ?>">
+          <?= $sideTabIcon('position') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_position')) ?></span>
+        </button>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabEffects" data-side-tab="effects" aria-selected="false" aria-controls="propsSidePanelEffects" title="<?= h(t('props.side_tab_effects')) ?>">
+          <?= $sideTabIcon('effects') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_effects')) ?></span>
+        </button>
+        <?php if (Config::languageToolEnabled()): ?>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabSpell" data-side-tab="spell" aria-selected="false" aria-controls="propsSidePanelSpell" title="<?= h(t('props.side_tab_spell')) ?>">
+          <?= $sideTabIcon('spell') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_spell')) ?></span>
+        </button>
+        <?php endif; ?>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabMedia" data-side-tab="media" aria-selected="false" aria-controls="propsSidePanelMedia" title="<?= h(t('props.side_tab_media')) ?>">
+          <?= $sideTabIcon('media') ?>
+          <span class="sr-only"><?= h(t('props.side_tab_media')) ?></span>
+        </button>
+        <button type="button" class="props-side-tab props-side-tab-customize" id="ribbonCustomizeBtn" title="<?= h(t('ribbon.customize_title')) ?>" aria-label="<?= h(t('ribbon.customize_short')) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </nav>
+
+      <div class="props-side-panels" id="propsSidePanels">
+        <section class="props-side-panel is-active" id="propsSidePanelTemplates" data-side-panel="templates" role="tabpanel" aria-labelledby="propsSideTabTemplates">
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_templates')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <div class="props-templates-section" id="propsTemplatesPanel"></div>
+          </div>
+        </section>
+
+        <section class="props-side-panel" id="propsSidePanelFormat" data-side-panel="format" role="tabpanel" aria-labelledby="propsSideTabFormat" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_format')) ?></h2>
+          </header>
+          <div class="props-pos-subtabs" id="propsFormatSubtabs" role="tablist" hidden>
+            <button type="button" class="props-pos-subtab" role="tab" data-format-subtab="text" aria-selected="false"><?= h(t('props.side_format_text')) ?></button>
+            <button type="button" class="props-pos-subtab" role="tab" data-format-subtab="templates" aria-selected="false"><?= h(t('props.side_format_templates')) ?></button>
+            <button type="button" class="props-pos-subtab active" role="tab" data-format-subtab="format" aria-selected="true"><?= h(t('props.side_format_style')) ?></button>
+          </div>
+          <div class="props-side-panel-body" id="propsSelectionBody">
+            <div class="props-format-subpanel" data-format-panel="text" hidden>
+              <div class="props-text-panel" id="propsTextPanel"></div>
+            </div>
+            <div class="props-format-subpanel" data-format-panel="templates" hidden>
+              <div class="props-text-templates-panel" id="propsTextTemplatesPanel"></div>
+            </div>
+            <div class="props-format-subpanel is-active" data-format-panel="format">
+              <div class="props-object-widgets" id="propsObjectWidgets">
+                <?php require __DIR__ . '/includes/editor_ribbon_object.php'; ?>
+              </div>
+              <div class="props-object-panel" id="propsObjectPanel" hidden aria-hidden="true"></div>
+            </div>
+          </div>
+          <footer class="props-side-panel-footer" id="propsFormatFooter">
+            <div class="ribbon-group ribbon-props-section ribbon-group-object-delete" id="ribbonObjectDeleteGroup">
+              <div class="ribbon-group-content ribbon-props-section-body">
+                <button type="button" class="button button-danger button-sm" id="deleteObjBtn" style="width:100%;" disabled><?= h(t('props.delete_object')) ?></button>
+              </div>
+            </div>
+          </footer>
+        </section>
+
+        <section class="props-side-panel" id="propsSidePanelPosition" data-side-panel="position" role="tabpanel" aria-labelledby="propsSideTabPosition" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_position')) ?></h2>
+          </header>
+          <div class="props-pos-subtabs" id="propsPosSubtabs" role="tablist">
+            <button type="button" class="props-pos-subtab active" role="tab" data-pos-subtab="layout" aria-selected="true"><?= h(t('props.side_pos_layout')) ?></button>
+            <button type="button" class="props-pos-subtab" role="tab" data-pos-subtab="layers" aria-selected="false"><?= h(t('props.side_pos_layers')) ?></button>
+          </div>
+          <div class="props-side-panel-body">
+            <div class="props-pos-subpanel is-active" data-pos-panel="layout">
+              <div class="props-position-panel" id="propsPositionPanel"></div>
+            </div>
+            <div class="props-pos-subpanel" data-pos-panel="layers" hidden>
+              <div class="props-layers-section" id="propsLayersPanel"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="props-side-panel" id="propsSidePanelEffects" data-side-panel="effects" role="tabpanel" aria-labelledby="propsSideTabEffects" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_effects')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <div class="props-effects-panel" id="propsEffectsPanel">
+              <div class="props-empty"><?= t('props.empty') ?></div>
+            </div>
+          </div>
+        </section>
+
+        <?php if (Config::languageToolEnabled()): ?>
+        <section class="props-side-panel" id="propsSidePanelSpell" data-side-panel="spell" role="tabpanel" aria-labelledby="propsSideTabSpell" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_spell')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <aside class="spell-panel spell-panel--embedded" id="spellPanel" aria-label="<?= h(t('spell.title')) ?>">
+              <div class="spell-panel-toolbar">
+                <button type="button" class="button button-sm" id="spellRunBtn"><?= h(t('spell.run')) ?></button>
+                <button type="button" class="button button-ghost button-sm" id="spellProceedBtn" hidden><?= h(t('spell.proceed_present')) ?></button>
+                <span class="spell-status" id="spellStatus"></span>
+              </div>
+              <div class="spell-panel-body" id="spellResults"></div>
+            </aside>
+          </div>
+        </section>
+        <?php endif; ?>
+
+        <section class="props-side-panel" id="propsSidePanelMedia" data-side-panel="media" role="tabpanel" aria-labelledby="propsSideTabMedia" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('props.side_tab_media')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <div class="props-media-section" id="propsMediaPanel">
+              <div class="props-media-accordion open" id="propsMediaAccordion">
+                <div class="props-media-body props-section-body">
+                  <div class="media-library-header">
+                    <div class="media-library-header-actions">
+                      <button type="button" class="button button-ghost button-sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
+                      <?php if ($canEdit): ?>
+                      <button type="button" class="button button-ghost button-sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                  <?php if ($canEdit): ?>
+                  <p class="media-library-hint"><?= h(t('media_lib.insert_hint')) ?></p>
+                  <?php endif; ?>
+                  <div class="media-library-status" id="mediaLibraryStatus"></div>
+                  <div class="media-library-list" id="mediaLibraryList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
   </div>
   <?php endif; ?>
 </div>
@@ -1231,25 +1102,166 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
   <input type="hidden" name="action" value="resize">
 </form>
 
+<div class="modal-backdrop" id="slideBgGradientModal" aria-hidden="true">
+  <div class="modal modal-sm">
+    <h2 class="sf-dialog-title modal-dialog-title"><?= h(t('bg.gradient')) ?></h2>
+    <div class="modal-dialog-body">
+    <div class="row">
+      <div><label for="bgGradColor1"><?= h(t('bg.color1')) ?></label><input type="color" id="bgGradColor1" value="#3a6c8d" style="width:100%; height:36px;"></div>
+      <div><label for="bgGradColor2"><?= h(t('bg.color2')) ?></label><input type="color" id="bgGradColor2" value="#87b42b" style="width:100%; height:36px;"></div>
+    </div>
+    <div style="margin-top:12px;">
+      <label for="bgGradAngle" id="bgGradAngleLabel"><?= h(t('bg.angle')) ?> (90°)</label>
+      <input type="range" id="bgGradAngle" min="0" max="360" value="90" style="width:100%;">
+    </div>
+    <div class="object-gradient-preview" id="slideBgGradientPreview" aria-hidden="true"></div>
+    </div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" id="slideBgGradientModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-sm" id="slideBgGradientModalApply"><?= h(t('tpl.save')) ?></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="slideBgMediaModal" aria-hidden="true">
+  <div class="modal modal-sm slide-bg-media-modal" role="dialog" aria-modal="true" aria-labelledby="slideBgMediaModalTitle">
+    <h2 id="slideBgMediaModalTitle" class="sf-dialog-title modal-dialog-title"><?= h(t('bg.image')) ?></h2>
+    <p class="sf-dialog-hint modal-dialog-hint slide-bg-media-modal-hint"><?= h(t('ribbon.slide_media_hint')) ?></p>
+    <div class="modal-dialog-body">
+    <div class="slide-bg-media-modal-preview" id="slideBgMediaModalPreview" hidden></div>
+    <input type="file" id="slideBgMediaModalFile" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp">
+    <div class="slide-bg-media-modal-actions">
+      <button type="button" class="button" id="slideBgMediaModalBrowse"><?= h(t('ribbon.slide_upload')) ?></button>
+      <?php if ($canEdit && Config::pixabayEnabled()): ?>
+      <button type="button" class="button button-ghost pixabay-open-btn" id="slideBgMediaModalPixabay" data-pixabay-open="background-image"><?= h(t('pixabay.open_from_bg')) ?></button>
+      <?php endif; ?>
+    </div>
+    <div class="slide-bg-media-modal-existing" id="slideBgMediaModalExisting" hidden>
+      <h3 class="slide-bg-media-modal-existing-title present-config-section-title" id="slideBgMediaModalExistingTitle"><?= h(t('ribbon.slide_media_existing')) ?></h3>
+      <div class="slide-bg-media-modal-existing-grid" id="slideBgMediaModalExistingGrid" role="list"></div>
+      <p class="slide-bg-media-modal-existing-empty" id="slideBgMediaModalExistingEmpty" hidden><?= h(t('ribbon.slide_media_existing_empty')) ?></p>
+    </div>
+    </div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" id="slideBgMediaModalRemove"><?= h(t('bg.remove')) ?></button>
+      <button type="button" class="button button-ghost button-sm" id="slideBgMediaModalClose"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>
+
+<?php if ($perm === 'owner' && !$isTemplateMode): ?>
+<div class="modal-backdrop" id="shareModal" aria-hidden="true">
+  <div class="modal share-modal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+    <div class="sf-dialog-header share-modal-header">
+      <h2 id="shareModalTitle" class="sf-dialog-title"><?= h(t('editor.share')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="shareModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
+    </div>
+    <div class="share-modal-scroll">
+      <div id="shareModalStatus" class="share-modal-status" hidden></div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('share.with_people')) ?></div>
+        <div class="share-modal-row">
+          <div class="share-modal-field share-modal-field-grow">
+            <label for="shareUsername"><?= h(t('share.user_label')) ?></label>
+            <select id="shareUsername"></select>
+          </div>
+          <div class="share-modal-field">
+            <label for="sharePermission"><?= h(t('share.permission')) ?></label>
+            <select id="sharePermission">
+              <option value="view"><?= h(t('share.view_only_opt')) ?></option>
+              <option value="edit"><?= h(t('share.edit_opt')) ?></option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="button" id="shareAddBtn" style="margin-top:12px;"><?= h(t('share.share_btn')) ?></button>
+        <ul class="share-list" id="shareList"></ul>
+      </div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('share.public_link')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('share.public_link_desc') ?></p>
+        <label class="present-config-check">
+          <input type="checkbox" id="sharePublicEnabled">
+          <span><?= h(t('share.enable_public_link')) ?></span>
+        </label>
+        <button type="button" class="button button-sm" id="sharePublicSaveBtn" style="margin-top:10px;"><?= h(t('common.save')) ?></button>
+        <div class="public-link-box" id="sharePublicLinkBox" hidden>
+          <input type="text" id="sharePublicUrl" readonly>
+          <button type="button" class="button button-ghost button-sm" id="sharePublicCopyBtn"><?= h(t('present.copy')) ?></button>
+        </div>
+        <button type="button" class="button button-ghost button-sm" id="sharePublicResetBtn" style="margin-top:10px;" hidden><?= h(t('share.reset_link')) ?></button>
+      </div>
+    </div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" id="shareModalDone"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if ($canEdit && !$isTemplateMode): ?>
+<div class="modal-backdrop" id="exportModal" aria-hidden="true">
+  <div class="modal export-modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <div class="sf-dialog-header share-modal-header">
+      <h2 id="exportModalTitle" class="sf-dialog-title"><?= h(t('editor.export')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="exportModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
+    </div>
+    <p class="sf-dialog-hint"><?= h(t('export.intro')) ?></p>
+    <div class="share-modal-scroll">
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('export.single_file')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.single_file_desc') ?></p>
+        <a class="button button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=html" data-export-download><?= h(t('export.download_html')) ?></a>
+      </div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('export.zip_heading')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.zip_desc') ?></p>
+        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=zip" data-export-download><?= h(t('export.download_zip')) ?></a>
+      </div>
+      <div class="present-config-section">
+        <div class="alert alert-success" style="margin:0;"><?= t('export.reimport_hint') ?></div>
+      </div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('export.pptx_heading')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.pptx_desc') ?></p>
+        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=pptx" data-export-download><?= h(t('export.download_pptx')) ?></a>
+      </div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('export.odp_heading')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.odp_desc') ?></p>
+        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=odp" data-export-download><?= h(t('export.download_odp')) ?></a>
+      </div>
+      <div class="present-config-section">
+        <div class="present-config-section-title"><?= h(t('export.pdf_heading')) ?></div>
+        <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.pdf_desc') ?></p>
+        <a class="button button-ghost button-sm" href="pdf_export.php?id=<?= urlencode($id) ?>" target="_blank" rel="noopener noreferrer"><?= h(t('export.open_pdf_view')) ?></a>
+      </div>
+    </div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" id="exportModalDone"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="modal-backdrop" id="elementLinksModal">
   <div class="modal modal-element-config">
-    <h2 style="font-size:1.2rem; text-transform:none;"><?= h(t('elements.element_links_modal_title')) ?></h2>
-    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:-8px;"><?= h(t('elements.element_links_modal_desc')) ?></p>
-    <div id="elementLinksModalBody" class="element-links-modal-body"></div>
-    <div class="modal-actions">
-      <button type="button" class="button button-ghost" id="elementLinksModalClose"><?= h(t('common.close')) ?></button>
-      <button type="button" class="button" id="elementLinksModalSave"><?= h(t('tpl.save')) ?></button>
+    <h2 class="sf-dialog-title modal-dialog-title"><?= h(t('elements.element_links_modal_title')) ?></h2>
+    <p class="sf-dialog-hint modal-dialog-hint"><?= h(t('elements.element_links_modal_desc')) ?></p>
+    <div id="elementLinksModalBody" class="element-links-modal-body modal-dialog-body"></div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" id="elementLinksModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-sm" id="elementLinksModalSave"><?= h(t('tpl.save')) ?></button>
     </div>
   </div>
 </div>
 
 <div class="modal-backdrop" id="templateModal">
   <div class="modal">
-    <h2 style="font-size:1.2rem; text-transform:none;"><?= h(t('editor.apply_template')) ?></h2>
-    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:-8px;"><?= h(t('template_modal.hint')) ?></p>
-    <div id="templateList" style="max-height:340px; overflow-y:auto; margin-top:14px;"></div>
-    <div class="modal-actions">
-      <button type="button" class="button button-ghost" onclick="document.getElementById('templateModal').classList.remove('open')"><?= h(t('common.close')) ?></button>
+    <h2 class="sf-dialog-title modal-dialog-title"><?= h(t('editor.apply_template')) ?></h2>
+    <p class="sf-dialog-hint modal-dialog-hint"><?= h(t('template_modal.hint')) ?></p>
+    <div id="templateList" class="modal-dialog-body" style="max-height:340px; overflow-y:auto;"></div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm" onclick="document.getElementById('templateModal').classList.remove('open')"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -1257,17 +1269,21 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 <?php if (Config::pixabayEnabled()): ?>
 <div class="modal-backdrop" id="pixabayModal" aria-hidden="true">
   <div class="modal pixabay-modal" role="dialog" aria-modal="true" aria-labelledby="pixabayModalTitle">
-    <div class="pixabay-modal-header">
-      <div>
-        <h2 id="pixabayModalTitle" class="pixabay-modal-title"><?= h(t('pixabay.title')) ?></h2>
-        <p class="pixabay-target-hint" id="pixabayTargetHint"></p>
-      </div>
-      <button type="button" class="button button-ghost button-sm" id="pixabayModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header pixabay-modal-header">
+      <h2 id="pixabayModalTitle" class="sf-dialog-title pixabay-modal-title"><?= h(t('pixabay.title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="pixabayModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
+    <p class="sf-dialog-hint pixabay-target-hint" id="pixabayTargetHint"></p>
     <div class="pixabay-modal-toolbar">
-      <div class="pixabay-search-row">
-        <input type="search" id="pixabayQuery" placeholder="<?= h(t('pixabay.search_placeholder')) ?>" autocomplete="off">
-        <button type="button" class="button button-sm" id="pixabaySearchBtn"><?= h(t('pixabay.search')) ?></button>
+      <div class="pixabay-search-block">
+        <div class="pixabay-search-row">
+          <input type="search" id="pixabayQuery" placeholder="<?= h(t('pixabay.search_placeholder')) ?>" autocomplete="off">
+          <div class="pixabay-search-actions">
+            <button type="button" class="button button-sm" id="pixabaySearchBtn"><?= h(t('pixabay.search')) ?></button>
+            <button type="button" class="button button-ghost button-sm" id="pixabaySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+          </div>
+        </div>
+        <p class="media-search-english-hint" id="pixabaySearchEnglishHint" hidden></p>
       </div>
       <div class="pixabay-filters">
         <label class="pixabay-filter-item">
@@ -1336,18 +1352,22 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 <?php if (Config::iconifyEnabled()): ?>
 <div class="modal-backdrop" id="iconifyModal" aria-hidden="true">
   <div class="modal pixabay-modal" role="dialog" aria-modal="true" aria-labelledby="iconifyModalTitle">
-    <div class="pixabay-modal-header">
-      <div>
-        <h2 id="iconifyModalTitle" class="pixabay-modal-title"><?= h(t('iconify.title')) ?></h2>
-        <p class="pixabay-target-hint"><?= h(t('iconify.target_object')) ?></p>
-      </div>
-      <button type="button" class="button button-ghost button-sm" id="iconifyModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header pixabay-modal-header">
+      <h2 id="iconifyModalTitle" class="sf-dialog-title pixabay-modal-title"><?= h(t('iconify.title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="iconifyModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
+    <p class="sf-dialog-hint pixabay-target-hint"><?= h(t('iconify.target_object')) ?></p>
     <div class="pixabay-modal-toolbar iconify-modal-toolbar">
       <div class="iconify-toolbar-row iconify-search-row">
-        <div class="pixabay-search-row">
-          <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
-          <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
+        <div class="pixabay-search-block">
+          <div class="pixabay-search-row">
+            <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
+            <div class="pixabay-search-actions">
+              <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
+              <button type="button" class="button button-ghost button-sm" id="iconifySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+            </div>
+          </div>
+          <p class="media-search-english-hint" id="iconifySearchEnglishHint" hidden></p>
         </div>
         <label class="pixabay-filter-item iconify-set-filter">
           <span><?= h(t('iconify.filter_collection')) ?></span>
@@ -1413,19 +1433,21 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 <?php if (Config::openclipartEnabled()): ?>
 <div class="modal-backdrop" id="openclipartModal" aria-hidden="true">
   <div class="modal pixabay-modal" role="dialog" aria-modal="true" aria-labelledby="openclipartModalTitle">
-    <div class="pixabay-modal-header">
-      <div>
-        <h2 id="openclipartModalTitle" class="pixabay-modal-title"><?= h(t('openclipart.title')) ?></h2>
-        <p class="pixabay-target-hint"><?= h(t('openclipart.target_object')) ?></p>
-      </div>
-      <button type="button" class="button button-ghost button-sm" id="openclipartModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header pixabay-modal-header">
+      <h2 id="openclipartModalTitle" class="sf-dialog-title pixabay-modal-title"><?= h(t('openclipart.title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="openclipartModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
+    <p class="sf-dialog-hint pixabay-target-hint"><?= h(t('openclipart.target_object')) ?></p>
     <div class="pixabay-modal-toolbar openclipart-modal-toolbar">
-      <div class="iconify-toolbar-row iconify-search-row">
-        <div class="pixabay-search-wrap">
+      <div class="pixabay-search-block">
+        <div class="pixabay-search-row">
           <input type="search" id="openclipartQuery" placeholder="<?= h(t('openclipart.search_placeholder')) ?>" autocomplete="off">
-          <button type="button" class="button button-sm" id="openclipartSearchBtn"><?= h(t('openclipart.search')) ?></button>
+          <div class="pixabay-search-actions">
+            <button type="button" class="button button-sm" id="openclipartSearchBtn"><?= h(t('openclipart.search')) ?></button>
+            <button type="button" class="button button-ghost button-sm" id="openclipartSearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+          </div>
         </div>
+        <p class="media-search-english-hint" id="openclipartSearchEnglishHint" hidden></p>
       </div>
     </div>
     <div class="pixabay-modal-meta">
@@ -1457,13 +1479,11 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 <?php if ($canEdit && count($webdavDrives) > 0): ?>
 <div class="modal-backdrop" id="webdavModal" aria-hidden="true">
   <div class="modal pixabay-modal webdav-modal" role="dialog" aria-modal="true" aria-labelledby="webdavModalTitle">
-    <div class="pixabay-modal-header">
-      <div>
-        <h2 id="webdavModalTitle" class="pixabay-modal-title"><?= h(t('webdav.title')) ?></h2>
-        <p class="pixabay-target-hint"><?= h(t('webdav.target_object')) ?></p>
-      </div>
-      <button type="button" class="button button-ghost button-sm" id="webdavModalClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header pixabay-modal-header">
+      <h2 id="webdavModalTitle" class="sf-dialog-title pixabay-modal-title"><?= h(t('webdav.title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="webdavModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
+    <p class="sf-dialog-hint pixabay-target-hint"><?= h(t('webdav.target_object')) ?></p>
     <div class="pixabay-modal-toolbar webdav-modal-toolbar">
       <nav class="webdav-breadcrumb" id="webdavBreadcrumb" aria-label="<?= h(t('webdav.breadcrumb')) ?>"></nav>
     </div>
@@ -1494,6 +1514,9 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="assets/js/present-config.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/spellcheck.js?v=<?= ASSET_VERSION ?>"></script>
+<?php if ($canEdit && (Config::pixabayEnabled() || Config::iconifyEnabled() || Config::openclipartEnabled())): ?>
+<script src="assets/js/media-search-translate.js?v=<?= ASSET_VERSION ?>"></script>
+<?php endif; ?>
 <?php if ($canEdit && Config::pixabayEnabled()): ?>
 <script src="assets/js/pixabay.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
@@ -1507,6 +1530,13 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/webdav.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
+<?php if ($canEdit): ?>
+<script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ui-dialog.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ribbon-customize.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
+<?php endif; ?>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; // canEdit-Verzweigung Modals/Skripte ?>
 

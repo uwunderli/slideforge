@@ -7,6 +7,7 @@
   let lastQuery = '';
   let searching = false;
   let lastHits = [];
+  let lastSearchOpts = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -142,9 +143,16 @@
     if (vidFilters) vidFilters.hidden = !isVideo;
   }
 
-  async function runSearch(page) {
+  async function runSearch(page, opts) {
+    if (arguments.length >= 2) {
+      lastSearchOpts = opts || null;
+      opts = opts || {};
+    } else {
+      opts = lastSearchOpts || {};
+    }
     if (!api?.pixabayConfig?.enabled) return;
-    const q = ($('pixabayQuery')?.value || '').trim();
+    const originalQuery = ($('pixabayQuery')?.value || '').trim();
+    const q = (opts.searchQuery != null ? String(opts.searchQuery) : originalQuery).trim();
     if (!q) {
       setStatus(t('enterQuery'), true);
       return;
@@ -155,13 +163,22 @@
     lastQuery = q;
     setStatus(t('searching'));
 
+    if (window.SFMediaSearchTranslate) {
+      SFMediaSearchTranslate.setEnglishHint(
+        $('pixabaySearchEnglishHint'),
+        t('searchEnglishHint'),
+        opts.englishQuery || '',
+        originalQuery
+      );
+    }
+
     const payload = {
       action: 'search',
       id: api.id,
       q,
       page: currentPage,
       media: mediaType(),
-      lang: api.pixabayConfig.lang || 'de',
+      lang: opts.lang || (opts.englishQuery ? 'en' : (api.pixabayConfig.lang || 'de')),
       image_type: $('pixabayImageType')?.value || 'all',
       orientation: $('pixabayOrientation')?.value || 'all',
       video_type: $('pixabayVideoType')?.value || 'all',
@@ -276,12 +293,40 @@
     }
   }
 
+  async function runSearchEnglish(page) {
+    const q = ($('pixabayQuery')?.value || '').trim();
+    if (!q) {
+      setStatus(t('enterQuery'), true);
+      return;
+    }
+    if (!window.SFMediaSearchTranslate) {
+      setStatus(t('errorGeneric'), true);
+      return;
+    }
+    setStatus(t('translating'));
+    try {
+      const en = await SFMediaSearchTranslate.translateToEnglish(q);
+      await runSearch(page, { searchQuery: en, englishQuery: en, lang: 'en' });
+    } catch (e) {
+      setStatus(e.message || t('errorGeneric'), true);
+    }
+  }
+
   function bindEvents() {
-    $('pixabaySearchBtn')?.addEventListener('click', () => runSearch(1));
+    $('pixabaySearchBtn')?.addEventListener('click', () => {
+      if (window.SFMediaSearchTranslate) {
+        SFMediaSearchTranslate.setEnglishHint($('pixabaySearchEnglishHint'), t('searchEnglishHint'), '', ($('pixabayQuery')?.value || '').trim());
+      }
+      runSearch(1, {});
+    });
+    $('pixabaySearchEnglishBtn')?.addEventListener('click', () => runSearchEnglish(1));
     $('pixabayQuery')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        runSearch(1);
+        if (window.SFMediaSearchTranslate) {
+          SFMediaSearchTranslate.setEnglishHint($('pixabaySearchEnglishHint'), t('searchEnglishHint'), '', ($('pixabayQuery')?.value || '').trim());
+        }
+        runSearch(1, {});
       }
     });
     $('pixabayMedia')?.addEventListener('change', () => {
@@ -296,12 +341,9 @@
     $('pixabayOpenBtn')?.addEventListener('click', () => openPixabayModal('object-image'));
     $('pixabayModalClose')?.addEventListener('click', closePixabayModal);
     $('pixabayLightboxClose')?.addEventListener('click', closePixabayLightbox);
-    $('pixabayLightboxBackdrop')?.addEventListener('click', closePixabayLightbox);
-
     const modal = $('pixabayModal');
-    modal?.addEventListener('click', (e) => {
-      if (e.target === modal) closePixabayModal();
-    });
+    SFModalBackdrop?.bindDismiss($('pixabayLightboxBackdrop'), closePixabayLightbox);
+    SFModalBackdrop?.bindDismiss(modal, closePixabayModal);
 
     document.addEventListener('keydown', (e) => {
       const lightbox = $('pixabayLightbox');

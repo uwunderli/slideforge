@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Setzt role=admin für einen Benutzer auf Prod.
-# Schreibt sowohl per SFTP (data/users.json) als auch per PHP (gleicher Pfad wie die App).
 # Usage: ./.deploy/fix-prod-admin.sh <username>
 set -euo pipefail
 
@@ -10,9 +9,9 @@ USERNAME="${1:?Usage: $0 <username>}"
 ENV_FILE="${DEPLOY_ENV:-$SCRIPT_DIR/ssh.env}"
 # shellcheck source=/dev/null
 source "$ENV_FILE"
+# shellcheck source=ssh-common.sh
+source "$SCRIPT_DIR/ssh-common.sh"
 
-REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}:${SSH_PORT:-22}}"
-AUTH="${SSH_USER}:${SSH_PASS}"
 PROD_URL="${PROD_URL:-https://slides.bkbiel.ch}"
 TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
 REMOTE_SCRIPT="public_html/_fix_admin_$$.php"
@@ -21,17 +20,13 @@ TMPPHP="$(mktemp)"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP" "$TMPPHP"' EXIT
 
-curl_sftp() {
-  SSH_AUTH_SOCK= curl -sS --ftp-method nocwd --ftp-create-dirs --user "$AUTH" "$@"
-}
-
 cleanup_remote() {
-  curl_sftp -Q "RM /${REMOTE_SCRIPT}" "${REMOTE}/" 2>/dev/null || true
+  deploy_ssh "rm -f '$(deploy_remote_path "$REMOTE_SCRIPT")'" 2>/dev/null || true
 }
 trap cleanup_remote EXIT
 
-echo "1/2 SFTP: users.json …"
-curl_sftp -f "${REMOTE}/data/users.json" -o "$TMP"
+echo "1/2 users.json …"
+deploy_scp_pull "$(deploy_remote_path data/users.json)" "$TMP"
 
 python3 - "$TMP" "$USERNAME" <<'PY'
 import json, sys
@@ -50,7 +45,7 @@ if not found:
 json.dump(users, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
 PY
 
-curl_sftp -T "$TMP" "${REMOTE}/data/users.json"
+deploy_scp "$TMP" "$(deploy_remote_path data/users.json)"
 
 echo "2/2 PHP: Auth::setRole auf Prod …"
 cat > "$TMPPHP" <<PHP
@@ -79,7 +74,7 @@ echo json_encode([
 ], JSON_UNESCAPED_UNICODE);
 PHP
 
-curl_sftp -T "$TMPPHP" "${REMOTE}/${REMOTE_SCRIPT}"
+deploy_scp "$TMPPHP" "$(deploy_remote_path "$REMOTE_SCRIPT")"
 BODY="$(curl -sS "${PROD_URL}/${REMOTE_BASENAME}?token=${TOKEN}")"
 echo "$BODY" | python3 -m json.tool
 
@@ -90,5 +85,5 @@ if [[ "$ROLE" != "admin" ]]; then
 fi
 
 echo ""
-echo "Fertig: „${USERNAME}“ ist auf ${SSH_HOST} Admin."
+echo "Fertig: „${USERNAME}“ ist auf $(deploy_label) Admin."
 echo "Bitte einmal abmelden und neu anmelden (oder Browser-Cache leeren)."

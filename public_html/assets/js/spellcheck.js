@@ -52,13 +52,24 @@
     panel.hidden = false;
     panel.classList.add('open');
     panelOpen = true;
+    // In die rechte Sidebar-Tab-Leiste wechseln (kein Overlay mehr)
+    try {
+      window.dispatchEvent(new CustomEvent('sf-side-tab', { detail: 'spell' }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function ensureOpen() {
+    const panel = $('spellPanel');
+    if (!panel) return;
+    panel.hidden = false;
+    panel.classList.add('open');
+    panelOpen = true;
   }
 
   function closePanel() {
     const panel = $('spellPanel');
     if (!panel) return;
-    panel.classList.remove('open');
-    panel.hidden = true;
+    // Eingebettet: Panel bleibt im Tab, nur Pending-Flow zurücksetzen
     panelOpen = false;
     if (pendingPresentResolve) {
       pendingPresentResolve(false);
@@ -233,17 +244,30 @@
   }
 
   function bindUI() {
-    $('spellcheckBtn')?.addEventListener('click', () => {
-      clearPendingPresent();
-      openPanel();
-      runCheck();
-    });
-    $('spellPanelClose')?.addEventListener('click', closePanel);
-    $('spellRunBtn')?.addEventListener('click', () => {
-      clearPendingPresent();
-      runCheck();
-    });
-    $('spellProceedBtn')?.addEventListener('click', proceedToPresent);
+    const btn = $('spellcheckBtn');
+    if (btn && btn.dataset.spellWired !== '1') {
+      btn.dataset.spellWired = '1';
+      btn.addEventListener('click', () => {
+        clearPendingPresent();
+        openPanel();
+        runCheck();
+      });
+    }
+    if ($('spellPanelClose')?.dataset.spellWired !== '1') {
+      $('spellPanelClose')?.addEventListener('click', closePanel);
+      if ($('spellPanelClose')) $('spellPanelClose').dataset.spellWired = '1';
+    }
+    if ($('spellRunBtn')?.dataset.spellWired !== '1') {
+      $('spellRunBtn')?.addEventListener('click', () => {
+        clearPendingPresent();
+        runCheck();
+      });
+      if ($('spellRunBtn')) $('spellRunBtn').dataset.spellWired = '1';
+    }
+    if ($('spellProceedBtn')?.dataset.spellWired !== '1') {
+      $('spellProceedBtn')?.addEventListener('click', proceedToPresent);
+      if ($('spellProceedBtn')) $('spellProceedBtn').dataset.spellWired = '1';
+    }
   }
 
   window.SlideForgeSpellcheck = {
@@ -252,10 +276,15 @@
       if (!editorApi.spellConfig?.enabled) {
         $('spellcheckBtn')?.remove();
         $('spellPanel')?.remove();
+        document.getElementById('propsSideTabSpell')?.remove();
+        document.getElementById('propsSidePanelSpell')?.remove();
         return;
       }
       bindUI();
     },
+    openPanel,
+    ensureOpen,
+    rewire: bindUI,
     ensureCleanBeforePresent,
   };
 })();

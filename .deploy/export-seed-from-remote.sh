@@ -7,17 +7,13 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 export ROOT
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/ssh.env"
+# shellcheck source=ssh-common.sh
+source "$SCRIPT_DIR/ssh-common.sh"
 
-REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}}"
-AUTH="${SSH_USER}:${SSH_PASS}"
 LOCAL_DATA="$ROOT/data/presentations"
 
-curl_sftp() {
-  curl -sS --ftp-method nocwd --user "$AUTH" "$@"
-}
-
 echo "Remote-Präsentationen auflisten …"
-mapfile -t REMOTE_IDS < <(curl_sftp --list-only "${REMOTE}/data/presentations/" | grep -E '^[a-f0-9]+$' || true)
+mapfile -t REMOTE_IDS < <(deploy_ssh "ls -1 '$(deploy_remote_path data/presentations)' 2>/dev/null" | grep -E '^[a-f0-9]+$' || true)
 
 if ((${#REMOTE_IDS[@]} == 0)); then
   echo "Keine Präsentations-Ordner auf dem Server gefunden." >&2
@@ -27,22 +23,22 @@ fi
 mkdir -p "$LOCAL_DATA"
 
 for id in "${REMOTE_IDS[@]}"; do
-  remote_base="data/presentations/${id}"
+  remote_base="$(deploy_remote_path "data/presentations/${id}")"
   local_base="$LOCAL_DATA/${id}"
   mkdir -p "$local_base/assets"
 
   for file in meta.json slides.json; do
-    if curl_sftp -f "${REMOTE}/${remote_base}/${file}" -o "$local_base/${file}" 2>/dev/null; then
+    if deploy_scp_pull "${remote_base}/${file}" "$local_base/${file}" 2>/dev/null; then
       :
     else
       rm -f "$local_base/${file}"
     fi
   done
 
-  mapfile -t ASSETS < <(curl_sftp --list-only "${REMOTE}/${remote_base}/assets/" 2>/dev/null | grep -v '^$' || true)
+  mapfile -t ASSETS < <(deploy_ssh "ls -1 '${remote_base}/assets/' 2>/dev/null" | grep -v '^\.\.?$' || true)
   for asset in "${ASSETS[@]}"; do
-    [[ "$asset" == "." || "$asset" == ".." ]] && continue
-    curl_sftp -f "${REMOTE}/${remote_base}/assets/${asset}" -o "$local_base/assets/${asset}" 2>/dev/null || true
+    [[ -z "$asset" || "$asset" == "." || "$asset" == ".." ]] && continue
+    deploy_scp_pull "${remote_base}/assets/${asset}" "$local_base/assets/${asset}" 2>/dev/null || true
   done
 done
 

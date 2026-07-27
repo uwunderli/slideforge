@@ -11,12 +11,28 @@
 | **2** | **v2.1.0** | **Folien-Sets & Logos-Import** — Layout-Sets, `.chs`, Schlicht-Seed | ✔️ shipped | [RELEASE_v2.1.0.md](RELEASE_v2.1.0.md) · [GitHub](../.github/RELEASE_v2.1.0.md) |
 | — | **v2.1.1** | Editor-Fixes & Raster-Ansicht (Sortieren, Steuerung, Miniatur-Grösse) | ✔️ shipped | CHANGELOG |
 | — | **v2.1.2** | Raster-Kachel: Übergang/Zeit/Effektname Layout | ✔️ shipped | CHANGELOG |
-| **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
+| — | **v2.1.3** | **Editor-/Ribbon-Feinschliff** (Dialoge, Widgets, Raster→Entwurf, …) + bereits umgesetzte Patch-Themen | 🔧 unreleased (Working Tree) | [AENDERUNGEN.md](AENDERUNGEN.md) C · [RIBBON_MENU.md](RIBBON_MENU.md) |
+| **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig · **nächster Major nach 2.1.3** | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
 | **4** | **v2.3.0** | Integrierter **Medien-Editor** (Trim, Bild, SVG) | ✅ Briefing fertig | [RELEASE_v2.3.0.md](RELEASE_v2.3.0.md) |
 | **5** | **v2.4.0** | reveal.js **Auto-Animate** — Objekte zwischen Folien morphen | ✅ Briefing fertig | [RELEASE_v2.4.0.md](RELEASE_v2.4.0.md) |
 | **6** | **v3.1.0** | **Editor v2** — slides.com-artiger visueller Editor (Major) | ✅ Briefing fertig | [RELEASE_v3.1.0.md](RELEASE_v3.1.0.md) |
 
-**Legende:** ✅ Briefing fertig · 📝 Entwurf · 🚀 in Umsetzung · ✔️ shipped
+**Legende:** ✅ Briefing fertig · 📝 Entwurf · 🔧 in Arbeit / unreleased · 🚀 Release-Umsetzung · ✔️ shipped · ⏸ pausiert
+
+---
+
+## Aktuelle Situation (2026-07-27)
+
+| Lage | Stand |
+|------|--------|
+| **Letzter Tag** | **v2.1.2** auf GitHub / `main` |
+| **Arbeitsstand** | Umfangreicher Editor-/Ribbon-Feinschliff **noch nicht als Release getaggt** → Ziel-Patch **v2.1.3** |
+| **Ribbon** | Konzept **umgesetzt** ([RIBBON_MENU.md](RIBBON_MENU.md)); Feinschliff läuft über AENDERUNGEN C |
+| **Logos-Importer neu** | Briefing fertig, für 2.1.3 gedacht, **pausiert** bis Vorlage «Schlicht II» geprüft ([LOGOS_IMPORTER.md](LOGOS_IMPORTER.md), AENDERUNGEN B #7) |
+| **Dashboard** | Phase 1 ✔️; Phase 2 (geteilte Folien / Bereich teilen) noch offen (B #14b) |
+| **Animate.css Texteffekte** | Idee **pendent** (AENDERUNGEN A) — nicht in 2.1.3 |
+
+**Nächster Schritt:** Working Tree zu **v2.1.3** abschliessen/taggen, danach **v2.2.0** church.tools.
 
 ---
 
@@ -25,7 +41,7 @@
 | Linie | Bedeutung |
 |-------|-----------|
 | **v1.x** | Konva-Editor, WebDAV, Medien-Quellen — **endet mit v1.0.4** |
-| **v2.x** | Mobile, Folien-Sets/Logos, church.tools, Medien-Editor, Auto-Animate |
+| **v2.x** | Mobile, Folien-Sets/Logos, Ribbon-Feinschliff, church.tools, Medien-Editor, Auto-Animate |
 | **v3.1** | Neuer visueller Editor (slides.com), Konva bleibt als „Klassischer Editor“ |
 
 ---
@@ -41,13 +57,21 @@ v2.0.3   ✔️ shipped — Folien-Raster, Live-Sync
 v2.1.0   ✔️ shipped — Folien-Sets & Logos-Import
 v2.1.1   ✔️ shipped — Editor-Fixes, Raster-Sort/Steuerung/Miniatur-Grösse
 v2.1.2   ✔️ shipped — Raster-Kachel Meta-Layout
-v2.2.0   church.tools
-v2.3.0   Medien-Editor
-v2.4.0   Auto-Animate
-v3.1.0   Visueller Editor (slides.com)
+v2.1.3   🔧 unreleased — Ribbon/Editor-Feinschliff (+ Patch-Themen aus AENDERUNGEN C)
+         ⏸ Logos-Importer-Neu (pausiert, war für 2.1.3 vorgesehen)
+v2.2.0   → church.tools          (nächster Major)
+v2.3.0   → Medien-Editor
+v2.4.0   → Auto-Animate
+v3.1.0   → Visueller Editor (slides.com)
 ```
 
-**Nächster Schritt:** **v2.2.0** church.tools (Basis: **v2.1.0** auf `main`).
+**Nebenstränge (kein eigener Release-Slot):**
+
+| Thema | Ort | Status |
+|-------|-----|--------|
+| Dashboard Phase 2 | [AENDERUNGEN.md](AENDERUNGEN.md) B #14b · [DASHBOARD_PERSONALIZE.md](DASHBOARD_PERSONALIZE.md) | geplant |
+| Text-Animationen Animate.css | [AENDERUNGEN.md](AENDERUNGEN.md) A | pendent |
+| Audio-DB | [AUDIO_DB.md](AUDIO_DB.md) | Recherche; nicht 2.1.3 |
 
 **Backlog (ohne Release):** [BACKLOG.md](BACKLOG.md)  
 **Änderungen Bugs & Features (A → B → C):** [AENDERUNGEN.md](AENDERUNGEN.md)  
@@ -56,6 +80,12 @@ v3.1.0   Visueller Editor (slides.com)
 ---
 
 ## Handoff an Cursor
+
+```
+Lies docs/RELEASES.md und setze v2.1.3 um (Working Tree → Release).
+```
+
+Nach Publish von 2.1.3:
 
 ```
 Lies docs/RELEASES.md und setze v2.2.0 um.

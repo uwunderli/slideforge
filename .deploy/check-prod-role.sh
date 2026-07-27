@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prüft auf Prod, welche Rolle PHP für einen Benutzer sieht (nicht nur SFTP-Datei).
+# Prüft auf Prod, welche Rolle PHP für einen Benutzer sieht.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -7,21 +7,17 @@ USERNAME="${1:-urs}"
 ENV_FILE="${DEPLOY_ENV:-$SCRIPT_DIR/ssh.env}"
 # shellcheck source=/dev/null
 source "$ENV_FILE"
+# shellcheck source=ssh-common.sh
+source "$SCRIPT_DIR/ssh-common.sh"
 
-REMOTE="${SFTP_REMOTE:-sftp://${SSH_HOST}:${SSH_PORT:-22}}"
-AUTH="${SSH_USER}:${SSH_PASS}"
 TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
 REMOTE_SCRIPT="public_html/_role_check_$$.php"
 REMOTE_BASENAME="_role_check_$$.php"
 PROD_URL="${PROD_URL:-https://slides.bkbiel.ch}"
 TMPPHP="$(mktemp)"
 
-curl_sftp() {
-  SSH_AUTH_SOCK= curl -sS --ftp-method nocwd --user "$AUTH" "$@"
-}
-
 cleanup() {
-  curl_sftp -Q "RM /${REMOTE_SCRIPT}" "${REMOTE}/" 2>/dev/null || true
+  deploy_ssh "rm -f '$(deploy_remote_path "$REMOTE_SCRIPT")'" 2>/dev/null || true
   rm -f "$TMPPHP"
 }
 trap cleanup EXIT
@@ -53,7 +49,7 @@ echo json_encode([
 PHP
 
 echo "Lade Diagnose-Skript hoch …"
-curl_sftp -T "$TMPPHP" "${REMOTE}/${REMOTE_SCRIPT}"
+deploy_scp "$TMPPHP" "$(deploy_remote_path "$REMOTE_SCRIPT")"
 
 echo "Rufe ${PROD_URL}/${REMOTE_BASENAME} auf …"
 BODY="$(curl -sS "${PROD_URL}/${REMOTE_BASENAME}?token=${TOKEN}")"

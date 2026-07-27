@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Legacy: SFTP-Batch (nur noch für alte Hosts mit SSH_PASS).
+# Prod nutzt: ./remote.sh oder deploy.sh (SSH/rsync).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null

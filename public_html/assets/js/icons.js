@@ -8,6 +8,7 @@
   let lastHits = [];
   let lastTotal = 0;
   let lastLightboxHit = null;
+  let lastSearchOpts = null;
   const perPage = 24;
 
   function $(id) {
@@ -108,9 +109,16 @@
     }
   }
 
-  async function runSearch(page) {
+  async function runSearch(page, opts) {
+    if (arguments.length >= 2) {
+      lastSearchOpts = opts || null;
+      opts = opts || {};
+    } else {
+      opts = lastSearchOpts || {};
+    }
     if (!api?.iconifyConfig?.enabled) return;
-    const q = ($('iconifyQuery')?.value || '').trim();
+    const originalQuery = ($('iconifyQuery')?.value || '').trim();
+    const q = (opts.searchQuery != null ? String(opts.searchQuery) : originalQuery).trim();
     if (!q) {
       setStatus(t('enterQuery'), true);
       return;
@@ -120,6 +128,15 @@
     currentPage = page || 1;
     lastQuery = q;
     setStatus(t('searching'));
+
+    if (window.SFMediaSearchTranslate) {
+      SFMediaSearchTranslate.setEnglishHint(
+        $('iconifySearchEnglishHint'),
+        t('searchEnglishHint'),
+        opts.englishQuery || '',
+        originalQuery
+      );
+    }
 
     const payload = {
       action: 'search',
@@ -246,12 +263,40 @@
     });
   }
 
+  async function runSearchEnglish(page) {
+    const q = ($('iconifyQuery')?.value || '').trim();
+    if (!q) {
+      setStatus(t('enterQuery'), true);
+      return;
+    }
+    if (!window.SFMediaSearchTranslate) {
+      setStatus(t('errorGeneric'), true);
+      return;
+    }
+    setStatus(t('translating'));
+    try {
+      const en = await SFMediaSearchTranslate.translateToEnglish(q);
+      await runSearch(page, { searchQuery: en, englishQuery: en });
+    } catch (e) {
+      setStatus(e.message || t('errorGeneric'), true);
+    }
+  }
+
   function bindEvents() {
-    $('iconifySearchBtn')?.addEventListener('click', () => runSearch(1));
+    $('iconifySearchBtn')?.addEventListener('click', () => {
+      if (window.SFMediaSearchTranslate) {
+        SFMediaSearchTranslate.setEnglishHint($('iconifySearchEnglishHint'), t('searchEnglishHint'), '', ($('iconifyQuery')?.value || '').trim());
+      }
+      runSearch(1, {});
+    });
+    $('iconifySearchEnglishBtn')?.addEventListener('click', () => runSearchEnglish(1));
     $('iconifyQuery')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        runSearch(1);
+        if (window.SFMediaSearchTranslate) {
+          SFMediaSearchTranslate.setEnglishHint($('iconifySearchEnglishHint'), t('searchEnglishHint'), '', ($('iconifyQuery')?.value || '').trim());
+        }
+        runSearch(1, {});
       }
     });
     $('iconifyPrefix')?.addEventListener('change', () => {
@@ -265,14 +310,11 @@
     $('iconifyOpenBtn')?.addEventListener('click', openIconifyModal);
     $('iconifyModalClose')?.addEventListener('click', closeIconifyModal);
     $('iconifyLightboxClose')?.addEventListener('click', closeIconifyLightbox);
-    $('iconifyLightboxBackdrop')?.addEventListener('click', closeIconifyLightbox);
+    const modal = $('iconifyModal');
+    SFModalBackdrop?.bindDismiss($('iconifyLightboxBackdrop'), closeIconifyLightbox);
+    SFModalBackdrop?.bindDismiss(modal, closeIconifyModal);
 
     bindColorControls();
-
-    const modal = $('iconifyModal');
-    modal?.addEventListener('click', (e) => {
-      if (e.target === modal) closeIconifyModal();
-    });
 
     document.addEventListener('keydown', (e) => {
       const lightbox = $('iconifyLightbox');

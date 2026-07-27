@@ -55,12 +55,24 @@ class ElementLink
     /** @return array<string, string|null> */
     public static function defaults(): array
     {
-        $def = SermonImportTemplate::defaultTemplateFields('')['elements'];
-        $out = [];
-        foreach (self::allRoles() as $role) {
-            $out[$role] = $def[$role]['textTemplateId'] ?? null;
-        }
-        return $out;
+        return [
+            'document_title' => 'title',
+            'subtitle' => 'subtitle',
+            'heading1' => 'title',
+            'heading2' => '0b3aec509d2e',
+            'heading3' => '6ccca4e48029',
+            'heading4' => '982874cf3eb0',
+            'heading5' => '982874cf3eb0',
+            'normal' => null,
+            'list_item' => null,
+            'lighttext' => null,
+            'prompt' => null,
+            'scripture_block' => 'standard',
+            'scripture_ref' => '982874cf3eb0',
+            'scripture_verse' => 'standard',
+            'scripture_inline' => null,
+            'meta' => null,
+        ];
     }
 
     public static function ensureDefaults(): void

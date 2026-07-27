@@ -1,0 +1,66 @@
+---
+description: SlideForge Dialoge — einheitlich wie «Ribbon anpassen»
+alwaysApply: true
+---
+
+# Dialogfenster (SlideForge)
+
+Alle zentrierten Dialoge nutzen **denselben Look** wie **«Ribbon anpassen»**
+(`.ribbon-customize-panel` + `.sf-dialog-*`).
+
+Floating Ribbon-Settings (`.present-config-panel`) sind **keine** Dialoge —
+die bleiben kompakt im Settings-Host.
+
+## Referenz
+
+- UI: Ribbon → «Ribbon anpassen»
+- CSS: `public_html/assets/css/style.css` (`.modal`, `.sf-dialog-*`, `.ribbon-customize-*`)
+- Confirm/Prompt: `SFDialog` in `ui-dialog.js` (Karte = `.modal`, Footer = `.sf-dialog-actions`)
+
+## Pflicht-Look (Chrome)
+
+| Element | Klassen | Optik |
+| --- | --- | --- |
+| Karte | `.modal` / `.ribbon-customize-panel` | `var(--surface)`, `1px solid var(--border)`, **`border-radius: 12px`**, Schatten `0 16px 48px …`, **kein** Karten-Innenpadding |
+| Header | `.sf-dialog-header` | Titel links, Close rechts, `border-bottom` |
+| Titel | `.sf-dialog-title` | `1rem` / `font-weight: 600`, **kein** Uppercase/Muted-Label |
+| Close | `.sf-dialog-close` | Plain `×`, **kein** `button`/`button-ghost`-Kästchen |
+| Hinweis | `.sf-dialog-hint` | Unter dem Header, `0.78rem`, muted |
+| Footer | `.sf-dialog-actions` / `.modal-actions` | `border-top`, Buttons rechts; Abbrechen = `button-ghost` |
+
+Breite/Inhalt dürfen variieren (Cliparts/Pixabay breiter) — **Rahmen, Radius, Schatten, Header, Close, Footer** bleiben am Referenz-Look.
+
+## Markup-Muster
+
+```html
+<div class="modal-backdrop" id="…">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="…Title">
+    <div class="sf-dialog-header">
+      <h2 id="…Title" class="sf-dialog-title">…</h2>
+      <button type="button" class="sf-dialog-close" aria-label="Schliessen">×</button>
+    </div>
+    <p class="sf-dialog-hint">…</p>
+    <div class="modal-dialog-body">…</div>
+    <div class="sf-dialog-actions modal-actions">
+      <button type="button" class="button button-ghost">Abbrechen</button>
+      <button type="button" class="button">OK</button>
+    </div>
+  </div>
+</div>
+```
+
+Ohne Close-Button: Titel direkt als `.modal > .sf-dialog-title` (bekommt dieselbe Unterkante wie der Header).
+
+Aliase ok: `.pixabay-modal-header`, `.share-modal-header`, `.ribbon-customize-header` — immer **zusätzlich** zu `.sf-dialog-header` / denselben Basis-Styles.
+
+## Nicht vermischen
+
+- Keine eigenen Card-Optiken nur für einen Dialog
+- Close **nicht** als `button button-ghost button-sm` mit Rahmen
+- Keine nativen `alert` / `confirm` / `prompt` (siehe `confirm-dialogs.mdc`)
+- Kein Uppercase-Muted-«Panel-Label» als Dialogtitel
+
+## Neu bauen
+
+Neuen Dialog immer an `.modal` + `.sf-dialog-*` anbinden — nicht ad-hoc neu stylen.
+Bei Unsicherheit: «Ribbon anpassen» öffnen und Chrome 1:1 übernehmen.

@@ -8,6 +8,7 @@
   let lastHits = [];
   let lastTotal = 0;
   let lastTotalPages = 0;
+  let lastSearchOpts = null;
   let lastLightboxHit = null;
 
   function $(id) {
@@ -94,9 +95,16 @@
     $('openclipartQuery')?.focus();
   }
 
-  async function runSearch(page) {
+  async function runSearch(page, opts) {
+    if (arguments.length >= 2) {
+      lastSearchOpts = opts || null;
+      opts = opts || {};
+    } else {
+      opts = lastSearchOpts || {};
+    }
     if (!api?.openclipartConfig?.enabled) return;
-    const q = ($('openclipartQuery')?.value || '').trim();
+    const originalQuery = ($('openclipartQuery')?.value || '').trim();
+    const q = (opts.searchQuery != null ? String(opts.searchQuery) : originalQuery).trim();
     if (!q) {
       setStatus(t('enterQuery'), true);
       return;
@@ -106,6 +114,15 @@
     currentPage = page || 1;
     lastQuery = q;
     setStatus(t('searching'));
+
+    if (window.SFMediaSearchTranslate) {
+      SFMediaSearchTranslate.setEnglishHint(
+        $('openclipartSearchEnglishHint'),
+        t('searchEnglishHint'),
+        opts.englishQuery || '',
+        originalQuery
+      );
+    }
 
     const payload = {
       action: 'search',
@@ -215,12 +232,48 @@
     }
   }
 
+  async function runSearchEnglish(page) {
+    const q = ($('openclipartQuery')?.value || '').trim();
+    if (!q) {
+      setStatus(t('enterQuery'), true);
+      return;
+    }
+    if (!window.SFMediaSearchTranslate) {
+      setStatus(t('errorGeneric'), true);
+      return;
+    }
+    setStatus(t('translating'));
+    try {
+      const en = await SFMediaSearchTranslate.translateToEnglish(q);
+      if (window.SFMediaSearchTranslate) {
+        SFMediaSearchTranslate.setEnglishHint(
+          $('openclipartSearchEnglishHint'),
+          t('searchEnglishHint'),
+          en,
+          q
+        );
+      }
+      await runSearch(page, { searchQuery: en, englishQuery: en });
+    } catch (e) {
+      setStatus(e.message || t('errorGeneric'), true);
+    }
+  }
+
   function bindEvents() {
-    $('openclipartSearchBtn')?.addEventListener('click', () => runSearch(1));
+    $('openclipartSearchBtn')?.addEventListener('click', () => {
+      if (window.SFMediaSearchTranslate) {
+        SFMediaSearchTranslate.setEnglishHint($('openclipartSearchEnglishHint'), t('searchEnglishHint'), '', ($('openclipartQuery')?.value || '').trim());
+      }
+      runSearch(1, {});
+    });
+    $('openclipartSearchEnglishBtn')?.addEventListener('click', () => runSearchEnglish(1));
     $('openclipartQuery')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        runSearch(1);
+        if (window.SFMediaSearchTranslate) {
+          SFMediaSearchTranslate.setEnglishHint($('openclipartSearchEnglishHint'), t('searchEnglishHint'), '', ($('openclipartQuery')?.value || '').trim());
+        }
+        runSearch(1, {});
       }
     });
     $('openclipartPrev')?.addEventListener('click', () => {
@@ -230,12 +283,10 @@
 
     $('openclipartModalClose')?.addEventListener('click', closeOpenclipartModal);
     $('openclipartLightboxClose')?.addEventListener('click', closeOpenclipartLightbox);
-    $('openclipartLightboxBackdrop')?.addEventListener('click', closeOpenclipartLightbox);
+    SFModalBackdrop?.bindDismiss($('openclipartLightboxBackdrop'), closeOpenclipartLightbox);
 
     const modal = $('openclipartModal');
-    modal?.addEventListener('click', (e) => {
-      if (e.target === modal) closeOpenclipartModal();
-    });
+    SFModalBackdrop?.bindDismiss(modal, closeOpenclipartModal);
 
     document.addEventListener('keydown', (e) => {
       const lightbox = $('openclipartLightbox');

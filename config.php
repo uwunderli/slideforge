@@ -40,7 +40,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '362');
+define('ASSET_VERSION', '553');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -48,7 +48,7 @@ define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
 // Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
 // PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
 // sichtbar. Für den Produktivbetrieb display_errors ganz auf 0 setzen.
-error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+error_reporting(E_ALL & ~E_DEPRECATED);
 ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 
@@ -64,6 +64,37 @@ spl_autoload_register(function ($class) {
         require $file;
     }
 });
+
+// Shared Auth (Hub-Cookie / hub_session-Handoff)
+$authSecretFile = DATA_PATH . '/auth-secret.txt';
+if (is_readable($authSecretFile)) {
+    $hubAuthSecret = trim((string)file_get_contents($authSecretFile));
+    if ($hubAuthSecret !== '') {
+        putenv('CHURCHFORGE_AUTH_SECRET=' . $hubAuthSecret);
+        $_ENV['CHURCHFORGE_AUTH_SECRET'] = $hubAuthSecret;
+    }
+}
+
+$sharedPath = trim((string)(getenv('CHURCHFORGE_SHARED_PATH') ?: ''));
+if ($sharedPath === '') {
+    foreach ([dirname(BASE_PATH) . '/shared', '/data/www/shared', '/var/www/shared-lib'] as $dir) {
+        if (is_dir($dir)) {
+            $sharedPath = $dir;
+            putenv('CHURCHFORGE_SHARED_PATH=' . $dir);
+            $_ENV['CHURCHFORGE_SHARED_PATH'] = $dir;
+            break;
+        }
+    }
+}
+if ($sharedPath !== '' && is_readable($sharedPath . '/bootstrap.php')) {
+    if (!defined('CHURCHFORGE_SHARED_PATH')) {
+        define('CHURCHFORGE_SHARED_PATH', $sharedPath);
+    }
+    require_once $sharedPath . '/bootstrap.php';
+}
+if (class_exists('SharedAuth')) {
+    SharedAuth::bootstrapSlideForge();
+}
 
 Mobile::handleOverride();
 
@@ -118,7 +149,6 @@ if (!file_exists(TEXT_TEMPLATES_FILE)) {
         ['id' => 'standard', 'name' => 'Text', 'fontFamily' => 'Open Sans', 'fontSize' => 65, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'left', 'w' => 599, 'h' => 70],
     ], JSON_PRETTY_PRINT));
 }
-SermonImportTemplate::ensureDefaults();
 if (!is_dir(PUBLIC_UPLOADS_PATH)) {
     mkdir(PUBLIC_UPLOADS_PATH, 0770, true);
 }
@@ -440,9 +470,10 @@ if (!empty($_SESSION['user_id'])) {
     $__lang = $_COOKIE['sf_lang'];
 }
 
+I18n::init($__lang);
+
 if (Demo::isActive()) {
     Demo::maybeReset();
 }
 
-I18n::init($__lang);
 unset($__lang, $__u);

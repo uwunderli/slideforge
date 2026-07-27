@@ -39,7 +39,8 @@
 
     document.getElementById('copyPublicLinkBtn')?.addEventListener('click', (e) => {
       const input = document.getElementById('presentPublicLinkInput');
-      if (!input || !input.value) return;
+      const toggle = document.getElementById('publicLinkToggle');
+      if (!toggle?.checked || !input?.value) return;
       const btn = e.currentTarget;
       const original = i18n.copyLink || btn.textContent;
       const copied = () => {
@@ -86,6 +87,10 @@
 
     document.getElementById('publicLinkToggle')?.addEventListener('change', async (e) => {
       const enabled = e.target.checked;
+      const input = document.getElementById('presentPublicLinkInput');
+      const prevUrl = input?.value || '';
+      if (!enabled && input) input.value = '';
+      syncPublicLinkCopyBtn();
       try {
         const res = await fetch('api.php?action=toggle_public_link&id=' + encodeURIComponent(id), {
           method: 'POST',
@@ -93,8 +98,13 @@
           body: JSON.stringify({ enabled: enabled, csrf_token: csrfToken }),
         });
         const json = await res.json();
-        const input = document.getElementById('presentPublicLinkInput');
-        if (json.ok && json.enabled && json.url) {
+        if (!json.ok) {
+          e.target.checked = !enabled;
+          if (input) input.value = prevUrl;
+          syncPublicLinkCopyBtn();
+          return;
+        }
+        if (json.enabled && json.url) {
           if (input) input.value = json.url;
         } else if (input) {
           input.value = '';
@@ -102,11 +112,13 @@
         syncPublicLinkCopyBtn();
       } catch (err) {
         e.target.checked = !enabled;
+        if (input) input.value = prevUrl;
         syncPublicLinkCopyBtn();
       }
     });
 
     syncPublicLinkCopyBtn();
+    document.addEventListener('sf:ribbon-rendered', () => syncPublicLinkCopyBtn());
 
     let audienceWin = null;
     let presentScreens = [];
@@ -208,9 +220,14 @@
       const defaultIdx = presentScreens.findIndex((sc) => !sc.isPrimary);
       select.value = String(defaultIdx >= 0 ? defaultIdx : 0);
       if (hint) {
-        hint.textContent = presentScreens.length > 1
+        const text = presentScreens.length > 1
           ? (i18n.screenMultiHint || '')
           : (i18n.screenSingle || '');
+        hint.textContent = text;
+        /* Im Ribbon nur als Tooltip; Platz sparen. */
+        const inRibbon = !!select.closest('.ribbon-present-display-inner');
+        hint.hidden = inRibbon || !text;
+        select.title = text;
       }
     }
 
@@ -294,8 +311,11 @@
     });
 
     const localBtn = document.getElementById('presentLocalBtn');
-    if (localBtn) {
+    const screenSelect = document.getElementById('presentScreenSelect');
+    if (localBtn || screenSelect) {
       initPresentScreens();
+    }
+    if (localBtn) {
       localBtn.addEventListener('click', async () => {
         const url = 'present_audience.php?id=' + encodeURIComponent(id);
         await openAudienceWindow(url);

@@ -51,16 +51,7 @@ class TextTemplate
 
     public static function listAll(): array
     {
-        $list = Storage::read(TEXT_TEMPLATES_FILE, []);
-        usort($list, function ($a, $b) {
-            $aFallback = self::isFallback((string)($a['id'] ?? ''));
-            $bFallback = self::isFallback((string)($b['id'] ?? ''));
-            if ($aFallback !== $bFallback) {
-                return $aFallback ? -1 : 1;
-            }
-            return 0;
-        });
-        return $list;
+        return Storage::read(TEXT_TEMPLATES_FILE, []);
     }
 
     public static function find(string $id): ?array
@@ -165,15 +156,12 @@ class TextTemplate
                 $byId[$t['id']] = $t;
             }
             $new = [];
-            $ids = array_values(array_unique(array_merge(
-                [self::FALLBACK_ID],
-                array_filter(array_map('strval', $orderedIds), fn($id) => $id !== self::FALLBACK_ID)
-            )));
-            foreach ($ids as $id) {
-                if (isset($byId[$id])) {
-                    $new[] = $byId[$id];
-                    unset($byId[$id]);
+            foreach (array_map('strval', $orderedIds) as $id) {
+                if ($id === '' || !isset($byId[$id])) {
+                    continue;
                 }
+                $new[] = $byId[$id];
+                unset($byId[$id]);
             }
             foreach ($byId as $t) {
                 $new[] = $t;

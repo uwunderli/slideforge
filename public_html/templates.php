@@ -204,59 +204,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('tpl.element_links_saved');
     }
 
-    // ---- Logos-Importvorlagen (Legacy, nur noch API) ----
-    if ($action === 'add_sermon_import_template' && $isAdmin) {
-        SermonImportTemplate::create(['name' => t('tpl.default_sermon_import_name')]);
-        $msg = t('tpl.sermon_import_added');
-    }
-    if ($action === 'update_sermon_import_template' && $isAdmin) {
-        $id = $_POST['id'] ?? '';
-        $existing = SermonImportTemplate::find($id);
-        $existingElements = $existing['elements'] ?? [];
-        $elements = [];
-        foreach (SermonImportTemplate::ELEMENT_TYPES as $elType) {
-            $target = $_POST['el_target'][$elType] ?? 'skip';
-            if (!in_array($target, ['slide', 'notes', 'skip', 'title_slide'], true)) {
-                $target = 'skip';
-            }
-            $next = array_merge($existingElements[$elType] ?? [], [
-                'target' => $target,
-                'x' => max(0, (int)($_POST['el_x'][$elType] ?? 100)),
-                'y' => max(0, (int)($_POST['el_y'][$elType] ?? 100)),
-                'w' => max(20, (int)($_POST['el_w'][$elType] ?? 1720)),
-                'h' => max(10, (int)($_POST['el_h'][$elType] ?? 100)),
-            ]);
-            $tplId = trim((string)($_POST['el_text_template'][$elType] ?? ''));
-            if ($tplId !== '') {
-                $next['textTemplateId'] = $tplId;
-            } else {
-                unset($next['textTemplateId']);
-            }
-            $elements[$elType] = $next;
-        }
-        SermonImportTemplate::update($id, [
-            'name' => trim($_POST['name'] ?? '') !== '' ? trim($_POST['name']) : t('tpl.default_sermon_import_name'),
-            'createTitleSlide' => isset($_POST['create_title_slide']),
-            'background' => [
-                'type' => 'color',
-                'value' => preg_match('/^#[0-9a-fA-F]{6}$/', $_POST['background_color'] ?? '') ? $_POST['background_color'] : '#111111',
-            ],
-            'elements' => $elements,
-        ]);
-        $msg = t('tpl.sermon_import_saved');
-    }
-    if ($action === 'delete_sermon_import_template' && $isAdmin) {
-        if (SermonImportTemplate::delete($_POST['id'] ?? '')) {
-            $msg = t('tpl.sermon_import_deleted');
-        } else {
-            $error = t('tpl.sermon_import_delete_last');
-        }
-    }
-    if ($action === 'duplicate_sermon_import_template' && $isAdmin) {
-        SermonImportTemplate::duplicate($_POST['id'] ?? '');
-        $msg = t('tpl.sermon_import_duplicated');
-    }
-
     // ---- Folienvorlagen (jeder für eigene, Admin für alle) ----
     if ($action === 'create_slide_template') {
         $title = trim($_POST['title'] ?? '') !== '' ? trim($_POST['title']) : t('tpl.default_slide_title');
@@ -524,7 +471,7 @@ require __DIR__ . '/includes/header.php';
               <strong><?= h($f['name']) ?></strong>
               <span class="text-template-meta"><?= h($f['family']) ?> · <?= h(strtoupper($f['format'] ?? '')) ?></span>
             </div>
-            <form method="post" onsubmit="return confirm('<?= h(t('tpl.font_delete_confirm')) ?>');">
+            <form method="post" data-sf-confirm="<?= h(t('tpl.font_delete_confirm')) ?>" data-sf-confirm-danger>
               <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
               <input type="hidden" name="action" value="delete_font">
               <input type="hidden" name="tab" value="fonts">
@@ -608,9 +555,9 @@ require __DIR__ . '/includes/header.php';
     <div id="textTemplatesList">
     <?php foreach ($textTemplates as $t): ?>
       <?php $isFallbackTpl = TextTemplate::isFallback((string)($t['id'] ?? '')); ?>
-      <details class="text-template-row<?= $isFallbackTpl ? ' text-template-row--fallback' : '' ?>" <?= ($isAdmin && !$isFallbackTpl) ? 'draggable="true" data-tpl-id="' . h($t['id']) . '"' : '' ?>>
+      <details class="text-template-row<?= $isFallbackTpl ? ' text-template-row--fallback' : '' ?>" <?= $isAdmin ? 'draggable="true" data-tpl-id="' . h($t['id']) . '"' : '' ?>>
         <summary class="text-template-summary">
-          <?php if ($isAdmin && !$isFallbackTpl): ?><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span><?php endif; ?>
+          <?php if ($isAdmin): ?><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span><?php endif; ?>
           <span class="text-template-preview" style="font-family:'<?= h($t['fontFamily']) ?>',sans-serif; font-weight:<?= h($t['fontWeight']) ?>; color:<?= h($t['color']) ?>;"><?= h($t['name']) ?></span>
           <?php if ($isFallbackTpl): ?>
             <span class="perm-tag edit"><?= h(t('tpl.text_fallback_badge')) ?></span>
@@ -687,7 +634,7 @@ require __DIR__ . '/includes/header.php';
           <button type="submit" class="button button-sm"><?= h(t('tpl.save')) ?></button>
           <?php if (!$isFallbackTpl): ?>
           <button type="submit" name="action" value="duplicate_text_template" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
-          <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm" onclick="return confirm('<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>')"><?= h(t('tpl.delete')) ?></button>
+          <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm" data-sf-confirm="<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>" data-sf-confirm-danger><?= h(t('tpl.delete')) ?></button>
           <?php endif; ?>
         </div>
         <?php endif; ?>
@@ -752,7 +699,7 @@ require __DIR__ . '/includes/header.php';
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
                 <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
-              <form method="post" class="inline-form" onsubmit="return confirm('<?= h(t('tpl.delete_layout_set_confirm', ['name' => $t['title']])) ?>')">
+              <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_layout_set_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete_layout_set">
                 <input type="hidden" name="tab" value="slides">
@@ -821,7 +768,7 @@ require __DIR__ . '/includes/header.php';
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
                 <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
-              <form method="post" class="inline-form" onsubmit="return confirm('<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>')">
+              <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete_slide_template">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
@@ -876,7 +823,7 @@ require __DIR__ . '/includes/header.php';
               </form>
               <?php if ($isAdmin): ?>
                 <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
-                <form method="post" class="inline-form" onsubmit="return confirm('<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>')">
+                <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                   <input type="hidden" name="action" value="delete_slide_template">
                   <input type="hidden" name="id" value="<?= h($t['id']) ?>">

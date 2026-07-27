@@ -4,26 +4,18 @@
  */
 class LogosSermonImporter
 {
-    /** @return array{slides: array, title: string, width: int, height: int, warnings: string[], layout_set_id?: string, footer_text?: string} */
-    public static function import(string $html, ?string $templateId = null, ?string $layoutSetId = null): array
+    /** @return array{slides: array, title: string, width: int, height: int, warnings: string[], layout_set_id: string, footer_text?: string} */
+    public static function import(string $html, ?string $layoutSetId = null): array
     {
+        if ($layoutSetId === null || $layoutSetId === '' || !LayoutSet::isLayoutSet($layoutSetId)) {
+            throw new RuntimeException(t('import.layout_set_required'));
+        }
+
         $blocks = self::parseBlocks($html);
         $title = self::extractTitle($blocks);
-        $warnings = [];
-        $footerText = '';
-
-        if ($layoutSetId !== null && $layoutSetId !== '' && LayoutSet::isLayoutSet($layoutSetId)) {
-            $built = self::buildSlidesFromLayoutSet($blocks, $layoutSetId);
-            $slides = $built['slides'];
-            $footerText = $built['footer_text'] ?? '';
-            $resultLayoutSetId = $layoutSetId;
-        } else {
-            $template = SermonImportTemplate::find($templateId ?? '')
-                ?? SermonImportTemplate::find(SermonImportTemplate::defaultId())
-                ?? SermonImportTemplate::defaultTemplateFields('Predigt Standard');
-            $slides = self::buildSlidesLegacy($blocks, $template);
-            $resultLayoutSetId = null;
-        }
+        $built = self::buildSlidesFromLayoutSet($blocks, $layoutSetId);
+        $slides = $built['slides'];
+        $warnings = $built['warnings'] ?? [];
 
         if (empty($slides)) {
             $slides = [[
@@ -43,14 +35,47 @@ class LogosSermonImporter
             'width' => DEFAULT_SLIDE_WIDTH,
             'height' => DEFAULT_SLIDE_HEIGHT,
             'warnings' => $warnings,
+            'layout_set_id' => $layoutSetId,
         ];
-        if ($resultLayoutSetId) {
-            $out['layout_set_id'] = $resultLayoutSetId;
-        }
-        if ($footerText !== '') {
-            $out['footer_text'] = $footerText;
+        if (($built['footer_text'] ?? '') !== '') {
+            $out['footer_text'] = $built['footer_text'];
         }
         return $out;
+    }
+
+    /**
+     * Dry-Run für Import-Vorschau (legt keine Präsentation an).
+     *
+     * @return array{title: string, slide_count: int, slides: list<array>, sections: list<array>, warnings: list<string>, footer_text: string}
+     */
+    public static function planImport(string $html, string $layoutSetId): array
+    {
+        if (!LayoutSet::isLayoutSet($layoutSetId)) {
+            throw new RuntimeException(t('import.layout_set_required'));
+        }
+        $blocks = self::parseBlocks($html);
+        $title = self::extractTitle($blocks);
+        $setMeta = Presentation::getMeta($layoutSetId) ?? [];
+        $width = max(100, (int)($setMeta['width'] ?? DEFAULT_SLIDE_WIDTH));
+        $height = max(100, (int)($setMeta['height'] ?? DEFAULT_SLIDE_HEIGHT));
+        $built = self::buildSlidesFromLayoutSet($blocks, $layoutSetId);
+        $sections = $built['sections'] ?? [];
+        $sectionSlideCount = array_sum(array_map(
+            fn($s) => (int)($s['slide_count'] ?? 0),
+            $sections
+        ));
+
+        return [
+            'title' => $title,
+            'slide_count' => count($built['slides']),
+            'width' => $width,
+            'height' => $height,
+            'preamble_slide_count' => max(0, count($built['slides']) - $sectionSlideCount),
+            'slides' => self::summarizeSlidesForPreview($built['slides']),
+            'sections' => $sections,
+            'warnings' => $built['warnings'] ?? [],
+            'footer_text' => $built['footer_text'] ?? '',
+        ];
     }
 
     public static function isLogosExport(string $html): bool
@@ -180,18 +205,80 @@ class LogosSermonImporter
         return t('import.default_title');
     }
 
+    /**
+     * Teilt Blöcke in Vorspann (vor erstem H1) und H1-Abschnitte.
+     *
+     * @param list<array{type: string, text: string, level?: int, part?: string}> $blocks
+     * @return array{preamble: list<array>, sections: list<array{h1: string, blocks: list<array>}>}
+     */
+    private static function splitIntoSections(array $blocks): array
+    {
+        $preamble = [];
+        $sections = [];
+        $current = null;
+
+        foreach ($blocks as $block) {
+            if ($block['type'] === 'heading1') {
+                if ($current !== null) {
+                    $sections[] = $current;
+                }
+                $current = ['h1' => $block['text'], 'blocks' => []];
+                continue;
+            }
+            if ($current === null) {
+                $preamble[] = $block;
+            } else {
+                $current['blocks'][] = $block;
+            }
+        }
+        if ($current !== null) {
+            $sections[] = $current;
+        }
+
+        return ['preamble' => $preamble, 'sections' => $sections];
+    }
+
+    /** @param list<array> $slides
+     * @return list<array{layoutKey: string, label: string, preview: string, thumbHtml: string}>
+     */
+    private static function summarizeSlidesForPreview(array $slides): array
+    {
+        $out = [];
+        foreach ($slides as $slide) {
+            $preview = '';
+            foreach ($slide['objects'] ?? [] as $obj) {
+                if (($obj['type'] ?? '') === 'text' && trim((string)($obj['text'] ?? '')) !== '') {
+                    $preview = trim((string)$obj['text']);
+                    break;
+                }
+            }
+            if ($preview === '' && trim((string)($slide['notes'] ?? '')) !== '') {
+                $preview = t('import.preview_notes') . ' ' . mb_substr(trim((string)$slide['notes']), 0, 60);
+            }
+            $out[] = [
+                'layoutKey' => (string)($slide['layoutKey'] ?? ''),
+                'label' => (string)($slide['label'] ?? ''),
+                'preview' => mb_substr($preview, 0, 120),
+                'thumbHtml' => SlideRenderer::renderSlideThumbnailHtml($slide, null),
+            ];
+        }
+        return $out;
+    }
+
     /** @param list<array{type: string, text: string, level?: int, part?: string}> $blocks
-     * @return array{slides: list<array>, footer_text: string}
+     * @return array{slides: list<array>, footer_text: string, sections: list<array>, warnings: list<string>}
      */
     private static function buildSlidesFromLayoutSet(array $blocks, string $setId): array
     {
         LayoutSet::syncLayoutMap($setId);
         $setMeta = Presentation::getMeta($setId) ?? [];
+        $settings = LayoutSet::logosImportSettings($setMeta);
         $notesOrder = LayoutSet::notesOrder($setMeta);
-        $breakLevels = [1, 2, 3, 4, 5];
         $zoneFor = fn(string $role) => LayoutSet::zoneForRole($setMeta, $role);
 
         $slides = [];
+        $sectionSummaries = [];
+        $warnings = [];
         $current = null;
         $notesBucket = [];
         $footerLines = [];
@@ -231,21 +318,37 @@ class LogosSermonImporter
             $current = null;
         };
 
-        $openSlideWithRoles = function (string $layoutKey, array $contentByRole) use (&$current, $setId, $setMeta, $flushSlide, $flushNotesToString) {
+        $openSlideWithRoles = function (string $layoutKey, array $contentByRole) use (
+            &$current, $setId, $setMeta, $flushSlide, $flushNotesToString
+        ) {
             $flushSlide();
+            $contentByRole = array_filter(
+                $contentByRole,
+                fn($t) => trim((string)$t) !== '',
+                ARRAY_FILTER_USE_BOTH
+            );
+            if ($contentByRole === []) {
+                return;
+            }
+
             $layout = null;
-            if ($contentByRole !== []) {
+            if (count($contentByRole) > 1) {
+                $layout = LayoutSet::bestLayoutForContent($setId, $contentByRole, $setMeta);
+            }
+            if ($layout === null) {
                 $role = (string)array_key_first($contentByRole);
                 $layout = LayoutSet::findLayoutForRole($setId, $role, $setMeta);
                 if ($layout !== null) {
                     $layoutKey = (string)($layout['layoutKey'] ?? $layoutKey);
                 }
+            } elseif ($layout !== null) {
+                $layoutKey = (string)($layout['layoutKey'] ?? $layoutKey);
             }
             if ($layout === null) {
                 $layout = LayoutSet::findLayout($setId, $layoutKey);
             }
+
             $pendingNotes = $flushNotesToString();
-            $contentByRole = array_filter($contentByRole, fn($t) => trim((string)$t) !== '');
             if ($layout) {
                 $current = LayoutSet::fillSlideFromLayout($layout, $contentByRole, $pendingNotes, $setMeta);
             } else {
@@ -284,38 +387,9 @@ class LogosSermonImporter
             }
         };
 
-        $openSlideForZone = function (string $type, string $text) use ($setId, $setMeta, $openSlide, $zoneFor) {
-            if ($zoneFor($type) !== 'slides') {
-                return false;
-            }
-            $openSlide($type, $type, $text);
-            return true;
-        };
-
-        $routeExtra = function (string $type, string $text) use (
-            $zoneFor, $addNote, $addFooter, $openSlideForZone
+        $routeBlock = function (array $block, bool $inSection = false) use (
+            $setId, $setMeta, $zoneFor, $addNote, $addFooter, $openSlide, $openSlideWithRoles, &$slides
         ) {
-            $zone = $zoneFor($type);
-            if ($zone === 'unused') {
-                return;
-            }
-            if ($zone === 'footer') {
-                $addFooter($text);
-                return;
-            }
-            if ($zone === 'custom') {
-                $addNote($type, $text);
-                return;
-            }
-            if ($zone === 'slides') {
-                $openSlideForZone($type, $text);
-            }
-        };
-
-        $i = 0;
-        $n = count($blocks);
-        while ($i < $n) {
-            $block = $blocks[$i];
             $type = $block['type'];
 
             if ($type === 'document_title') {
@@ -326,7 +400,9 @@ class LogosSermonImporter
                     $addNote('document_title', $block['text']);
                 } elseif ($zone === 'slides') {
                     $layout = LayoutSet::findLayoutForRole($setId, 'document_title', $setMeta);
-                    $layoutKey = $layout ? (string)($layout['layoutKey'] ?? 'document_title') : LayoutSet::resolveLayoutKeyForRole($setId, 'document_title', $setMeta);
+                    $layoutKey = $layout
+                        ? (string)($layout['layoutKey'] ?? 'document_title')
+                        : LayoutSet::resolveLayoutKeyForRole($setId, 'document_title', $setMeta);
                     if ($layout) {
                         $slides[] = LayoutSet::fillSlideFromLayout($layout, ['document_title' => $block['text']], '', $setMeta);
                     } else {
@@ -341,271 +417,410 @@ class LogosSermonImporter
                         ];
                     }
                 }
-                $i++;
-                continue;
+                return;
             }
 
             if (str_starts_with($type, 'heading')) {
                 $zone = $zoneFor($type);
                 if ($zone === 'unused') {
-                    $i++;
-                    continue;
+                    return;
                 }
                 if ($zone === 'footer') {
                     $addFooter($block['text']);
                 } elseif ($zone === 'custom') {
                     $addNote($type, $block['text']);
-                } else {
-                    $level = (int)($block['level'] ?? (int)substr($type, -1));
-                    if (in_array($level, $breakLevels, true)) {
-                        $openSlide($type, $type, $block['text']);
-                    } else {
-                        $addNote($type, $block['text']);
-                    }
+                } elseif ($inSection && $type !== 'heading1') {
+                    $openSlide($type, $type, $block['text']);
+                } elseif (!$inSection) {
+                    $openSlide($type, $type, $block['text']);
                 }
-                $i++;
-                continue;
+                return;
             }
 
-            if ($type === 'scripture_block') {
-                $refParts = [];
-                $verseParts = [];
-                while ($i < $n && $blocks[$i]['type'] === 'scripture_block') {
-                    if (($blocks[$i]['part'] ?? '') === 'ref') {
-                        $refParts[] = $blocks[$i]['text'];
-                    } else {
-                        $verseParts[] = $blocks[$i]['text'];
-                    }
-                    $i++;
-                }
-                $refText = trim(implode("\n", array_filter($refParts)));
-                $verseText = trim(implode("\n\n", array_filter($verseParts)));
-                $layout = LayoutSet::findLayoutForRole($setId, 'scripture_block', $setMeta);
-                $layoutKey = $layout ? (string)($layout['layoutKey'] ?? 'scripture_block') : LayoutSet::resolveLayoutKeyForRole($setId, 'scripture_block', $setMeta);
-                if ($zoneFor('scripture_block') === 'slides') {
-                    $content = [];
-                    if ($layout && LayoutSet::layoutHasRole($layout, 'scripture_ref')) {
-                        if ($refText !== '') {
-                            $content['scripture_ref'] = $refText;
-                        }
-                        if ($verseText !== '') {
-                            $content['scripture_verse'] = $verseText;
-                        }
-                    } else {
-                        $combined = trim(implode("\n\n", array_filter([$refText, $verseText])));
-                        if ($combined !== '') {
-                            $content['scripture_block'] = $combined;
-                        }
-                    }
-                    if ($content !== []) {
-                        $openSlideWithRoles($layoutKey, $content);
-                    }
-                } elseif ($zoneFor('scripture_block') === 'footer') {
-                    $addFooter(trim(implode("\n\n", array_filter([$refText, $verseText]))));
-                } elseif ($zoneFor('scripture_block') === 'custom') {
-                    $combined = trim(implode("\n\n", array_filter([$refText, $verseText])));
-                    if ($combined !== '') {
-                        $addNote('scripture_block', $combined);
-                    }
-                }
-                continue;
-            }
-
-            if (in_array($type, ['normal', 'list_item'], true)) {
+            if (in_array($type, ['normal', 'list_item', 'lighttext'], true)) {
                 $zone = $zoneFor($type);
                 if ($zone === 'slides') {
-                    $openSlideForZone($type, $block['text']);
+                    $openSlide($type, $type, $block['text']);
                 } elseif ($zone === 'footer') {
                     $addFooter($block['text']);
                 } elseif ($zone === 'custom') {
                     $addNote($type, $block['text']);
                 }
-                $i++;
-                continue;
+                return;
             }
 
             if (in_array($type, LayoutSet::LOGOS_ZONE_ROLES, true)) {
-                $routeExtra($type, $block['text']);
-                $i++;
-                continue;
+                $zone = $zoneFor($type);
+                if ($zone === 'unused') {
+                    return;
+                }
+                if ($zone === 'footer') {
+                    $addFooter($block['text']);
+                } elseif ($zone === 'custom') {
+                    $addNote($type, $block['text']);
+                } elseif ($zone === 'slides') {
+                    $openSlide($type, $type, $block['text']);
+                }
+                return;
             }
 
             $addNote($type, $block['text']);
-            $i++;
+        };
+
+        $parseScriptureRun = function (array $sectionBlocks, int $start) use ($zoneFor): array {
+            $n = count($sectionBlocks);
+            $i = $start;
+            $refParts = [];
+            $verseParts = [];
+            while ($i < $n && $sectionBlocks[$i]['type'] === 'scripture_block') {
+                if (($sectionBlocks[$i]['part'] ?? '') === 'ref') {
+                    $refParts[] = $sectionBlocks[$i]['text'];
+                } else {
+                    $verseParts[] = $sectionBlocks[$i]['text'];
+                }
+                $i++;
+            }
+            return [
+                'consumed' => $i - $start,
+                'refText' => trim(implode("\n", array_filter($refParts))),
+                'verseText' => trim(implode("\n\n", array_filter($verseParts))),
+                'zone' => $zoneFor('scripture_block'),
+            ];
+        };
+
+        $emitScripture = function (
+            string $refText,
+            string $verseText,
+            ?string $headingRole = null,
+            ?string $headingText = null
+        ) use (
+            $setId, $setMeta, $zoneFor, $settings, $openSlideWithRoles, $addFooter, $addNote
+        ) {
+            $zone = $zoneFor('scripture_block');
+            $combined = trim(implode("\n\n", array_filter([$refText, $verseText])));
+            if ($combined === '') {
+                return;
+            }
+            if ($zone === 'footer') {
+                $addFooter($combined);
+                return;
+            }
+            if ($zone === 'custom') {
+                $addNote('scripture_block', $combined);
+                return;
+            }
+            if ($zone !== 'slides') {
+                return;
+            }
+
+            $content = [];
+            $layout = LayoutSet::findLayoutForRole($setId, 'scripture_block', $setMeta);
+            $layoutKey = $layout
+                ? (string)($layout['layoutKey'] ?? 'scripture_block')
+                : LayoutSet::resolveLayoutKeyForRole($setId, 'scripture_block', $setMeta);
+
+            if ($layout && LayoutSet::layoutHasRole($layout, 'scripture_ref')) {
+                if ($refText !== '') {
+                    $content['scripture_ref'] = $refText;
+                }
+                if ($verseText !== '') {
+                    $content['scripture_verse'] = $verseText;
+                }
+            } else {
+                $content['scripture_block'] = $combined;
+            }
+
+            $scriptureHeading = $settings['scriptureHeading'];
+            if ($headingRole !== null && $headingText !== null && trim($headingText) !== '') {
+                if ($scriptureHeading === 'always_combined') {
+                    $content = [$headingRole => $headingText] + $content;
+                } elseif ($scriptureHeading === 'combine_if_layout_fits') {
+                    $try = [$headingRole => $headingText] + $content;
+                    if (LayoutSet::bestLayoutForContent($setId, $try, $setMeta) !== null) {
+                        $content = $try;
+                    } else {
+                        $openSlideWithRoles(
+                            LayoutSet::resolveLayoutKeyForRole($setId, $headingRole, $setMeta),
+                            [$headingRole => $headingText]
+                        );
+                    }
+                } elseif ($scriptureHeading === 'scripture_always_separate') {
+                    $openSlideWithRoles(
+                        LayoutSet::resolveLayoutKeyForRole($setId, $headingRole, $setMeta),
+                        [$headingRole => $headingText]
+                    );
+                }
+            }
+
+            if ($content !== []) {
+                $openSlideWithRoles($layoutKey, $content);
+            }
+        };
+
+        $processSection = function (array $section) use (
+            $settings, $zoneFor, $routeBlock, $openSlide, $openSlideWithRoles,
+            $parseScriptureRun, $emitScripture, $setId, $setMeta, &$slides, $flushSlide
+        ) {
+            $h1 = trim((string)($section['h1'] ?? ''));
+            $blocks = $section['blocks'];
+            $n = count($blocks);
+            $pendingH1 = '';
+
+            if ($h1 !== '' && $zoneFor('heading1') === 'slides') {
+                if ($settings['h1Opener'] === 'always_separate') {
+                    $openSlide('heading1', 'heading1', $h1);
+                } else {
+                    $pendingH1 = $h1;
+                }
+            } elseif ($h1 !== '') {
+                if ($zoneFor('heading1') === 'footer') {
+                    $routeBlock(['type' => 'heading1', 'text' => $h1, 'level' => 1], true);
+                } elseif ($zoneFor('heading1') === 'custom') {
+                    $routeBlock(['type' => 'heading1', 'text' => $h1, 'level' => 1], true);
+                }
+            }
+
+            $i = 0;
+            while ($i < $n) {
+                $block = $blocks[$i];
+                $type = $block['type'];
+
+                if ($type === 'scripture_block') {
+                    $run = $parseScriptureRun($blocks, $i);
+                    $emitScripture($run['refText'], $run['verseText']);
+                    $i += max(1, $run['consumed']);
+                    continue;
+                }
+
+                if (str_starts_with($type, 'heading') && $type !== 'heading1'
+                    && $i + 1 < $n && $blocks[$i + 1]['type'] === 'scripture_block'
+                    && $settings['scriptureHeading'] !== 'scripture_always_separate') {
+                    $run = $parseScriptureRun($blocks, $i + 1);
+                    $emitScripture($run['refText'], $run['verseText'], $type, $block['text']);
+                    $i += 1 + max(1, $run['consumed']);
+                    continue;
+                }
+
+                if ($type === 'list_item' && $zoneFor('list_item') === 'slides') {
+                    $items = [];
+                    while ($i < $n && $blocks[$i]['type'] === 'list_item') {
+                        $items[] = $blocks[$i]['text'];
+                        $i++;
+                    }
+                    foreach (self::chunkListItemsByGrouping($items, $settings['listGrouping'], $setId, $setMeta) as $chunk) {
+                        $content = [];
+                        if ($pendingH1 !== '') {
+                            $content['heading1'] = $pendingH1;
+                            $pendingH1 = '';
+                        }
+                        $content['list_item'] = self::formatListItemsMarkdown($chunk);
+                        $openSlideWithRoles('list_item', $content);
+                    }
+                    continue;
+                }
+
+                if ($type === 'normal' && $zoneFor('normal') === 'slides') {
+                    $textMax = $settings['textMaxCharacters'];
+                    if ($textMax === 'layout' || $textMax === 0 || $textMax === '0') {
+                        $content = [];
+                        if ($pendingH1 !== '') {
+                            $content['heading1'] = $pendingH1;
+                            $pendingH1 = '';
+                        }
+                        $content['normal'] = $block['text'];
+                        $openSlideWithRoles('normal', $content);
+                        $i++;
+                        continue;
+                    }
+                    $parts = [];
+                    $totalLen = 0;
+                    while ($i < $n && $blocks[$i]['type'] === 'normal') {
+                        $piece = trim($blocks[$i]['text']);
+                        if ($piece === '') {
+                            $i++;
+                            continue;
+                        }
+                        $nextLen = $totalLen + ($totalLen > 0 ? 2 : 0) + mb_strlen($piece);
+                        if ($parts !== [] && $nextLen > (int)$textMax) {
+                            break;
+                        }
+                        $parts[] = $piece;
+                        $totalLen = $nextLen;
+                        $i++;
+                    }
+                    $merged = implode("\n\n", $parts);
+                    $content = [];
+                    if ($pendingH1 !== '') {
+                        $content['heading1'] = $pendingH1;
+                        $pendingH1 = '';
+                    }
+                    $content['normal'] = $merged;
+                    $openSlideWithRoles('normal', $content);
+                    continue;
+                }
+
+                if (str_starts_with($type, 'heading') && $type !== 'heading1' && $zoneFor($type) === 'slides') {
+                    $content = [$type => $block['text']];
+                    if ($pendingH1 !== '') {
+                        $content = ['heading1' => $pendingH1] + $content;
+                        $pendingH1 = '';
+                    }
+
+                    $j = $i + 1;
+                    if ($j < $n && $blocks[$j]['type'] === 'list_item' && $zoneFor('list_item') === 'slides') {
+                        $items = [];
+                        while ($j < $n && $blocks[$j]['type'] === 'list_item') {
+                            $items[] = $blocks[$j]['text'];
+                            $j++;
+                        }
+                        foreach (self::chunkListItemsByGrouping($items, $settings['listGrouping'], $setId, $setMeta) as $chunkIdx => $chunk) {
+                            $listText = self::formatListItemsMarkdown($chunk);
+                            $slideContent = $chunkIdx === 0
+                                ? $content + self::listBodyRoleForHeading($setId, $setMeta, $type, $listText)
+                                : self::listBodyRoleForHeading($setId, $setMeta, $type, $listText);
+                            $openSlideWithRoles($chunkIdx === 0 ? $type : 'list_item', $slideContent);
+                        }
+                        $i = $j;
+                        continue;
+                    }
+
+                    if ($j < $n && $blocks[$j]['type'] === 'normal' && $zoneFor('normal') === 'slides') {
+                        $content['normal'] = $blocks[$j]['text'];
+                        $openSlideWithRoles($type, $content);
+                        $i = $j + 1;
+                        continue;
+                    }
+                    $openSlideWithRoles($type, $content);
+                    $i++;
+                    continue;
+                }
+
+                if ($pendingH1 !== '' && $zoneFor($type) === 'slides' && !str_starts_with($type, 'heading')) {
+                    $openSlideWithRoles('heading1', ['heading1' => $pendingH1, $type => $block['text']]);
+                    $pendingH1 = '';
+                    $i++;
+                    continue;
+                }
+
+                $routeBlock($block, true);
+                $i++;
+            }
+
+            if ($pendingH1 !== '' && $zoneFor('heading1') === 'slides') {
+                $openSlide('heading1', 'heading1', $pendingH1);
+            }
+            $flushSlide();
+        };
+
+        ['preamble' => $preamble, 'sections' => $sections] = self::splitIntoSections($blocks);
+
+        $pi = 0;
+        $pn = count($preamble);
+        while ($pi < $pn) {
+            $block = $preamble[$pi];
+            if ($block['type'] === 'scripture_block') {
+                $run = $parseScriptureRun($preamble, $pi);
+                $emitScripture($run['refText'], $run['verseText']);
+                $pi += max(1, $run['consumed']);
+                continue;
+            }
+            $routeBlock($block, false);
+            $pi++;
+        }
+
+        foreach ($sections as $section) {
+            $before = count($slides);
+            $processSection($section);
+            $sectionSummaries[] = [
+                'title' => trim((string)($section['h1'] ?? '')),
+                'slide_count' => count($slides) - $before,
+            ];
         }
 
         $flushSlide();
+
         return [
             'slides' => $slides,
             'footer_text' => implode("\n\n", $footerLines),
+            'sections' => $sectionSummaries,
+            'warnings' => $warnings,
         ];
     }
 
-    /** @param list<array{type: string, text: string, level?: int, part?: string}> $blocks */
-    private static function buildSlidesLegacy(array $blocks, array $template): array
-    {
-        $elements = SermonImportTemplate::elementMap($template);
-        $breakLevels = $template['slideBreakLevels'] ?? [1, 2, 3, 4, 5];
-        $slides = [];
-        $titleSlide = null;
-        $current = null;
-
-        $flush = function () use (&$slides, &$current) {
-            if ($current === null) {
-                return;
-            }
-            if ($current['objects'] || trim($current['notes']) !== '') {
-                $slides[] = $current;
-            }
-            $current = null;
-        };
-
-        $ensureSlide = function () use (&$current, $template) {
-            if ($current !== null) {
-                return;
-            }
-            $current = self::emptySlide($template);
-        };
-
-        $appendNotes = function (string $text) use (&$current, $ensureSlide) {
-            $ensureSlide();
-            $current['notes'] = trim($current['notes'] . ($current['notes'] !== '' ? "\n\n" : '') . $text);
-        };
-
-        $appendObject = function (string $type, string $text) use (&$current, $ensureSlide, $elements) {
-            $ensureSlide();
-            $obj = self::makeTextObject($text, $elements[$type] ?? ['target' => 'slide']);
-            if ($obj) {
-                $current['objects'][] = $obj;
-            }
-        };
-
-        $i = 0;
-        $n = count($blocks);
-        while ($i < $n) {
-            $block = $blocks[$i];
-            $type = $block['type'];
-            $placement = $elements[$type] ?? ['target' => 'skip'];
-            $target = $placement['target'] ?? 'skip';
-
-            if ($type === 'document_title' && !empty($template['createTitleSlide']) && $target === 'title_slide') {
-                $titleSlide = self::emptySlide($template);
-                $obj = self::makeTextObject($block['text'], $placement);
-                if ($obj) {
-                    $titleSlide['objects'][] = $obj;
-                }
-                $i++;
-                continue;
-            }
-
-            if ($type === 'meta' || $target === 'skip') {
-                $i++;
-                continue;
-            }
-
-            if (str_starts_with($type, 'heading')) {
-                $level = (int)($block['level'] ?? (int)substr($type, -1));
-                if (in_array($level, $breakLevels, true)) {
-                    $flush();
-                    $current = self::emptySlide($template);
-                } else {
-                    $ensureSlide();
-                }
-                if ($target === 'slide') {
-                    $appendObject($type, $block['text']);
-                } elseif ($target === 'notes') {
-                    $appendNotes($block['text']);
-                }
-                $i++;
-                continue;
-            }
-
-            if ($type === 'scripture_block') {
-                $parts = [];
-                while ($i < $n && $blocks[$i]['type'] === 'scripture_block') {
-                    $parts[] = $blocks[$i]['text'];
-                    $i++;
-                }
-                $combined = implode("\n\n", array_filter($parts));
-                if ($target === 'slide') {
-                    $appendObject('scripture_block', $combined);
-                } elseif ($target === 'notes') {
-                    $appendNotes($combined);
-                }
-                continue;
-            }
-
-            if ($target === 'notes') {
-                $appendNotes($block['text']);
-            } elseif ($target === 'slide') {
-                $appendObject($type, $block['text']);
-            }
-
-            $i++;
+    /** @return array<string, string> */
+    private static function listBodyRoleForHeading(
+        string $setId,
+        array $setMeta,
+        string $headingType,
+        string $listText
+    ): array {
+        $headingType = LayoutSet::canonicalLogosRole($headingType);
+        $withNormal = [$headingType => 'heading', 'normal' => $listText];
+        if (LayoutSet::bestLayoutForContent($setId, $withNormal, $setMeta) !== null) {
+            return ['normal' => $listText];
         }
-
-        $flush();
-
-        if ($titleSlide !== null) {
-            array_unshift($slides, $titleSlide);
-        }
-
-        return $slides;
+        return ['list_item' => $listText];
     }
 
-    private static function emptySlide(array $template): array
+    /** @param list<string> $items */
+    public static function formatListItemsMarkdown(array $items): string
     {
-        return [
-            'id' => Storage::generateId(4),
-            'background' => $template['background'] ?? ['type' => 'color', 'value' => '#111111'],
-            'transition' => 'slide',
-            'autoAdvance' => 0,
-            'notes' => '',
-            'objects' => [],
-        ];
+        $lines = [];
+        foreach ($items as $item) {
+            $item = trim((string)$item);
+            if ($item === '') {
+                continue;
+            }
+            $item = preg_replace('/^[•›\-*]\s*/u', '', $item) ?? $item;
+            $item = preg_replace('/^\d+\.\s*/u', '', $item) ?? $item;
+            $lines[] = '- ' . $item;
+        }
+        return implode("\n", $lines);
     }
 
-    private static function makeTextObject(string $text, array $placement): ?array
-    {
-        $text = trim($text);
-        if ($text === '') {
-            return null;
+    /**
+     * @param list<string> $items
+     * @return list<list<string>>
+     */
+    private static function chunkListItemsByGrouping(
+        array $items,
+        string|int $grouping,
+        string $setId,
+        array $setMeta
+    ): array {
+        if ($items === []) {
+            return [];
         }
+        if ($grouping === 0 || $grouping === '0') {
+            return [$items];
+        }
+        if ($grouping === 'layout') {
+            $slots = self::listItemSlotCount($setId, $setMeta);
+            if ($slots <= 1) {
+                return [$items];
+            }
+            return array_chunk($items, $slots);
+        }
+        if ((int)$grouping === 1) {
+            return array_map(static fn($item) => [$item], $items);
+        }
+        return array_chunk($items, max(1, (int)$grouping));
+    }
 
-        $style = $placement;
-        if (!empty($placement['textTemplateId'])) {
-            $tpl = TextTemplate::resolve($placement['textTemplateId']);
-            if ($tpl) {
-                $style = array_merge($tpl, $placement);
+    private static function listItemSlotCount(string $setId, array $setMeta): int
+    {
+        $layout = LayoutSet::findLayoutForRole($setId, 'list_item', $setMeta);
+        if ($layout === null) {
+            return 1;
+        }
+        $count = 0;
+        foreach ($layout['objects'] ?? [] as $obj) {
+            $role = LayoutSet::canonicalLogosRole((string)($obj['setRole'] ?? $obj['logosRole'] ?? ''));
+            if ($role === 'list_item') {
+                $count++;
             }
         }
-
-        return [
-            'id' => 'o' . bin2hex(random_bytes(4)),
-            'type' => 'text',
-            'rotation' => 0,
-            'opacity' => 1,
-            'animType' => 'none',
-            'animOrder' => 1,
-            'animAutoAdvance' => 0,
-            'animDuration' => 0,
-            'x' => (int)($style['x'] ?? 100),
-            'y' => (int)($style['y'] ?? 100),
-            'w' => (int)($style['w'] ?? 1720),
-            'h' => (int)($style['h'] ?? 100),
-            'text' => $text,
-            'fontFamily' => $style['fontFamily'] ?? 'Open Sans',
-            'fontSize' => (int)($style['fontSize'] ?? 65),
-            'fontWeight' => ($style['fontWeight'] ?? '') === 'bold' ? 'bold' : 'normal',
-            'italic' => !empty($style['italic']),
-            'underline' => !empty($style['underline']),
-            'strikethrough' => !empty($style['strikethrough']),
-            'uppercase' => !empty($style['uppercase']),
-            'smallCaps' => !empty($style['smallCaps']),
-            'animPerLine' => false,
-            'color' => $style['color'] ?? '#ffffff',
-            'align' => in_array($style['align'] ?? '', ['left', 'center', 'right'], true) ? $style['align'] : 'left',
-        ];
+        return max(1, $count);
     }
 
     private static function nodeText(DOMElement $node): string

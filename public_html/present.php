@@ -135,7 +135,7 @@ require __DIR__ . '/includes/header.php';
                 <input type="checkbox" id="publicLinkToggle" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?>>
                 <span><?= h(t('present.public_link')) ?></span>
               </label>
-              <button type="button" class="button button-ghost button-sm" id="copyPublicLinkBtn" <?= $publicUrl ? '' : 'disabled' ?>><?= h(t('present.copy_link')) ?></button>
+              <button type="button" class="button button-ghost button-sm" id="copyPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?>><?= h(t('present.copy_link')) ?></button>
             </div>
             <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
             <?php endif; ?>

@@ -376,11 +376,9 @@
   function bindEvents() {
     $('webdavModalClose')?.addEventListener('click', closeWebdavModal);
     $('webdavLightboxClose')?.addEventListener('click', closeWebdavLightbox);
-    $('webdavLightboxBackdrop')?.addEventListener('click', closeWebdavLightbox);
     const modal = $('webdavModal');
-    modal?.addEventListener('click', (e) => {
-      if (e.target === modal) closeWebdavModal();
-    });
+    SFModalBackdrop?.bindDismiss($('webdavLightboxBackdrop'), closeWebdavLightbox);
+    SFModalBackdrop?.bindDismiss(modal, closeWebdavModal);
 
     document.addEventListener('keydown', (e) => {
       const lightbox = $('webdavLightbox');

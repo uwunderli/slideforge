@@ -839,7 +839,7 @@
     accordion.hidden = false;
     list.innerHTML = mediaEls.map((el) => {
       const mid = el.getAttribute('data-media-id');
-      const label = el.tagName === 'AUDIO' ? '🔊 Audio' : '▶ Video';
+      const label = el.tagName === 'AUDIO' ? 'Audio' : 'Video';
       const slideEl = el.closest('section');
       const slideIdx = allSlides.indexOf(slideEl);
       const slideLabel = slideIdx >= 0 ? (' &ndash; Folie ' + (slideIdx + 1)) : '';

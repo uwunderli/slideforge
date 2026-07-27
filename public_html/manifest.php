@@ -15,7 +15,7 @@ $manifest = [
     'display' => 'standalone',
     'orientation' => 'any',
     'background_color' => '#14171c',
-    'theme_color' => '#3a6c8d',
+    'theme_color' => '#428BBE',
     'lang' => I18n::currentLang(),
     'icons' => [
         [

@@ -6,6 +6,8 @@ Wenn ein Punkt konkret geplant wird: nach `AENDERUNGEN.md` (A→B) oder in ein `
 
 **Legende:** 💡 Idee · 📋 spezifiziert · 🔧 in Arbeit · ✔️ erledigt (→ Release oder gestrichen)
 
+**Roadmap-Stand:** siehe [RELEASES.md](RELEASES.md) (aktuell: **v2.1.2** shipped · **v2.1.3** unreleased · danach **v2.2.0** church.tools).
+
 ---
 
 ## Offen
@@ -31,11 +33,15 @@ _Punkte, die grob bekannt sind, aber noch nicht priorisiert oder spezifiziert._
 | Thema | Ziel |
 |-------|------|
 | Folien-Sets & Logos-Import | **v2.1.0** |
+| Ribbon Menü (Konzept + Feinschliff) | → AENDERUNGEN C #8 · unreleased **v2.1.3** |
+| Dashboard Phase 1 | → AENDERUNGEN C #14 · unreleased **v2.1.3** |
+| Logos Importer neu | → AENDERUNGEN B #7 (**pausiert**, war v2.1.3) |
+| Dashboard Phase 2 | → AENDERUNGEN B #14b |
+| Text-Animationen Animate.css | → AENDERUNGEN A (pendent) |
 | church.tools-Anbindung | **v2.2.0** (Briefing) |
 | Medien-Editor | **v2.3.0** (Briefing) |
 | reveal.js Auto-Animate | **v2.4.0** (Briefing) |
 | Editor v2 (slides.com) | **v3.1.0** (Briefing) |
-| Vorlageelemente / Raster-Sort / Folie→Set / Logos-Import-Neu / Ribbon | → [AENDERUNGEN.md](AENDERUNGEN.md) B |
 
 ---
 

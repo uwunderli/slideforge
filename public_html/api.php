@@ -20,6 +20,44 @@ function json_ok(array $data = []): void {
     exit;
 }
 
+function sf_public_view_url(?string $token): ?string
+{
+    $token = trim((string)$token);
+    if ($token === '') {
+        return null;
+    }
+    $scheme = current_scheme();
+    $host = $_SERVER['HTTP_HOST'];
+    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    return "$scheme://$host$base/view.php?token=" . $token;
+}
+
+/** @return array{shares:list,public:array,users:list} */
+function sf_share_state(string $id, string $meId): array
+{
+    $acl = Presentation::getAcl($id);
+    $sharedIds = array_column($acl['shares'] ?? [], 'user_id');
+    $availableUsers = array_values(array_filter(Auth::listAll(), static fn($u) => ($u['id'] ?? '') !== $meId));
+    usort($availableUsers, static fn($a, $b) => strcasecmp((string)$a['username'], (string)$b['username']));
+    $enabled = !empty($acl['public']['enabled']);
+    $token = (string)($acl['public']['token'] ?? '');
+    return [
+        'shares' => array_values($acl['shares'] ?? []),
+        'public' => [
+            'enabled' => $enabled,
+            'url' => ($enabled && $token !== '') ? sf_public_view_url($token) : null,
+        ],
+        'users' => array_map(static function (array $u) use ($sharedIds): array {
+            return [
+                'id' => (string)$u['id'],
+                'username' => (string)$u['username'],
+                'email' => (string)($u['email'] ?? ''),
+                'shared' => in_array($u['id'], $sharedIds, true),
+            ];
+        }, $availableUsers),
+    ];
+}
+
 if (!Auth::isLoggedIn()) {
     json_fail('Nicht angemeldet.', 401);
 }
@@ -46,7 +84,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
+$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background', 'add_share', 'remove_share', 'set_public_share', 'regenerate_public_token'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -284,6 +322,32 @@ switch ($action) {
         json_ok(['slides' => $result['slides']]);
         break;
 
+    case 'import_slide_to_layout_set':
+        $index = (int)($body['index'] ?? -1);
+        $setId = trim((string)($body['layout_set_id'] ?? ''));
+        $layoutKey = trim((string)($body['layout_key'] ?? ''));
+        if (!LayoutSet::isLayoutSet($setId)) {
+            json_fail(t('tpl.layout_set_invalid'), 400);
+        }
+        $setMeta = Presentation::getMeta($setId);
+        $canEditSet = $setMeta
+            && ($setMeta['owner_id'] === $me['id'] || Auth::isAdmin());
+        if (!$canEditSet) {
+            json_fail(t('tpl.no_permission'), 403);
+        }
+        if ($layoutKey === '') {
+            $slidesData = Presentation::getSlides($id);
+            $slide = $slidesData['slides'][$index] ?? null;
+            $layoutKey = $slide ? LayoutSet::layoutKeyFromTitle(LayoutSet::slideLabel($slide)) : '';
+        }
+        try {
+            LayoutSet::importPresentationSlide($setId, $id, $index, $layoutKey);
+        } catch (Throwable $e) {
+            json_fail($e->getMessage(), 400);
+        }
+        json_ok(['message' => t('editor.import_slide_to_set_done')]);
+        break;
+
     case 'save_layout_set_settings':
         if (!LayoutSet::isLayoutSet($id) || !Presentation::canUseTemplate($id, $me['id'])) {
             json_fail('Keine Berechtigung.', 403);
@@ -320,6 +384,9 @@ switch ($action) {
             }
             $fields['elementTextLinks'] = $links;
         }
+        if (isset($body['logosImportSettings']) && is_array($body['logosImportSettings'])) {
+            $fields['logosImportSettings'] = LayoutSet::normalizeLogosImportSettings($body['logosImportSettings']);
+        }
         if (!empty($fields)) {
             Presentation::updateMeta($id, $fields);
         }
@@ -328,6 +395,7 @@ switch ($action) {
             'meta' => $meta,
             'elementZones' => LayoutSet::elementZones($meta),
             'elementTextLinks' => LayoutSet::elementTextLinks($meta),
+            'logosImportSettings' => LayoutSet::logosImportSettings($meta),
         ]);
         break;
 
@@ -357,18 +425,80 @@ switch ($action) {
 
     case 'toggle_public_link':
         if ($perm !== 'owner') {
-            json_fail('Nur der Eigentümer kann die Freigabe ändern.', 403);
+            json_fail(t('share.owner_only'), 403);
         }
         $enabled = !empty($body['enabled']);
         $public = Presentation::setPublic($id, $enabled, 'view');
-        $publicUrl = null;
-        if ($enabled && !empty($public['token'])) {
-            $scheme = current_scheme();
-            $host = $_SERVER['HTTP_HOST'];
-            $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-            $publicUrl = "$scheme://$host$base/view.php?token=" . $public['token'];
-        }
+        $publicUrl = $enabled ? sf_public_view_url($public['token'] ?? null) : null;
         json_ok(['enabled' => $enabled, 'url' => $publicUrl]);
+        break;
+
+    case 'get_share':
+        if ($perm !== 'owner') {
+            json_fail(t('share.owner_only'), 403);
+        }
+        json_ok(sf_share_state($id, $me['id']));
+        break;
+
+    case 'add_share':
+        if ($perm !== 'owner') {
+            json_fail(t('share.owner_only'), 403);
+        }
+        if (Presentation::isTemplate($id)) {
+            json_fail(t('share.owner_only'), 400);
+        }
+        $username = trim((string)($body['username'] ?? ''));
+        $permission = (($body['permission'] ?? 'view') === 'edit') ? 'edit' : 'view';
+        $target = Auth::findByUsername($username);
+        if (!$target) {
+            json_fail(t('share.user_not_found'));
+        }
+        if (($target['id'] ?? '') === $me['id']) {
+            json_fail(t('share.cannot_share_self'));
+        }
+        $meta = Presentation::getMeta($id) ?? [];
+        Presentation::addShare($id, $target['id'], $target['username'], $permission);
+        $mail = ShareNotification::send($target, $me, $meta, $permission);
+        $message = t('share.saved_for', ['user' => $target['username']]);
+        $warning = null;
+        if (!empty($mail['ok'])) {
+            $message = t('share.saved_and_mailed', ['user' => $target['username'], 'email' => $target['email']]);
+        } elseif (($mail['error'] ?? '') === 'no_smtp') {
+            $warning = t('share.mail_no_smtp');
+        } elseif (($mail['error'] ?? '') === 'invalid_email') {
+            $warning = t('share.mail_invalid_email', ['user' => $target['username']]);
+        } else {
+            $warning = t('share.mail_send_failed', ['error' => $mail['error'] ?? t('admin.test_mail_unknown_error')]);
+        }
+        json_ok(sf_share_state($id, $me['id']) + ['message' => $message, 'warning' => $warning]);
+        break;
+
+    case 'remove_share':
+        if ($perm !== 'owner') {
+            json_fail(t('share.owner_only'), 403);
+        }
+        Presentation::removeShare($id, (string)($body['user_id'] ?? ''));
+        json_ok(sf_share_state($id, $me['id']) + ['message' => t('share.removed')]);
+        break;
+
+    case 'set_public_share':
+        if ($perm !== 'owner') {
+            json_fail(t('share.owner_only'), 403);
+        }
+        $enabled = !empty($body['enabled']);
+        Presentation::setPublic($id, $enabled, 'view');
+        $state = sf_share_state($id, $me['id']);
+        json_ok($state + [
+            'message' => $enabled ? t('share.public_enabled') : t('share.public_disabled'),
+        ]);
+        break;
+
+    case 'regenerate_public_token':
+        if ($perm !== 'owner') {
+            json_fail(t('share.owner_only'), 403);
+        }
+        Presentation::regeneratePublicToken($id);
+        json_ok(sf_share_state($id, $me['id']) + ['message' => t('share.token_regenerated')]);
         break;
 
     case 'set_display_options':
@@ -384,11 +514,29 @@ switch ($action) {
         break;
 
     case 'save_meta':
+        $meta = Presentation::getMeta($id) ?? [];
         $fields = [];
         if (array_key_exists('title', $body)) {
             $title = trim((string)$body['title']);
             if ($title !== '') {
                 $fields['title'] = $title;
+            }
+        }
+        if (array_key_exists('width', $body)) {
+            $fields['width'] = max(100, (int)$body['width']);
+        }
+        if (array_key_exists('height', $body)) {
+            $fields['height'] = max(100, (int)$body['height']);
+        }
+        if (array_key_exists('safe_margin', $body)) {
+            $fields['safe_margin'] = max(0, (int)$body['safe_margin']);
+        }
+        if (empty($meta['is_template'])) {
+            if (array_key_exists('presentation_duration', $body)) {
+                $fields['presentation_duration'] = max(1, (int)$body['presentation_duration']);
+            }
+            if (array_key_exists('layout_set_id', $body)) {
+                $fields['layout_set_id'] = trim((string)$body['layout_set_id']);
             }
         }
         if ($fields) {

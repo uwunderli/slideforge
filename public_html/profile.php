@@ -259,7 +259,7 @@ require __DIR__ . '/includes/header.php';
                 <button type="button" class="button button-ghost button-sm webdav-test-btn" data-drive-id="<?= h($drive['id']) ?>"><?= h(t('profile.webdav_test')) ?></button>
               </div>
             </form>
-            <form method="post" class="profile-inline-form" onsubmit="return confirm(<?= json_encode(t('profile.webdav_delete_confirm')) ?>);">
+            <form method="post" class="profile-inline-form" data-sf-confirm="<?= h(t('profile.webdav_delete_confirm')) ?>" data-sf-confirm-danger>
               <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
               <input type="hidden" name="action" value="delete_webdav_drive">
               <input type="hidden" name="drive_id" value="<?= h($drive['id']) ?>">
@@ -334,9 +334,9 @@ require __DIR__ . '/includes/header.php';
 
 <div class="modal-backdrop" id="webdavHelpModal" aria-hidden="true">
   <div class="modal admin-help-modal" role="dialog" aria-modal="true" aria-labelledby="webdavHelpTitle">
-    <div class="admin-help-modal-header">
-      <h2 id="webdavHelpTitle" style="font-size:1.15rem; text-transform:none; margin:0;"><?= h(t('profile.webdav_help_title')) ?></h2>
-      <button type="button" class="button button-ghost button-sm" id="webdavHelpClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
+    <div class="sf-dialog-header admin-help-modal-header">
+      <h2 id="webdavHelpTitle" class="sf-dialog-title"><?= h(t('profile.webdav_help_title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="webdavHelpClose" aria-label="<?= h(t('common.close')) ?>">×</button>
     </div>
     <div class="admin-help-modal-body">
       <?= t('profile.webdav_help_body') ?>
@@ -416,9 +416,7 @@ require __DIR__ . '/includes/header.php';
     webdavHelpBtn.addEventListener('click', openWebdavHelpModal);
     document.getElementById('webdavHelpClose')?.addEventListener('click', closeWebdavHelpModal);
     document.getElementById('webdavHelpOk')?.addEventListener('click', closeWebdavHelpModal);
-    webdavHelpModal.addEventListener('click', (e) => {
-      if (e.target === webdavHelpModal) closeWebdavHelpModal();
-    });
+    SFModalBackdrop?.bindDismiss(webdavHelpModal, closeWebdavHelpModal);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && webdavHelpModal.classList.contains('open')) closeWebdavHelpModal();
     });

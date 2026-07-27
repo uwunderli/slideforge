@@ -2,7 +2,7 @@
 
 > **Handoff:** *„Lies `docs/RELEASE_v2.2.0.md` und setze die Release um — ausser „Nicht in dieser Release“.“*
 
-Stand: Juli 2026 · Basis: **v2.1.0** (main) · **Integration:** [church.tools](https://church.tools)
+Stand: Juli 2026 · Basis: **v2.1.3** (nach Publish; aktuell Working Tree auf **v2.1.2** + Feinschliff) · **Integration:** [church.tools](https://church.tools)
 
 ---
 

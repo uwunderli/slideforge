@@ -5,6 +5,10 @@ if (Auth::isLoggedIn()) {
     redirect('index.php');
 }
 
+if (class_exists('SharedAuth') && SharedAuth::shouldUseHubLogin()) {
+    SharedAuth::redirectToHubLogin((string)($_GET['redirect'] ?? $_SERVER['REQUEST_URI'] ?? 'index.php'));
+}
+
 $error = '';
 $resendEmail = '';
 if (isset($_GET['expired'])) {

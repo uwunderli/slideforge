@@ -163,7 +163,7 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="regenerate_token">
       <input type="hidden" name="id" value="<?= h($id) ?>">
-      <button type="submit" class="button button-ghost button-sm" onclick="return confirm('<?= h(t('share.reset_confirm')) ?>')"><?= h(t('share.reset_link')) ?></button>
+      <button type="submit" class="button button-ghost button-sm" data-sf-confirm="<?= h(t('share.reset_confirm')) ?>"><?= h(t('share.reset_link')) ?></button>
     </form>
   <?php endif; ?>
 </div>

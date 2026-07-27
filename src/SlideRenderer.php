@@ -74,6 +74,23 @@ class SlideRenderer
         return array_map(fn($p) => [$p[0] * $w, $p[1] * $h], $tpl);
     }
 
+    private static function sampleCubicBezier(
+        float $x0, float $y0, float $x1, float $y1, float $x2, float $y2, float $x3, float $y3, int $steps
+    ): array {
+        $pts = [];
+        $n = max(2, $steps);
+        for ($i = 0; $i <= $n; $i++) {
+            $t = $i / $n;
+            $u = 1 - $t;
+            $a = $u * $u * $u;
+            $b = 3 * $u * $u * $t;
+            $c = 3 * $u * $t * $t;
+            $d = $t * $t * $t;
+            $pts[] = [$a * $x0 + $b * $x1 + $c * $x2 + $d * $x3, $a * $y0 + $b * $y1 + $c * $y2 + $d * $y3];
+        }
+        return $pts;
+    }
+
     private static function bracketPoints(float $w, float $h, string $style): array
     {
         $isRight = strpos($style, 'right') !== false;
@@ -82,25 +99,45 @@ class SlideRenderer
             if ($isRight) { $pts = [[0, 0], [1, 0], [1, 1], [0, 1]]; }
             else { $pts = [[1, 0], [0, 0], [0, 1], [1, 1]]; }
         } elseif (strpos($style, 'round') === 0) {
-            // Rund: flach an den Spitzen (oben/unten), stärkste Krümmung in der Mitte -
-            // sin^2 sorgt für Krümmung Null an t=0/1, Maximum bei t=0.5.
-            $n = 24; $amp = 0.85;
-            for ($i = 0; $i <= $n; $i++) {
-                $t = $i / $n;
-                $bulge = (sin($t * M_PI) ** 2) * $amp;
-                $pts[] = [$isRight ? $bulge : 1 - $bulge, $t];
+            // Rund: elliptischer Halbbogen (typografische Klammer), Spitzen mit horizontaler Tangente
+            $k = 0.55228475;
+            $segs = $isRight
+                ? [
+                    [0.00, 0.00, $k, 0.00, 1.00, 0.5 - $k * 0.5, 1.00, 0.50],
+                    [1.00, 0.50, 1.00, 0.5 + $k * 0.5, $k, 1.00, 0.00, 1.00],
+                ]
+                : [
+                    [1.00, 0.00, 1 - $k, 0.00, 0.00, 0.5 - $k * 0.5, 0.00, 0.50],
+                    [0.00, 0.50, 0.00, 0.5 + $k * 0.5, 1 - $k, 1.00, 1.00, 1.00],
+                ];
+            foreach ($segs as $si => $s) {
+                $sampled = self::sampleCubicBezier($s[0], $s[1], $s[2], $s[3], $s[4], $s[5], $s[6], $s[7], 16);
+                $start = $si === 0 ? 0 : 1;
+                for ($i = $start, $len = count($sampled); $i < $len; $i++) {
+                    $pts[] = $sampled[$i];
+                }
             }
-        } else { // curly
-            // Geschweift: sanfter, durchgehender Bauch über die ganze Höhe plus eine
-            // schmale, scharfe Spitze genau in der Mitte (kein Sprung, alles stetig).
-            $n = 40;
-            for ($i = 0; $i <= $n; $i++) {
-                $t = $i / $n;
-                $d = abs($t - 0.5) * 2;
-                $belly = (1 - ($d ** 1.5)) * 0.35;
-                $spike = exp(-(($d * 6) ** 2)) * 0.5;
-                $x = $belly + $spike;
-                $pts[] = [$isRight ? $x : 1 - $x, $t];
+        } else {
+            // Geschweift: typografische Accolade aus 4 kubischen Béziers (wie editor.js)
+            $segs = $isRight
+                ? [
+                    [0.08, 0.00, 0.08, 0.06, 0.52, 0.10, 0.52, 0.28],
+                    [0.52, 0.28, 0.52, 0.42, 0.95, 0.46, 1.00, 0.50],
+                    [1.00, 0.50, 0.95, 0.54, 0.52, 0.58, 0.52, 0.72],
+                    [0.52, 0.72, 0.52, 0.90, 0.08, 0.94, 0.08, 1.00],
+                ]
+                : [
+                    [0.92, 0.00, 0.92, 0.06, 0.48, 0.10, 0.48, 0.28],
+                    [0.48, 0.28, 0.48, 0.42, 0.05, 0.46, 0.00, 0.50],
+                    [0.00, 0.50, 0.05, 0.54, 0.48, 0.58, 0.48, 0.72],
+                    [0.48, 0.72, 0.48, 0.90, 0.92, 0.94, 0.92, 1.00],
+                ];
+            foreach ($segs as $si => $s) {
+                $sampled = self::sampleCubicBezier($s[0], $s[1], $s[2], $s[3], $s[4], $s[5], $s[6], $s[7], 12);
+                $start = $si === 0 ? 0 : 1;
+                for ($i = $start, $len = count($sampled); $i < $len; $i++) {
+                    $pts[] = $sampled[$i];
+                }
             }
         }
         return array_map(fn($p) => [$p[0] * $w, $p[1] * $h], $pts);
@@ -176,7 +213,7 @@ class SlideRenderer
         }
         if ($shapeType === 'star') return self::starPoints($w, $h, (int)($obj['starPoints'] ?? 5));
         if ($shapeType === 'arrow') return self::arrowPoints($w, $h, $obj['arrowStyle'] ?? 'right');
-        if ($shapeType === 'bracket') return self::bracketPoints($w, $h, $obj['bracketStyle'] ?? 'round-left');
+        if ($shapeType === 'bracket') return self::bracketPoints($w, $h, $obj['bracketStyle'] ?? 'curly-left');
         if ($shapeType === 'speech-bubble') return self::bubblePoints($w, $h, $obj['bubbleStyle'] ?? 'rect-left');
         if ($shapeType === 'line') return [[0, $h / 2], [$w, $h / 2]];
         $tpl = self::SHAPE_POINTS[$shapeType] ?? self::SHAPE_POINTS['triangle'];
@@ -601,7 +638,8 @@ class SlideRenderer
             $lineColor = h(($obj['stroke'] ?? '') !== 'transparent' && !empty($obj['stroke']) ? $obj['stroke'] : '#ffffff');
             $lineWidth = $strokeWidth > 0 ? (float)$strokeWidth : 3;
             return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">'
-                . '<polyline points="' . $pointsAttr . '" fill="none" stroke="' . $lineColor . '" stroke-width="' . $lineWidth . '" vector-effect="non-scaling-stroke"/></svg>';
+                . '<polyline points="' . $pointsAttr . '" fill="none" stroke="' . $lineColor . '" stroke-width="' . $lineWidth
+                . '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
         }
 
         $defs = '';
