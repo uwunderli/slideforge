@@ -92,6 +92,37 @@ if ($sharedPath !== '' && is_readable($sharedPath . '/bootstrap.php')) {
     }
     require_once $sharedPath . '/bootstrap.php';
 }
+
+// Docker-Prod mountet oft nur SlideForge (/var/www/html) ohne ../shared —
+// dann fehlen die Bootstrap-Helpers. Fallbacks wie in shared/bootstrap.php.
+if (!function_exists('churchforge_hub_url')) {
+    function churchforge_hub_url(): string
+    {
+        $url = trim((string)(getenv('CHURCHFORGE_HUB_URL') ?: ''));
+        return $url !== '' ? rtrim($url, '/') : 'https://bkbiel.ch';
+    }
+}
+if (!function_exists('churchforge_modules_file')) {
+    function churchforge_modules_file(): string
+    {
+        $custom = trim((string)(getenv('CHURCHFORGE_MODULES_JSON') ?: ''));
+        if ($custom !== '' && is_readable($custom)) {
+            return $custom;
+        }
+        $hubData = trim((string)(getenv('CHURCHFORGE_HUB_DATA') ?: ''));
+        if ($hubData === '') {
+            $hubData = dirname(BASE_PATH) . '/hub/data/gemeinde';
+        }
+        return rtrim($hubData, '/') . '/modules.json';
+    }
+}
+if (!function_exists('churchforge_shared_asset_url')) {
+    function churchforge_shared_asset_url(string $file): string
+    {
+        return churchforge_hub_url() . '/shared/' . ltrim($file, '/');
+    }
+}
+
 if (class_exists('SharedAuth')) {
     SharedAuth::bootstrapSlideForge();
 }

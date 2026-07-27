@@ -71,6 +71,7 @@ v3.1.0   → Visueller Editor (slides.com)
 |-------|-----|--------|
 | Dashboard Phase 2 | [AENDERUNGEN.md](AENDERUNGEN.md) B #14b · [DASHBOARD_PERSONALIZE.md](DASHBOARD_PERSONALIZE.md) | geplant |
 | Text-Animationen Animate.css | [AENDERUNGEN.md](AENDERUNGEN.md) A | pendent |
+| Präsentationsansicht → Ribbon | [AENDERUNGEN.md](AENDERUNGEN.md) A · [RIBBON_MENU.md](RIBBON_MENU.md) | pendent |
 | Audio-DB | [AUDIO_DB.md](AUDIO_DB.md) | Recherche; nicht 2.1.3 |
 
 **Backlog (ohne Release):** [BACKLOG.md](BACKLOG.md)  

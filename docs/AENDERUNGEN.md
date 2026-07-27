@@ -41,6 +41,7 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | #   | Typ     | Thema                         | Beschreibung                                                                 | Gewünschte Änderung / Hinweis                                                                 |
 | --- | ------- | ----------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | —   | Feature | Text-Animationen Animate.css  | Zusätzliche Texteffekte über Reveal-Fragments hinaus (bounceIn, zoomIn, …). | Kuratierte Auswahl (~8–12 Entrance) nur für Text; Bridge Fragment↔Animate.css. **Pendent** — Aufwand ca. 1–2 Tage, nicht jetzt. |
+| —   | Feature | Präsentationsansicht → Ribbon | Present-Mode-UI (Zuschauer, QR, Lokal, Einstellungen, …) noch nicht im konfigurierbaren Editor-Ribbon. | Analog Editor-Ribbon umbauen (Tabs/Gruppen/Anpassen). **Pendent** — nicht jetzt; nach v2.1.3 einplanen. |
 
 *Ausgangslage*
 

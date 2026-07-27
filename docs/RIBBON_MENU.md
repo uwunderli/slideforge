@@ -1,6 +1,8 @@
 # Ribbon Menü — konfigurierbares Layout
 
-**Status:** Umgesetzt (2026-07-12) · Standard = Nutzer-Layout inkl. Ansicht→Vorschau → **v2.1.3** ([RELEASES.md](RELEASES.md), AENDERUNGEN C #8)
+**Status:** Editor-Ribbon umgesetzt (2026-07-12) · Standard = Nutzer-Layout inkl. Ansicht→Vorschau → **v2.1.3** ([RELEASES.md](RELEASES.md), AENDERUNGEN C #8)
+
+**Pendent:** Präsentationsansicht (`present.php` / Present-Menüs) noch nicht als konfigurierbares Ribbon — siehe [AENDERUNGEN.md](AENDERUNGEN.md) A.
 
 ## Konzept
 

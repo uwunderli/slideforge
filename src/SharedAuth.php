@@ -13,8 +13,9 @@ class SharedAuth
     /** @param array<string,mixed> $user */
     public static function issueCookie(array $user): void
     {
+        $personId = self::resolvePersonId($user);
         $payload = [
-            'sub' => (string)($user['person_id'] ?? ''),
+            'sub' => $personId > 0 ? (string)$personId : (string)($user['person_id'] ?? $user['sub'] ?? ''),
             'username' => (string)($user['username'] ?? ''),
             'display_name' => (string)($user['display_name'] ?? ''),
             'email' => (string)($user['email'] ?? ''),
@@ -22,7 +23,7 @@ class SharedAuth
             'tags' => array_values($user['tags'] ?? []),
             'groups' => array_values($user['groups'] ?? []),
             'provider' => (string)($user['provider'] ?? 'churchtools'),
-            'ct_person_id' => (int)($user['person_id'] ?? 0),
+            'ct_person_id' => $personId,
             'ct_login_token' => (string)($user['ct_login_token'] ?? ''),
             'iat' => time(),
             'exp' => time() + self::TTL_SECONDS,
@@ -169,8 +170,19 @@ class SharedAuth
         return $scheme . '://' . $host . '/' . ltrim($returnTo, '/');
     }
 
+    /** @return array<string,mixed>|null */
+    public static function validateToken(string $token): ?array
+    {
+        $token = trim($token);
+        if ($token === '') {
+            return null;
+        }
+        return self::decode($token);
+    }
+
     /**
-     * FolienSchmiede: Session aus Hub-Cookie übernehmen (Auto-Provision wenn nötig).
+     * FolienSchmiede: Session aus hub_session-Handoff oder Hub-Cookie übernehmen
+     * (Auto-Provision wenn Auth::ensureFromHubPayload existiert).
      */
     public static function bootstrapSlideForge(): bool
     {
@@ -178,7 +190,17 @@ class SharedAuth
             return class_exists('Auth') && Auth::isLoggedIn();
         }
 
-        $payload = self::read();
+        $fromHandoff = false;
+        $payload = null;
+
+        $handoff = trim((string)($_GET['hub_session'] ?? ''));
+        if ($handoff !== '') {
+            $payload = self::validateToken($handoff);
+            $fromHandoff = $payload !== null;
+        }
+        if ($payload === null) {
+            $payload = self::read();
+        }
         if ($payload === null) {
             return false;
         }
@@ -197,12 +219,68 @@ class SharedAuth
         $_SESSION['username'] = $user['username'];
         $_SESSION['auth_via'] = 'churchforge_hub';
 
+        if ($fromHandoff) {
+            self::issueCookie($payload);
+            self::redirectStripHandoff();
+        }
+
         return true;
+    }
+
+    private static function redirectStripHandoff(): void
+    {
+        $uri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+        $parts = parse_url($uri);
+        if (!is_array($parts)) {
+            return;
+        }
+        $query = [];
+        if (!empty($parts['query'])) {
+            parse_str((string)$parts['query'], $query);
+        }
+        unset($query['hub_session']);
+        $path = (string)($parts['path'] ?? '/');
+        $new = $path;
+        if ($query !== []) {
+            $new .= '?' . http_build_query($query);
+        }
+        if ($new !== $uri) {
+            header('Location: ' . $new);
+            exit;
+        }
+    }
+
+    /** @param array<string,mixed> $payload */
+    private static function resolvePersonId(array $user): int
+    {
+        foreach (['person_id', 'ct_person_id', 'sub', 'id'] as $key) {
+            if (!array_key_exists($key, $user)) {
+                continue;
+            }
+            $raw = $user[$key];
+            if (is_int($raw) || (is_string($raw) && ctype_digit(trim($raw)))) {
+                $pid = (int)$raw;
+                if ($pid > 0) {
+                    return $pid;
+                }
+            }
+        }
+        return 0;
     }
 
     /** @param array<string,mixed> $payload */
     private static function resolveExistingSlideForgeUser(array $payload): ?array
     {
+        $ctPersonId = self::resolvePersonId($payload);
+        if ($ctPersonId > 0 && defined('USERS_FILE') && class_exists('Storage')) {
+            $users = Storage::read(USERS_FILE, []);
+            foreach ($users as $u) {
+                if ((int)($u['ct_person_id'] ?? 0) === $ctPersonId) {
+                    return $u;
+                }
+            }
+        }
+
         $username = trim((string)($payload['username'] ?? ''));
         if ($username !== '' && method_exists('Auth', 'findByUsername')) {
             $user = Auth::findByUsername($username);
@@ -290,6 +368,9 @@ class SharedAuth
         if (defined('BASE_PATH')) {
             $paths[] = dirname(BASE_PATH) . '/shared/auth-secret.txt';
             $paths[] = dirname(BASE_PATH) . '/hub/data/gemeinde/auth-secret.txt';
+        }
+        if (defined('DATA_PATH')) {
+            $paths[] = DATA_PATH . '/auth-secret.txt';
         }
         $paths[] = '/data/www/shared/auth-secret.txt';
         return array_values(array_unique($paths));
