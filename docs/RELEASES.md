@@ -11,7 +11,7 @@
 | **2** | **v2.1.0** | **Folien-Sets & Logos-Import** — Layout-Sets, `.chs`, Schlicht-Seed | ✔️ shipped | [RELEASE_v2.1.0.md](RELEASE_v2.1.0.md) · [GitHub](../.github/RELEASE_v2.1.0.md) |
 | — | **v2.1.1** | Editor-Fixes & Raster-Ansicht (Sortieren, Steuerung, Miniatur-Grösse) | ✔️ shipped | CHANGELOG |
 | — | **v2.1.2** | Raster-Kachel: Übergang/Zeit/Effektname Layout | ✔️ shipped | CHANGELOG |
-| — | **v2.1.3** | **Editor-/Ribbon-Feinschliff** (Dialoge, Widgets, Raster→Entwurf, …) + bereits umgesetzte Patch-Themen | 🔧 unreleased (Working Tree) | [AENDERUNGEN.md](AENDERUNGEN.md) C · [RIBBON_MENU.md](RIBBON_MENU.md) |
+| — | **v2.1.3** | **Editor-/Ribbon-Feinschliff** (Dialoge, Widgets, Raster→Entwurf, …) + SharedAuth-Docker-Fix | ✔️ shipped | [RELEASE_v2.1.3.md](../.github/RELEASE_v2.1.3.md) · [RIBBON_MENU.md](RIBBON_MENU.md) |
 | **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig · **nächster Major nach 2.1.3** | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
 | **4** | **v2.3.0** | Integrierter **Medien-Editor** (Trim, Bild, SVG) | ✅ Briefing fertig | [RELEASE_v2.3.0.md](RELEASE_v2.3.0.md) |
 | **5** | **v2.4.0** | reveal.js **Auto-Animate** — Objekte zwischen Folien morphen | ✅ Briefing fertig | [RELEASE_v2.4.0.md](RELEASE_v2.4.0.md) |
@@ -25,14 +25,14 @@
 
 | Lage | Stand |
 |------|--------|
-| **Letzter Tag** | **v2.1.2** auf GitHub / `main` |
-| **Arbeitsstand** | Umfangreicher Editor-/Ribbon-Feinschliff **noch nicht als Release getaggt** → Ziel-Patch **v2.1.3** |
-| **Ribbon** | Konzept **umgesetzt** ([RIBBON_MENU.md](RIBBON_MENU.md)); Feinschliff läuft über AENDERUNGEN C |
-| **Logos-Importer neu** | Briefing fertig, für 2.1.3 gedacht, **pausiert** bis Vorlage «Schlicht II» geprüft ([LOGOS_IMPORTER.md](LOGOS_IMPORTER.md), AENDERUNGEN B #7) |
+| **Letzter Tag** | **v2.1.3** auf GitHub / `main` |
+| **Arbeitsstand** | Editor-/Ribbon-Feinschliff **shipped**; nächster Major **v2.2.0** church.tools |
+| **Ribbon** | Editor-Ribbon **umgesetzt** ([RIBBON_MENU.md](RIBBON_MENU.md)); Präsentationsansicht→Ribbon **pendent** (AENDERUNGEN A) |
+| **Logos-Importer neu** | Briefing fertig, **pausiert** bis Vorlage «Schlicht II» geprüft ([LOGOS_IMPORTER.md](LOGOS_IMPORTER.md), AENDERUNGEN B #7) |
 | **Dashboard** | Phase 1 ✔️; Phase 2 (geteilte Folien / Bereich teilen) noch offen (B #14b) |
-| **Animate.css Texteffekte** | Idee **pendent** (AENDERUNGEN A) — nicht in 2.1.3 |
+| **Animate.css Texteffekte** | Idee **pendent** (AENDERUNGEN A) |
 
-**Nächster Schritt:** Working Tree zu **v2.1.3** abschliessen/taggen, danach **v2.2.0** church.tools.
+**Nächster Schritt:** **v2.2.0** church.tools.
 
 ---
 
@@ -57,8 +57,9 @@ v2.0.3   ✔️ shipped — Folien-Raster, Live-Sync
 v2.1.0   ✔️ shipped — Folien-Sets & Logos-Import
 v2.1.1   ✔️ shipped — Editor-Fixes, Raster-Sort/Steuerung/Miniatur-Grösse
 v2.1.2   ✔️ shipped — Raster-Kachel Meta-Layout
-v2.1.3   🔧 unreleased — Ribbon/Editor-Feinschliff (+ Patch-Themen aus AENDERUNGEN C)
-         ⏸ Logos-Importer-Neu (pausiert, war für 2.1.3 vorgesehen)
+v2.1.3   ✔️ shipped — Ribbon/Editor-Feinschliff
+         ⏸ Logos-Importer-Neu (pausiert)
+         ⏸ Präsentationsansicht→Ribbon (AENDERUNGEN A)
 v2.2.0   → church.tools          (nächster Major)
 v2.3.0   → Medien-Editor
 v2.4.0   → Auto-Animate

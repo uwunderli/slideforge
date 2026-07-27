@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.3] - 2026-07-27
+
+### Added
+
+- **Konfigurierbares Ribbon** — Tabs/Gruppen/Befehle anpassen, Peek, Standard-Layout inkl. Ansicht→Vorschau/Fenster/Lokal
+- **Theme** Tag / Nacht / System (Prefs + `cf_theme`-Cookie)
+- Dashboard Phase 1; einheitliche Dialoge (`.sf-dialog-*`); Zoom-Stepper; Einstellungen als Ribbon-Widgets
+
+### Fixed
+
+- Hub→SlideForge: fehlende Shared-Helpers im Docker-Container (500 nach Login)
+- Diverse Ribbon-/Editor-/Raster-Fixes (siehe AENDERUNGEN C)
+
 ## [2.1.2] - 2026-07-08
 
 ### Changed

@@ -7,9 +7,9 @@
 | Datei | Zweck |
 |-------|--------|
 | [AENDERUNGEN.md](AENDERUNGEN.md) | Bugs & Features: **A** neu → **B** geplant → **C** umgesetzt |
-| [RELEASES.md](RELEASES.md) | Release-Roadmap (**v2.1.3** unreleased → danach **v2.2.0**) |
+| [RELEASES.md](RELEASES.md) | Release-Roadmap (**v2.1.3** shipped → danach **v2.2.0**) |
 | [LOGOS_IMPORTER.md](LOGOS_IMPORTER.md) | Briefing: Logos Importer neu — **pausiert** (AENDERUNGEN B #7) |
-| [RIBBON_MENU.md](RIBBON_MENU.md) | Ribbon — umgesetzt; Feinschliff in v2.1.3 |
+| [RIBBON_MENU.md](RIBBON_MENU.md) | Editor-Ribbon umgesetzt (v2.1.3); Present-Ribbon pendent |
 | [DASHBOARD_PERSONALIZE.md](DASHBOARD_PERSONALIZE.md) | Dashboard Phase 1 ✔️ · Phase 2 geplant (B #14b) |
 | [BACKLOG.md](BACKLOG.md) | Ideen ohne Release-Zuordnung |
 | `AGENT_TASK_YYYY-MM-DD.md` | Tagesauftrag Agent/Owner (danach Archiv) |
@@ -24,8 +24,8 @@
 | [RELEASE_v3.1.0.md](RELEASE_v3.1.0.md) | Editor v2 (slides.com) |
 | [RELEASE_TEMPLATE.md](RELEASE_TEMPLATE.md) | Vorlage für neue Briefings |
 
-Shipped: v2.0.x–**v2.1.2** siehe [CHANGELOG.md](../CHANGELOG.md) und `.github/RELEASE_v*.md`.  
-Aktuell in Arbeit: **v2.1.3** (unreleased) — siehe [RELEASES.md](RELEASES.md).
+Shipped: v2.0.x–**v2.1.3** siehe [CHANGELOG.md](../CHANGELOG.md) und `.github/RELEASE_v*.md`.  
+Nächster Major: **v2.2.0** church.tools — siehe [RELEASES.md](RELEASES.md).
 
 ## Betrieb & Sonstiges
 

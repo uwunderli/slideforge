@@ -60,7 +60,7 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 
 | #   | Thema | Wohin |
 | --- | ----- | ----- |
-| 8   | Ribbon Menü | → C (Konzept umgesetzt; Feinschliff in unreleased **v2.1.3**, siehe [RIBBON_MENU.md](RIBBON_MENU.md) / [RELEASES.md](RELEASES.md)) |
+| 8   | Ribbon Menü | → C (umgesetzt in **v2.1.3**, siehe [RIBBON_MENU.md](RIBBON_MENU.md) / [RELEASES.md](RELEASES.md)) |
 
 ---
 
@@ -70,7 +70,7 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | #   | Typ     | Thema                        | Umsetzung                                                                                                                         | Datum / Kontext     |
 | --- | ------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | —   | Feature | Ribbon-Default = aktuelles Menü | Ansicht+Vorschau/Fenster/Lokal im Standard; Theme Tag/Nacht/System in Prefs+Cookie. ASSET 553. | 2026-07-27          |
-| 8   | Feature | Ribbon Menü                   | Konfigurierbares Ribbon (Tabs/Gruppen/Anpassen/Peek); Feinschliff laufend → unreleased **v2.1.3**. [RIBBON_MENU.md](RIBBON_MENU.md) | 2026-07-12 … 07-27  |
+| 8   | Feature | Ribbon Menü                   | Konfigurierbares Ribbon (Tabs/Gruppen/Anpassen/Peek). [RIBBON_MENU.md](RIBBON_MENU.md) · **v2.1.3** | 2026-07-12 … 07-27  |
 | —   | Design  | Runde Klammern typografisch   | `( )` als elliptischer Bézier-Bogen statt sin²-Wölbung. ASSET 552. | 2026-07-27          |
 | —   | Design  | Dialoge = Ribbon anpassen     | Einheitliches Chrome (`.sf-dialog-*`); Cliparts/Pixabay/Share/…; Rule `sf-dialogs`. ASSET 551. | 2026-07-27          |
 | —   | Feature | Zahlenfeld Mausrad global     | input[type=number]: Scrollrad ±step; Standard via number-input-wheel.js. ASSET 550. | 2026-07-27          |
