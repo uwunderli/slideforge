@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.4] - 2026-07-28
+
+### Added
+
+- **Present-Ribbon** — konfigurierbar wie im Editor (Anpassen, Tabs/Gruppen, `present_ribbon_layout`)
+- Tab **Ansicht:** Steuerungsleiste (Panel-Toggles), Timer/Zeitleiste/Uhr/Laser als Dialoge
+- Fortschritt & Navigation als eigene Ribbon-Toggle-Befehle (Editor + Present)
+
+### Changed
+
+- Editor-Anzeige: nur Fortschritt/Navigation; Link und Bildschirm nur noch im Präsentationsmodus
+- Present-Tab «Einstellungen» → **Ansicht**; dezente Spalten-Trenner; Abstände in Zuschauer-/Steuerungs-Gruppen
+
 ## [2.1.3] - 2026-07-27
 
 ### Added

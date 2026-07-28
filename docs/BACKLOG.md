@@ -34,11 +34,11 @@ _Punkte, die grob bekannt sind, aber noch nicht priorisiert oder spezifiziert._
 |-------|------|
 | Folien-Sets & Logos-Import | **v2.1.0** |
 | Ribbon Menü (Konzept + Feinschliff) | → AENDERUNGEN C #8 · **v2.1.3** |
+| Präsentationsmodus-Ribbon | → AENDERUNGEN C · Anpassen wie Editor (ASSET 567) |
 | Dashboard Phase 1 | → AENDERUNGEN C #14 · **v2.1.3** |
 | Logos Importer neu | → AENDERUNGEN B #7 (**pausiert**, war v2.1.3) |
 | Dashboard Phase 2 | → AENDERUNGEN B #14b |
 | Text-Animationen Animate.css | → AENDERUNGEN A (pendent) |
-| Präsentationsansicht → Ribbon | → AENDERUNGEN A (pendent) |
 | church.tools-Anbindung | **v2.2.0** (Briefing) |
 | Medien-Editor | **v2.3.0** (Briefing) |
 | reveal.js Auto-Animate | **v2.4.0** (Briefing) |
