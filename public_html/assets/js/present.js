@@ -356,142 +356,273 @@
     i18n: P.i18n,
   });
 
-  const CONFIGURABLE_PANELS = ['next', 'clock', 'timer', 'slides'];
+  const CONFIGURABLE_PANELS = ['next', 'clock', 'timer', 'media', 'slides'];
 
-  (function initPresentTopbarMenus() {
-    const wraps = document.querySelectorAll('[data-present-menu-wrap]');
-    if (!wraps.length) return;
+  (function initPresentRemoteQrDialog() {
+    const modal = document.getElementById('presentRemoteQrModal');
+    if (!modal) return;
+    const qrSrc = document.getElementById('presentRemoteQr')?.getAttribute('src') || '';
 
-    function closeSettingsPanels(wrap) {
-      wrap.querySelectorAll('[data-settings-panel]').forEach((p) => { p.hidden = true; });
-      const submenu = wrap.querySelector('[data-settings-submenu]');
-      if (submenu) submenu.hidden = true;
+    function isOpen() {
+      return modal.classList.contains('open');
+    }
+    function open() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('presentRemoteQrModalClose')?.focus();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
     }
 
-    function closeWrap(wrap) {
-      const btn = wrap.querySelector('[data-menu-btn]');
-      if (wrap.hasAttribute('data-present-settings-menu')) {
-        closeSettingsPanels(wrap);
-      } else {
-        const panel = wrap.querySelector('[data-menu-panel]');
-        if (panel) panel.hidden = true;
-      }
-      if (btn) {
-        btn.setAttribute('aria-expanded', 'false');
-        btn.classList.remove('open');
-      }
+    function paintRibbonQrThumb() {
+      const btn = document.getElementById('presentRemoteQrBtn');
+      if (!btn || !qrSrc) return;
+      if (btn.querySelector('img.present-remote-qr-ribbon-img')) return;
+      const thumb = document.createElement('img');
+      thumb.className = 'present-remote-qr-ribbon-img';
+      thumb.src = qrSrc;
+      thumb.width = 40;
+      thumb.height = 40;
+      thumb.alt = '';
+      thumb.decoding = 'async';
+      const svg = btn.querySelector('svg');
+      if (svg) svg.replaceWith(thumb);
+      else btn.insertBefore(thumb, btn.firstChild);
+    }
+    paintRibbonQrThumb();
+    /* Ribbon kann nach dem ersten Paint neu rendern */
+    const ribbon = document.getElementById('presentRibbon');
+    if (ribbon && typeof MutationObserver !== 'undefined') {
+      const obs = new MutationObserver(() => paintRibbonQrThumb());
+      obs.observe(ribbon, { childList: true, subtree: true });
     }
 
-    function closeAll() {
-      wraps.forEach(closeWrap);
-    }
-
-    function isSettingsOpen(wrap) {
-      const submenu = wrap.querySelector('[data-settings-submenu]');
-      if (submenu && !submenu.hidden) return true;
-      return Array.from(wrap.querySelectorAll('[data-settings-panel]')).some((p) => !p.hidden);
-    }
-
-    wraps.forEach((wrap) => {
-      const btn = wrap.querySelector('[data-menu-btn]');
-      if (!btn) return;
-
-      if (wrap.hasAttribute('data-present-settings-menu')) {
-        const submenu = wrap.querySelector('[data-settings-submenu]');
-        const panels = wrap.querySelectorAll('[data-settings-panel]');
-
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const willOpen = !isSettingsOpen(wrap);
-          closeAll();
-          if (willOpen && submenu) {
-            submenu.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-            btn.classList.add('open');
-          }
-        });
-
-        wrap.querySelectorAll('[data-settings-open]').forEach((item) => {
-          item.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const id = item.getAttribute('data-settings-open');
-            if (submenu) submenu.hidden = true;
-            panels.forEach((p) => { p.hidden = p.getAttribute('data-settings-panel') !== id; });
-          });
-        });
-
-        wrap.querySelectorAll('[data-settings-back]').forEach((backBtn) => {
-          backBtn.addEventListener('click', () => {
-            closeSettingsPanels(wrap);
-            if (submenu) submenu.hidden = false;
-          });
-        });
-        return;
-      }
-
-      const panel = wrap.querySelector('[data-menu-panel]');
-      if (!panel) return;
-
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const willOpen = panel.hidden;
-        closeAll();
-        if (willOpen) {
-          if (wrap.hasAttribute('data-present-config-menu')) {
-            presentConfigApi?.refreshScreens?.();
-          }
-          panel.hidden = false;
-          btn.setAttribute('aria-expanded', 'true');
-          btn.classList.add('open');
-        }
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('#presentRemoteQrBtn, [data-ribbon-command="remote_qr"]');
+      if (!btn || !document.getElementById('presentRibbon')?.contains(btn)) return;
+      e.preventDefault();
+      open();
+    });
+    document.getElementById('presentRemoteQrModalClose')?.addEventListener('click', close);
+    document.getElementById('presentRemoteQrModalOk')?.addEventListener('click', close);
+    if (window.SFModalBackdrop?.bindDismiss) {
+      window.SFModalBackdrop.bindDismiss(modal, close);
+    } else {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
       });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }, true);
+  })();
+
+  (function initPresentTimebarSettingsDialog() {
+    const modal = document.getElementById('presentTimebarSettingsModal');
+    if (!modal) return;
+
+    function isOpen() {
+      return modal.classList.contains('open');
+    }
+    function open() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('presentTimebarSettingsModalClose')?.focus();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('#presentTimebarSettingsBtn, [data-ribbon-command="settings_timebar"]');
+      if (!btn || !document.getElementById('presentRibbon')?.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open();
+    });
+    document.getElementById('presentTimebarSettingsModalClose')?.addEventListener('click', close);
+    document.getElementById('presentTimebarSettingsModalOk')?.addEventListener('click', close);
+    if (window.SFModalBackdrop?.bindDismiss) {
+      window.SFModalBackdrop.bindDismiss(modal, close);
+    } else {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }, true);
+  })();
+
+  (function initPresentLaserSettingsDialog() {
+    const modal = document.getElementById('presentLaserSettingsModal');
+    if (!modal) return;
+
+    function isOpen() {
+      return modal.classList.contains('open');
+    }
+    function open() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('presentLaserSettingsModalClose')?.focus();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('#presentLaserSettingsBtn, [data-ribbon-command="settings_laser"]');
+      if (!btn || !document.getElementById('presentRibbon')?.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open();
+    });
+    document.getElementById('presentLaserSettingsModalClose')?.addEventListener('click', close);
+    document.getElementById('presentLaserSettingsModalOk')?.addEventListener('click', close);
+    if (window.SFModalBackdrop?.bindDismiss) {
+      window.SFModalBackdrop.bindDismiss(modal, close);
+    } else {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }, true);
+  })();
+
+  (function initPresentClockSettingsDialog() {
+    const modal = document.getElementById('presentClockSettingsModal');
+    if (!modal) return;
+
+    function isOpen() {
+      return modal.classList.contains('open');
+    }
+    function open() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('presentClockSettingsModalClose')?.focus();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('#presentClockSettingsBtn, [data-ribbon-command="settings_clock"]');
+      if (!btn || !document.getElementById('presentRibbon')?.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open();
+    });
+    document.getElementById('presentClockSettingsModalClose')?.addEventListener('click', close);
+    document.getElementById('presentClockSettingsModalOk')?.addEventListener('click', close);
+    if (window.SFModalBackdrop?.bindDismiss) {
+      window.SFModalBackdrop.bindDismiss(modal, close);
+    } else {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }, true);
+  })();
+
+  function syncTimebarToggleUi(show) {
+    const on = show !== false;
+    document.querySelectorAll('#presentRibbon [data-ribbon-command="panel_timebar"]').forEach((btn) => {
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function currentShowTimebar() {
+    return !document.querySelector('.present-layout')?.classList.contains('present-timebar-hidden');
+  }
+
+  (function initPresentTimebarToggle() {
+    const ribbon = document.getElementById('presentRibbon');
+    if (!ribbon) return;
+
+    ribbon.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('[data-ribbon-command="panel_timebar"]');
+      if (!btn || !ribbon.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const next = !currentShowTimebar();
+      window.SlideForgePresentLayout?.setShowTimebar?.(next);
+      syncTimebarToggleUi(next);
     });
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAll();
+    document.addEventListener('sf:show-timebar', (e) => {
+      syncTimebarToggleUi(!!(e.detail && e.detail.show));
     });
-    document.addEventListener('mousedown', (e) => {
-      if (e.target.closest('[data-present-menu-wrap]')) return;
-      closeAll();
+    document.addEventListener('sf:ribbon-rendered', () => {
+      syncTimebarToggleUi(currentShowTimebar());
     });
-    document.querySelector('.present-layout')?.addEventListener('mousedown', (e) => {
-      if (e.target.closest('[data-present-menu-wrap]')) return;
-      closeAll();
+    syncTimebarToggleUi(currentShowTimebar());
+  })();
+
+  (function initPresentSettingsHost() {
+    const wrap = document.querySelector('#presentSettingsHost[data-settings-menu]');
+    if (!wrap) return;
+    wrap.querySelectorAll('[data-settings-back]').forEach((backBtn) => {
+      backBtn.addEventListener('click', () => {
+        wrap.querySelectorAll('[data-settings-panel]').forEach((p) => { p.hidden = true; });
+        if (window.SFRibbon?.resetFloatingSettingsPanels) {
+          window.SFRibbon.resetFloatingSettingsPanels();
+        }
+        document.querySelectorAll('#presentRibbon [data-ribbon-settings].active').forEach((b) => {
+          b.classList.remove('active');
+        });
+      });
     });
   })();
 
-  document.getElementById('presentShowTimebarToggle')?.addEventListener('change', (e) => {
-    window.SlideForgePresentLayout?.setShowTimebar?.(e.target.checked);
-  });
+  function isPanelUserVisible(panelId) {
+    const list = P.presentPanels || [];
+    const found = list.find((p) => p.id === panelId);
+    return found ? !!found.visible : true;
+  }
 
   function applyPanelLayout(panels) {
     const container = document.querySelector('.present-side-accordions');
     if (!container || !Array.isArray(panels)) return;
-    const media = document.getElementById('mediaControlAccordion');
     panels.forEach((p) => {
       if (!CONFIGURABLE_PANELS.includes(p.id)) return;
       const group = container.querySelector('.props-accordion-group[data-acc="' + p.id + '"]');
       if (!group) return;
-      group.hidden = !p.visible;
-      if (media && media.parentNode === container) {
-        container.insertBefore(group, media);
+      if (p.id === 'media') {
+        group.dataset.userVisible = p.visible ? '1' : '0';
+        if (!p.visible) group.hidden = true;
       } else {
-        container.appendChild(group);
+        group.hidden = !p.visible;
       }
+      container.appendChild(group);
     });
     if (panels.some((p) => p.id === 'next' && p.visible)) {
       requestAnimationFrame(layoutNextPreview);
     }
+    updateMediaControls();
     window.SlideForgePresentLayout?.fitAllPanels?.();
-  }
-
-  function readPanelsFromSettingsList() {
-    const list = document.getElementById('presentPanelSettingsList');
-    if (!list) return P.presentPanels || [];
-    return Array.from(list.querySelectorAll('.present-panel-settings-item')).map((el) => ({
-      id: el.dataset.id,
-      visible: el.querySelector('input[type="checkbox"]')?.checked ?? true,
-    }));
+    syncPanelToggleButtons(panels);
   }
 
   function readPanelsFromSidebar() {
@@ -503,17 +634,35 @@
       .map((group) => {
         const id = group.dataset.acc;
         const saved = known.get(id);
-        return { id, visible: saved ? !!saved.visible : !group.hidden };
+        let visible;
+        if (id === 'media') {
+          visible = saved ? !!saved.visible : group.dataset.userVisible !== '0';
+        } else {
+          visible = saved ? !!saved.visible : !group.hidden;
+        }
+        return { id, visible };
       });
   }
 
-  function syncSettingsListOrder(panels) {
-    const list = document.getElementById('presentPanelSettingsList');
-    if (!list) return;
-    panels.forEach((p) => {
-      const item = list.querySelector('.present-panel-settings-item[data-id="' + p.id + '"]');
-      if (item) list.appendChild(item);
+  function syncPanelToggleButtons(panels) {
+    const list = Array.isArray(panels) ? panels : (P.presentPanels || []);
+    const byId = new Map(list.map((p) => [p.id, !!p.visible]));
+    document.querySelectorAll('#presentRibbon [data-ribbon-command^="panel_"]').forEach((btn) => {
+      const id = String(btn.dataset.ribbonCommand || '').replace(/^panel_/, '');
+      if (!CONFIGURABLE_PANELS.includes(id)) return;
+      const on = byId.has(id) ? byId.get(id) : true;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+  }
+
+  function revealSidebarPanel(panelId) {
+    const group = document.querySelector('.present-side-accordions .props-accordion-group[data-acc="' + panelId + '"]');
+    if (!group || group.hidden) return;
+    group.classList.add('open');
+    try {
+      group.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } catch (e) { /* ignore */ }
   }
 
   function insertSidebarPanelAt(container, group, clientY) {
@@ -527,9 +676,7 @@
         break;
       }
     }
-    const media = document.getElementById('mediaControlAccordion');
     if (target) container.insertBefore(group, target);
-    else if (media && media.parentNode === container) container.insertBefore(group, media);
     else container.appendChild(group);
   }
 
@@ -550,51 +697,50 @@
     }, 180);
   }
 
-  (function initPresentPanelSettings() {
-    const list = document.getElementById('presentPanelSettingsList');
-    if (!list) return;
+  (function initPresentPanelToggles() {
+    const ribbon = document.getElementById('presentRibbon');
+    if (!ribbon) return;
 
-    list.addEventListener('change', (e) => {
-      if (e.target.matches('input[type="checkbox"]')) {
-        const panelItems = readPanelsFromSettingsList();
-        savePresentPanels(panelItems);
-        applyPanelLayout(panelItems);
-      }
+    function currentPanels() {
+      const known = new Map((P.presentPanels || []).map((p) => [p.id, p]));
+      return CONFIGURABLE_PANELS.map((id) => {
+        const saved = known.get(id);
+        return { id, visible: saved ? !!saved.visible : true };
+      });
+    }
+
+    ribbon.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('[data-ribbon-command^="panel_"]');
+      if (!btn || !ribbon.contains(btn)) return;
+      const id = String(btn.dataset.ribbonCommand || '').replace(/^panel_/, '');
+      if (!CONFIGURABLE_PANELS.includes(id)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const panels = currentPanels().map((p) => (
+        p.id === id ? { id: p.id, visible: !p.visible } : p
+      ));
+      /* Reihenfolge aus der rechten Leiste beibehalten */
+      const order = readPanelsFromSidebar().map((p) => p.id);
+      const byId = new Map(panels.map((p) => [p.id, p]));
+      const ordered = [];
+      order.forEach((oid) => {
+        if (byId.has(oid)) {
+          ordered.push(byId.get(oid));
+          byId.delete(oid);
+        }
+      });
+      byId.forEach((p) => ordered.push(p));
+      P.presentPanels = ordered;
+      applyPanelLayout(ordered);
+      savePresentPanels(ordered);
+      const toggled = ordered.find((p) => p.id === id);
+      if (toggled && toggled.visible) revealSidebarPanel(id);
     });
 
-    let dragItem = null;
-    list.querySelectorAll('.present-panel-settings-item').forEach((item) => {
-      item.addEventListener('dragstart', (e) => {
-        dragItem = item;
-        item.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      item.addEventListener('dragend', () => {
-        item.classList.remove('dragging');
-        dragItem = null;
-        list.querySelectorAll('.present-panel-settings-item').forEach((el) => el.classList.remove('drag-over'));
-      });
-      item.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (!dragItem || dragItem === item) return;
-        item.classList.add('drag-over');
-      });
-      item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
-      item.addEventListener('drop', (e) => {
-        e.preventDefault();
-        item.classList.remove('drag-over');
-        if (!dragItem || dragItem === item) return;
-        const items = Array.from(list.querySelectorAll('.present-panel-settings-item'));
-        const from = items.indexOf(dragItem);
-        const to = items.indexOf(item);
-        if (from < 0 || to < 0) return;
-        if (from < to) list.insertBefore(dragItem, item.nextSibling);
-        else list.insertBefore(dragItem, item);
-        const panelItems = readPanelsFromSettingsList();
-        savePresentPanels(panelItems);
-        applyPanelLayout(panelItems);
-      });
+    document.addEventListener('sf:ribbon-rendered', () => {
+      syncPanelToggleButtons(P.presentPanels || []);
     });
+    syncPanelToggleButtons(P.presentPanels || []);
   })();
 
   (function initSidebarPanelReorder() {
@@ -604,16 +750,18 @@
     let dragGroup = null;
     let dragStarted = false;
     let suppressHeaderClick = false;
+    let startY = 0;
+    let activePointerId = null;
 
     function finishDrag() {
       document.body.classList.remove('present-panel-dragging');
       if (dragGroup) dragGroup.classList.remove('panel-dragging');
       if (dragStarted) {
         const panels = readPanelsFromSidebar();
-        syncSettingsListOrder(panels);
         savePresentPanels(panels);
       }
       dragGroup = null;
+      activePointerId = null;
       if (dragStarted) {
         setTimeout(() => { suppressHeaderClick = false; dragStarted = false; }, 120);
       } else {
@@ -630,62 +778,47 @@
       insertSidebarPanelAt(container, dragGroup, clientY);
     }
 
-    container.querySelectorAll('.present-panel-drag-handle').forEach((handle) => {
-      handle.addEventListener('click', (e) => e.stopPropagation());
+    function groupFromEventTarget(target) {
+      const handle = target && target.closest ? target.closest('.present-panel-drag-handle') : null;
+      if (!handle || !container.contains(handle)) return null;
+      const group = handle.closest('.props-accordion-group');
+      if (!group || group.hidden) return null;
+      if (!CONFIGURABLE_PANELS.includes(group.dataset.acc)) return null;
+      return group;
+    }
 
-      handle.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const group = handle.closest('.props-accordion-group');
-        if (!group || !CONFIGURABLE_PANELS.includes(group.dataset.acc)) return;
-        dragGroup = group;
-        dragStarted = false;
-        const startY = e.clientY;
-        document.body.classList.add('present-panel-dragging');
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('.present-panel-drag-handle')) e.stopPropagation();
+    });
 
-        function onMove(ev) {
-          if (Math.abs(ev.clientY - startY) < 4 && !dragStarted) return;
-          onPointerMove(ev.clientY);
-        }
+    container.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const group = groupFromEventTarget(e.target);
+      if (!group) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragGroup = group;
+      dragStarted = false;
+      startY = e.clientY;
+      activePointerId = e.pointerId;
+      document.body.classList.add('present-panel-dragging');
+    });
 
-        function onUp() {
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          finishDrag();
-        }
+    document.addEventListener('pointermove', (e) => {
+      if (!dragGroup || e.pointerId !== activePointerId) return;
+      const threshold = e.pointerType === 'touch' ? 6 : 4;
+      if (Math.abs(e.clientY - startY) < threshold && !dragStarted) return;
+      if (e.cancelable) e.preventDefault();
+      onPointerMove(e.clientY);
+    }, { passive: false });
 
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-
-      handle.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-        const group = handle.closest('.props-accordion-group');
-        if (!group || !CONFIGURABLE_PANELS.includes(group.dataset.acc)) return;
-        dragGroup = group;
-        dragStarted = false;
-        const startY = e.changedTouches[0]?.clientY ?? 0;
-        document.body.classList.add('present-panel-dragging');
-
-        function onTouchMove(ev) {
-          if (ev.cancelable) ev.preventDefault();
-          const y = ev.changedTouches[0]?.clientY ?? startY;
-          if (Math.abs(y - startY) < 6 && !dragStarted) return;
-          onPointerMove(y);
-        }
-
-        function onTouchEnd() {
-          handle.removeEventListener('touchmove', onTouchMove);
-          handle.removeEventListener('touchend', onTouchEnd);
-          handle.removeEventListener('touchcancel', onTouchEnd);
-          finishDrag();
-        }
-
-        handle.addEventListener('touchmove', onTouchMove, { passive: false });
-        handle.addEventListener('touchend', onTouchEnd);
-        handle.addEventListener('touchcancel', onTouchEnd);
-      }, { passive: true });
+    document.addEventListener('pointerup', (e) => {
+      if (!dragGroup || e.pointerId !== activePointerId) return;
+      finishDrag();
+    });
+    document.addEventListener('pointercancel', (e) => {
+      if (!dragGroup || e.pointerId !== activePointerId) return;
+      finishDrag();
     });
 
     container.addEventListener('click', (e) => {
@@ -807,10 +940,10 @@
     const counter = document.getElementById('presCounter');
     if (counter) counter.textContent = (h + 1) + ' / ' + P.slideCount;
 
-    const editorBack = document.getElementById('editorBackLink');
-    if (editorBack) {
-      editorBack.href = 'editor.php?id=' + encodeURIComponent(P.id) + '&slide=' + h;
-    }
+    const editorHref = 'editor.php?id=' + encodeURIComponent(P.id) + '&slide=' + h;
+    document.querySelectorAll('#editorBackLink, #editorBackLinkRibbon, a[data-ribbon-command="back_to_editor"]').forEach((el) => {
+      el.href = editorHref;
+    });
 
     syncNotesForSlide(h);
 
@@ -829,14 +962,32 @@
     const accordion = document.getElementById('mediaControlAccordion');
     const list = document.getElementById('mediaControlList');
     if (!accordion || !list || !P.canBroadcast) return;
+    const header = accordion.querySelector('.props-accordion-header');
+    if (header && !header.querySelector('.present-panel-drag-handle')) {
+      const handle = document.createElement('span');
+      handle.className = 'present-panel-drag-handle';
+      handle.setAttribute('aria-hidden', 'true');
+      handle.title = (P.i18n && P.i18n.reorderPanel) || 'Ziehen zum Sortieren';
+      handle.textContent = '⋮⋮';
+      header.insertBefore(handle, header.firstChild);
+    }
+    const userWants = isPanelUserVisible('media');
     let mediaEls = [];
     let allSlides = [];
     try {
       mediaEls = Array.from(mainFrame.contentDocument.querySelectorAll('[data-media-id]'));
       allSlides = Array.from(mainFrame.contentDocument.querySelectorAll('.reveal .slides > section'));
     } catch (e) { /* Frame evtl. noch nicht bereit */ }
-    if (!mediaEls.length) { accordion.hidden = true; list.innerHTML = ''; return; }
-    accordion.hidden = false;
+    if (!mediaEls.length) {
+      accordion.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+    accordion.hidden = !userWants;
+    if (!userWants) {
+      list.innerHTML = '';
+      return;
+    }
     list.innerHTML = mediaEls.map((el) => {
       const mid = el.getAttribute('data-media-id');
       const label = el.tagName === 'AUDIO' ? 'Audio' : 'Video';
@@ -1048,6 +1199,8 @@
     if (!t || !(t instanceof Element)) return false;
     if (isPresentTypingTarget(t)) return true;
     if (t.closest('button, a, [role="button"], #presentClockArea')) return true;
+    const qrModal = document.getElementById('presentRemoteQrModal');
+    if (qrModal && qrModal.classList.contains('open')) return true;
     return false;
   }
 
@@ -1136,8 +1289,7 @@
           if (typeof data.config.showTimebar === 'boolean') {
             lastRemoteConfigTs = data.config.ts;
             window.SlideForgePresentLayout?.setShowTimebarLive?.(!!data.config.showTimebar);
-            const toggle = document.getElementById('presentShowTimebarToggle');
-            if (toggle) toggle.checked = !!data.config.showTimebar;
+            syncTimebarToggleUi(!!data.config.showTimebar);
           }
         }
 

@@ -655,15 +655,19 @@ body.present-remote-tablet .present-remote-laser-enable input {
   padding: 8px 0;
 }
 
+.present-remote-qr-box--dialog img,
 .present-remote-qr-box img {
-  width: 220px;
-  height: 220px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: #fff;
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+.present-remote-qr-box:not(.present-remote-qr-box--dialog) img {
+  width: 220px;
+  height: 220px;
 }
 
 .present-remote-badge {
@@ -739,9 +743,33 @@ html.sf-tablet body.present-mode .button-sm {
   font-size: 0.95rem;
 }
 
+/* Ribbon-Kopieren bleibt kompakt wie im Editor (nicht Touch-Upscale). */
+/* Ribbon-Kopieren / Präsentieren bleiben kompakt wie im Editor (nicht Touch-Upscale). */
+html.sf-tablet body.present-mode .ribbon-present-display-copy.button-sm {
+  min-height: 0;
+  height: 22px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  border-radius: 999px;
+}
+
 html.sf-tablet body.present-mode .present-local-btn {
   min-height: 52px;
   font-size: 1rem;
+}
+
+html.sf-tablet body.present-mode .present-ribbon-local-inner .present-local-btn {
+  min-height: 0;
+  height: 22px;
+  width: 100%;
+  align-self: stretch;
+  margin-top: 0;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  border-radius: 999px;
+  box-sizing: border-box;
 }
 
 html.sf-tablet body.present-mode .present-side-accordions .props-accordion-header {
@@ -819,7 +847,15 @@ html.sf-tablet body.present-mode .notes-toggle-btn svg {
 }
 
 html.sf-tablet body.present-mode .present-panel-resize-handle {
-  height: 14px;
+  height: 18px;
+}
+html.sf-tablet body.present-mode .present-panel-resize-handle::before {
+  top: -10px;
+  bottom: -10px;
+}
+html.sf-tablet body.present-mode .present-col-splitter::before {
+  left: -10px;
+  right: -10px;
 }
 
 html.sf-tablet body.present-mode .present-panel-settings-item {

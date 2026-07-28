@@ -88,209 +88,33 @@ $presentPanelLabels = [
     'timer' => t('present.timer_section'),
     'slides' => t('present.slide_control'),
 ];
+$presentRibbonContext = PresentRibbonLayout::buildContext([
+    'canBroadcast' => $canBroadcast,
+    'isOwner' => $perm === 'owner',
+    'hasRemote' => $canBroadcast && $remoteUrl !== '',
+]);
+$presentRibbonRaw = PresentRibbonLayout::getLayout($me['id'], $presentRibbonContext);
+$presentRibbonLayout = PresentRibbonLayout::layoutForClient($presentRibbonRaw, $presentRibbonContext);
+$presentRibbonCommands = PresentRibbonLayout::commandDefsForClient($presentRibbonContext);
+$presentRibbonCatalog = PresentRibbonLayout::catalogForClient($presentRibbonContext);
+
 $bodyClass = 'present-mode';
 require __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DSEG7+Classic:wght@700&display=swap">
 <div class="present-layout<?= $showTimebar ? '' : ' present-timebar-hidden' ?>" style="--present-slide-aspect: <?= (int)$meta['width'] ?> / <?= (int)$meta['height'] ?>;">
+<?php require __DIR__ . '/includes/present_ribbon.php'; ?>
 <div class="present-topbar present-main-grid" id="presentTopbar">
   <div class="present-topbar-main">
-    <a href="editor.php?id=<?= urlencode($id) ?>&amp;slide=<?= (int)$startSlide ?>" class="back-link" id="editorBackLink">&larr; <?= h(t('present.back_to_editor')) ?></a>
-    <span class="present-remote-badge" id="presentRemoteBadge" hidden>
-      <span class="present-remote-badge-dot"></span>
-      <?= h(t('remote.mobile_connected')) ?>
-    </span>
-    <?php if ($canBroadcast): ?>
-    <span class="present-control-status" id="presentControlStatus" hidden>
-      <span class="present-control-status-dot" id="presentControlDot" aria-hidden="true"></span>
-      <?= h(t('present.control_status')) ?>
-    </span>
-    <?php endif; ?>
     <?php if ($canBroadcast && $remoteUrl): ?>
-    <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkBtn" title="<?= h(t('remote.copy_url')) ?>"><?= h(t('remote.copy_url')) ?></button>
     <input type="hidden" id="presentRemoteLinkInput" value="<?= h($remoteUrl) ?>">
     <?php endif; ?>
-    <div class="present-topbar-menus">
-      <?php if ($canBroadcast): ?>
-      <div class="present-config-wrap" data-present-menu-wrap data-present-config-menu>
-        <button type="button" class="present-config-btn" id="presentConfigBtn" data-menu-btn aria-expanded="false" aria-haspopup="true" aria-controls="presentConfigPanel">
-          <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8"/><path d="M12 18v4"/><path d="M7 15h10"/></svg>
-          <?= h(t('present.section_present')) ?>
-          <span class="present-config-chevron" aria-hidden="true">▾</span>
-        </button>
-        <div class="present-config-panel" id="presentConfigPanel" data-menu-panel hidden role="menu" aria-labelledby="presentConfigBtn">
-          <div class="present-config-section">
-            <div class="present-config-section-title"><?= h(t('present.menu_audience')) ?></div>
-            <label class="present-config-check">
-              <input type="checkbox" id="showProgressToggle" <?= ($meta['show_progress'] ?? true) ? 'checked' : '' ?>>
-              <span><?= h(t('present.progress_bar')) ?></span>
-            </label>
-            <label class="present-config-check">
-              <input type="checkbox" id="showControlsToggle" <?= ($meta['show_controls'] ?? true) ? 'checked' : '' ?>>
-              <span><?= h(t('present.controls_toggle')) ?></span>
-            </label>
-            <?php if ($perm === 'owner'): ?>
-            <div class="present-config-row">
-              <label class="present-config-check present-config-check-grow">
-                <input type="checkbox" id="publicLinkToggle" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?>>
-                <span><?= h(t('present.public_link')) ?></span>
-              </label>
-              <button type="button" class="button button-ghost button-sm" id="copyPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?>><?= h(t('present.copy_link')) ?></button>
-            </div>
-            <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
-            <?php endif; ?>
-          </div>
-          <?php if ($canBroadcast && $remoteUrl): ?>
-          <div class="present-config-section">
-            <div class="present-config-section-title"><?= h(t('remote.qr_section')) ?></div>
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('remote.qr_hint')) ?></p>
-            <div class="present-remote-qr-box">
-              <img id="presentRemoteQr" src="<?= h($remoteQrSrc) ?>" width="220" height="220" alt="<?= h(t('remote.qr_section')) ?>" decoding="async">
-            </div>
-            <div class="present-config-row" style="margin-top:8px;">
-              <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkPanelBtn"><?= h(t('remote.copy_url')) ?></button>
-            </div>
-          </div>
-          <?php endif; ?>
-          <div class="present-config-section">
-            <div class="present-config-section-title"><?= h(t('present.local_present')) ?></div>
-            <label class="present-field-label" for="presentScreenSelect"><?= h(t('present.screen_label')) ?></label>
-            <select id="presentScreenSelect" class="present-screen-select"></select>
-            <p class="present-screen-hint" id="presentScreenHint"></p>
-            <button type="button" class="button button-primary present-local-btn" id="presentLocalBtn"><?= h(t('present.local_start')) ?></button>
-          </div>
-        </div>
-      </div>
-      <?php endif; ?>
-      <div class="present-config-wrap" data-present-menu-wrap data-present-settings-menu>
-        <button type="button" class="present-config-btn" id="presentSettingsBtn" data-menu-btn aria-expanded="false" aria-haspopup="true">
-          <svg class="present-config-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2"/></svg>
-          <?= h(t('editor.settings_menu')) ?>
-          <span class="present-config-chevron" aria-hidden="true">▾</span>
-        </button>
-        <div class="present-config-panel editor-settings-submenu" data-settings-submenu hidden>
-          <button type="button" class="dropdown-menu-item" data-settings-open="panels">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
-            <?= h(t('present.panel_settings_title')) ?>
-          </button>
-          <button type="button" class="dropdown-menu-item" data-settings-open="timebar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="18" y="3" width="3" height="18" rx="1"/><path d="M6 8h8"/><path d="M6 12h10"/><path d="M6 16h6"/></svg>
-            <?= h(t('present.settings_submenu_timebar')) ?>
-          </button>
-          <button type="button" class="dropdown-menu-item" data-settings-open="clock">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="12" x2="12" y2="7"/><line x1="12" y1="12" x2="16" y2="12"/></svg>
-            <?= h(t('present.clock_section')) ?>
-          </button>
-          <button type="button" class="dropdown-menu-item" data-settings-open="laser">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M19.1 4.9l-2.1 2.1M7.1 16.9l-2.1 2.1"/></svg>
-            <?= h(t('present.settings_submenu_laser')) ?>
-          </button>
-          <button type="button" class="dropdown-menu-item" data-settings-open="display">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 10h10"/><path d="M7 13h6" opacity="0.45"/></svg>
-            <?= h(t('present.settings_submenu_display')) ?>
-          </button>
-        </div>
-        <div class="present-config-panel editor-settings-panel" data-settings-panel="panels" hidden>
-          <div class="present-config-section">
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.panel_settings_hint')) ?></p>
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.layout_user_hint')) ?></p>
-            <div class="present-panel-settings-list" id="presentPanelSettingsList">
-              <?php foreach ($presentPanels as $panel):
-                $pid = $panel['id'];
-                if (!isset($presentPanelIcons[$pid])) continue;
-              ?>
-              <div class="present-panel-settings-item" draggable="true" data-id="<?= h($pid) ?>">
-                <span class="present-panel-settings-handle" aria-hidden="true">⋮⋮</span>
-                <span class="present-panel-settings-icon"><?= $presentPanelIcons[$pid] ?></span>
-                <span class="present-panel-settings-label"><?= h($presentPanelLabels[$pid]) ?></span>
-                <label class="present-panel-settings-check" title="<?= h(t('present.panel_visible')) ?>">
-                  <input type="checkbox" <?= !empty($panel['visible']) ? 'checked' : '' ?>>
-                </label>
-              </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-          <div class="present-config-panel-footer">
-            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          </div>
-        </div>
-        <div class="present-config-panel editor-settings-panel editor-settings-panel-wide" data-settings-panel="timebar" hidden>
-          <div class="present-config-section">
-            <label class="present-config-check present-config-check-block">
-              <input type="checkbox" id="presentShowTimebarToggle" <?= $showTimebar ? 'checked' : '' ?>>
-              <span><?= h(t('present.show_timebar')) ?></span>
-            </label>
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.show_timebar_hint')) ?></p>
-          </div>
-          <div class="present-config-section">
-            <div class="present-config-section-title"><?= h(t('present.timebar_stops_label')) ?></div>
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.timebar_stops_hint')) ?></p>
-            <div id="presentTimebarStopsList"></div>
-            <button type="button" class="button button-ghost button-sm" id="presentAddTimebarStopBtn"><?= h(t('present.add_timebar_stop')) ?></button>
-          </div>
-          <div class="present-config-panel-footer">
-            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          </div>
-        </div>
-        <div class="present-config-panel editor-settings-panel" data-settings-panel="clock" hidden>
-          <div class="present-config-section">
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.clock_order_hint')) ?></p>
-            <div class="clock-order-list" id="presentClockOrderList"></div>
-          </div>
-          <div class="present-config-panel-footer">
-            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          </div>
-        </div>
-        <div class="present-config-panel editor-settings-panel" data-settings-panel="laser" hidden>
-          <div class="present-config-section">
-            <label class="present-config-check present-config-check-block" style="margin-bottom:14px;">
-              <input type="checkbox" id="presentLaserEnabled" <?= (($presentLayout['laserPointerEnabled'] ?? true) !== false) ? 'checked' : '' ?>>
-              <span><?= h(t('present.laser_enabled')) ?></span>
-            </label>
-            <div id="presentLaserOptions">
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.laser_hint')) ?></p>
-            <div class="present-laser-preview" id="presentLaserPreview" aria-hidden="true">
-              <span class="present-laser-preview-dot" id="presentLaserPreviewDot"></span>
-            </div>
-            <label for="presentLaserColor"><?= h(t('present.laser_color')) ?></label>
-            <input type="color" id="presentLaserColor" value="<?= h($presentLayout['laserPointerColor'] ?? '#ff0000') ?>">
-            <div class="brand-palette mini" id="presentLaserPalette"></div>
-            <label for="presentLaserSize" style="margin-top:12px;"><?= h(t('present.laser_size')) ?> (<span id="presentLaserSizeVal"><?= (int)($presentLayout['laserPointerSize'] ?? 24) ?></span> px)</label>
-            <input type="range" id="presentLaserSize" min="8" max="64" step="1" value="<?= (int)($presentLayout['laserPointerSize'] ?? 24) ?>">
-            <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;">
-              <input type="checkbox" id="presentLaserTrail" style="width:auto;" <?= !empty($presentLayout['laserPointerTrail']) ? 'checked' : '' ?>>
-              <?= h(t('present.laser_trail')) ?>
-            </label>
-            <p class="props-video-note" style="margin-top:6px;"><?= h(t('present.laser_trail_hint')) ?></p>
-            </div>
-          </div>
-          <div class="present-config-panel-footer">
-            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          </div>
-        </div>
-        <div class="present-config-panel editor-settings-panel" data-settings-panel="display" hidden>
-          <div class="present-config-section">
-            <label class="present-config-check present-config-check-block">
-              <input type="checkbox" id="presentShowSlideGhostToggle" <?= !empty($presentLayout['showSlideGhost']) ? 'checked' : '' ?>>
-              <span><?= h(t('present.show_slide_ghost')) ?></span>
-            </label>
-            <p class="props-video-note present-panel-settings-hint"><?= h(t('present.show_slide_ghost_hint')) ?></p>
-            <label for="presentSlideGhostOpacity" style="margin-top:12px;"><?= h(t('present.slide_ghost_opacity')) ?> (<span id="presentSlideGhostOpacityVal"><?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?></span> %)</label>
-            <input type="range" id="presentSlideGhostOpacity" min="5" max="80" step="1" value="<?= (int)($presentLayout['slideGhostOpacity'] ?? 25) ?>" <?= empty($presentLayout['showSlideGhost']) ? 'disabled' : '' ?>>
-          </div>
-          <div class="present-config-panel-footer">
-            <button type="button" class="button button-ghost button-sm" data-settings-back><?= h(t('editor.settings_back')) ?></button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <span id="presentStatus" class="save-status present-topbar-status"><?= $canBroadcast ? h(t('present.live')) : h(t('present.view_only')) ?></span>
   </div>
   <div class="present-topbar-splitter present-layout-splitter" data-split="main-side" aria-hidden="true"></div>
   <div class="present-topbar-spacer present-topbar-side" aria-hidden="true"></div>
   <div class="present-topbar-splitter present-layout-splitter" data-split="side-time" aria-hidden="true"<?= $showTimebar ? '' : ' hidden' ?>></div>
-  <div class="present-topbar-time">
-    <span id="presentStatus" class="save-status"><?= $canBroadcast ? h(t('present.live')) : h(t('present.view_only')) ?></span>
-  </div>
+  <div class="present-topbar-time" aria-hidden="true"></div>
 </div>
 
 <div class="present-main-row present-main-grid" id="presentMainRow">
@@ -396,8 +220,9 @@ require __DIR__ . '/includes/header.php';
         </div>
       </div>
 
-      <div class="props-accordion-group open" data-acc="media" id="mediaControlAccordion" hidden>
+      <div class="props-accordion-group open" data-acc="media" id="mediaControlAccordion" data-user-visible="1" hidden>
         <button type="button" class="props-accordion-header">
+          <span class="present-panel-drag-handle" aria-hidden="true" title="<?= h(t('editor.reorder_slide')) ?>">⋮⋮</span>
           <span class="present-panel-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
           <span class="present-panel-header-title"><?= h(t('present.media_control')) ?></span>
           <span class="props-accordion-chevron">▾</span>
@@ -499,6 +324,84 @@ require __DIR__ . '/includes/header.php';
 </div>
 
 <script>
+window.SF_BOOTSTRAP = {
+  csrfToken: <?= json_encode(csrf_token()) ?>,
+  ribbon: {
+    rootId: 'presentRibbon',
+    widgetStoreId: 'presentRibbonWidgetTemplates',
+    layout: <?= json_encode($presentRibbonLayout, JSON_UNESCAPED_UNICODE) ?>,
+    catalog: <?= json_encode($presentRibbonCatalog, JSON_UNESCAPED_UNICODE) ?>,
+    commands: <?= json_encode($presentRibbonCommands, JSON_UNESCAPED_UNICODE) ?>,
+    apiUrl: 'present_ribbon.php',
+    meta: {
+      urls: {
+        editor: <?= json_encode('editor.php?id=' . urlencode($id) . '&slide=' . (int)$startSlide) ?>,
+      },
+      canBroadcast: <?= $canBroadcast ? 'true' : 'false' ?>,
+      isOwner: <?= $perm === 'owner' ? 'true' : 'false' ?>,
+      hasRemote: <?= ($canBroadcast && $remoteUrl !== '') ? 'true' : 'false' ?>,
+      displayOptions: {
+        show_progress: <?= json_encode(($meta['show_progress'] ?? true) ? true : false) ?>,
+        show_controls: <?= json_encode(($meta['show_controls'] ?? true) ? true : false) ?>,
+      },
+      displayProgressTitle: <?= json_encode(t('present.progress_bar')) ?>,
+      displayControlsTitle: <?= json_encode(t('present.controls_toggle')) ?>,
+    },
+    i18n: {
+      title: <?= json_encode(t('ribbon.customize_title')) ?>,
+      search: <?= json_encode(t('ribbon.customize_search')) ?>,
+      categoryAll: <?= json_encode(t('ribbon.customize_category_all')) ?>,
+      tabAdd: <?= json_encode(t('ribbon.customize_tab_add')) ?>,
+      tabRename: <?= json_encode(t('ribbon.customize_tab_rename')) ?>,
+      tabDelete: <?= json_encode(t('ribbon.customize_tab_delete')) ?>,
+      tabNamePrompt: <?= json_encode(t('ribbon.customize_tab_name')) ?>,
+      groupAdd: <?= json_encode(t('ribbon.customize_group_add')) ?>,
+      groupRename: <?= json_encode(t('ribbon.customize_group_rename')) ?>,
+      groupDelete: <?= json_encode(t('ribbon.customize_group_delete')) ?>,
+      groupNamePrompt: <?= json_encode(t('ribbon.customize_group_name')) ?>,
+      newTab: <?= json_encode(t('ribbon.customize_new_tab')) ?>,
+      newGroup: <?= json_encode(t('ribbon.customize_new_group')) ?>,
+      reset: <?= json_encode(t('ribbon.customize_reset')) ?>,
+      resetConfirm: <?= json_encode(t('ribbon.customize_reset_confirm')) ?>,
+      save: <?= json_encode(t('ribbon.customize_save')) ?>,
+      cancel: <?= json_encode(t('common.cancel')) ?>,
+      remove: <?= json_encode(t('ribbon.customize_remove')) ?>,
+      livePreviewHint: <?= json_encode(t('ribbon.customize_live_preview')) ?>,
+      emptyLayout: <?= json_encode(t('ribbon.customize_empty_layout')) ?>,
+      toggleTab: <?= json_encode(t('ribbon.customize_toggle_tab')) ?>,
+      toggleGroup: <?= json_encode(t('ribbon.customize_toggle_group')) ?>,
+      appearanceIconSize: <?= json_encode(t('ribbon.appearance_icon_size')) ?>,
+      appearanceIconSmall: <?= json_encode(t('ribbon.appearance_icon_small')) ?>,
+      appearanceIconMedium: <?= json_encode(t('ribbon.appearance_icon_medium')) ?>,
+      appearanceIconLarge: <?= json_encode(t('ribbon.appearance_icon_large')) ?>,
+      appearanceLabelsShow: <?= json_encode(t('ribbon.appearance_labels_show')) ?>,
+      appearanceLabelsHide: <?= json_encode(t('ribbon.appearance_labels_hide')) ?>,
+      appearanceGroupRows: <?= json_encode(t('ribbon.appearance_group_rows')) ?>,
+      appearanceGroupRows1: <?= json_encode(t('ribbon.appearance_group_rows_1')) ?>,
+      appearanceGroupRows2: <?= json_encode(t('ribbon.appearance_group_rows_2')) ?>,
+      separatorAdd: <?= json_encode(t('ribbon.customize_separator_add')) ?>,
+      rowSeparatorAdd: <?= json_encode(t('ribbon.customize_row_separator_add')) ?>,
+      itemTileSmall: <?= json_encode(t('ribbon.item_tile_small')) ?>,
+      itemTileLarge: <?= json_encode(t('ribbon.item_tile_large')) ?>,
+      itemTileLargeNeedsRows: <?= json_encode(t('ribbon.item_tile_large_needs_rows')) ?>,
+      itemTileSep1: <?= json_encode(t('ribbon.item_tile_sep_1')) ?>,
+      itemTileSep2: <?= json_encode(t('ribbon.item_tile_sep_2')) ?>,
+      itemTileTransition1: <?= json_encode(t('ribbon.item_tile_transition_1')) ?>,
+      itemTileTransition2: <?= json_encode(t('ribbon.item_tile_transition_2')) ?>,
+      itemTileTransition2NeedsRows: <?= json_encode(t('ribbon.item_tile_transition_2_needs_rows')) ?>,
+      itemLabelShow: <?= json_encode(t('ribbon.item_label_show')) ?>,
+      itemLabelHide: <?= json_encode(t('ribbon.item_label_hide')) ?>,
+      errorSave: <?= json_encode(t('ribbon.error_save')) ?>,
+      errorReset: <?= json_encode(t('ribbon.error_reset')) ?>,
+      categories: {
+        nav: <?= json_encode(t('ribbon.group_nav')) ?>,
+        present: <?= json_encode(t('present.section_present')) ?>,
+        settings: <?= json_encode(t('ribbon.tab_view')) ?>,
+        layout: <?= json_encode(t('ribbon.separator')) ?>,
+      },
+    },
+  }
+};
 window.SF_PRESENT = {
   id: <?= json_encode($id) ?>,
   csrfToken: <?= json_encode(csrf_token()) ?>,
@@ -541,9 +444,14 @@ window.SF_PRESENT = {
     laserToggleOff: <?= json_encode(t('present.laser_toggle_off')) ?>,
     ghostToggleOn: <?= json_encode(t('present.ghost_toggle_on')) ?>,
     ghostToggleOff: <?= json_encode(t('present.ghost_toggle_off')) ?>,
+    reorderPanel: <?= json_encode(t('editor.reorder_slide')) ?>,
+    brandColors: <?= json_encode(t('bg.brand_colors')) ?>,
   }
 };
 </script>
+<script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ribbon-customize.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-config.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-layout.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present.js?v=<?= ASSET_VERSION ?>"></script>

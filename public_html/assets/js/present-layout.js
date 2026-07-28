@@ -4,7 +4,7 @@
 (function (global) {
   'use strict';
 
-  const MIN_COL = { main: 200, side: 180, time: 72 };
+  const MIN_COL = { main: 200, side: 180, time: 100 };
   const MIN_PANEL_H = 72;
   const MAX_PANEL_H = 900;
   const SPLITTER_W = 6;
@@ -291,10 +291,14 @@
     const widths = readColWidths();
     const startX = startEvent.clientX;
     const start = { ...widths };
-    document.body.classList.add('present-layout-dragging');
+    const splitter = startEvent.currentTarget;
+    document.body.classList.add('present-col-resizing');
+    if (splitter && splitter.classList) splitter.classList.add('is-resizing');
+    let raf = 0;
+    let lastX = startX;
 
-    function onMove(e) {
-      const dx = e.clientX - startX;
+    function apply(clientX) {
+      const dx = clientX - startX;
       let main = start.main;
       let side = start.side;
       let time = start.time;
@@ -310,10 +314,26 @@
       setColumnPx(main, side, time);
     }
 
-    function onUp() {
-      document.body.classList.remove('present-layout-dragging');
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+    function onMove(e) {
+      lastX = e.clientX;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        apply(lastX);
+      });
+    }
+
+    function onUp(e) {
+      document.body.classList.remove('present-col-resizing');
+      if (splitter && splitter.classList) splitter.classList.remove('is-resizing');
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      apply(e.clientX != null ? e.clientX : lastX);
       const w = readColWidths();
       if (isTimebarVisible()) layoutState.timebarPx = w.time;
       layoutState.colWeights = pxToWeights(w.main, w.side);
@@ -322,30 +342,54 @@
       fitAllPanels();
     }
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+    if (startEvent.pointerId != null && splitter?.setPointerCapture) {
+      try { splitter.setPointerCapture(startEvent.pointerId); } catch (err) { /* ignore */ }
+    }
     startEvent.preventDefault();
   }
 
   function startPanelDrag(accId, startEvent) {
     const group = document.querySelector('.props-accordion-group[data-acc="' + accId + '"]');
     const body = group?.querySelector('.props-accordion-body');
+    const handle = startEvent.currentTarget;
     if (!body) return;
     const startY = startEvent.clientY;
     const startH = body.offsetHeight;
-    document.body.classList.add('present-layout-dragging');
+    document.body.classList.add('present-panel-resizing');
+    if (handle && handle.classList) handle.classList.add('is-resizing');
+    let raf = 0;
+    let lastY = startY;
 
-    function onMove(e) {
-      const h = Math.max(MIN_PANEL_H, Math.min(MAX_PANEL_H, startH + (e.clientY - startY)));
+    function apply(clientY) {
+      const h = Math.max(MIN_PANEL_H, Math.min(MAX_PANEL_H, startH + (clientY - startY)));
       group.style.setProperty('--present-panel-body-h', h + 'px');
       if (!group.classList.contains('open')) group.classList.add('open');
       fitPanel(accId);
     }
 
-    function onUp() {
-      document.body.classList.remove('present-layout-dragging');
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+    function onMove(e) {
+      lastY = e.clientY;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        apply(lastY);
+      });
+    }
+
+    function onUp(e) {
+      document.body.classList.remove('present-panel-resizing');
+      if (handle && handle.classList) handle.classList.remove('is-resizing');
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      apply(e.clientY != null ? e.clientY : lastY);
       const h = parseInt(getComputedStyle(body).height, 10) || body.offsetHeight;
       if (!layoutState.panelHeights) layoutState.panelHeights = {};
       layoutState.panelHeights[accId] = h;
@@ -353,21 +397,31 @@
       fitPanel(accId);
     }
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+    if (startEvent.pointerId != null && handle?.setPointerCapture) {
+      try { handle.setPointerCapture(startEvent.pointerId); } catch (err) { /* ignore */ }
+    }
     startEvent.preventDefault();
   }
 
   function initColumnSplitters() {
     document.querySelectorAll('.present-layout-splitter[data-split]').forEach((el) => {
       if (el.classList.contains('present-topbar-splitter')) return;
-      el.addEventListener('mousedown', (e) => startColumnDrag(el.dataset.split, e));
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startColumnDrag(el.dataset.split, e);
+      });
     });
   }
 
   function initPanelSplitters() {
     document.querySelectorAll('.present-panel-resize-handle[data-panel-resize]').forEach((el) => {
-      el.addEventListener('mousedown', (e) => startPanelDrag(el.dataset.panelResize, e));
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        startPanelDrag(el.dataset.panelResize, e);
+      });
     });
     document.querySelectorAll('.present-side-accordions .props-accordion-header').forEach((header) => {
       header.addEventListener('click', () => {
@@ -403,6 +457,9 @@
     applyGridVars(layoutState);
     if (!opts || !opts.skipSave) saveLayout();
     fitAllPanels();
+    try {
+      document.dispatchEvent(new CustomEvent('sf:show-timebar', { detail: { show: !!show } }));
+    } catch (e) { /* ignore */ }
   }
 
   function setShowTimebarLive(show) {

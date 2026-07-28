@@ -1,8 +1,6 @@
 # Ribbon Menü — konfigurierbares Layout
 
-**Status:** Editor-Ribbon umgesetzt (2026-07-12) · Standard = Nutzer-Layout inkl. Ansicht→Vorschau → **v2.1.3** ([RELEASES.md](RELEASES.md), AENDERUNGEN C #8)
-
-**Pendent:** Präsentationsansicht (`present.php` / Present-Menüs) noch nicht als konfigurierbares Ribbon — siehe [AENDERUNGEN.md](AENDERUNGEN.md) A.
+**Status:** Editor-Ribbon umgesetzt (2026-07-12) · Present-Ribbon Anpassen wie Editor (2026-07-28) → [RELEASES.md](RELEASES.md)
 
 ## Konzept
 
@@ -34,9 +32,22 @@
 
 Widget-Blöcke (Schrift, Hintergrund, …) bleiben PHP-Templates in `#ribbonWidgetTemplates` und werden vom Renderer platziert.
 
-**Präsentation-Tab:** Anzeige-Widget; Teilen/Export; Einstellungen als Einzel-Widgets (Dateiname, B×H, Randabstand, Dauer, Texte prüfen, Folien-Set) — Auto-Save.
+**Präsentation-Tab:** Fortschritt/Navigation als Einzelbefehle; Teilen/Export; Einstellungen als Einzel-Widgets (Dateiname, B×H, Randabstand, Dauer, Texte prüfen, Folien-Set) — Auto-Save. Link und Bildschirm nur im Präsentationsmodus.
 
 **Ansicht-Tab:** Raster / Masterfolie · **Vorschau** (Tab / Fenster / Lokal) · Zoom.
+
+## Präsentationsmodus
+
+Auf `present.php` gibt es ein eigenes Ribbon (`#presentRibbon`, Katalog `config/present_ribbon_*.php`):
+
+| Tab | Inhalt |
+|-----|--------|
+| **Präsentieren** | Fortschritt/Navigation · Link (Owner) · QR+Status · Lokal — Broadcast-Recht |
+| **Ansicht** | Steuerungsleiste (…/**Ghost**/**Laser**) · Timer & Zeitleiste (Dialog) · Uhr (Dialog) · Laserpointer (Dialog) · Anpassen |
+
+**Anpassen:** wie Editor — Rechtsklick oder Befehl «Anpassen» im Settings-Tab. Persistenz getrennt: `users.json` → `present_ribbon_layout` via `present_ribbon.php` / `PresentRibbonLayout`.
+
+Peek/Doppelklick wie im Editor.
 
 ## Layout-Helfer
 
@@ -57,4 +68,5 @@ Entwurf-Standard: Hintergrund · Übergang · Zeitsteuerung · **Einstellungen**
 ```json
 // users.json
 "ribbon_layout": { "version": 1, "tabs": [...], "prefs": { "activeTab": "start", "collapsed": false } }
+"present_ribbon_layout": { "version": 1, "tabs": [...], "prefs": { "activeTab": "present", "collapsed": false } }
 ```

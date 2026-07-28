@@ -41,7 +41,6 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | #   | Typ     | Thema                         | Beschreibung                                                                 | Gewünschte Änderung / Hinweis                                                                 |
 | --- | ------- | ----------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | —   | Feature | Text-Animationen Animate.css  | Zusätzliche Texteffekte über Reveal-Fragments hinaus (bounceIn, zoomIn, …). | Kuratierte Auswahl (~8–12 Entrance) nur für Text; Bridge Fragment↔Animate.css. **Pendent** — Aufwand ca. 1–2 Tage, nicht jetzt. |
-| —   | Feature | Präsentationsansicht → Ribbon | Present-Mode-UI (Zuschauer, QR, Lokal, Einstellungen, …) noch nicht im konfigurierbaren Editor-Ribbon. | Analog Editor-Ribbon umbauen (Tabs/Gruppen/Anpassen). **Pendent** — nicht jetzt; nach v2.1.3 einplanen. |
 
 *Ausgangslage*
 
@@ -70,6 +69,31 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | #   | Typ     | Thema                        | Umsetzung                                                                                                                         | Datum / Kontext     |
 | --- | ------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | —   | Feature | Ribbon-Default = aktuelles Menü | Ansicht+Vorschau/Fenster/Lokal im Standard; Theme Tag/Nacht/System in Prefs+Cookie. ASSET 553. | 2026-07-27          |
+| —   | UX      | Fortschritt/Nav als Befehle   | Einzelne Ribbon-Commands (konfigurierbar); Link-Widget getrennt. ASSET 584. | 2026-07-28          |
+| —   | UX      | Present-Tab «Ansicht»         | Ribbon-Tab Einstellungen → Ansicht (`ribbon.tab_view`). | 2026-07-28          |
+| —   | UX      | Anzeige als Icon-Toggles      | Fortschritt/Navigation als Ribbon-Buttons (active) statt Switch — Editor + Present. ASSET 583. | 2026-07-28          |
+| —   | UX      | Editor-Anzeige schlank        | Nur Fortschritt/Navigation; Link+Bildschirm nur noch im Präsentationsmodus. ASSET 582. | 2026-07-28          |
+| —   | Design  | Icon «Ribbon anpassen» einheitlich | Neues Icon (Leiste+Kacheln+Stift) in Editor-Sidebar & Present-Ribbon. ASSET 581. | 2026-07-28          |
+| —   | Design  | Present-Spalten-Trenner dezent | 1px Linie statt voller Border-Balken; Akzent nur Hover/Resize. ASSET 580. | 2026-07-28          |
+| —   | Fix     | Present-Layout rechts         | «Live» aus schmaler Zeitleisten-Spalte (min-width 140px) in Topbar; Timebar-Min. 100px. ASSET 579. | 2026-07-28          |
+| —   | UX      | Uhr-Einstellungen Dialog      | Reihenfolge der Uhren als Standard-Dialog statt Floating-Panel. ASSET 576. | 2026-07-28          |
+| —   | UX      | Laser: Toggle + Dialog        | Ein/Aus in Steuerungsleiste; Farbe/Grösse/Schweif als Standard-Dialog. ASSET 575. | 2026-07-28          |
+| —   | UX      | Ghost in Steuerungsleiste     | Hauptfenster → Ghost-Icon Toggle in Steuerung; Transparenz bleibt bei Folien steuern. ASSET 574. | 2026-07-28          |
+| —   | UX      | Panel-Resize weniger fummelig | Grössere Trefferflächen, sichtbarer Griff, Pointer-Capture, korrekter ns/col-Cursor. ASSET 572. | 2026-07-28          |
+| —   | UX      | Medien-Panel sortierbar       | Drag-Handle + gleiche Sortier-Logik wie übrige Seitenpanels. ASSET 571. | 2026-07-28          |
+| —   | UX      | Medien-Panel im Ribbon        | «Medien» Toggle in Steuerungsleiste; Sichtbarkeit persistiert, erscheint bei Audio/Video. ASSET 570. | 2026-07-28          |
+| —   | UX      | Zeitleiste: Icon + Dialog     | Toggle-Icon in Steuerungsleiste (nach Timer); Timer/Zeitleisten-Einstellungen als Standard-Dialog. ASSET 569. | 2026-07-28          |
+| —   | UX      | Steuerungsleiste aufgedröselt | Panel-Icons (Nächste/Uhr/Timer/Folien) eigene Gruppe; Klick = aktiv + sichtbar rechts. ASSET 568. | 2026-07-28          |
+| —   | Feature | Present-Ribbon Anpassen       | Wie Editor: Dialog, Rechtsklick, Settings-Befehl; `present_ribbon_layout` / `present_ribbon.php`. ASSET 567. | 2026-07-28          |
+| —   | UX      | Steuerung neben QR            | Status «Steuerung»/Handy im Ribbon links vom QR; Topbar bereinigt. ASSET 564. | 2026-07-28          |
+| —   | Design  | Präsentieren-Btn wie Kopieren | Ribbon-Lokal: kompakter Pill-Button; Widget schmaler (5 Spalten). ASSET 561. | 2026-07-28          |
+| —   | UX      | Present: QR wieder eigene Gruppe | QR-Gruppe «Mobile Fernsteuerung» getrennt; Lokal unter «Präsentieren». | 2026-07-28          |
+| —   | UX      | Present: eine Gruppe Präsentieren | QR + Lokal kurz zusammen; Topbar-Remote-Link entfernt (bleibt im QR-Dialog). | 2026-07-28          |
+| —   | Bug     | Present-QR-Dialog tot         | Modal braucht `.open`; Ribbon zeigt echten QR-Thumb. ASSET 560. | 2026-07-28          |
+| —   | Design  | Zuschauer-Spalten gleichbreit   | Present-Ribbon: 2 Spalten 1fr/1fr statt fälschlich 3-Spalten-Owner-Grid. ASSET 559. | 2026-07-28          |
+| —   | Design  | Zurück-Icon = Editor          | Present-Ribbon «Zurück»: Folie+Stift statt Pfeil (Pendant zu Present Monitor+Play). ASSET 558. | 2026-07-28          |
+| —   | UX      | Present-QR im Ribbon klein    | QR als 2×2-Ribbon-Icon; Klick öffnet Dialog mit grossem Code + Link kopieren. ASSET 557. | 2026-07-28          |
+| —   | Feature | Präsentationsmodus-Ribbon     | Present-Topbar-Menüs → Ribbon (Präsentieren/Einstellungen); Widgets Lokal/Zuschauer; Floating-Settings. ASSET 554. Customize später. | 2026-07-28          |
 | 8   | Feature | Ribbon Menü                   | Konfigurierbares Ribbon (Tabs/Gruppen/Anpassen/Peek). [RIBBON_MENU.md](RIBBON_MENU.md) · **v2.1.3** | 2026-07-12 … 07-27  |
 | —   | Design  | Runde Klammern typografisch   | `( )` als elliptischer Bézier-Bogen statt sin²-Wölbung. ASSET 552. | 2026-07-27          |
 | —   | Design  | Dialoge = Ribbon anpassen     | Einheitliches Chrome (`.sf-dialog-*`); Cliparts/Pixabay/Share/…; Rule `sf-dialogs`. ASSET 551. | 2026-07-27          |

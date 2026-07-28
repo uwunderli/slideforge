@@ -61,7 +61,8 @@ function ribbon_command_catalog(): array
 
         // --- Präsentation ---
         ['id' => 'present_mode', 'kind' => 'link', 'category' => 'present', 'labelKey' => 'ribbon.present_mode_short', 'icon' => 'present', 'domId' => 'presentModeLink', 'hrefKey' => 'present', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-        ['id' => 'widget:present_display', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'ribbon.group_present_display', 'templateId' => 'widget-present-display', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 12, 'rows' => 2]],
+        ['id' => 'show_progress', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_progress_short', 'icon' => 'progress_bar', 'domId' => 'showProgressToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'show_controls', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_controls_short', 'icon' => 'navigation', 'domId' => 'showControlsToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'share', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'editor.share', 'icon' => 'share', 'visibleWhen' => ['canEdit', 'showPresentTab', 'isOwner'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'export', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'editor.export', 'icon' => 'export', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'widget:settings_title', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'ribbon.settings_title_short', 'templateId' => 'widget-settings-title', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 6, 'rows' => 2]],

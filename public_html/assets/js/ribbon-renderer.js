@@ -3,6 +3,22 @@
 
   const ICONS = {
     undo: '<path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>',
+    back_editor: {
+      strokeWidth: 1.35,
+      paths:
+        /* Editor: Folienfläche + Stift — Pendant zu Present (Monitor+Play) */
+        '<rect x="3.5" y="4" width="14.5" height="12" rx="1.5"/>' +
+        '<path d="M6.5 7.5h8.5M6.5 10.5h6"/>' +
+        '<path d="M13.2 14.8l5.9-5.9 2.1 2.1-5.9 5.9-2.7.6.6-2.7z" fill="currentColor" stroke="none"/>',
+    },
+    qr: {
+      strokeWidth: 1.4,
+      paths:
+        '<rect x="4" y="4" width="7" height="7" rx="1"/>' +
+        '<rect x="13" y="4" width="7" height="7" rx="1"/>' +
+        '<rect x="4" y="13" width="7" height="7" rx="1"/>' +
+        '<path d="M13 13h3v3h-3zM17 13h3v2M13 17h2v3M16 16h4v4"/>',
+    },
     redo: '<path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 0 0 0 8h1"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
     cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.5 15.5M8.5 8.5L20 20"/>',
@@ -26,6 +42,14 @@
         '<path d="M9 3.5h6"/>' +
         '<path d="M12 3.5v2"/>',
     },
+    timebar: {
+      strokeWidth: 1.5,
+      paths:
+        /* Vertikaler Fortschrittsbalken (Zeitleiste) */
+        '<rect x="8" y="3" width="8" height="18" rx="2"/>' +
+        '<path d="M10 17h4v2h-4z" fill="currentColor" stroke="none"/>' +
+        '<path d="M10 12h4v4.5h-4z" fill="currentColor" stroke="none" opacity="0.45"/>',
+    },
     navigation: {
       strokeWidth: 1.5,
       paths:
@@ -35,6 +59,13 @@
         '<circle cx="18.5" cy="7" r="1.6"/>' +
         '<circle cx="15.5" cy="12" r="1.6"/>' +
         '<circle cx="18.5" cy="17" r="1.6"/>',
+    },
+    progress_bar: {
+      strokeWidth: 1.5,
+      paths:
+        '<rect x="3.5" y="7" width="17" height="10" rx="1.5"/>' +
+        '<path d="M6 12h7" stroke-width="2.5"/>' +
+        '<path d="M14.5 12h3.5" opacity="0.35" stroke-width="2.5"/>',
     },
     add_slide: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/>',
     text_field: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 12h8"/><path d="M8 15h5"/>',
@@ -74,6 +105,18 @@
         '<path d="M14 3.5h6.5v6.5"/>' +
         '<path d="M20.5 3.5l-7.5 7.5"/>',
     },
+    clock: {
+      strokeWidth: 1.5,
+      paths:
+        '<circle cx="12" cy="12" r="9"/>' +
+        '<path d="M12 7v5l3 2"/>',
+    },
+    laser: {
+      strokeWidth: 1.5,
+      paths:
+        '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>' +
+        '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+    },
     present_local: {
       strokeWidth: 1.5,
       paths:
@@ -81,6 +124,15 @@
         '<path d="M7.5 19h9"/>' +
         '<path d="M12 15v4"/>' +
         '<path d="M18.5 9.5l3 2-3 2v-4z"/>',
+    },
+    ghost: {
+      strokeWidth: 1.5,
+      paths:
+        /* Fertige Folie als Ghost hinter der Live-Folie */
+        '<rect x="6" y="8" width="14" height="10" rx="1.5" opacity="0.4"/>' +
+        '<rect x="3" y="5" width="14" height="10" rx="1.5"/>' +
+        '<path d="M7 9h6" opacity="0.55"/>' +
+        '<path d="M7 12h4" opacity="0.55"/>',
     },
     present_display: {
       strokeWidth: 1.5,
@@ -108,6 +160,16 @@
     grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     master_slide: '<rect x="4" y="5" width="14" height="10" rx="1.5"/><path d="M8 19h12"/><rect x="10" y="9" width="14" height="10" rx="1.5"/>',
     widget: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/>',
+    /* Ribbon-Leiste (Tabs + Befehls-Kacheln) + Stift — «Anpassen» Editor & Present */
+    ribbon_customize: {
+      strokeWidth: 1.5,
+      paths:
+        '<path d="M4 4.5h4.5M10.5 4.5h5"/>' +
+        '<rect x="3" y="7" width="18" height="11.5" rx="1.5"/>' +
+        '<rect x="5.5" y="9.5" width="3.8" height="6.5" rx="0.7"/>' +
+        '<rect x="10.8" y="9.5" width="3.8" height="6.5" rx="0.7"/>' +
+        '<path d="M15.4 18.2l5.5-5.5 2 2-5.5 5.5-2.55.55.55-2.55z" fill="currentColor" stroke="none"/>',
+    },
     separator: '<path d="M12 4v16"/>',
     row_separator: '<path d="M19 5v6a3 3 0 0 1-3 3H7"/><path d="M10 10l-4 4 4 4"/>',
     bg_none: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M7 17L17 7"/>',
@@ -140,6 +202,16 @@
   let layoutData = null;
   let ribbonMeta = {};
   let renderState = null;
+  let ribbonRoot = null;
+  let widgetStoreId = 'ribbonWidgetTemplates';
+
+  function getRibbonEl() {
+    return ribbonRoot || document.getElementById('editorRibbon');
+  }
+
+  function getWidgetStore() {
+    return document.getElementById(widgetStoreId);
+  }
 
   function svgIcon(name) {
     const entry = ICONS[name];
@@ -307,6 +379,8 @@
       widget.classList.contains('ribbon-slide-transition-inner') ||
       widget.classList.contains('ribbon-slide-autoadvance-inner') ||
       widget.classList.contains('ribbon-present-display-inner') ||
+      widget.classList.contains('present-ribbon-remote-inner') ||
+      widget.classList.contains('present-ribbon-local-inner') ||
       widget.classList.contains('ribbon-settings-title-inner') ||
       widget.classList.contains('ribbon-settings-size-inner') ||
       widget.classList.contains('ribbon-settings-margin-inner') ||
@@ -336,6 +410,8 @@
       ':scope > .ribbon-slide-timing-inner, ' +
       ':scope > .ribbon-slide-autoadvance-inner, ' +
       ':scope > .ribbon-present-display-inner, ' +
+      ':scope > .present-ribbon-remote-inner, ' +
+      ':scope > .present-ribbon-local-inner, ' +
       ':scope > .ribbon-settings-title-inner, ' +
       ':scope > .ribbon-settings-size-inner, ' +
       ':scope > .ribbon-settings-margin-inner, ' +
@@ -389,10 +465,10 @@
   }
 
   function returnWidgetsToStore() {
-    const store = document.getElementById('ribbonWidgetTemplates');
+    const store = getWidgetStore();
     if (!store) return;
     document.querySelectorAll('[data-widget-id]').forEach((el) => {
-      if (el.closest('#ribbonWidgetTemplates')) return;
+      if (el.closest('#' + widgetStoreId)) return;
       store.appendChild(el);
     });
     /* Leere Duplikat-Hüllen entfernen, Inhalt behalten. */
@@ -415,7 +491,7 @@
   }
 
   function takeWidget(templateId) {
-    const store = document.getElementById('ribbonWidgetTemplates');
+    const store = getWidgetStore();
     if (!store) return null;
     const nodes = [...store.querySelectorAll('[data-widget-id="' + templateId + '"]')];
     if (!nodes.length) return null;
@@ -518,7 +594,7 @@
       a.href = (ribbonMeta.urls && ribbonMeta.urls[hrefKey]) || ribbonMeta.urls?.present || '#';
       if (cmd.target) a.target = cmd.target;
       if (cmd.target === '_blank') a.rel = 'noopener noreferrer';
-      a.title = cmd.label;
+      a.title = cmd.title || cmd.label;
       a.innerHTML = svgIcon(cmd.icon || 'present') + '<span class="ribbon-btn-label">' + escapeHtml(cmd.label) + '</span>';
       if (ribbonMeta.masterSlideEditing && (cmd.id === 'present_mode' || cmd.id === 'preview_tab')) {
         const tip = ribbonMeta.masterSlideCommandsDisabled || cmd.label;
@@ -557,6 +633,10 @@
     btn.type = 'button';
     btn.className = 'ribbon-btn ribbon-grid-btn' + tallClass;
     btn.dataset.ribbonCommand = cmd.id;
+    if (cmd.settingsPanel) {
+      btn.dataset.ribbonSettings = cmd.settingsPanel;
+      btn.classList.add('ribbon-settings-btn', 'ribbon-btn-tall');
+    }
     if (cmd.domId && !state.usedDomIds.has(cmd.domId)) {
       btn.id = cmd.domId;
       state.usedDomIds.add(cmd.domId);
@@ -565,7 +645,21 @@
     const title = cmd.shortcut ? cmd.label + ' (' + cmd.shortcut + ')' : cmd.label;
     btn.title = title;
     btn.innerHTML = (cmd.icon ? svgIcon(cmd.icon) : '') + '<span class="ribbon-btn-label">' + escapeHtml(cmd.label) + '</span>';
-    if (ribbonMeta.masterSlideEditing && (cmd.id === 'share' || cmd.id === 'export' || cmd.id === 'preview_window' || cmd.id === 'present_local')) {
+    if (cmd.id === 'show_progress' || cmd.id === 'show_controls') {
+      const opts = ribbonMeta.displayOptions || {};
+      const on = cmd.id === 'show_progress'
+        ? opts.show_progress !== false
+        : opts.show_controls !== false;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('role', 'switch');
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (cmd.id === 'show_progress' && ribbonMeta.displayProgressTitle) {
+        btn.title = ribbonMeta.displayProgressTitle;
+      } else if (cmd.id === 'show_controls' && ribbonMeta.displayControlsTitle) {
+        btn.title = ribbonMeta.displayControlsTitle;
+      }
+    }
+    if (ribbonMeta.masterSlideEditing && (cmd.id === 'share' || cmd.id === 'export' || cmd.id === 'preview_window' || cmd.id === 'present_local' || cmd.id === 'show_progress' || cmd.id === 'show_controls')) {
       const tip = ribbonMeta.masterSlideCommandsDisabled || title;
       btn.setAttribute('aria-disabled', 'true');
       btn.title = tip;
@@ -750,7 +844,7 @@
   }
 
   function renderLayout(layout) {
-    const ribbon = document.getElementById('editorRibbon');
+    const ribbon = getRibbonEl();
     if (!ribbon || !layout) return;
 
     beginRenderState();
@@ -799,6 +893,14 @@
   }
 
   function init(config) {
+    widgetStoreId = config.widgetStoreId || 'ribbonWidgetTemplates';
+    if (config.root instanceof Element) {
+      ribbonRoot = config.root;
+    } else if (config.rootId) {
+      ribbonRoot = document.getElementById(config.rootId);
+    } else {
+      ribbonRoot = document.getElementById('editorRibbon');
+    }
     ribbonMeta = config.meta || {};
     buildCommandIndex(config.commands || []);
     renderLayout(config.layout);

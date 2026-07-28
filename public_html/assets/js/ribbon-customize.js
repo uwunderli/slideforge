@@ -1182,6 +1182,21 @@
     close();
   }
 
+  function presentApiExtra() {
+    if ((boot.rootId || '') !== 'presentRibbon') {
+      return {
+        templateMode: !!global.SF_BOOTSTRAP?.templateMode,
+        layoutSetMode: !!global.SF_BOOTSTRAP?.layoutSetMode,
+        showMasterSlideNav: !!boot.meta?.masterSlideNav,
+      };
+    }
+    return {
+      canBroadcast: !!boot.meta?.canBroadcast,
+      isOwner: !!boot.meta?.isOwner,
+      hasRemote: !!boot.meta?.hasRemote,
+    };
+  }
+
   async function save() {
     if (!editingLayout) return;
     clearPreviewTimer();
@@ -1191,18 +1206,16 @@
       const res = await fetch(boot.apiUrl || 'ribbon.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           action: 'save',
           csrf_token: global.SF_BOOTSTRAP?.csrfToken,
           layout: layoutToSave,
-          templateMode: !!global.SF_BOOTSTRAP?.templateMode,
-          layoutSetMode: !!global.SF_BOOTSTRAP?.layoutSetMode,
-          showMasterSlideNav: !!boot.meta?.masterSlideNav,
-        }),
+        }, presentApiExtra())),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'save failed');
       originalLayout = cloneLayout(data.layout);
+      boot.layout = data.layout;
       applyLayoutAndNotify(data.layout);
       close();
     } catch (err) {
@@ -1223,17 +1236,15 @@
       const res = await fetch(boot.apiUrl || 'ribbon.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           action: 'reset',
           csrf_token: global.SF_BOOTSTRAP?.csrfToken,
-          templateMode: !!global.SF_BOOTSTRAP?.templateMode,
-          layoutSetMode: !!global.SF_BOOTSTRAP?.layoutSetMode,
-          showMasterSlideNav: !!boot.meta?.masterSlideNav,
-        }),
+        }, presentApiExtra())),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'reset failed');
       originalLayout = cloneLayout(data.layout);
+      boot.layout = data.layout;
       applyLayoutAndNotify(data.layout);
       close();
     } catch (err) {

@@ -171,10 +171,16 @@ class RibbonLayout
                         'widget:slide_autoadvance',
                     ],
                     'widget:present_menu' => [
-                        ['id' => 'widget:present_display', 'gridSpan' => ['cols' => 10, 'rows' => 2]],
+                        ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ],
                     'present_display' => [
-                        ['id' => 'widget:present_display', 'gridSpan' => ['cols' => 10, 'rows' => 2]],
+                        ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                    ],
+                    'widget:present_display' => [
+                        ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ],
                     'widget:collab_menu' => [
                         ['id' => 'share', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
@@ -270,17 +276,6 @@ class RibbonLayout
                         $itemEntry['gridSpan'] = [
                             'cols' => max(1, min(16, (int)($item['gridSpan']['cols'] ?? 1))),
                             'rows' => max(1, min(2, (int)($item['gridSpan']['rows'] ?? 1))),
-                        ];
-                    }
-                    if ($itemId === 'widget:present_display') {
-                        // Kompakte 3-Spalten-Anzeige (Fortschritt|Link|Bildschirm); alte Layouts mit 12+ verkleinern.
-                        $cols = (int)($itemEntry['gridSpan']['cols'] ?? 10);
-                        if ($cols >= 12) {
-                            $cols = 10;
-                        }
-                        $itemEntry['gridSpan'] = [
-                            'cols' => max(10, $cols),
-                            'rows' => 2,
                         ];
                     }
                     if ($itemId === 'widget:settings_title') {
@@ -697,7 +692,7 @@ class RibbonLayout
             return $tabs;
         }
         $needsRestore = empty($have['present_mode'])
-            || empty($have['widget:present_display'])
+            || (empty($have['show_progress']) && empty($have['show_controls']) && empty($have['widget:present_display']))
             || empty($have['share'])
             || empty($have['export'])
             || empty($have['widget:settings_duration'])

@@ -524,6 +524,7 @@ class Auth
             ['id' => 'next', 'visible' => true],
             ['id' => 'clock', 'visible' => true],
             ['id' => 'timer', 'visible' => true],
+            ['id' => 'media', 'visible' => true],
             ['id' => 'slides', 'visible' => true],
         ];
     }
@@ -647,7 +648,7 @@ class Auth
             }
         }
         $timebarPx = isset($layout['timebarPx']) ? (int)$layout['timebarPx'] : $defaults['timebarPx'];
-        $timebarPx = max(72, min(220, $timebarPx));
+        $timebarPx = max(100, min(220, $timebarPx));
         $showTimebar = !array_key_exists('showTimebar', $layout) || (bool)$layout['showTimebar'];
         $allowedPanels = ['next', 'clock', 'timer', 'slides', 'media'];
         $panelHeights = [];

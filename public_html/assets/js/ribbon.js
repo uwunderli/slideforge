@@ -1,13 +1,15 @@
 (function (global) {
   'use strict';
 
-  const ribbon = document.getElementById('editorRibbon');
+  const boot = global.SF_BOOTSTRAP?.ribbon || {};
+  const rootId = boot.rootId || 'editorRibbon';
+  const ribbon = document.getElementById(rootId);
   if (!ribbon) return;
 
-  const boot = global.SF_BOOTSTRAP?.ribbon || {};
   const userId = ribbon.dataset.userId || 'default';
-  const storageTab = 'sf_ribbon_tab_' + userId;
-  const storageCollapsed = 'sf_ribbon_collapsed_' + userId;
+  const storagePrefix = rootId === 'presentRibbon' ? 'sf_present_ribbon_' : 'sf_ribbon_';
+  const storageTab = storagePrefix + 'tab_' + userId;
+  const storageCollapsed = storagePrefix + 'collapsed_' + userId;
 
   let tabs = [];
   let panels = [];
@@ -303,8 +305,7 @@
     openRibbonCustomize();
   }
 
-  // Capture + mousedown (button 2): deaktivierte Buttons feuern in manchen
-  // Browsern kein contextmenu; pointer-events:none auf :disabled hilft zusätzlich.
+  // Present + Editor: Anpassen per Rechtsklick und Ribbon-Befehl / Sidebar-Button.
   ribbon.addEventListener('contextmenu', openRibbonCustomizeFromContext, true);
   ribbon.addEventListener('mousedown', (e) => {
     if (e.button !== 2) return;
@@ -318,9 +319,20 @@
     openRibbonCustomize();
   });
 
+  ribbon.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('#ribbonCustomizeBtn, #presentRibbonCustomizeBtn, [data-ribbon-command="ribbon_customize"]');
+    if (!btn || !ribbon.contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openRibbonCustomize();
+  });
+
   function bootRibbon() {
     if (global.SFRibbonRenderer && boot.layout) {
       global.SFRibbonRenderer.init({
+        root: ribbon,
+        rootId: rootId,
+        widgetStoreId: boot.widgetStoreId || 'ribbonWidgetTemplates',
         layout: boot.layout,
         commands: boot.commands || [],
         meta: boot.meta || {},

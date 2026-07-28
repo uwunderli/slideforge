@@ -690,6 +690,12 @@ $bootstrap = [
             ] : null,
             'masterSlideEditing' => $masterSlideNavActive,
             'masterSlideCommandsDisabled' => t('editor.master_slide_commands_disabled'),
+            'displayOptions' => [
+                'show_progress' => ($meta['show_progress'] ?? true) ? true : false,
+                'show_controls' => ($meta['show_controls'] ?? true) ? true : false,
+            ],
+            'displayProgressTitle' => t('present.progress_bar'),
+            'displayControlsTitle' => t('present.controls_toggle'),
         ],
         'i18n' => [
             'title' => t('ribbon.customize_title'),
@@ -970,7 +976,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <span class="sr-only"><?= h(t('props.side_tab_media')) ?></span>
         </button>
         <button type="button" class="props-side-tab props-side-tab-customize" id="ribbonCustomizeBtn" title="<?= h(t('ribbon.customize_title')) ?>" aria-label="<?= h(t('ribbon.customize_short')) ?>">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4.5M10.5 4.5h5"/><rect x="3" y="7" width="18" height="11.5" rx="1.5"/><rect x="5.5" y="9.5" width="3.8" height="6.5" rx="0.7"/><rect x="10.8" y="9.5" width="3.8" height="6.5" rx="0.7"/><path d="M15.4 18.2l5.5-5.5 2 2-5.5 5.5-2.55.55.55-2.55z" fill="currentColor" stroke="none"/></svg>
         </button>
       </nav>
 

@@ -78,42 +78,6 @@ foreach ($elementZones as $zone => $roles) {
 
 <?php require __DIR__ . '/editor_ribbon_design.php'; ?>
 
-<?php if (!$isTemplateMode || $masterSlideNavActive): ?>
-<?php $masterHint = t('editor.master_slide_commands_disabled'); ?>
-<div class="ribbon-widget-shell" data-widget-id="widget-present-display">
-  <div class="ribbon-present-display-inner<?= $perm === 'owner' ? ' ribbon-present-display-inner--owner' : '' ?><?= $masterSlideNavActive ? ' is-master-disabled' : '' ?>"<?= $masterSlideNavActive ? ' title="' . h($masterHint) . '"' : '' ?>>
-    <div class="ribbon-present-display-col">
-      <label class="ribbon-toggle" title="<?= h($masterSlideNavActive ? $masterHint : t('present.progress_bar')) ?>">
-        <input type="checkbox" id="showProgressToggle" role="switch" <?= ($meta['show_progress'] ?? true) ? 'checked' : '' ?><?= $masterSlideNavActive ? ' disabled' : '' ?>>
-        <span class="ribbon-toggle-track" aria-hidden="true"></span>
-        <span class="ribbon-toggle-label"><?= h(t('ribbon.present_progress_short')) ?></span>
-      </label>
-      <label class="ribbon-toggle" title="<?= h($masterSlideNavActive ? $masterHint : t('present.controls_toggle')) ?>">
-        <input type="checkbox" id="showControlsToggle" role="switch" <?= ($meta['show_controls'] ?? true) ? 'checked' : '' ?><?= $masterSlideNavActive ? ' disabled' : '' ?>>
-        <span class="ribbon-toggle-track" aria-hidden="true"></span>
-        <span class="ribbon-toggle-label"><?= h(t('ribbon.present_controls_short')) ?></span>
-      </label>
-    </div>
-    <?php if ($perm === 'owner'): ?>
-    <div class="ribbon-present-display-col ribbon-present-display-col--sep">
-      <label class="ribbon-toggle" title="<?= h($masterSlideNavActive ? $masterHint : t('present.public_link')) ?>">
-        <input type="checkbox" id="publicLinkToggle" role="switch" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?><?= $masterSlideNavActive ? ' disabled' : '' ?>>
-        <span class="ribbon-toggle-track" aria-hidden="true"></span>
-        <span class="ribbon-toggle-label"><?= h(t('ribbon.present_public_short')) ?></span>
-      </label>
-      <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="copyPublicLinkBtn" disabled title="<?= h($masterSlideNavActive ? $masterHint : t('present.copy_link')) ?>"><?= h(t('present.copy')) ?></button>
-      <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
-    </div>
-    <?php endif; ?>
-    <div class="ribbon-present-display-screen ribbon-present-display-col--sep">
-      <label class="ribbon-present-display-screen-label" for="presentScreenSelect"><?= h(t('ribbon.present_screen_short')) ?></label>
-      <select id="presentScreenSelect" class="present-screen-select ribbon-present-screen-select" aria-describedby="presentScreenHint"<?= $masterSlideNavActive ? ' disabled' : '' ?>></select>
-      <p class="present-screen-hint ribbon-present-screen-hint" id="presentScreenHint" hidden></p>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
-
 <?php
 $rbIconWidth = '<svg class="ribbon-settings-field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"/><path d="M7 9L4 12l3 3"/><path d="M17 9l3 3-3 3"/><rect x="9" y="7" width="6" height="10" rx="1"/></svg>';
 $rbIconHeight = '<svg class="ribbon-settings-field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16"/><path d="M9 7l3-3 3 3"/><path d="M9 17l3 3 3-3"/><rect x="7" y="9" width="10" height="6" rx="1"/></svg>';

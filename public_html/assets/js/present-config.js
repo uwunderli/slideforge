@@ -10,6 +10,11 @@
     const i18n = opts.i18n || {};
 
     function setDisplayOption(field, value) {
+      const meta = global.SF_BOOTSTRAP?.ribbon?.meta;
+      if (meta) {
+        if (!meta.displayOptions) meta.displayOptions = {};
+        meta.displayOptions[field] = !!value;
+      }
       fetch('api.php?action=set_display_options&id=' + encodeURIComponent(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,10 +26,22 @@
       }).catch(() => {});
     }
 
-    function bindConfigCheckbox(elId, onToggle) {
-      const el = document.getElementById(elId);
-      if (!el) return;
-      el.addEventListener('change', () => onToggle(el.checked));
+    function syncDisplayCommandButtons(cmdId, on) {
+      document.querySelectorAll('[data-ribbon-command="' + cmdId + '"]').forEach((btn) => {
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+
+    function bindDisplayCommand(cmdId, field) {
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest?.('[data-ribbon-command="' + cmdId + '"]');
+        if (!btn || btn.getAttribute('aria-disabled') === 'true' || btn.disabled) return;
+        e.preventDefault();
+        const next = btn.getAttribute('aria-pressed') !== 'true';
+        syncDisplayCommandButtons(cmdId, next);
+        setDisplayOption(field, next);
+      });
     }
 
     function syncPublicLinkCopyBtn() {
@@ -34,8 +51,8 @@
       if (btn) btn.disabled = !toggle?.checked || !input?.value;
     }
 
-    bindConfigCheckbox('showProgressToggle', (state) => setDisplayOption('show_progress', state));
-    bindConfigCheckbox('showControlsToggle', (state) => setDisplayOption('show_controls', state));
+    bindDisplayCommand('show_progress', 'show_progress');
+    bindDisplayCommand('show_controls', 'show_controls');
 
     document.getElementById('copyPublicLinkBtn')?.addEventListener('click', (e) => {
       const input = document.getElementById('presentPublicLinkInput');
@@ -272,9 +289,19 @@
 
     async function openAudienceWindow(url, screenIndex) {
       await refreshScreensFromGesture();
-      const idx = typeof screenIndex === 'number'
-        ? screenIndex
-        : parseInt(document.getElementById('presentScreenSelect')?.value || '0', 10);
+      let idx;
+      if (typeof screenIndex === 'number') {
+        idx = screenIndex;
+      } else {
+        const select = document.getElementById('presentScreenSelect');
+        if (select && select.value !== '') {
+          idx = parseInt(select.value, 10);
+        } else {
+          /* Ohne Select (Editor): wie bisheriger Dropdown-Default — Nicht-Primär bevorzugen. */
+          const secondary = presentScreens.findIndex((sc) => !sc.isPrimary);
+          idx = secondary >= 0 ? secondary : 0;
+        }
+      }
       const sc = presentScreens[idx] || presentScreens[0];
       if (!sc) return null;
       const sep = url.indexOf('?') >= 0 ? '&' : '?';
