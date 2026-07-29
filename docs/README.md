@@ -9,6 +9,7 @@
 | [AENDERUNGEN.md](AENDERUNGEN.md) | Bugs & Features: **A** neu → **B** geplant → **C** umgesetzt |
 | [RELEASES.md](RELEASES.md) | Release-Roadmap (**v2.1.4** shipped → danach **v2.2.0**) |
 | [LOGOS_IMPORTER.md](LOGOS_IMPORTER.md) | Briefing: Logos Importer neu — **pausiert** (AENDERUNGEN B #7) |
+| [UI.md](UI.md) | **UI/Design:** nur Hub `docs/DESIGN.md` + Lab — keine Modul-Kopie |
 | [RIBBON_MENU.md](RIBBON_MENU.md) | Editor- + Present-Ribbon (Anpassen beider) |
 | [DASHBOARD_PERSONALIZE.md](DASHBOARD_PERSONALIZE.md) | Dashboard Phase 1 ✔️ · Phase 2 geplant (B #14b) |
 | [BACKLOG.md](BACKLOG.md) | Ideen ohne Release-Zuordnung |

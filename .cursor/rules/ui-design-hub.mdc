@@ -1,0 +1,11 @@
+---
+description: UI folgt verbindlich hub/docs/DESIGN.md + Lab
+alwaysApply: true
+---
+
+# UI / Design — verbindlich
+
+**Quelle:** `hub/docs/DESIGN.md` (Abschnitt «Verbindlich») + Hub-Lab `/lab/`.  
+Bei UI-Arbeit diese Vorgaben einhalten. Modul: nur `docs/UI.md` als Verweis — keine eigenen Design-Kataloge.
+
+Kurz-Muss: `.hub-btn*`, Formularfelder, `.hub-scroll`, `.hub-ribbon`/`.hub-edit-rail`, Confirm-Overlay (kein `confirm()`), Flash `.hub-status` farbig ohne Transparenz, Busy mit Statusbar.

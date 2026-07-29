@@ -1,29 +1,11 @@
 ---
-description: ChurchForge Bestätigungsdialoge — UI-Overlay statt window.confirm (alle Module)
+description: Confirm-Dialoge — Details nur Hub DESIGN.md
 alwaysApply: true
 ---
 
 # Bestätigungsdialoge
 
-Gilt für **alle** ChurchForge-Module. Keine nativen Browser-Dialoge für Nutzerbestätigungen.
+**Quelle:** `hub/docs/DESIGN.md` (Bestätigungsdialoge) + Lab.  
+**Neue Design-Entscheidungen nur dort** — hier keine Kataloge pflegen.
 
-## Verboten
-
-- `window.confirm()` / `window.alert()` / `window.prompt()`
-- `onclick="return confirm(...)"` / `onsubmit="return confirm(...)"`
-
-## Pflicht
-
-UI-eigene Overlays im Modul-Look (dunkle Karte, Abbrechen + OK):
-
-- ArchiveForge: `AFConfirm.ask()` / `data-af-confirm-*` (`.confirm-overlay`, `.confirm-dialog--ask`)
-- ClipForge & andere: analoges Modul-Confirm (gleiches Overlay-Muster wie Busy/Delete)
-
-Esc, Abbrechen und Klick auf den Backdrop = Nein.
-
-## Wann
-
-Jede irreversible oder riskante Aktion: Löschen, Zusammenführen, YouTube ersetzen, Publish-Nebenwirkungen, …
-
-Docs: `_notes/PRINCIPLES.md` §5 „Bestätigungsdialoge“.
-
+Kurz: kein `window.confirm` / `alert` / `prompt` — Modul-Confirm-Overlay (Esc/Backdrop = Nein).

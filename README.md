@@ -223,3 +223,11 @@ Beim ersten Admin werden zudem sieben Standard-Folienvorlagen aus `seed/template
 ### KI-Hinweis
 
 Der Quellcode dieses Projekts wurde **vollständig mit Unterstützung durch KI** (Large Language Models) erstellt und weiterentwickelt. Trotz sorgfältiger Prüfung kann **keine Garantie** für Fehlerfreiheit, Vollständigkeit oder Eignung für einen bestimmten Zweck übernommen werden. Bitte testet kritische Funktionen (Authentifizierung, Freigaben, Export, Mailversand) in eurer Umgebung, bevor ihr SlideForge produktiv einsetzt.
+
+## UI / Design
+
+Siehe [docs/UI.md](docs/UI.md). **Neue Design-Entscheidungen nur in** [hub/docs/DESIGN.md](../hub/docs/DESIGN.md) + Lab.
+
+## Workflow
+
+- [WORKFLOW.md](docs/WORKFLOW.md) — zentraler Entwicklungsablauf: lokal entwickeln, oft deployen, auf Prod testen
