@@ -1453,4 +1453,8 @@ return [
     'common.cancel' => 'Annulla',
     'common.delete' => 'Elimina',
     'common.close' => 'Chiudi',
+    'dialog.minimize' => 'Riduci',
+    'dialog.maximize' => 'Ingrandisci',
+    'dialog.restore' => 'Ripristina',
+    'dialog.close' => 'Chiudi',
 ];

@@ -1615,4 +1615,8 @@ return [
     'common.cancel' => 'Abbrechen',
     'common.delete' => 'Löschen',
     'common.close' => 'Schliessen',
+    'dialog.minimize' => 'Minimieren',
+    'dialog.maximize' => 'Maximieren',
+    'dialog.restore' => 'Wiederherstellen',
+    'dialog.close' => 'Schliessen',
 ];

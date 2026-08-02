@@ -47,6 +47,8 @@ $manifestUrl = $webPrefix . '/manifest.php';
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
 <link rel="stylesheet" href="assets/css/mobile.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/hub-scroll.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/hub-float-dialog.css?v=<?= ASSET_VERSION ?>">
 <?php if ($currentUser && class_exists('Launcher')): ?>
 <link rel="stylesheet" href="<?= h(churchforge_shared_asset_url('cf-launcher.css')) ?>?v=<?= ASSET_VERSION ?>">
 <?php endif; ?>
@@ -61,12 +63,32 @@ window.SF_DIALOG_I18N = <?= json_encode([
     'ok' => t('common.ok'),
     'cancel' => t('common.cancel'),
 ], JSON_UNESCAPED_UNICODE) ?>;
+window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
+    'minimize' => t('dialog.minimize'),
+    'maximize' => t('dialog.maximize'),
+    'restore' => t('dialog.restore'),
+    'close' => t('dialog.close'),
+], JSON_UNESCAPED_UNICODE) ?>;
 </script>
+<script src="assets/js/hub-float-dialog.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-float-bridge.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ui-dialog.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/number-input-wheel.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/pwa.js?v=<?= ASSET_VERSION ?>" defer></script>
 </head>
-<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?><?= client_is_touch_tablet() ? ' data-sf-tablet="1"' : '' ?>>
+<body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?><?= client_is_touch_tablet() ? ' data-sf-tablet="1"' : '' ?><?= !empty($_GET['hub_theme']) ? ' data-sf-hub-embedded="1"' : '' ?>>
+<script>
+(function () {
+  try {
+    if (window.self !== window.top) {
+      document.documentElement.setAttribute('data-sf-hub-embedded', '1');
+      document.body && document.body.setAttribute('data-sf-hub-embedded', '1');
+    }
+  } catch (e) {
+    document.documentElement.setAttribute('data-sf-hub-embedded', '1');
+  }
+})();
+</script>
 <?php if (Config::demoMode()): ?>
 <div class="demo-banner" role="status">
   <div><?= h(t('demo.banner')) ?></div>

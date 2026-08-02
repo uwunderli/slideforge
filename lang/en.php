@@ -1528,4 +1528,8 @@ return [
     'common.cancel' => 'Cancel',
     'common.delete' => 'Delete',
     'common.close' => 'Close',
+    'dialog.minimize' => 'Minimize',
+    'dialog.maximize' => 'Maximize',
+    'dialog.restore' => 'Restore',
+    'dialog.close' => 'Close',
 ];

@@ -14,8 +14,6 @@
   let collapsedTabs = new Set();
   let collapsedGroups = new Set();
 
-  const PANEL_SIZE_KEY = 'sf_ribbon_customize_panel_size';
-
   function appearanceIcon(name) {
     const icons = {
       sizeSmall:
@@ -273,11 +271,12 @@
     backdrop.id = 'ribbonCustomizeBackdrop';
     backdrop.setAttribute('aria-hidden', 'true');
     backdrop.innerHTML =
-      '<div class="ribbon-customize-panel" role="dialog" aria-modal="false" aria-labelledby="ribbonCustomizeTitle">' +
-      '<header class="sf-dialog-header ribbon-customize-header" id="ribbonCustomizeDragHandle">' +
-      '<h2 class="sf-dialog-title" id="ribbonCustomizeTitle"></h2>' +
-      '<button type="button" class="sf-dialog-close ribbon-customize-close" id="ribbonCustomizeClose" aria-label="">×</button>' +
-      '</header>' +
+      '<div class="hub-float-dialog ribbon-customize-panel" role="dialog" aria-modal="false" aria-labelledby="ribbonCustomizeTitle" id="ribbonCustomizePanel">' +
+      '<div class="hub-float-dialog__title ribbon-customize-header" data-hub-drag>' +
+      '<h2 class="hub-float-dialog__title-text sf-dialog-title" id="ribbonCustomizeTitle"></h2>' +
+      '<div class="hub-float-dialog__win-btns"></div>' +
+      '</div>' +
+      '<div class="hub-float-dialog__body hub-scroll ribbon-customize-float-body">' +
       '<p class="sf-dialog-hint ribbon-customize-hint" id="ribbonCustomizeHint"></p>' +
       '<div class="ribbon-customize-appearance" id="ribbonCustomizeAppearance">' +
       '<div class="ribbon-customize-appearance-row">' +
@@ -291,7 +290,7 @@
       '<label class="ribbon-customize-search-label" for="ribbonCustomizeSearch"></label>' +
       '<input type="search" class="ribbon-customize-search" id="ribbonCustomizeSearch" autocomplete="off">' +
       '<select class="ribbon-customize-category" id="ribbonCustomizeCategory"></select>' +
-      '<ul class="ribbon-customize-command-list" id="ribbonCustomizeCommandList"></ul>' +
+      '<ul class="ribbon-customize-command-list hub-scroll" id="ribbonCustomizeCommandList"></ul>' +
       '</div>' +
       '<div class="ribbon-customize-col ribbon-customize-layout">' +
       '<div class="ribbon-customize-layout-toolbar">' +
@@ -299,7 +298,7 @@
       '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeTabRename"></button>' +
       '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeTabDelete"></button>' +
       '</div>' +
-      '<div class="ribbon-customize-tabs" id="ribbonCustomizeTabs"></div>' +
+      '<div class="ribbon-customize-tabs hub-scroll" id="ribbonCustomizeTabs"></div>' +
       '<div class="ribbon-customize-group-actions">' +
       '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeGroupAdd"></button>' +
       '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeGroupRename"></button>' +
@@ -309,22 +308,33 @@
       '</div>' +
       '</div>' +
       '</div>' +
-      '<div class="sf-dialog-actions ribbon-customize-actions">' +
-      '<button type="button" class="button button-ghost" id="ribbonCustomizeReset"></button>' +
+      '</div>' +
+      '<div class="hub-float-dialog__footer hub-dialog-actions ribbon-customize-actions">' +
+      '<button type="button" class="button button-ghost hub-dialog-actions__start" id="ribbonCustomizeReset"></button>' +
       '<button type="button" class="button button-ghost" id="ribbonCustomizeCancel"></button>' +
       '<button type="button" class="button" id="ribbonCustomizeSave"></button>' +
       '</div>' +
-      '<div class="ribbon-customize-resize-handle ribbon-customize-resize-handle--e" data-resize="e" aria-hidden="true"></div>' +
-      '<div class="ribbon-customize-resize-handle ribbon-customize-resize-handle--s" data-resize="s" aria-hidden="true"></div>' +
-      '<div class="ribbon-customize-resize-handle ribbon-customize-resize-handle--se" data-resize="se" id="ribbonCustomizeResizeHandle" aria-hidden="true" title="Grösse ändern"></div>' +
       '</div>';
     document.body.appendChild(backdrop);
     panel = backdrop.querySelector('.ribbon-customize-panel');
 
+    if (global.HubFloatDialog) {
+      global.HubFloatDialog.bind(panel, {
+        id: 'sf:ribbon-customize',
+        width: 920,
+        height: 680,
+        minWidth: 520,
+        minHeight: 360,
+        fitContent: true,
+        persist: false,
+        geomRev: 2,
+        onClose: () => finishClose(closeShouldRestore)
+      });
+    }
+
     backdrop.querySelector('#ribbonCustomizeTitle').textContent = I.title || 'Ribbon anpassen';
     backdrop.querySelector('#ribbonCustomizeHint').textContent = I.livePreviewHint || 'Änderungen werden sofort im Ribbon oben angezeigt.';
     backdrop.querySelector('.ribbon-customize-search-label').textContent = I.search || 'Suchen';
-    backdrop.querySelector('#ribbonCustomizeClose').setAttribute('aria-label', I.cancel || 'Schliessen');
     backdrop.querySelector('#ribbonCustomizeTabAdd').textContent = I.tabAdd || 'Neuer Tab';
     backdrop.querySelector('#ribbonCustomizeTabRename').textContent = I.tabRename || 'Tab umbenennen';
     backdrop.querySelector('#ribbonCustomizeTabDelete').textContent = I.tabDelete || 'Tab löschen';
@@ -337,7 +347,6 @@
     backdrop.querySelector('#ribbonCustomizeCancel').textContent = I.cancel || 'Abbrechen';
     backdrop.querySelector('#ribbonCustomizeSave').textContent = I.save || 'Speichern';
 
-    backdrop.querySelector('#ribbonCustomizeClose').addEventListener('click', cancel);
     backdrop.querySelector('#ribbonCustomizeCancel').addEventListener('click', cancel);
     backdrop.querySelector('#ribbonCustomizeSave').addEventListener('click', save);
     backdrop.querySelector('#ribbonCustomizeReset').addEventListener('click', reset);
@@ -353,8 +362,6 @@
     backdrop.querySelector('#ribbonCustomizeCategory').addEventListener('change', renderCatalog);
 
     initAppearanceControls();
-    initDragPanel();
-    initResizePanel();
   }
 
   function initCollapseState() {
@@ -397,138 +404,6 @@
     const key = groupKey(tabId, groupId);
     if (collapsedGroups.has(key)) collapsedGroups.delete(key);
     else collapsedGroups.add(key);
-  }
-
-  function restorePanelSize() {
-    if (!panel) return;
-    try {
-      const raw = localStorage.getItem(PANEL_SIZE_KEY);
-      if (!raw) return;
-      const size = JSON.parse(raw);
-      const maxW = Math.max(520, window.innerWidth - 16);
-      const maxH = Math.max(280, window.innerHeight - 16);
-      if (size.width) {
-        panel.style.width = Math.min(maxW, Math.max(520, Number(size.width) || 520)) + 'px';
-      }
-      if (size.height) {
-        panel.style.height = Math.min(maxH, Math.max(280, Number(size.height) || 280)) + 'px';
-      }
-      if (typeof size.left === 'number' && typeof size.top === 'number') {
-        const left = Math.max(8, Math.min(window.innerWidth - 80, size.left));
-        const top = Math.max(8, Math.min(window.innerHeight - 80, size.top));
-        panel.style.left = left + 'px';
-        panel.style.top = top + 'px';
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
-      }
-    } catch (e) { /* ignore */ }
-  }
-
-  function storePanelSize() {
-    if (!panel) return;
-    try {
-      const rect = panel.getBoundingClientRect();
-      localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify({
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        left: Math.round(rect.left),
-        top: Math.round(rect.top),
-      }));
-    } catch (e) { /* ignore */ }
-  }
-
-  function anchorPanelPosition() {
-    if (!panel) return;
-    const rect = panel.getBoundingClientRect();
-    panel.style.left = rect.left + 'px';
-    panel.style.top = rect.top + 'px';
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-  }
-
-  function initResizePanel() {
-    if (!backdrop || backdrop.dataset.resizeWired === '1') return;
-    backdrop.dataset.resizeWired = '1';
-    const handles = backdrop.querySelectorAll('[data-resize]');
-    if (!handles.length) return;
-
-    handles.forEach((handle) => {
-      handle.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const mode = handle.getAttribute('data-resize') || 'se';
-        anchorPanelPosition();
-        const rect = panel.getBoundingClientRect();
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const startW = rect.width;
-        const startH = rect.height;
-        const startLeft = rect.left;
-        const startTop = rect.top;
-        panel.classList.add('is-resizing');
-
-        const onMove = (ev) => {
-          const maxW = window.innerWidth - startLeft - 8;
-          const maxH = window.innerHeight - startTop - 8;
-          let nextW = startW;
-          let nextH = startH;
-          if (mode === 'e' || mode === 'se') {
-            nextW = Math.max(520, Math.min(maxW, startW + ev.clientX - startX));
-          }
-          if (mode === 's' || mode === 'se') {
-            nextH = Math.max(280, Math.min(maxH, startH + ev.clientY - startY));
-          }
-          panel.style.width = nextW + 'px';
-          panel.style.height = nextH + 'px';
-        };
-        const onUp = () => {
-          panel.classList.remove('is-resizing');
-          storePanelSize();
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-        };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
-      });
-    });
-  }
-
-  function initDragPanel() {
-    const handle = backdrop.querySelector('#ribbonCustomizeDragHandle');
-    if (!handle || handle.dataset.wired === '1') return;
-    handle.dataset.wired = '1';
-    let startX = 0;
-    let startY = 0;
-    let startLeft = 0;
-    let startTop = 0;
-
-    handle.addEventListener('mousedown', (e) => {
-      if (e.button !== 0 || e.target.closest('button')) return;
-      e.preventDefault();
-      const rect = panel.getBoundingClientRect();
-      panel.style.left = rect.left + 'px';
-      panel.style.top = rect.top + 'px';
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-      startX = e.clientX;
-      startY = e.clientY;
-      startLeft = rect.left;
-      startTop = rect.top;
-      const onMove = (ev) => {
-        const nextLeft = Math.max(8, Math.min(window.innerWidth - 80, startLeft + ev.clientX - startX));
-        const nextTop = Math.max(8, Math.min(window.innerHeight - 80, startTop + ev.clientY - startY));
-        panel.style.left = nextLeft + 'px';
-        panel.style.top = nextTop + 'px';
-      };
-      const onUp = () => {
-        storePanelSize();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
   }
 
   function cloneLayout(layout) {
@@ -1123,6 +998,31 @@
     layoutChanged();
   }
 
+  let closingUi = false;
+  let closeShouldRestore = true;
+
+  function finishClose(restore) {
+    if (closingUi) return;
+    closingUi = true;
+    clearPreviewTimer();
+    if (restore) restoreOriginalLayout();
+    if (backdrop) {
+      backdrop.classList.remove('open');
+      backdrop.style.display = 'none';
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    if (panel) {
+      panel.hidden = true;
+      panel.setAttribute('hidden', '');
+      panel.classList.remove('hub-float-dialog--open', 'is-minimized', 'is-maximized');
+    }
+    editingLayout = null;
+    originalLayout = null;
+    dragPayload = null;
+    closeShouldRestore = true;
+    closingUi = false;
+  }
+
   function open() {
     ensureDom();
     if (!backdrop || !panel) {
@@ -1159,27 +1059,34 @@
     renderCatalog();
     renderAppearanceControls();
     renderTree();
-    restorePanelSize();
     backdrop.style.display = 'block';
     backdrop.classList.add('open');
     backdrop.setAttribute('aria-hidden', 'false');
+    if (global.HubFloatDialog) {
+      global.HubFloatDialog.open(panel);
+    } else {
+      panel.hidden = false;
+      panel.removeAttribute('hidden');
+    }
     applyPreview();
   }
 
   function close() {
-    clearPreviewTimer();
-    if (!backdrop) return;
-    backdrop.classList.remove('open');
-    backdrop.style.display = 'none';
-    backdrop.setAttribute('aria-hidden', 'true');
-    editingLayout = null;
-    originalLayout = null;
-    dragPayload = null;
+    closeShouldRestore = false;
+    if (panel && global.HubFloatDialog) {
+      global.HubFloatDialog.close(panel);
+      return;
+    }
+    finishClose(false);
   }
 
   function cancel() {
-    restoreOriginalLayout();
-    close();
+    closeShouldRestore = true;
+    if (panel && global.HubFloatDialog) {
+      global.HubFloatDialog.close(panel);
+      return;
+    }
+    finishClose(true);
   }
 
   function presentApiExtra() {

@@ -1,0 +1,189 @@
+/**
+ * HubFloatDialog — kanonischer Fenster-Chrome (DESIGN § Dialogfenster).
+ * Quelle für Module: diese Datei vendorn, nicht forken.
+ * Abnahme: Lab → Dialogfenster.
+ *
+ * Markup: .hub-float-dialog > __title / __body.hub-scroll / __footer.hub-dialog-actions / __handle--*
+ * Klassen is-minimized / is-maximized.
+ */
+
+.hub-float-dialog {
+  position: fixed;
+  z-index: 12000;
+  left: 18vw;
+  top: 12vh;
+  width: min(920px, 96vw);
+  height: min(680px, 90vh);
+  min-width: 320px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.hub-float-dialog[hidden] {
+  display: none !important;
+}
+
+.hub-float-dialog.is-minimized {
+  height: auto !important;
+  min-height: 0;
+}
+
+.hub-float-dialog.is-minimized .hub-float-dialog__body,
+.hub-float-dialog.is-minimized .hub-float-dialog__footer,
+.hub-float-dialog.is-minimized .hub-float-dialog__handle {
+  display: none !important;
+}
+
+.hub-float-dialog.is-maximized {
+  left: 2vw !important;
+  top: 2vh !important;
+  width: 96vw !important;
+  height: 96vh !important;
+  right: auto !important;
+}
+
+.hub-float-dialog.is-maximized .hub-float-dialog__handle {
+  display: none !important;
+}
+
+.hub-float-dialog__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  cursor: move;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 80%, var(--border));
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.hub-float-dialog.is-minimized .hub-float-dialog__title {
+  border-bottom: none;
+  border-radius: 12px;
+}
+
+.hub-float-dialog__title-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.hub-float-dialog__win-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.hub-float-dialog__win-btns .hub-btn {
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.15rem 0.45rem;
+  line-height: 1;
+}
+
+.hub-float-dialog__body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.85rem;
+  min-height: 0;
+}
+
+.hub-float-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0.65rem 0.85rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, var(--border));
+  border-radius: 0 0 12px 12px;
+}
+
+.hub-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hub-dialog-actions__start {
+  margin-right: auto;
+}
+
+.hub-float-dialog__handle {
+  position: absolute;
+  z-index: 2;
+}
+
+.hub-float-dialog__handle--n { top: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.hub-float-dialog__handle--e { right: 0; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.hub-float-dialog__handle--s { bottom: 0; left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.hub-float-dialog__handle--w { left: 0; top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.hub-float-dialog__handle--ne { top: 0; right: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+.hub-float-dialog__handle--nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.hub-float-dialog__handle--se { bottom: 0; right: 0; width: 14px; height: 14px; cursor: nwse-resize; }
+.hub-float-dialog__handle--sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+
+.hub-float-host {
+  position: fixed;
+  inset: 0;
+  z-index: 11990;
+  pointer-events: none;
+}
+
+/* Minimale hub-btn-Varianten, falls Modul admin.css nicht lädt */
+.hub-float-dialog .hub-btn {
+  appearance: none;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--surface-raised, var(--surface));
+  color: var(--text);
+}
+
+.hub-float-dialog .hub-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.hub-float-dialog .hub-btn--ghost:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.hub-float-dialog .hub-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.hub-float-dialog .hub-btn--primary:hover {
+  background: var(--accent-dim, var(--accent));
+}
+
+/* Lab-Alias während Migration */
+.lab-float-dialog {
+  /* alias: see hub-float-dialog — Lab markup uses hub-float-dialog */
+}

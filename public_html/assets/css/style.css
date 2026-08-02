@@ -303,6 +303,12 @@ a:hover { text-decoration: underline; }
 }
 .topbar-user a.button-ghost { margin-left: 4px; }
 
+/* Hub-Embed: App-Shell hat den Launcher — SF-Dock ausblenden */
+html[data-sf-hub-embedded="1"] .topbar-user > .cf-launcher,
+body[data-sf-hub-embedded="1"] .topbar-user > .cf-launcher {
+  display: none !important;
+}
+
 .topbar-icon-btn {
   width: 34px;
   height: 34px;
@@ -866,6 +872,20 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 }
 .modal.modal-wide { max-width: 560px; }
 .modal.modal-sm { max-width: 400px; }
+
+/* HubFloatDialog: schwebend statt zentrierte Modal-Karte */
+.modal.hub-float-dialog,
+.hub-float-host .modal {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+.modal-backdrop.open[data-hub-float-upgraded="1"] {
+  background: transparent;
+  pointer-events: none;
+  align-items: stretch;
+  justify-content: flex-start;
+}
 
 /* Shared dialog chrome (Header / Title / Close / Hint) */
 .sf-dialog-header,
@@ -10870,25 +10890,20 @@ body:has(.editor-layout) > .editor-layout {
   display: block;
   pointer-events: none;
 }
-.ribbon-customize-panel {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: min(920px, calc(100vw - 32px));
-  height: min(420px, calc(72vh));
-  min-width: 520px;
-  min-height: 280px;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100vh - 16px);
+.ribbon-customize-panel.hub-float-dialog {
+  /* Chrome/Position über hub-float-dialog.css; hier nur SF-Inhalt */
+  z-index: 1601;
+  overflow: hidden;
+}
+.ribbon-customize-float-body {
   display: flex;
   flex-direction: column;
-  pointer-events: auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-  overflow: hidden;
-  z-index: 1601;
+  gap: 0.5rem;
+  min-height: 0;
+}
+.ribbon-customize-float-body .ribbon-customize-body {
+  flex: 1;
+  min-height: 0;
 }
 .ribbon-customize-panel.is-resizing {
   user-select: none;

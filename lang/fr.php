@@ -1467,4 +1467,8 @@ return [
     'common.cancel' => 'Annuler',
     'common.delete' => 'Supprimer',
     'common.close' => 'Fermer',
+    'dialog.minimize' => 'Réduire',
+    'dialog.maximize' => 'Agrandir',
+    'dialog.restore' => 'Restaurer',
+    'dialog.close' => 'Fermer',
 ];

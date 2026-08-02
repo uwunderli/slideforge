@@ -101,6 +101,7 @@ class Auth
                     }
                     $_SESSION['user_id'] = $u['id'];
                     $_SESSION['username'] = $u['username'];
+                    $_SESSION['auth_via'] = 'local';
                     if (class_exists('SharedAuth')) {
                         $pref = self::themePref($u);
                         SharedAuth::issueThemeCookie($pref);
@@ -139,6 +140,12 @@ class Auth
     public static function isLoggedIn(): bool
     {
         return !empty($_SESSION['user_id']);
+    }
+
+    /** Sitzung über Hub-SSO / SharedAuth-Bootstrap (nicht lokales Passwort). */
+    public static function isViaHub(): bool
+    {
+        return ($_SESSION['auth_via'] ?? '') === 'churchforge_hub';
     }
 
     public static function requireLogin(): void

@@ -1453,4 +1453,8 @@ return [
     'common.cancel' => 'Annullar',
     'common.delete' => 'Stizzar',
     'common.close' => 'Serrar',
+    'dialog.minimize' => 'Minimar',
+    'dialog.maximize' => 'Maximar',
+    'dialog.restore' => 'Restaurar',
+    'dialog.close' => 'Serrar',
 ];
