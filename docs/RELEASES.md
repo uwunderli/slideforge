@@ -20,6 +20,7 @@
 | — | **v2.1.9** | Notizen nach unten (stabilisiert) | ✔️ shipped | [RELEASE_v2.1.9.md](../.github/RELEASE_v2.1.9.md) |
 | — | **v2.1.10** | HubUserMenu-Standard in der Topbar | ✔️ shipped | [RELEASE_v2.1.10.md](../.github/RELEASE_v2.1.10.md) |
 | — | **v2.1.11** | Present Notizen-Einstellungen | ✔️ shipped | [RELEASE_v2.1.11.md](../.github/RELEASE_v2.1.11.md) |
+| — | **v2.1.14** | Launcher/Dialog-Nachzug | ✔️ shipped | [RELEASE_v2.1.14.md](../.github/RELEASE_v2.1.14.md) |
 | — | **v2.1.13** | Hub-Launcher + globale Dialog-Klassen | ✔️ shipped | [RELEASE_v2.1.13.md](../.github/RELEASE_v2.1.13.md) |
 | — | **v2.1.12** | Notizen-Kontrast zur Folie | ✔️ shipped | [RELEASE_v2.1.12.md](../.github/RELEASE_v2.1.12.md) |
 | **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig · **nächster Major nach 2.1.13** | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
@@ -35,7 +36,7 @@
 
 | Lage | Stand |
 |------|--------|
-| **Letzter Tag** | **v2.1.13** auf GitHub / `main` |
+| **Letzter Tag** | **v2.1.14** auf GitHub / `main` |
 | **Arbeitsstand** | Hub-Launcher + hub-float-dialog **shipped**; nächster Major **v2.2.0** church.tools |
 | **Ribbon** | Editor + Present konfigurierbar ([RIBBON_MENU.md](RIBBON_MENU.md)) |
 | **Logos-Importer neu** | Briefing fertig, **pausiert** bis Vorlage «Schlicht II» geprüft ([LOGOS_IMPORTER.md](LOGOS_IMPORTER.md), AENDERUNGEN B #7) |
