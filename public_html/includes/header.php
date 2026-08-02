@@ -77,18 +77,6 @@ window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
 <script src="assets/js/pwa.js?v=<?= ASSET_VERSION ?>" defer></script>
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?><?= client_is_touch_tablet() ? ' data-sf-tablet="1"' : '' ?><?= !empty($_GET['hub_theme']) ? ' data-sf-hub-embedded="1"' : '' ?>>
-<script>
-(function () {
-  try {
-    if (window.self !== window.top) {
-      document.documentElement.setAttribute('data-sf-hub-embedded', '1');
-      document.body && document.body.setAttribute('data-sf-hub-embedded', '1');
-    }
-  } catch (e) {
-    document.documentElement.setAttribute('data-sf-hub-embedded', '1');
-  }
-})();
-</script>
 <?php if (Config::demoMode()): ?>
 <div class="demo-banner" role="status">
   <div><?= h(t('demo.banner')) ?></div>

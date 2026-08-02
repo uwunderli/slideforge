@@ -142,7 +142,10 @@ class Auth
         return !empty($_SESSION['user_id']);
     }
 
-    /** Sitzung über Hub-SSO / SharedAuth (nicht lokales Passwort). */
+    /**
+     * Sitzung über Hub (nicht lokales Passwort).
+     * Auf Prod (Hub-Login Pflicht) gilt jeder Login als Hub — ausser explizit auth_via=local.
+     */
     public static function isViaHub(): bool
     {
         $via = (string)($_SESSION['auth_via'] ?? '');
@@ -152,7 +155,12 @@ class Auth
         if ($via === 'churchforge_hub') {
             return true;
         }
-        // Bestehende Sessions ohne Flag: gültiges Hub-Cookie → Hub-Dock
+        if (class_exists('SharedAuth') && method_exists('SharedAuth', 'shouldUseHubLogin')
+            && SharedAuth::shouldUseHubLogin() && self::isLoggedIn()
+        ) {
+            $_SESSION['auth_via'] = 'churchforge_hub';
+            return true;
+        }
         if (class_exists('SharedAuth')) {
             $payload = SharedAuth::read();
             if (is_array($payload) && $payload !== []) {
