@@ -11,17 +11,15 @@ if (!empty($_GET['hub_theme'])) {
 $hubUrl = function_exists('churchforge_hub_url') ? churchforge_hub_url() : 'https://bkbiel.ch';
 
 if (!Auth::isViaHub()) {
-    // Lokaler / Demo-Login: ein CF-Logo → Hub
+    // Lokaler / Demo-Login: nur CF/Hub-Logo (kein Programm-Dock)
     $iconSrc = class_exists('ModuleIcon')
         ? ModuleIcon::hubUrl()
         : (rtrim($hubUrl, '/') . '/assets/icons/hub.svg');
     echo '<nav class="cf-launcher cf-launcher--topbar cf-launcher--solo" aria-label="ChurchForge">';
-    echo '<div class="cf-launcher-dock" role="list">';
-    echo '<a class="cf-launcher-item" href="' . h($hubUrl . '/') . '" role="listitem" title="GemeindeSchmiede">';
-    echo '<span class="cf-launcher-icon cf-icon-image" aria-hidden="true"><img src="' . h($iconSrc) . '" alt="" loading="lazy" decoding="async"></span>';
-    echo '<span class="cf-launcher-label">Hub</span>';
+    echo '<a class="cf-launcher-solo-logo" href="' . h($hubUrl . '/') . '" title="GemeindeSchmiede">';
+    echo '<img src="' . h($iconSrc) . '" alt="GemeindeSchmiede" width="32" height="32" loading="lazy" decoding="async">';
     echo '</a>';
-    echo '</div></nav>';
+    echo '</nav>';
     return;
 }
 

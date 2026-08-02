@@ -433,19 +433,12 @@
 
     /**
      * Backdrop-Modal → schwebendes hub-float-dialog.
-     * Behält IDs; Backdrop wird transparenter Host (pointer-events none wenn offen).
+     * Modal bleibt im Backdrop (kein DOM-Umhängen); Backdrop wird bei Open transparent.
      */
     upgradeBackdrop(backdrop, opts) {
       if (!backdrop) return null;
       const modal = backdrop.querySelector('.modal, .ribbon-customize-panel, [role="dialog"]') || backdrop.firstElementChild;
       if (!modal) return null;
-
-      const host = document.querySelector('.hub-float-host') || (() => {
-        const h = document.createElement('div');
-        h.className = 'hub-float-host';
-        document.body.appendChild(h);
-        return h;
-      })();
 
       opts = opts || {};
       const id = opts.id || modal.id || backdrop.id || ('float_' + Date.now());
@@ -457,19 +450,17 @@
       state.onClose = () => {
         backdrop.classList.remove('open');
         backdrop.setAttribute('aria-hidden', 'true');
-        if (modal.parentElement !== host) {
-          /* keep in host when floating */
-        }
         if (origOnClose) origOnClose();
         if (typeof opts.onClose === 'function') opts.onClose();
       };
 
       const openFloat = () => {
-        if (modal.parentElement !== host) host.appendChild(modal);
         backdrop.classList.add('open');
         backdrop.setAttribute('aria-hidden', 'false');
         backdrop.style.background = 'transparent';
         backdrop.style.pointerEvents = 'none';
+        // Modal selbst empfängt Pointer-Events
+        modal.style.pointerEvents = 'auto';
         this.open(modal);
       };
 

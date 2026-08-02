@@ -186,8 +186,18 @@ class SharedAuth
      */
     public static function bootstrapSlideForge(): bool
     {
-        if (!class_exists('Auth') || Auth::isLoggedIn()) {
-            return class_exists('Auth') && Auth::isLoggedIn();
+        if (!class_exists('Auth')) {
+            return false;
+        }
+        // Bereits eingeloggt: Hub-Cookie → auth_via nachziehen (alte Sessions)
+        if (Auth::isLoggedIn()) {
+            if (($_SESSION['auth_via'] ?? '') === '') {
+                $existing = self::read();
+                if (is_array($existing) && $existing !== []) {
+                    $_SESSION['auth_via'] = 'churchforge_hub';
+                }
+            }
+            return true;
         }
 
         $fromHandoff = false;

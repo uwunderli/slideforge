@@ -309,6 +309,29 @@ body[data-sf-hub-embedded="1"] .topbar-user > .cf-launcher {
   display: none !important;
 }
 
+/* Lokaler Login: ein CF-Logo, kein Dock */
+.cf-launcher--solo {
+  display: flex;
+  align-items: center;
+}
+.cf-launcher-solo-logo {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.cf-launcher-solo-logo:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.cf-launcher-solo-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+}
+
 .topbar-icon-btn {
   width: 34px;
   height: 34px;
@@ -874,17 +897,20 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 .modal.modal-sm { max-width: 400px; }
 
 /* HubFloatDialog: schwebend statt zentrierte Modal-Karte */
-.modal.hub-float-dialog,
-.hub-float-host .modal {
+.modal.hub-float-dialog {
   width: auto;
   max-width: none;
   margin: 0;
+  /* bleibt position:fixed aus hub-float-dialog.css */
 }
 .modal-backdrop.open[data-hub-float-upgraded="1"] {
-  background: transparent;
+  background: transparent !important;
   pointer-events: none;
-  align-items: stretch;
-  justify-content: flex-start;
+  /* kein Flex-Zentrieren — Fenster steuert Position selbst */
+  display: block !important;
+}
+.modal-backdrop.open[data-hub-float-upgraded="1"] .hub-float-dialog {
+  pointer-events: auto;
 }
 
 /* Shared dialog chrome (Header / Title / Close / Hint) */

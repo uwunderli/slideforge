@@ -1,6 +1,7 @@
 /**
  * Bindet bestehende SlideForge .modal-backdrop-Dialoge an HubFloatDialog
  * (globale hub-float-dialog Klassen). Confirm-Overlay (.sf-ui-dialog) bleibt unberührt.
+ * Upgrade erst beim ersten Öffnen (lazy), kein DOM-Umhängen in einen Host.
  */
 (function (global) {
   'use strict';
@@ -27,13 +28,15 @@
   };
 
   function upgradeOne(backdrop) {
-    if (!backdrop || !global.HubFloatDialog) return;
-    if (SKIP.has(backdrop.id)) return;
-    if (backdrop.classList.contains('sf-ui-dialog-backdrop')) return;
-    if (backdrop.dataset.hubFloatUpgraded === '1') return;
+    if (!backdrop || !global.HubFloatDialog) return null;
+    if (SKIP.has(backdrop.id)) return null;
+    if (backdrop.classList.contains('sf-ui-dialog-backdrop')) return null;
+    if (backdrop.dataset.hubFloatUpgraded === '1') {
+      return { open: backdrop._hubFloatOpen, close: backdrop._hubFloatClose };
+    }
 
     const modal = backdrop.querySelector('.modal, [role="dialog"]');
-    if (!modal) return;
+    if (!modal) return null;
 
     const id = backdrop.id || modal.id || ('sf_modal_' + Math.random().toString(36).slice(2, 8));
     const hint = SIZE_HINTS[id] || SIZE_HINTS[modal.id] || { width: 560, height: 480 };
@@ -48,7 +51,7 @@
       persist: false,
       geomRev: 1
     });
-    if (!pack) return;
+    if (!pack) return null;
 
     backdrop.dataset.hubFloatUpgraded = '1';
     backdrop._hubFloatModal = pack.modal;
@@ -63,16 +66,25 @@
         pack.close();
       });
     });
+
+    return pack;
   }
 
   function watchBackdrop(backdrop) {
-    upgradeOne(backdrop);
+    if (SKIP.has(backdrop.id) || backdrop.classList.contains('sf-ui-dialog-backdrop')) return;
+
     let wasOpen = backdrop.classList.contains('open');
+    if (wasOpen) {
+      const pack = upgradeOne(backdrop);
+      if (pack && typeof pack.open === 'function') pack.open();
+    }
+
     const obs = new MutationObserver(() => {
       const isOpen = backdrop.classList.contains('open');
       if (isOpen && !wasOpen) {
-        upgradeOne(backdrop);
-        if (typeof backdrop._hubFloatOpen === 'function') backdrop._hubFloatOpen();
+        const pack = upgradeOne(backdrop);
+        if (pack && typeof pack.open === 'function') pack.open();
+        else if (typeof backdrop._hubFloatOpen === 'function') backdrop._hubFloatOpen();
       } else if (!isOpen && wasOpen) {
         const modal = backdrop._hubFloatModal;
         if (modal && global.HubFloatDialog) global.HubFloatDialog.close(modal);
