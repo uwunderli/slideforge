@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.10] - 2026-08-02
+
+### Changed
+
+- Topbar: HubUserMenu-Standard (Anzeigename-Chip; Sprache/Darstellung im Menü)
+
 ## [2.1.9] - 2026-08-02
 
 ### Changed
