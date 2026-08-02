@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.13] - 2026-08-02
+
+### Added
+
+- HubFloatDialog (globale Klassen): schwebende Dialoge mit Min/Max, 8-Resize, fitContent
+- Launcher: voller Dock bei Hub-Login, ein CF-Logo bei lokalem Login
+
+### Changed
+
+- FolienSchmiede im Hub wie SendeSchmiede (`external` + `hubAuth`); Embed blendet SF-Dock aus
+
 ## [2.1.12] - 2026-08-02
 
 ### Fixed
