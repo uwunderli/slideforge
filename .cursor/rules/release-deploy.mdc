@@ -1,0 +1,17 @@
+---
+description: Nach UI-/Feature-Arbeit sofort Release-Routine (Commit, Push, Deploy, Tag)
+alwaysApply: true
+---
+
+# Release & Deploy — sofort nach Umsetzung
+
+Wenn eine Aufgabe **fertig umgesetzt** ist (UI-Fix, Feature, Bugfix) und der Nutzer nicht ausdrücklich «nur lokal» / «nicht deployen» sagt:
+
+1. **ASSET_VERSION** bumpen (bei CSS/JS/PHP-UI)
+2. Feature-Commit
+3. Patch-Release vorbereiten: `VERSION`, `CHANGELOG.md`, `README.md` Release-Link, `.github/RELEASE_vX.Y.Z.md`, ggf. `docs/RELEASES.md` / `docs/AENDERUNGEN.md`
+4. `chore(release): vX.Y.Z`
+5. **Push `main`** — Pre-Push-Hook deployt Prod + Demo und erstellt Tag (`docs/VEROEFFENTLICHUNG.md`)
+6. **GitHub Release** mit `gh release create` und Notes-Datei
+
+Nicht nachfragen «soll ich deployen?» — die Routine ist die Default-Antwort auf fertige Arbeit.
