@@ -303,9 +303,9 @@ a:hover { text-decoration: underline; }
 }
 .topbar-user a.button-ghost { margin-left: 4px; }
 
-/* Hub-Embed: App-Shell hat den Launcher — SF-Dock ausblenden */
-html[data-sf-hub-embedded="1"] .topbar-user > .cf-launcher,
-body[data-sf-hub-embedded="1"] .topbar-user > .cf-launcher {
+/* Hub-Embed: App-Shell hat Launcher + User-Menü — in SF nicht doppelt */
+html[data-sf-hub-embedded="1"] .topbar-user,
+body[data-sf-hub-embedded="1"] .topbar-user {
   display: none !important;
 }
 

@@ -108,13 +108,17 @@ window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
   </div>
   <?php endif; ?>
   </div>
+  <?php if (empty($_GET['hub_theme'])): ?>
   <div class="topbar-user">
     <?php require __DIR__ . '/launcher.php'; ?>
     <?php require __DIR__ . '/user_menu.php'; ?>
   </div>
+  <?php endif; ?>
 </header>
+<?php if (empty($_GET['hub_theme'])): ?>
 <script src="assets/js/hub-user-menu.js?v=<?= ASSET_VERSION ?>"></script>
 <script>window.HubUserMenu && HubUserMenu.bindAll();</script>
+<?php endif; ?>
 <?php else: ?>
 <div class="anon-lang-switch">
   <?php foreach (I18n::SUPPORTED as $code => $label): ?>
