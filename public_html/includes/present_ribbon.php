@@ -168,3 +168,41 @@
     </div>
   </div>
 </div>
+
+<div class="modal-backdrop present-notes-settings-modal-backdrop" id="presentNotesSettingsModal" aria-hidden="true">
+  <div class="modal present-notes-settings-modal" role="dialog" aria-modal="true" aria-labelledby="presentNotesSettingsModalTitle">
+    <div class="sf-dialog-header">
+      <h2 id="presentNotesSettingsModalTitle" class="sf-dialog-title"><?= h(t('present.settings_submenu_notes')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="presentNotesSettingsModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
+    </div>
+    <p class="sf-dialog-hint"><?= h(t('present.notes_mode_hint')) ?></p>
+    <div class="modal-dialog-body present-notes-settings-modal-body">
+      <div class="present-config-section" role="radiogroup" aria-labelledby="presentNotesSettingsModalTitle">
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesMode" value="always_open" id="presentNotesModeAlwaysOpen">
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_mode_always_open')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_mode_always_open_desc')) ?></span>
+          </span>
+        </label>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesMode" value="always_closed" id="presentNotesModeAlwaysClosed">
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_mode_always_closed')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_mode_always_closed_desc')) ?></span>
+          </span>
+        </label>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesMode" value="carry" id="presentNotesModeCarry" checked>
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_mode_carry')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_mode_carry_desc')) ?></span>
+          </span>
+        </label>
+      </div>
+    </div>
+    <div class="sf-dialog-actions modal-actions">
+      <button type="button" class="button" id="presentNotesSettingsModalOk"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>

@@ -83,6 +83,7 @@ function present_ribbon_default_layout(): array
                             ['id' => 'settings_timebar'],
                             ['id' => 'settings_clock'],
                             ['id' => 'settings_laser'],
+                            ['id' => 'settings_notes'],
                             ['id' => 'ribbon_customize'],
                         ],
                     ],

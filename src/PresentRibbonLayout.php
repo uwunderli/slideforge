@@ -282,6 +282,7 @@ class PresentRibbonLayout
             'panel_media' => 'panel_timebar',
             'panel_ghost' => 'panel_slides',
             'panel_laser' => 'panel_ghost',
+            'settings_notes' => 'settings_laser',
         ];
         foreach ($insertAfter as $newId => $afterId) {
             if (!isset($catalog[$newId])) {

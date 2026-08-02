@@ -27,6 +27,7 @@ function present_ribbon_command_catalog(): array
         ['id' => 'settings_timebar', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'present.settings_submenu_timebar', 'icon' => 'timebar', 'domId' => 'presentTimebarSettingsBtn', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'settings_clock', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'present.clock_section', 'icon' => 'clock', 'domId' => 'presentClockSettingsBtn', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'settings_laser', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'present.settings_submenu_laser', 'icon' => 'laser', 'domId' => 'presentLaserSettingsBtn', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'settings_notes', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'present.settings_submenu_notes', 'icon' => 'notes', 'domId' => 'presentNotesSettingsBtn', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'ribbon_customize', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'ribbon.customize_short', 'icon' => 'ribbon_customize', 'domId' => 'presentRibbonCustomizeBtn', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
 
         ['id' => 'separator', 'kind' => 'separator', 'category' => 'layout', 'labelKey' => 'ribbon.separator'],

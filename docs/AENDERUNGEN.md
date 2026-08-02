@@ -70,6 +70,7 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | --- | ------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | —   | Feature | Ribbon-Default = aktuelles Menü | Ansicht+Vorschau/Fenster/Lokal im Standard; Theme Tag/Nacht/System in Prefs+Cookie. ASSET 553. | 2026-07-27          |
 | —   | UX      | Header HubUserMenu-Standard   | Anzeigename+Avatar-Chip; Sprache/Darstellung im Menü (kein Flag-/Theme-Icon mehr). ASSET 589. | 2026-08-02          |
+| —   | Feature | Present: Notizen-Einstellungen | Ribbon-Icon; Dialog Offen/Geschlossen/Übernehmen beim Folienwechsel. ASSET 590. | 2026-08-02          |
 | —   | UX      | Notizen nach unten einklappen | Horizontal; Tippen → nach unten, Register unten bleibt zum Einblenden. ASSET 588. | 2026-08-02          |
 | —   | UX      | Notizen-Overlay einklappbar   | Rechts Register; Tippen auf Fläche → raus, Register → rein. Touch-tauglich. ASSET 587. | 2026-08-02          |
 | —   | UX      | Fortschritt/Nav als Befehle   | Einzelne Ribbon-Commands (konfigurierbar); Link-Widget getrennt. ASSET 584. | 2026-07-28          |

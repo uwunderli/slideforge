@@ -545,6 +545,76 @@
     }, true);
   })();
 
+  (function initPresentNotesSettingsDialog() {
+    const modal = document.getElementById('presentNotesSettingsModal');
+    if (!modal) return;
+    const MODE_KEY = 'sf_present_notes_mode';
+    const radios = [...modal.querySelectorAll('input[name="presentNotesMode"]')];
+
+    function readMode() {
+      try {
+        const v = localStorage.getItem(MODE_KEY);
+        if (v === 'always_open' || v === 'always_closed' || v === 'carry') return v;
+      } catch (e) { /* ignore */ }
+      return 'carry';
+    }
+
+    function writeMode(mode) {
+      const next = (mode === 'always_open' || mode === 'always_closed' || mode === 'carry') ? mode : 'carry';
+      try { localStorage.setItem(MODE_KEY, next); } catch (e) { /* ignore */ }
+      window.SlideForgePresentNotes?.applyMode?.(next);
+      return next;
+    }
+
+    function syncRadios() {
+      const mode = readMode();
+      radios.forEach((r) => { r.checked = r.value === mode; });
+    }
+
+    function isOpen() {
+      return modal.classList.contains('open');
+    }
+    function open() {
+      syncRadios();
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('presentNotesSettingsModalClose')?.focus();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    radios.forEach((r) => {
+      r.addEventListener('change', () => {
+        if (r.checked) writeMode(r.value);
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('#presentNotesSettingsBtn, [data-ribbon-command="settings_notes"]');
+      if (!btn || !document.getElementById('presentRibbon')?.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open();
+    });
+    document.getElementById('presentNotesSettingsModalClose')?.addEventListener('click', close);
+    document.getElementById('presentNotesSettingsModalOk')?.addEventListener('click', close);
+    if (window.SFModalBackdrop?.bindDismiss) {
+      window.SFModalBackdrop.bindDismiss(modal, close);
+    } else {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !isOpen()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    }, true);
+  })();
+
   function syncTimebarToggleUi(show) {
     const on = show !== false;
     document.querySelectorAll('#presentRibbon [data-ribbon-command="panel_timebar"]').forEach((btn) => {
@@ -903,6 +973,9 @@
     const hasNotes = !!(html && html.trim() !== '');
     if (notesPanel) notesPanel.innerHTML = hasNotes ? html : '';
     if (overlay) overlay.hidden = !hasNotes;
+    if (hasNotes) {
+      window.SlideForgePresentNotes?.onSlideChange?.();
+    }
   }
 
   (function initPresentNotesCollapse() {
@@ -912,30 +985,51 @@
     if (!overlay || !body || !register) return;
 
     const STORAGE_KEY = 'sf_present_notes_collapsed';
+    const MODE_KEY = 'sf_present_notes_mode';
     const i18n = P.i18n || {};
+
+    function readMode() {
+      try {
+        const v = localStorage.getItem(MODE_KEY);
+        if (v === 'always_open' || v === 'always_closed' || v === 'carry') return v;
+      } catch (e) { /* ignore */ }
+      return 'carry';
+    }
 
     function isCollapsed() {
       return overlay.classList.contains('is-collapsed');
     }
 
-    function setCollapsed(on) {
+    function setCollapsed(on, persist) {
       overlay.classList.toggle('is-collapsed', !!on);
       register.setAttribute('aria-expanded', on ? 'false' : 'true');
       register.title = on
         ? (i18n.notesExpandHint || i18n.toggleNotes || register.title)
         : (i18n.notesCollapseHint || i18n.toggleNotes || register.title);
       body.title = on ? '' : (i18n.notesCollapseHint || '');
-      try {
-        localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
-      } catch (e) { /* ignore */ }
+      if (persist !== false) {
+        try {
+          localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+        } catch (e) { /* ignore */ }
+      }
     }
 
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === '1') setCollapsed(true);
-      else setCollapsed(false);
-    } catch (e) {
-      setCollapsed(false);
+    function applyMode(mode) {
+      const m = mode || readMode();
+      if (m === 'always_open') {
+        setCollapsed(false, false);
+      } else if (m === 'always_closed') {
+        setCollapsed(true, false);
+      } else {
+        try {
+          setCollapsed(localStorage.getItem(STORAGE_KEY) === '1', false);
+        } catch (e) {
+          setCollapsed(false, false);
+        }
+      }
     }
+
+    applyMode();
 
     let ptr = null;
     body.addEventListener('pointerdown', (e) => {
@@ -950,15 +1044,21 @@
       ptr = null;
       if (dx > 10 || dy > 10) return;
       if (window.getSelection && String(window.getSelection()).length > 0) return;
-      setCollapsed(true);
+      setCollapsed(true, readMode() === 'carry');
     });
     body.addEventListener('pointercancel', () => { ptr = null; });
 
     register.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      setCollapsed(!isCollapsed());
+      setCollapsed(!isCollapsed(), readMode() === 'carry');
     });
+
+    window.SlideForgePresentNotes = {
+      applyMode,
+      onSlideChange: () => applyMode(),
+      getMode: readMode,
+    };
   })();
 
   syncNotesForSlide(currentIndex);

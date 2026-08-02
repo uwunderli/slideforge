@@ -117,6 +117,14 @@
         '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>' +
         '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
     },
+    notes: {
+      strokeWidth: 1.5,
+      paths:
+        /* Notizzettel mit Linien */
+        '<path d="M6 3.5h9.5L18.5 6.5V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V5A1.5 1.5 0 0 1 6 3.5z"/>' +
+        '<path d="M15 3.5V7h3.5"/>' +
+        '<path d="M7.5 11h9M7.5 14.5h9M7.5 18h5.5"/>',
+    },
     present_local: {
       strokeWidth: 1.5,
       paths:

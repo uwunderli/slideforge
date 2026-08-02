@@ -1744,8 +1744,20 @@ body.present-mode .present-ribbon.editor-ribbon.is-peek {
 .present-remote-qr-modal {
   max-width: 420px;
 }
-.present-timebar-settings-modal-backdrop {
+.present-timebar-settings-modal-backdrop,
+.present-notes-settings-modal-backdrop {
   z-index: 2500;
+}
+.present-notes-settings-modal {
+  max-width: 440px;
+}
+.present-notes-mode-desc {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.35;
 }
 .present-timebar-settings-modal {
   max-width: 480px;
