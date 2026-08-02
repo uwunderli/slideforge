@@ -17,9 +17,9 @@ $initialSource = $displayName !== '' ? $displayName : $username;
 $initial = $initialSource !== '' ? mb_strtoupper(mb_substr($initialSource, 0, 1)) : '?';
 
 $avatarUrl = '';
-$shared = (class_exists('SharedAuth') ? SharedAuth::read() : null);
-if (is_array($shared)) {
-    $avatarUrl = trim((string)($shared['avatar_url'] ?? ''));
+$cfSession = (class_exists('SharedAuth') ? SharedAuth::read() : null);
+if (is_array($cfSession)) {
+    $avatarUrl = trim((string)($cfSession['avatar_url'] ?? ''));
 }
 if ($avatarUrl === '' && !empty($currentUser['avatar'])) {
     $avatarUrl = 'uploads/avatars/' . (string)$currentUser['avatar'];
