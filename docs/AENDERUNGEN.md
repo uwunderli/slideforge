@@ -69,6 +69,7 @@ Verwandt: [BACKLOG.md](BACKLOG.md) · [RELEASES.md](RELEASES.md) · [README.md](
 | #   | Typ     | Thema                        | Umsetzung                                                                                                                         | Datum / Kontext     |
 | --- | ------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | —   | Feature | Ribbon-Default = aktuelles Menü | Ansicht+Vorschau/Fenster/Lokal im Standard; Theme Tag/Nacht/System in Prefs+Cookie. ASSET 553. | 2026-07-27          |
+| —   | UX      | Notizen-Overlay einklappbar   | Rechts Register; Tippen auf Fläche → raus, Register → rein. Touch-tauglich. ASSET 587. | 2026-08-02          |
 | —   | UX      | Fortschritt/Nav als Befehle   | Einzelne Ribbon-Commands (konfigurierbar); Link-Widget getrennt. ASSET 584. | 2026-07-28          |
 | —   | UX      | Present-Tab «Ansicht»         | Ribbon-Tab Einstellungen → Ansicht (`ribbon.tab_view`). | 2026-07-28          |
 | —   | UX      | Anzeige als Icon-Toggles      | Fortschritt/Navigation als Ribbon-Buttons (active) statt Switch — Editor + Present. ASSET 583. | 2026-07-28          |

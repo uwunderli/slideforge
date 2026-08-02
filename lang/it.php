@@ -415,6 +415,8 @@ return [
     'present.next_slide' => 'Diapositiva successiva',
     'present.notes' => 'Note',
     'present.toggle_notes' => 'Mostra/nascondi note',
+    'present.notes_collapse_hint' => 'Tocca per far scorrere le note',
+    'present.notes_expand_hint' => 'Tocca per mostrare le note',
     'present.notes_empty' => 'Nessuna nota per questa diapositiva.',
     'present.media_control' => 'Controlli media',
     'present.clock_section' => 'Orologio',

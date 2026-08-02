@@ -905,6 +905,62 @@
     if (overlay) overlay.hidden = !hasNotes;
   }
 
+  (function initPresentNotesCollapse() {
+    const overlay = document.getElementById('presentNotesOverlay');
+    const body = document.getElementById('presentNotesBody');
+    const register = document.getElementById('presentNotesRegister');
+    if (!overlay || !body || !register) return;
+
+    const STORAGE_KEY = 'sf_present_notes_collapsed';
+    const i18n = P.i18n || {};
+
+    function isCollapsed() {
+      return overlay.classList.contains('is-collapsed');
+    }
+
+    function setCollapsed(on) {
+      overlay.classList.toggle('is-collapsed', !!on);
+      register.setAttribute('aria-expanded', on ? 'false' : 'true');
+      register.title = on
+        ? (i18n.notesExpandHint || i18n.toggleNotes || register.title)
+        : (i18n.notesCollapseHint || i18n.toggleNotes || register.title);
+      body.title = on ? '' : (i18n.notesCollapseHint || '');
+      try {
+        localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
+      } catch (e) { /* ignore */ }
+    }
+
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === '1') setCollapsed(true);
+      else setCollapsed(false);
+    } catch (e) {
+      setCollapsed(false);
+    }
+
+    let ptr = null;
+    body.addEventListener('pointerdown', (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (isCollapsed()) return;
+      ptr = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    });
+    body.addEventListener('pointerup', (e) => {
+      if (!ptr || ptr.id !== e.pointerId) return;
+      const dx = Math.abs(e.clientX - ptr.x);
+      const dy = Math.abs(e.clientY - ptr.y);
+      ptr = null;
+      if (dx > 10 || dy > 10) return;
+      if (window.getSelection && String(window.getSelection()).length > 0) return;
+      setCollapsed(true);
+    });
+    body.addEventListener('pointercancel', () => { ptr = null; });
+
+    register.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCollapsed(!isCollapsed());
+    });
+  })();
+
   syncNotesForSlide(currentIndex);
 
   window.SlideForgePresentLayout?.init({

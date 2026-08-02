@@ -13,7 +13,9 @@
 | — | **v2.1.2** | Raster-Kachel: Übergang/Zeit/Effektname Layout | ✔️ shipped | CHANGELOG |
 | — | **v2.1.3** | **Editor-/Ribbon-Feinschliff** (Dialoge, Widgets, Raster→Entwurf, …) + SharedAuth-Docker-Fix | ✔️ shipped | [RELEASE_v2.1.3.md](../.github/RELEASE_v2.1.3.md) · [RIBBON_MENU.md](RIBBON_MENU.md) |
 | — | **v2.1.4** | **Present-Ribbon** — Anpassen, Ansicht/Steuerung, Fortschritt/Navigation-Befehle | ✔️ shipped | [RELEASE_v2.1.4.md](../.github/RELEASE_v2.1.4.md) · [RIBBON_MENU.md](RIBBON_MENU.md) |
-| **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig · **nächster Major nach 2.1.4** | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
+| — | **v2.1.5** | Snapshot Modulstand | ✔️ shipped | CHANGELOG |
+| — | **v2.1.6** | **Notizen-Overlay einklappbar** (Register rechts, touch-tauglich) | ✔️ shipped | [RELEASE_v2.1.6.md](../.github/RELEASE_v2.1.6.md) |
+| **3** | **v2.2.0** | **church.tools** — Live-Kalender, Gruppen, Platzhalter-Templates | ✅ Briefing fertig · **nächster Major nach 2.1.6** | [RELEASE_v2.2.0.md](RELEASE_v2.2.0.md) |
 | **4** | **v2.3.0** | Integrierter **Medien-Editor** (Trim, Bild, SVG) | ✅ Briefing fertig | [RELEASE_v2.3.0.md](RELEASE_v2.3.0.md) |
 | **5** | **v2.4.0** | reveal.js **Auto-Animate** — Objekte zwischen Folien morphen | ✅ Briefing fertig | [RELEASE_v2.4.0.md](RELEASE_v2.4.0.md) |
 | **6** | **v3.1.0** | **Editor v2** — slides.com-artiger visueller Editor (Major) | ✅ Briefing fertig | [RELEASE_v3.1.0.md](RELEASE_v3.1.0.md) |
@@ -22,12 +24,12 @@
 
 ---
 
-## Aktuelle Situation (2026-07-28)
+## Aktuelle Situation (2026-08-02)
 
 | Lage | Stand |
 |------|--------|
-| **Letzter Tag** | **v2.1.4** auf GitHub / `main` |
-| **Arbeitsstand** | Present-Ribbon **shipped**; nächster Major **v2.2.0** church.tools |
+| **Letzter Tag** | **v2.1.6** auf GitHub / `main` |
+| **Arbeitsstand** | Notizen einklappbar **shipped**; nächster Major **v2.2.0** church.tools |
 | **Ribbon** | Editor + Present konfigurierbar ([RIBBON_MENU.md](RIBBON_MENU.md)) |
 | **Logos-Importer neu** | Briefing fertig, **pausiert** bis Vorlage «Schlicht II» geprüft ([LOGOS_IMPORTER.md](LOGOS_IMPORTER.md), AENDERUNGEN B #7) |
 | **Dashboard** | Phase 1 ✔️; Phase 2 (geteilte Folien / Bereich teilen) noch offen (B #14b) |

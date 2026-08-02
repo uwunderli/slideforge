@@ -836,14 +836,14 @@ html.sf-tablet body.present-mode .filmstrip-notes-badge svg {
   height: 18px;
 }
 
-html.sf-tablet body.present-mode .notes-toggle-btn {
-  width: 52px;
-  height: 80px;
+html.sf-tablet body.present-mode .present-notes-overlay {
+  --present-notes-register-w: 56px;
 }
-
-html.sf-tablet body.present-mode .notes-toggle-btn svg {
-  width: 24px;
-  height: 24px;
+html.sf-tablet body.present-mode .present-notes-register {
+  min-height: 132px;
+}
+html.sf-tablet body.present-mode .present-notes-overlay.is-collapsed .present-notes-register {
+  min-height: 160px;
 }
 
 html.sf-tablet body.present-mode .present-panel-resize-handle {

@@ -121,7 +121,21 @@ require __DIR__ . '/includes/header.php';
   <div class="present-current-panel">
     <iframe id="mainFrame" src="present_frame.php?id=<?= urlencode($id) ?>&mode=main&amp;start=<?= (int)$startSlide ?>" title="<?= h(t('present.current_slide')) ?>"></iframe>
     <div class="present-notes-overlay" id="presentNotesOverlay" hidden>
-      <div class="present-notes-overlay-inner" id="notesPanel" role="region" aria-label="<?= h(t('present.notes')) ?>"></div>
+      <div class="present-notes-sheet" id="presentNotesSheet">
+        <div class="present-notes-body" id="presentNotesBody" title="<?= h(t('present.notes_collapse_hint')) ?>">
+          <div class="present-notes-overlay-inner" id="notesPanel" role="region" aria-label="<?= h(t('present.notes')) ?>"></div>
+        </div>
+        <button
+          type="button"
+          class="present-notes-register"
+          id="presentNotesRegister"
+          aria-controls="notesPanel"
+          aria-expanded="true"
+          title="<?= h(t('present.notes')) ?>"
+        >
+          <span class="present-notes-register-label"><?= h(t('present.notes')) ?></span>
+        </button>
+      </div>
     </div>
   </div>
   <div class="present-col-splitter present-layout-splitter" data-split="main-side" role="separator" aria-orientation="vertical" title="<?= h(t('present.resize_columns')) ?>"></div>
@@ -437,6 +451,8 @@ window.SF_PRESENT = {
     copyLink: <?= json_encode(t('present.copy_link')) ?>,
     copyRemote: <?= json_encode(t('remote.copy_url')) ?>,
     notesEmpty: <?= json_encode(t('present.notes_empty')) ?>,
+    notesCollapseHint: <?= json_encode(t('present.notes_collapse_hint')) ?>,
+    notesExpandHint: <?= json_encode(t('present.notes_expand_hint')) ?>,
     clockStudio: <?= json_encode(t('present.clock_studio')) ?>,
     clockAnalog: <?= json_encode(t('present.clock_analog')) ?>,
     clockDigital: <?= json_encode(t('present.clock_digital')) ?>,
