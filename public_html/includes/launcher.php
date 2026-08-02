@@ -3,15 +3,18 @@ if (!Auth::isLoggedIn() || !class_exists('Launcher')) {
     return;
 }
 
+// Hub App-Shell (embed.php) liefert den Programm-Launcher — hier nicht doppelt
 if (!empty($_GET['hub_theme'])) {
-    // Hub App-Shell hat bereits den Programm-Launcher
     return;
 }
 
 $hubUrl = function_exists('churchforge_hub_url') ? churchforge_hub_url() : 'https://bkbiel.ch';
 
-if (!Auth::isViaHub()) {
-    // Lokaler / Demo-Login: nur CF/Hub-Logo (kein Programm-Dock)
+// Solo-Logo nur Demo oder echter lokaler Login ohne Hub.
+// Auf Hub-Pflicht-Hosts (Prod) immer voller Dock — sticky auth_via=local blockiert nicht.
+$useFullDock = Auth::isViaHub();
+
+if (!$useFullDock) {
     $iconSrc = class_exists('ModuleIcon')
         ? ModuleIcon::hubUrl()
         : (rtrim($hubUrl, '/') . '/assets/icons/hub.svg');

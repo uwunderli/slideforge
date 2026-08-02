@@ -121,8 +121,11 @@ class Launcher
         if (class_exists('HubAuth') && HubAuth::isAdmin()) {
             return true;
         }
-        // FolienSchmiede: ohne Hub ModuleAccess — sichtbare Module mit Gruppen-Match;
-        // leere requireAnyGroup = für alle Hub-Nutzer sichtbar (wie Kachel-Intent).
+        // Admin-Tag aus SharedAuth-Cookie (ohne HubAuth in FolienSchmiede)
+        if (self::hasAnyTag($userTags, ['Admin'])) {
+            return true;
+        }
+        // Leere requireAnyGroup = für Hub-Nutzer sichtbar; sonst Gruppen-Match
         $groups = $module['requireAnyGroup'] ?? null;
         if (!is_array($groups) || $groups === []) {
             return true;

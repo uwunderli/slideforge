@@ -189,11 +189,14 @@ class SharedAuth
         if (!class_exists('Auth')) {
             return false;
         }
-        // Bereits eingeloggt: Hub-Cookie → auth_via nachziehen (alte Sessions)
+        // Bereits eingeloggt: Hub-Cookie / Hub-Pflicht → auth_via nachziehen
         if (Auth::isLoggedIn()) {
-            if (($_SESSION['auth_via'] ?? '') === '') {
+            $via = (string)($_SESSION['auth_via'] ?? '');
+            if ($via !== 'churchforge_hub') {
                 $existing = self::read();
                 if (is_array($existing) && $existing !== []) {
+                    $_SESSION['auth_via'] = 'churchforge_hub';
+                } elseif (self::shouldUseHubLogin()) {
                     $_SESSION['auth_via'] = 'churchforge_hub';
                 }
             }

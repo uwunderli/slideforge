@@ -144,29 +144,35 @@ class Auth
 
     /**
      * Sitzung über Hub (nicht lokales Passwort).
-     * Auf Prod (Hub-Login Pflicht) gilt jeder Login als Hub — ausser explizit auth_via=local.
+     * Auf Prod (Hub-Login Pflicht) gilt jeder eingeloggte User als Hub —
+     * sticky auth_via=local aus alten Sessions darf den Dock nicht blockieren.
      */
     public static function isViaHub(): bool
     {
-        $via = (string)($_SESSION['auth_via'] ?? '');
-        if ($via === 'local') {
+        if (!self::isLoggedIn()) {
             return false;
         }
-        if ($via === 'churchforge_hub') {
-            return true;
-        }
-        if (class_exists('SharedAuth') && method_exists('SharedAuth', 'shouldUseHubLogin')
-            && SharedAuth::shouldUseHubLogin() && self::isLoggedIn()
-        ) {
-            $_SESSION['auth_via'] = 'churchforge_hub';
-            return true;
-        }
+
+        // Hub-Cookie immer als Hub zählen (schlägt sticky local)
         if (class_exists('SharedAuth')) {
             $payload = SharedAuth::read();
             if (is_array($payload) && $payload !== []) {
                 $_SESSION['auth_via'] = 'churchforge_hub';
                 return true;
             }
+        }
+
+        // Prod / Hub-Pflicht-Hosts: lokales Login-UI gibt es nicht → immer Hub-Dock
+        if (class_exists('SharedAuth') && method_exists('SharedAuth', 'shouldUseHubLogin')
+            && SharedAuth::shouldUseHubLogin()
+        ) {
+            $_SESSION['auth_via'] = 'churchforge_hub';
+            return true;
+        }
+
+        $via = (string)($_SESSION['auth_via'] ?? '');
+        if ($via === 'churchforge_hub') {
+            return true;
         }
         return false;
     }
