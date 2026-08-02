@@ -122,19 +122,19 @@ require __DIR__ . '/includes/header.php';
     <iframe id="mainFrame" src="present_frame.php?id=<?= urlencode($id) ?>&mode=main&amp;start=<?= (int)$startSlide ?>" title="<?= h(t('present.current_slide')) ?>"></iframe>
     <div class="present-notes-overlay" id="presentNotesOverlay" hidden>
       <div class="present-notes-sheet" id="presentNotesSheet">
-        <div class="present-notes-body" id="presentNotesBody" title="<?= h(t('present.notes_collapse_hint')) ?>">
-          <div class="present-notes-overlay-inner" id="notesPanel" role="region" aria-label="<?= h(t('present.notes')) ?>"></div>
-        </div>
         <button
           type="button"
           class="present-notes-register"
           id="presentNotesRegister"
           aria-controls="notesPanel"
           aria-expanded="true"
-          title="<?= h(t('present.notes')) ?>"
+          title="<?= h(t('present.notes_expand_hint')) ?>"
         >
           <span class="present-notes-register-label"><?= h(t('present.notes')) ?></span>
         </button>
+        <div class="present-notes-body" id="presentNotesBody" title="<?= h(t('present.notes_collapse_hint')) ?>">
+          <div class="present-notes-overlay-inner" id="notesPanel" role="region" aria-label="<?= h(t('present.notes')) ?>"></div>
+        </div>
       </div>
     </div>
   </div>

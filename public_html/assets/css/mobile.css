@@ -837,13 +837,10 @@ html.sf-tablet body.present-mode .filmstrip-notes-badge svg {
 }
 
 html.sf-tablet body.present-mode .present-notes-overlay {
-  --present-notes-register-w: 56px;
+  --present-notes-register-h: 56px;
 }
 html.sf-tablet body.present-mode .present-notes-register {
-  min-height: 132px;
-}
-html.sf-tablet body.present-mode .present-notes-overlay.is-collapsed .present-notes-register {
-  min-height: 160px;
+  min-height: 56px;
 }
 
 html.sf-tablet body.present-mode .present-panel-resize-handle {
