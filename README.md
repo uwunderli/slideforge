@@ -7,7 +7,7 @@
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v2.1.6](https://github.com/uwunderli/slideforge/releases/tag/v2.1.6)
+**Repository:** [github.com/uwunderli/slideforge](https://github.com/uwunderli/slideforge) · **Release:** [v2.1.7](https://github.com/uwunderli/slideforge/releases/tag/v2.1.7)
 
 **Live demo:** [slideforge.service7.ch](https://slideforge.service7.ch/) *(resets every 12h — credentials on login page)*
 
