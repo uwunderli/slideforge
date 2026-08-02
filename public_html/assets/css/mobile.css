@@ -865,10 +865,20 @@ html.sf-tablet body.present-mode .present-panel-settings-check input {
   height: 22px;
 }
 
-html.sf-tablet body.present-mode .topbar-icon-btn,
-html.sf-tablet body.present-mode .user-menu-trigger {
+html.sf-tablet body.present-mode .topbar-icon-btn {
   width: 48px;
   height: 48px;
+}
+
+html.sf-tablet body.present-mode .hub-user-chip {
+  min-height: 48px;
+  padding: 0.2rem 0.25rem 0.2rem 0.75rem;
+  font-size: 1rem;
+}
+
+html.sf-tablet body.present-mode .hub-user-chip__avatar {
+  width: 40px;
+  height: 40px;
 }
 
 html.sf-tablet body.present-mode .topbar-icon-btn svg:not(.lang-flag-icon) {
@@ -876,12 +886,8 @@ html.sf-tablet body.present-mode .topbar-icon-btn svg:not(.lang-flag-icon) {
   height: 22px;
 }
 
-html.sf-tablet body.present-mode .lang-flag-icon {
-  width: 26px;
-}
-
-html.sf-tablet body.present-mode .topbar-lang-option,
-html.sf-tablet body.present-mode .user-menu-dropdown a {
+html.sf-tablet body.present-mode .hub-user-menu__dropdown a,
+html.sf-tablet body.present-mode .hub-user-menu .user-menu-dropdown a {
   min-height: 48px;
   padding: 12px 14px;
   font-size: 1rem;

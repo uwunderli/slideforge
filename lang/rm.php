@@ -9,6 +9,11 @@ return [
     'nav.theme_to_light' => '☀️ Tema cler',
     'nav.theme_system' => '💻 Tenor sistem',
     'nav.language' => 'Lingua',
+    'settings.language' => 'Lingua',
+    'settings.appearance' => 'Presentaziun',
+    'settings.theme.dark' => 'Stgir',
+    'settings.theme.light' => 'Cler',
+    'settings.theme.system' => 'Sistem',
 
     'demo.banner' => 'Instanza da demonstraziun – las datas vegnan resettadas regularmain. Na utilisai betg per cuntegn da producziun.',
 

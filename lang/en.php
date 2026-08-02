@@ -9,6 +9,11 @@ return [
     'nav.theme_to_light' => '☀️ Day',
     'nav.theme_system' => '💻 System',
     'nav.language' => 'Language',
+    'settings.language' => 'Language',
+    'settings.appearance' => 'Appearance',
+    'settings.theme.dark' => 'Dark',
+    'settings.theme.light' => 'Light',
+    'settings.theme.system' => 'System',
 
     'demo.banner' => 'Demo instance – data is reset every 12 hours. Do not use for production content.',
     'demo.next_reset' => 'Next reset in',

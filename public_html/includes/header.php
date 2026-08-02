@@ -50,6 +50,9 @@ $manifestUrl = $webPrefix . '/manifest.php';
 <?php if ($currentUser && class_exists('Launcher')): ?>
 <link rel="stylesheet" href="<?= h(churchforge_shared_asset_url('cf-launcher.css')) ?>?v=<?= ASSET_VERSION ?>">
 <?php endif; ?>
+<?php if ($currentUser): ?>
+<link rel="stylesheet" href="assets/css/hub-user-menu.css?v=<?= ASSET_VERSION ?>">
+<?php endif; ?>
 <script src="assets/js/cf-theme.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
@@ -97,92 +100,11 @@ window.SF_DIALOG_I18N = <?= json_encode([
   </div>
   <div class="topbar-user">
     <?php require __DIR__ . '/launcher.php'; ?>
-    <div class="topbar-lang-menu">
-      <button type="button" class="topbar-icon-btn topbar-lang-trigger" id="langMenuTrigger" aria-expanded="false" aria-haspopup="true" title="<?= h(t('nav.language')) ?>">
-        <?= I18n::flagSvg($currentLang) ?>
-      </button>
-      <div class="topbar-lang-dropdown" id="langMenuDropdown" hidden>
-        <?php foreach (I18n::SUPPORTED as $code => $label): ?>
-        <a href="lang_toggle.php?lang=<?= h($code) ?>&redirect=<?= $redirectUri ?>" class="topbar-lang-option<?= $currentLang === $code ? ' active' : '' ?>">
-          <?= I18n::flagSvg($code) ?>
-          <span><?= h($label) ?></span>
-        </a>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <a href="theme_toggle.php?redirect=<?= $redirectUri ?>" class="topbar-icon-btn topbar-theme-btn" title="<?= h(
-      $themePref === 'system' ? t('nav.theme_system') : ($theme === 'light' ? t('nav.theme_to_dark') : t('nav.theme_to_light'))
-    ) ?>">
-      <?php if ($themePref === 'system'): ?>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      <?php elseif ($theme === 'light'): ?>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <?php else: ?>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      <?php endif; ?>
-    </a>
-    <div class="user-menu">
-      <button type="button" class="user-menu-trigger" id="userMenuTrigger" title="<?= h($currentUser['username']) ?>">
-        <?php if (!empty($currentUser['avatar'])): ?>
-          <img src="uploads/avatars/<?= h($currentUser['avatar']) ?>" alt="">
-        <?php else: ?>
-          <span><?= h(mb_strtoupper(mb_substr($currentUser['username'], 0, 1))) ?></span>
-        <?php endif; ?>
-      </button>
-      <div class="user-menu-dropdown" id="userMenuDropdown">
-        <div class="user-menu-name"><?= h($currentUser['username']) ?></div>
-        <a href="templates.php"><?= h(t('nav.templates')) ?></a>
-        <a href="import.php"><?= h(t('nav.import')) ?></a>
-        <div class="user-menu-sep"></div>
-        <a href="profile.php"><?= h(t('nav.profile')) ?></a>
-        <?php if (Auth::isAdmin()): ?>
-          <a href="admin_settings.php"><?= h(t('nav.settings')) ?></a>
-        <?php endif; ?>
-        <a href="logout.php"><?= h(t('nav.logout')) ?></a>
-      </div>
-    </div>
+    <?php require __DIR__ . '/user_menu.php'; ?>
   </div>
 </header>
-<script>
-(function () {
-  const userTrigger = document.getElementById('userMenuTrigger');
-  const userDropdown = document.getElementById('userMenuDropdown');
-  const langTrigger = document.getElementById('langMenuTrigger');
-  const langDropdown = document.getElementById('langMenuDropdown');
-
-  function closeAllTopMenus() {
-    userDropdown?.classList.remove('open');
-    if (langDropdown) langDropdown.hidden = true;
-    langTrigger?.setAttribute('aria-expanded', 'false');
-  }
-
-  if (userTrigger && userDropdown) {
-    userTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const willOpen = !userDropdown.classList.contains('open');
-      closeAllTopMenus();
-      if (willOpen) userDropdown.classList.add('open');
-    });
-  }
-
-  if (langTrigger && langDropdown) {
-    langTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const willOpen = langDropdown.hidden;
-      closeAllTopMenus();
-      if (willOpen) {
-        langDropdown.hidden = false;
-        langTrigger.setAttribute('aria-expanded', 'true');
-      }
-    });
-  }
-
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('.topbar-lang-menu') || e.target.closest('.user-menu')) return;
-    closeAllTopMenus();
-  });
-})();
-</script>
+<script src="assets/js/hub-user-menu.js?v=<?= ASSET_VERSION ?>"></script>
+<script>window.HubUserMenu && HubUserMenu.bindAll();</script>
 <?php else: ?>
 <div class="anon-lang-switch">
   <?php foreach (I18n::SUPPORTED as $code => $label): ?>

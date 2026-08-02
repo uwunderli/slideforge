@@ -9,6 +9,11 @@ return [
     'nav.theme_to_light' => '☀️ Tema chiaro',
     'nav.theme_system' => '💻 Come il sistema',
     'nav.language' => 'Lingua',
+    'settings.language' => 'Lingua',
+    'settings.appearance' => 'Aspetto',
+    'settings.theme.dark' => 'Scuro',
+    'settings.theme.light' => 'Chiaro',
+    'settings.theme.system' => 'Sistema',
 
     'demo.banner' => 'Istanza demo &ndash; i dati vengono reimpostati regolarmente. Non utilizzare per contenuti di produzione.',
 

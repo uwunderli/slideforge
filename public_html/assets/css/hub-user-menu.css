@@ -1,0 +1,188 @@
+/**
+ * HubUserMenu — Header-Benutzerchip + Dropdown (Lab → Branding → Benutzer).
+ * Quelle für Module: diese Datei vendorn, nicht forken.
+ *
+ * Tokens: Hub `--surface*` / `--border` / `--text*` / `--accent`.
+ * Module ohne Hub-Tokens: `--of-*` als Fallback (OfficeForge).
+ */
+.hub-user-menu {
+  --hub-um-chip-bg: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-um-surface: var(--surface, var(--of-surface, #242830));
+  --hub-um-raised: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-um-border: var(--border, var(--of-border, #3a4150));
+  --hub-um-text: var(--text, var(--of-text, #e8eaed));
+  --hub-um-muted: var(--text-muted, var(--of-muted, #9aa3b2));
+  --hub-um-accent: var(--accent, var(--of-accent, #428bbe));
+  --hub-um-shadow: var(--shadow, var(--of-shadow, 0 8px 24px rgba(0, 0, 0, 0.3)));
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Alias: ältere Markup-Klasse */
+.hub-user-menu.user-menu {
+  position: relative;
+}
+
+.hub-user-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: auto;
+  height: auto;
+  min-height: 34px;
+  margin: 0;
+  padding: 0.15rem 0.2rem 0.15rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-chip-bg);
+  color: var(--hub-um-text);
+  cursor: pointer;
+  overflow: visible;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+.hub-user-chip:hover {
+  border-color: var(--hub-um-accent);
+}
+.hub-user-chip:focus-visible {
+  outline: 2px solid var(--hub-um-accent);
+  outline-offset: 2px;
+}
+
+.hub-user-chip__name {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.hub-user-chip__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+.hub-user-chip__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hub-user-chip__initial {
+  line-height: 1;
+  color: #fff;
+}
+
+.hub-user-menu__dropdown,
+.hub-user-menu .user-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--hub-um-surface);
+  border: 1px solid var(--hub-um-border);
+  border-radius: 10px;
+  box-shadow: var(--hub-um-shadow);
+  padding: 6px;
+  z-index: 120;
+  box-sizing: border-box;
+}
+
+.hub-user-menu__dropdown.is-open,
+.hub-user-menu__dropdown.open,
+.hub-user-menu .user-menu-dropdown.is-open,
+.hub-user-menu .user-menu-dropdown.open {
+  display: block;
+}
+
+.hub-user-menu__name,
+.hub-user-menu .user-menu-name {
+  display: grid;
+  gap: 0.1rem;
+  padding: 8px 10px 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--hub-um-text);
+  border-bottom: 1px solid var(--hub-um-border);
+  margin-bottom: 4px;
+}
+
+.hub-user-menu__pref,
+.hub-user-menu .user-menu-pref {
+  margin: 0;
+  padding: 4px 6px 6px;
+}
+.hub-user-menu__pref label,
+.hub-user-menu .user-menu-pref label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--hub-um-muted);
+  font-weight: 600;
+}
+.hub-user-menu__pref select,
+.hub-user-menu .user-menu-pref select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-raised);
+  color: var(--hub-um-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.25rem 0.45rem;
+  box-sizing: border-box;
+}
+
+.hub-user-menu__dropdown a,
+.hub-user-menu .user-menu-dropdown a,
+.hub-user-menu__dropdown a:link,
+.hub-user-menu__dropdown a:visited,
+.hub-user-menu .user-menu-dropdown a:link,
+.hub-user-menu .user-menu-dropdown a:visited {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--hub-um-text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.hub-user-menu__dropdown a:hover,
+.hub-user-menu .user-menu-dropdown a:hover {
+  background: var(--hub-um-raised);
+  text-decoration: none;
+  color: var(--hub-um-text);
+}
+
+.hub-user-menu__sep,
+.hub-user-menu .user-menu-sep {
+  height: 1px;
+  background: var(--hub-um-border);
+  margin: 4px 2px;
+}
+
+@media (max-width: 640px) {
+  .hub-user-chip__name {
+    max-width: 7rem;
+  }
+}

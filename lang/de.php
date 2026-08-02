@@ -10,6 +10,11 @@ return [
     'nav.theme_to_light' => '☀️ Tag',
     'nav.theme_system' => '💻 System',
     'nav.language' => 'Sprache',
+    'settings.language' => 'Sprache',
+    'settings.appearance' => 'Darstellung',
+    'settings.theme.dark' => 'Dunkel',
+    'settings.theme.light' => 'Hell',
+    'settings.theme.system' => 'System',
 
     'demo.banner' => 'Testinstanz – Daten werden alle 12 Stunden zurückgesetzt. Nicht für produktive Inhalte verwenden.',
     'demo.next_reset' => 'Nächste Zurücksetzung in',

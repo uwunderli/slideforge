@@ -365,52 +365,7 @@ a:hover { text-decoration: underline; }
 }
 .topbar-lang-option .lang-flag-icon { flex-shrink: 0; }
 
-.user-menu { position: relative; }
-.user-menu-trigger {
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-  padding: 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-.user-menu-trigger img { width: 100%; height: 100%; object-fit: cover; }
-.user-menu-dropdown {
-  display: none;
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 180px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-  padding: 6px;
-  z-index: 50;
-}
-.user-menu-dropdown.open { display: block; }
-.user-menu-name {
-  padding: 8px 10px 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 4px;
-}
-.user-menu-dropdown a {
-  display: block;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  text-decoration: none;
-  font-size: 0.88rem;
-}
-.user-menu-dropdown a:hover { background: var(--surface-raised); }
+/* Benutzermenü: kanonisch HubUserMenu (hub-user-menu.css) */
 .anon-lang-switch {
   position: fixed;
   top: 16px;
@@ -429,7 +384,6 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .anon-lang-switch a.active { border-color: var(--accent); color: var(--accent); }
-.user-menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
 
 /* ---------- Buttons & Forms ---------- */
 .button {

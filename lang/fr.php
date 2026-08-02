@@ -9,6 +9,11 @@ return [
     'nav.theme_to_light' => '☀️ Thème clair',
     'nav.theme_system' => '💻 Selon le système',
     'nav.language' => 'Langue',
+    'settings.language' => 'Langue',
+    'settings.appearance' => 'Apparence',
+    'settings.theme.dark' => 'Sombre',
+    'settings.theme.light' => 'Clair',
+    'settings.theme.system' => 'Système',
 
     'demo.banner' => 'Instance de démonstration – les données sont réinitialisées toutes les 12 heures. Ne pas utiliser pour du contenu de production.',
     'demo.next_reset' => 'Prochaine réinitialisation dans',
