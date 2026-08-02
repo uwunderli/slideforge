@@ -425,6 +425,7 @@ window.SF_PRESENT = {
   startSlide: <?= (int)$startSlide ?>,
   slideDisabled: <?= json_encode($slideDisabled) ?>,
   notesHtml: <?= json_encode($notesHtml, JSON_UNESCAPED_UNICODE) ?>,
+  slideBgSwatches: <?= json_encode($swatches, JSON_UNESCAPED_UNICODE) ?>,
   slideWidth: <?= (int)$meta['width'] ?>,
   slideHeight: <?= (int)$meta['height'] ?>,
   timebarStops: <?= json_encode($timebarStops, JSON_UNESCAPED_UNICODE) ?>,

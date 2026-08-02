@@ -2240,6 +2240,15 @@ body.present-panel-resizing {
 }
 .present-notes-overlay {
   --present-notes-register-h: 48px;
+  /* Kontrast zur Folie — data-notes-contrast per JS (nicht UI-Theme) */
+  --present-notes-fg: #f4f1ea;
+  --present-notes-bg: rgba(14, 16, 20, 0.78);
+  --present-notes-register-bg: rgba(14, 16, 20, 0.92);
+  --present-notes-register-bg-hover: rgba(30, 36, 46, 0.96);
+  --present-notes-border: rgba(255, 255, 255, 0.12);
+  --present-notes-grip: rgba(255, 255, 255, 0.4);
+  --present-notes-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --present-notes-code-bg: rgba(255, 255, 255, 0.1);
   position: absolute;
   left: 0;
   right: 0;
@@ -2281,6 +2290,16 @@ body.present-panel-resizing {
   flex-direction: column;
   cursor: pointer;
 }
+.present-notes-overlay[data-notes-contrast="on-light"] {
+  --present-notes-fg: #1c1914;
+  --present-notes-bg: rgba(250, 247, 240, 0.88);
+  --present-notes-register-bg: rgba(250, 247, 240, 0.94);
+  --present-notes-register-bg-hover: rgba(255, 255, 255, 0.98);
+  --present-notes-border: rgba(28, 25, 20, 0.14);
+  --present-notes-grip: rgba(28, 25, 20, 0.35);
+  --present-notes-shadow: 0 1px 1px rgba(255, 255, 255, 0.55);
+  --present-notes-code-bg: rgba(28, 25, 20, 0.08);
+}
 .present-notes-overlay-inner {
   width: 100%;
   flex: 1 1 auto;
@@ -2289,11 +2308,11 @@ body.present-panel-resizing {
   padding: 12px max(48px, 8%) 16px max(48px, 8%);
   font-size: 0.92rem;
   line-height: 1.55;
-  color: var(--text);
-  background: rgba(14, 16, 20, 0.72);
+  color: var(--present-notes-fg);
+  background: var(--present-notes-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  text-shadow: var(--present-notes-shadow);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -2307,31 +2326,31 @@ body.present-panel-resizing {
   margin: 0;
   padding: 0 16px;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--present-notes-border);
   border-radius: 10px 10px 0 0;
-  background: rgba(14, 16, 20, 0.9);
+  background: var(--present-notes-register-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #fff;
+  color: var(--present-notes-fg);
   cursor: pointer;
   touch-action: manipulation;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.22);
 }
 .present-notes-register::before {
   content: '';
   width: 36px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--present-notes-grip);
   flex-shrink: 0;
 }
 .present-notes-register:hover,
 .present-notes-register:focus-visible {
-  background: rgba(30, 36, 46, 0.96);
+  background: var(--present-notes-register-bg-hover);
   outline: none;
 }
 .present-notes-register:focus-visible {
@@ -2361,7 +2380,7 @@ body.present-panel-resizing {
 .present-notes-overlay-inner code {
   font-family: var(--font-mono);
   font-size: 0.88em;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--present-notes-code-bg);
   padding: 0.1em 0.35em;
   border-radius: 3px;
 }

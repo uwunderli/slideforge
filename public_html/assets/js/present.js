@@ -966,6 +966,50 @@
 
   applyPanelLayout(P.presentPanels || []);
 
+  function sampleSlideBgColor(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return '#222222';
+    if (s.charAt(0) === '#' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(s)) {
+      return s.length === 9 ? s.slice(0, 7) : s;
+    }
+    const hex = s.match(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/);
+    if (hex) return hex[0];
+    const rgb = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgb) {
+      const toHex = (n) => Math.max(0, Math.min(255, parseInt(n, 10))).toString(16).padStart(2, '0');
+      return '#' + toHex(rgb[1]) + toHex(rgb[2]) + toHex(rgb[3]);
+    }
+    return '#222222';
+  }
+
+  function expandHex(hex) {
+    const h = String(hex || '').replace('#', '');
+    if (h.length === 3) {
+      return [0, 1, 2].map((i) => parseInt(h[i] + h[i], 16));
+    }
+    if (h.length >= 6) {
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    return [34, 34, 34];
+  }
+
+  function relativeLuminance(hex) {
+    const channels = expandHex(hex).map((c) => {
+      const v = c / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  }
+
+  function applyNotesContrastForSlide(h) {
+    const overlay = document.getElementById('presentNotesOverlay');
+    if (!overlay) return;
+    const swatches = Array.isArray(P.slideBgSwatches) ? P.slideBgSwatches : [];
+    const sample = sampleSlideBgColor(swatches[h] != null ? swatches[h] : '#222222');
+    const onLight = relativeLuminance(sample) >= 0.45;
+    overlay.dataset.notesContrast = onLight ? 'on-light' : 'on-dark';
+  }
+
   function syncNotesForSlide(h) {
     const overlay = document.getElementById('presentNotesOverlay');
     const notesPanel = document.getElementById('notesPanel');
@@ -973,6 +1017,7 @@
     const hasNotes = !!(html && html.trim() !== '');
     if (notesPanel) notesPanel.innerHTML = hasNotes ? html : '';
     if (overlay) overlay.hidden = !hasNotes;
+    applyNotesContrastForSlide(h);
     if (hasNotes) {
       window.SlideForgePresentNotes?.onSlideChange?.();
     }
