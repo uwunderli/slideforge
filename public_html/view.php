@@ -118,6 +118,9 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
               if (media.action === 'play') { el.play && el.play().catch(function () {}); }
               else if (media.action === 'pause') { el.pause && el.pause(); }
               else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (err) {} }
+              else if (media.action === 'seek' && typeof media.time === 'number') {
+                try { el.currentTime = media.time; } catch (err) {}
+              }
             }
           }
         })

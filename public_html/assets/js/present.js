@@ -1133,6 +1133,7 @@
       window.SlideForgePresentLayout?.broadcastSlideGhost?.();
       try { mainFrame.contentWindow?.focus(); } catch (err) { /* ignore */ }
       if (!controlsBound) { bindControls(); controlsBound = true; }
+      wrapRevealNavigation(mainReveal);
     });
   });
 
@@ -1157,6 +1158,117 @@
     syncNextPreview();
     broadcastPosition(h);
     updateMediaControls();
+  }
+
+  function getCurrentSlideSection() {
+    try {
+      const slides = Array.from(mainFrame.contentDocument.querySelectorAll('.reveal .slides > section'));
+      return slides[currentIndex] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function currentSlideHasPlayingMedia() {
+    const slide = getCurrentSlideSection();
+    if (!slide) return false;
+    return Array.from(slide.querySelectorAll('video, audio')).some((el) => {
+      try {
+        return !el.paused && !el.ended && el.readyState > 0;
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  function navigationWouldLeaveSlide(method, args) {
+    if (!mainReveal) return false;
+    if (method === 'slide') {
+      const targetH = args[0];
+      const cur = (mainReveal.getIndices() || {}).h;
+      return typeof targetH === 'number' && targetH !== cur;
+    }
+    try {
+      const fr = typeof mainReveal.availableFragments === 'function'
+        ? (mainReveal.availableFragments() || {})
+        : {};
+      if (method === 'next' && fr.next) return false;
+      if (method === 'prev' && fr.prev) return false;
+    } catch (e) { /* ignore */ }
+    return method === 'next' || method === 'prev';
+  }
+
+  let mediaNavGuardPending = false;
+  let mediaNavAllowedOnce = false;
+  let revealNavWrapped = false;
+
+  async function confirmLeavePlayingMedia() {
+    if (!currentSlideHasPlayingMedia()) return true;
+    const msg = (P.i18n && P.i18n.mediaLeaveConfirm)
+      || 'Auf dieser Folie läuft noch eine Mediendatei. Wirklich wechseln und die Wiedergabe stoppen?';
+    if (window.SFDialog && typeof window.SFDialog.confirm === 'function') {
+      return window.SFDialog.confirm(msg);
+    }
+    return true;
+  }
+
+  function wrapRevealNavigation(reveal) {
+    if (!reveal || revealNavWrapped) return;
+    revealNavWrapped = true;
+    ['next', 'prev', 'slide'].forEach((method) => {
+      if (typeof reveal[method] !== 'function') return;
+      const orig = reveal[method].bind(reveal);
+      reveal[method] = function (...args) {
+        if (mediaNavAllowedOnce) {
+          mediaNavAllowedOnce = false;
+          return orig(...args);
+        }
+        if (mediaNavGuardPending) return undefined;
+        if (!navigationWouldLeaveSlide(method, args) || !currentSlideHasPlayingMedia()) {
+          return orig(...args);
+        }
+        mediaNavGuardPending = true;
+        confirmLeavePlayingMedia().then((ok) => {
+          mediaNavGuardPending = false;
+          if (!ok) return;
+          mediaNavAllowedOnce = true;
+          orig(...args);
+        });
+        return undefined;
+      };
+    });
+  }
+
+  function formatMediaTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) sec = 0;
+    const s = Math.floor(sec % 60);
+    const m = Math.floor(sec / 60) % 60;
+    const h = Math.floor(sec / 3600);
+    const pad = (n) => String(n).padStart(2, '0');
+    return h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (m + ':' + pad(s));
+  }
+
+  function findFrameMedia(mediaId) {
+    try {
+      return mainFrame.contentDocument.querySelector('[data-media-id="' + mediaId.replace(/"/g, '') + '"]');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function applyMediaLocally(mediaId, action, time) {
+    const el = findFrameMedia(mediaId);
+    if (!el) return;
+    if (action === 'play') {
+      el.play && el.play().catch(() => {});
+    } else if (action === 'pause') {
+      el.pause && el.pause();
+    } else if (action === 'stop') {
+      el.pause && el.pause();
+      try { el.currentTime = 0; } catch (e) { /* ignore */ }
+    } else if (action === 'seek' && Number.isFinite(time)) {
+      try { el.currentTime = Math.max(0, time); } catch (e) { /* ignore */ }
+    }
   }
 
   function updateMediaControls() {
@@ -1189,34 +1301,94 @@
       list.innerHTML = '';
       return;
     }
+    const i18n = P.i18n || {};
     list.innerHTML = mediaEls.map((el) => {
       const mid = el.getAttribute('data-media-id');
       const label = el.tagName === 'AUDIO' ? 'Audio' : 'Video';
       const slideEl = el.closest('section');
       const slideIdx = allSlides.indexOf(slideEl);
       const slideLabel = slideIdx >= 0 ? (' &ndash; Folie ' + (slideIdx + 1)) : '';
-      return '<div class="media-control-row">' +
-        '<span>' + label + slideLabel + '</span>' +
-        '<div class="media-control-btns">' +
-          '<button type="button" data-media-cmd="play" data-media-id="' + mid + '" title="Abspielen">▶</button>' +
-          '<button type="button" data-media-cmd="pause" data-media-id="' + mid + '" title="Pause">⏸</button>' +
-          '<button type="button" data-media-cmd="stop" data-media-id="' + mid + '" title="Stopp">⏹</button>' +
+      const dur = Number.isFinite(el.duration) ? el.duration : 0;
+      const cur = Number.isFinite(el.currentTime) ? el.currentTime : 0;
+      const max = dur > 0 ? dur : Math.max(cur, 1);
+      return '<div class="media-control-row" data-media-row="' + mid + '">' +
+        '<div class="media-control-row-top">' +
+          '<span>' + label + slideLabel + '</span>' +
+          '<div class="media-control-btns">' +
+            '<button type="button" data-media-cmd="play" data-media-id="' + mid + '" title="' + (i18n.mediaPlay || 'Abspielen') + '">▶</button>' +
+            '<button type="button" data-media-cmd="pause" data-media-id="' + mid + '" title="' + (i18n.mediaPause || 'Pause') + '">⏸</button>' +
+            '<button type="button" data-media-cmd="stop" data-media-id="' + mid + '" title="' + (i18n.mediaStop || 'Stopp') + '">⏹</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="media-control-seek">' +
+          '<input type="range" min="0" max="' + max + '" step="0.1" value="' + cur + '" data-media-seek="' + mid + '" aria-label="' + (i18n.mediaSeek || 'Position') + '">' +
+          '<span class="media-control-time" data-media-time="' + mid + '">' + formatMediaTime(cur) + ' / ' + formatMediaTime(dur) + '</span>' +
         '</div>' +
       '</div>';
     }).join('');
+
     list.querySelectorAll('[data-media-cmd]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        withLeaderControl(() => sendMediaCommand(btn.dataset.mediaId, btn.dataset.mediaCmd));
+        withLeaderControl(() => {
+          applyMediaLocally(btn.dataset.mediaId, btn.dataset.mediaCmd);
+          sendMediaCommand(btn.dataset.mediaId, btn.dataset.mediaCmd);
+        });
       });
+    });
+
+    list.querySelectorAll('[data-media-seek]').forEach((range) => {
+      const mid = range.dataset.mediaSeek;
+      let scrubbing = false;
+      const syncFromEl = () => {
+        if (scrubbing) return;
+        const el = findFrameMedia(mid);
+        if (!el) return;
+        const dur = Number.isFinite(el.duration) ? el.duration : 0;
+        const cur = Number.isFinite(el.currentTime) ? el.currentTime : 0;
+        if (dur > 0) range.max = String(dur);
+        range.value = String(cur);
+        const timeEl = list.querySelector('[data-media-time="' + mid + '"]');
+        if (timeEl) timeEl.textContent = formatMediaTime(cur) + ' / ' + formatMediaTime(dur);
+      };
+      const commitSeek = () => {
+        const t = parseFloat(range.value);
+        if (!Number.isFinite(t)) return;
+        withLeaderControl(() => {
+          applyMediaLocally(mid, 'seek', t);
+          sendMediaCommand(mid, 'seek', t);
+        });
+      };
+      range.addEventListener('pointerdown', () => { scrubbing = true; });
+      range.addEventListener('pointerup', () => { scrubbing = false; commitSeek(); });
+      range.addEventListener('change', () => { scrubbing = false; commitSeek(); });
+      range.addEventListener('input', () => {
+        const t = parseFloat(range.value);
+        const el = findFrameMedia(mid);
+        const dur = el && Number.isFinite(el.duration) ? el.duration : parseFloat(range.max) || 0;
+        const timeEl = list.querySelector('[data-media-time="' + mid + '"]');
+        if (timeEl) timeEl.textContent = formatMediaTime(t) + ' / ' + formatMediaTime(dur);
+        // Live-Vorschau lokal während Wischen (ohne Live-Flood)
+        applyMediaLocally(mid, 'seek', t);
+      });
+      const el = findFrameMedia(mid);
+      if (el) {
+        el.addEventListener('timeupdate', syncFromEl);
+        el.addEventListener('loadedmetadata', syncFromEl);
+        el.addEventListener('durationchange', syncFromEl);
+      }
     });
   }
 
-  function sendMediaCommand(mediaId, action) {
+  function sendMediaCommand(mediaId, action, time) {
     if (!P.canBroadcast) return;
+    const body = { action: 'media', media_id: mediaId, media_action: action, csrf_token: P.csrfToken };
+    if (action === 'seek' && Number.isFinite(time)) {
+      body.media_time = time;
+    }
     fetch('live.php?id=' + encodeURIComponent(P.id), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'media', media_id: mediaId, media_action: action, csrf_token: P.csrfToken }),
+      body: JSON.stringify(body),
     }).catch(() => {});
   }
 

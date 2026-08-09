@@ -133,12 +133,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'media') {
         $mediaId = (string)($body['media_id'] ?? '');
         $mediaAction = (string)($body['media_action'] ?? '');
-        if ($mediaId === '' || !in_array($mediaAction, ['play', 'pause', 'stop'], true)) {
+        if ($mediaId === '' || !in_array($mediaAction, ['play', 'pause', 'stop', 'seek'], true)) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'Ungültiger Medien-Befehl.']);
             exit;
         }
-        Presentation::setLiveMediaCommand($id, $mediaId, $mediaAction);
+        $mediaTime = array_key_exists('media_time', $body) ? (float)$body['media_time'] : null;
+        if ($mediaAction === 'seek' && ($mediaTime === null || !is_finite($mediaTime) || $mediaTime < 0)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Ungültige Medien-Position.']);
+            exit;
+        }
+        Presentation::setLiveMediaCommand($id, $mediaId, $mediaAction, $mediaTime);
         echo json_encode(['ok' => true]);
         exit;
     }

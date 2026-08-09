@@ -1393,10 +1393,14 @@ class Presentation
         }, []);
     }
 
-    public static function setLiveMediaCommand(string $id, string $mediaId, string $mediaAction): void
+    public static function setLiveMediaCommand(string $id, string $mediaId, string $mediaAction, ?float $mediaTime = null): void
     {
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($mediaId, $mediaAction) {
-            $data['media'] = ['id' => $mediaId, 'action' => $mediaAction, 'cmd_ts' => microtime(true)];
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($mediaId, $mediaAction, $mediaTime) {
+            $entry = ['id' => $mediaId, 'action' => $mediaAction, 'cmd_ts' => microtime(true)];
+            if ($mediaTime !== null && is_finite($mediaTime) && $mediaTime >= 0) {
+                $entry['time'] = $mediaTime;
+            }
+            $data['media'] = $entry;
             $data['ts'] = time();
             return $data;
         }, ['index' => 0]);

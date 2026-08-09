@@ -181,6 +181,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
               if (media.action === 'play') { el.play && el.play().catch(function () {}); }
               else if (media.action === 'pause') { el.pause && el.pause(); }
               else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (e) {} }
+              else if (media.action === 'seek' && typeof media.time === 'number') {
+                try { el.currentTime = media.time; } catch (e) {}
+              }
             }
           }
         })
