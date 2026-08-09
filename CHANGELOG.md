@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.22] - 2026-08-09
+
+### Changed
+
+- merge: Morgen-WIP aus Stash wiederherstellen
+- fix: Presenter stumm, Ton nur auf Zuschauer-Ansicht
+- WIP on main: e55370b chore(release): v2.1.18
+- index on main: e55370b chore(release): v2.1.18
+- untracked files on main: e55370b chore(release): v2.1.18
+
+
 ## [2.1.21] - 2026-08-09
 
 ### Changed
