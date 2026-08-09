@@ -28,13 +28,15 @@
   <div class="ribbon-widget-shell" data-widget-id="widget-present-audience">
     <?php if ($perm === 'owner'): ?>
     <div class="ribbon-present-display-inner">
-      <div class="ribbon-present-display-col">
+      <div class="ribbon-present-display-col ribbon-present-display-col--link-grid">
         <label class="ribbon-toggle" title="<?= h(t('present.public_link')) ?>">
           <input type="checkbox" id="publicLinkToggle" role="switch" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?>>
           <span class="ribbon-toggle-track" aria-hidden="true"></span>
           <span class="ribbon-toggle-label"><?= h(t('ribbon.present_public_short')) ?></span>
         </label>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="sharePublicLinkBtn" hidden <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.share_link_title')) ?>"><?= h(t('present.share_link')) ?></button>
         <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="copyPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.copy_link')) ?>"><?= h(t('present.copy')) ?></button>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="downloadPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.download_link_title')) ?>"><?= h(t('present.download_link')) ?></button>
         <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
       </div>
     </div>

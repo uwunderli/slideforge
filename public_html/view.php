@@ -113,16 +113,22 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
           const media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
             lastMediaCmdTs = media.cmd_ts;
-            const el = document.querySelector('[data-media-id="' + media.id + '"]');
-            if (el) {
-              if (media.action === 'play') { el.play && el.play().catch(function () {}); }
-              else if (media.action === 'pause') { el.pause && el.pause(); }
-              else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (err) {} }
+            if (typeof sfApplyLiveMediaCommand === 'function') {
+              sfApplyLiveMediaCommand(media);
             }
           }
         })
         .catch(function () {});
     }
+
+    // Nach Live-Folienwechsel Timed-Medien erneut scharf schalten.
+    Reveal.on('slidechanged', function () {
+      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+      if (slide && typeof sfArmMediaTriggers === 'function') {
+        if (!window.__sfViewPlayTimers) window.__sfViewPlayTimers = [];
+        sfArmMediaTriggers(slide, window.__sfViewPlayTimers);
+      }
+    });
 
     pollLive();
     setInterval(pollLive, 400);

@@ -44,35 +44,118 @@
       });
     }
 
-    function syncPublicLinkCopyBtn() {
-      const btn = document.getElementById('copyPublicLinkBtn');
+    function getPublicLinkUrl() {
       const input = document.getElementById('presentPublicLinkInput');
       const toggle = document.getElementById('publicLinkToggle');
-      if (btn) btn.disabled = !toggle?.checked || !input?.value;
+      if (!toggle?.checked || !input?.value) return '';
+      return String(input.value).trim();
+    }
+
+    function presentationTitle() {
+      return String(opts.presentationTitle || i18n.publicLinkDefaultTitle || 'SlideForge').trim();
+    }
+
+    function flashButtonLabel(btn, labelKey, fallback) {
+      if (!btn) return;
+      const original = btn.dataset.sfLabelOriginal || btn.textContent;
+      btn.dataset.sfLabelOriginal = original;
+      btn.textContent = i18n[labelKey] || fallback || 'OK';
+      clearTimeout(btn._sfFlashTimer);
+      btn._sfFlashTimer = setTimeout(() => {
+        btn.textContent = btn.dataset.sfLabelOriginal || original;
+      }, 1500);
+    }
+
+    function publicLinkShareText(url) {
+      const title = presentationTitle();
+      const tpl = i18n.shareText || '„{title}“\n{url}';
+      return tpl.replace(/\{title\}/g, title).replace(/\{url\}/g, url);
+    }
+
+    function publicLinkFileBody(url) {
+      const title = presentationTitle();
+      const tpl = i18n.shareFileBody
+        || 'Präsentation: {title}\n\nÖffentlicher Zuschauer-Link (ohne Login):\n{url}\n';
+      return tpl.replace(/\{title\}/g, title).replace(/\{url\}/g, url);
+    }
+
+    function publicLinkFileName() {
+      let s = presentationTitle().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      s = s.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      if (!s) s = 'praesentation';
+      const suffix = i18n.shareFileSuffix || '-zuschauerlink.txt';
+      return s.slice(0, 48) + suffix;
+    }
+
+    function syncPublicLinkActionBtns() {
+      const enabled = !!getPublicLinkUrl();
+      ['copyPublicLinkBtn', 'sharePublicLinkBtn', 'downloadPublicLinkBtn'].forEach((id) => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = !enabled;
+      });
+      const shareBtn = document.getElementById('sharePublicLinkBtn');
+      if (shareBtn) {
+        const canShare = typeof navigator.share === 'function';
+        shareBtn.hidden = !canShare;
+      }
     }
 
     bindDisplayCommand('show_progress', 'show_progress');
     bindDisplayCommand('show_controls', 'show_controls');
 
     document.getElementById('copyPublicLinkBtn')?.addEventListener('click', (e) => {
-      const input = document.getElementById('presentPublicLinkInput');
-      const toggle = document.getElementById('publicLinkToggle');
-      if (!toggle?.checked || !input?.value) return;
+      const url = getPublicLinkUrl();
+      if (!url) return;
       const btn = e.currentTarget;
-      const original = i18n.copyLink || btn.textContent;
-      const copied = () => {
-        btn.textContent = i18n.copied || 'OK';
-        setTimeout(() => { btn.textContent = original; }, 1500);
-      };
-      navigator.clipboard.writeText(input.value).then(copied).catch(() => {
+      const done = () => flashButtonLabel(btn, 'copied', 'OK');
+      navigator.clipboard.writeText(url).then(done).catch(() => {
         const tmp = document.createElement('textarea');
-        tmp.value = input.value;
+        tmp.value = url;
         document.body.appendChild(tmp);
         tmp.select();
         document.execCommand('copy');
         tmp.remove();
-        copied();
+        done();
       });
+    });
+
+    document.getElementById('sharePublicLinkBtn')?.addEventListener('click', async (e) => {
+      const url = getPublicLinkUrl();
+      if (!url || typeof navigator.share !== 'function') return;
+      const btn = e.currentTarget;
+      const title = presentationTitle();
+      const data = {
+        title: title,
+        text: publicLinkShareText(url),
+        url: url,
+      };
+      try {
+        if (navigator.canShare && !navigator.canShare(data)) {
+          delete data.url;
+        }
+        await navigator.share(data);
+        flashButtonLabel(btn, 'shared', 'OK');
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    });
+
+    document.getElementById('downloadPublicLinkBtn')?.addEventListener('click', (e) => {
+      const url = getPublicLinkUrl();
+      if (!url) return;
+      const btn = e.currentTarget;
+      const body = publicLinkFileBody(url);
+      const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = publicLinkFileName();
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 2000);
+      flashButtonLabel(btn, 'downloaded', 'OK');
     });
 
     function copyRemoteUrl(btn) {
@@ -107,7 +190,7 @@
       const input = document.getElementById('presentPublicLinkInput');
       const prevUrl = input?.value || '';
       if (!enabled && input) input.value = '';
-      syncPublicLinkCopyBtn();
+      syncPublicLinkActionBtns();
       try {
         const res = await fetch('api.php?action=toggle_public_link&id=' + encodeURIComponent(id), {
           method: 'POST',
@@ -118,7 +201,7 @@
         if (!json.ok) {
           e.target.checked = !enabled;
           if (input) input.value = prevUrl;
-          syncPublicLinkCopyBtn();
+          syncPublicLinkActionBtns();
           return;
         }
         if (json.enabled && json.url) {
@@ -126,16 +209,16 @@
         } else if (input) {
           input.value = '';
         }
-        syncPublicLinkCopyBtn();
+        syncPublicLinkActionBtns();
       } catch (err) {
         e.target.checked = !enabled;
         if (input) input.value = prevUrl;
-        syncPublicLinkCopyBtn();
+        syncPublicLinkActionBtns();
       }
     });
 
-    syncPublicLinkCopyBtn();
-    document.addEventListener('sf:ribbon-rendered', () => syncPublicLinkCopyBtn());
+    syncPublicLinkActionBtns();
+    document.addEventListener('sf:ribbon-rendered', () => syncPublicLinkActionBtns());
 
     let audienceWin = null;
     let presentScreens = [];

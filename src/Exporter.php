@@ -138,9 +138,13 @@ class Exporter
 .sf-media-status--ready{color:#b8e6b8}
 .sf-media-status--loading::before{content:'';display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sfMediaSpin .8s linear infinite;vertical-align:-1px}
 @keyframes sfMediaSpin{to{transform:rotate(360deg)}}
+.sf-media-unlock{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:50;display:none;align-items:center;gap:10px;padding:12px 18px;border:none;border-radius:10px;background:#3a6c8d;color:#fff;font:600 15px/1.3 system-ui,sans-serif;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+.sf-media-unlock.is-visible{display:flex}
+.sf-media-unlock:hover{filter:brightness(1.08)}
 </style>
 <div id="sf-media-status" class="sf-media-status sf-media-status--hidden" aria-live="polite" aria-atomic="true"
   data-msg-loading="{$loading}" data-msg-ready="{$ready}"></div>
+<button type="button" id="sf-media-unlock" class="sf-media-unlock" hidden>Klicken für Ton</button>
 HTML;
     }
 
@@ -223,16 +227,28 @@ JS : '';
         return;
       }
       var cancelled = false;
+      var allReadyFired = false;
+      function onReadyEvent() { update(); }
+      function detach() {
+        els.forEach(function (el) {
+          el.removeEventListener('canplay', onReadyEvent);
+          el.removeEventListener('loadeddata', onReadyEvent);
+          el.removeEventListener('sf-hydrated', onReadyEvent);
+          el.removeEventListener('error', onReadyEvent);
+        });
+      }
       sfMediaStatusWatch = {
-        cancel: function () { cancelled = true; }
+        cancel: function () { cancelled = true; detach(); }
       };
       function update() {
-        if (cancelled) return;
+        if (cancelled || allReadyFired) return;
         var ready = els.filter(sfMediaIsReady).length;
         var total = els.length;
         if (ready < total) {
           sfMediaStatusShow('loading', ready, total);
         } else {
+          allReadyFired = true;
+          detach();
           sfMediaStatusShow('ready', total, total);
           document.dispatchEvent(new Event('sf-media-all-ready'));
           sfMediaStatusWatch = null;
@@ -240,20 +256,61 @@ JS : '';
       }
       els.forEach(function (el) {
         if (sfMediaIsReady(el)) return;
-        el.addEventListener('canplay', update);
-        el.addEventListener('loadeddata', update);
-        el.addEventListener('sf-hydrated', update);
-        el.addEventListener('error', update, { once: true });
+        el.addEventListener('canplay', onReadyEvent);
+        el.addEventListener('loadeddata', onReadyEvent);
+        el.addEventListener('sf-hydrated', onReadyEvent);
+        el.addEventListener('error', onReadyEvent, { once: true });
       });
       update();
+    }
+    var sfPendingMedia = [];
+    var sfUnlockBtn = null;
+    function sfShowMediaUnlock(on) {
+      if (!sfUnlockBtn) sfUnlockBtn = document.getElementById('sf-media-unlock');
+      if (!sfUnlockBtn) return;
+      sfUnlockBtn.hidden = !on;
+      sfUnlockBtn.classList.toggle('is-visible', !!on);
+    }
+    function sfFlushPendingMedia() {
+      if (!sfPendingMedia.length) {
+        sfShowMediaUnlock(false);
+        return;
+      }
+      var list = sfPendingMedia.slice();
+      sfPendingMedia = [];
+      sfShowMediaUnlock(false);
+      list.forEach(function (el) { sfPlayMedia(el, true); });
     }
     (function sfMediaUnlockSetup() {
       if (window.__sfMediaUnlockSetup) return;
       window.__sfMediaUnlockSetup = true;
-      function unlock() { window.__sfMediaUnlocked = true; }
+      function onGesture() {
+        window.__sfMediaUnlocked = true;
+        sfFlushPendingMedia();
+      }
       ['click', 'keydown', 'touchstart'].forEach(function (ev) {
-        document.addEventListener(ev, unlock, { once: true, capture: true });
+        document.addEventListener(ev, onGesture, { capture: true });
       });
+      document.addEventListener('DOMContentLoaded', function () {
+        sfUnlockBtn = document.getElementById('sf-media-unlock');
+        if (sfUnlockBtn) {
+          sfUnlockBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.__sfMediaUnlocked = true;
+            sfFlushPendingMedia();
+          });
+        }
+      });
+      sfUnlockBtn = document.getElementById('sf-media-unlock');
+      if (sfUnlockBtn) {
+        sfUnlockBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.__sfMediaUnlocked = true;
+          sfFlushPendingMedia();
+        });
+      }
     })();
     function sfWhenMediaReady(el, cb) {
       function run() {
@@ -266,43 +323,99 @@ JS : '';
       }
       run();
     }
-    function sfPlayMedia(el) {
+    function sfPlayMedia(el, fromPending) {
       if (!el || !el.play) return;
+      try { el.muted = false; } catch (e) {}
       sfWhenMediaReady(el, function () {
-        var attempt = function () {
-          var p = el.play();
-          if (p && p.catch) {
-            p.catch(function () {
-              var retry = function () {
-                el.play().catch(function () {});
-              };
-              document.addEventListener('click', retry, { once: true, capture: true });
-              document.addEventListener('keydown', retry, { once: true, capture: true });
-            });
-          }
-        };
-        attempt();
+        var p = el.play();
+        if (p && p.catch) {
+          p.catch(function () {
+            if (sfPendingMedia.indexOf(el) === -1) sfPendingMedia.push(el);
+            sfShowMediaUnlock(true);
+          });
+        }
       });
+    }
+    function sfApplyLiveMediaCommand(media) {
+      if (!media || !media.id) return;
+      var el = document.querySelector('[data-media-id="' + media.id + '"]');
+      if (!el) return;
+      if (media.action === 'play') {
+        if (!el.paused && !el.ended) return;
+        el.dataset.sfTimedArmed = '1';
+        if (el.ended) {
+          try { el.currentTime = 0; } catch (err) {}
+        }
+        sfPlayMedia(el);
+      } else if (media.action === 'pause') { el.pause && el.pause(); }
+      else if (media.action === 'stop') {
+        el.pause && el.pause();
+        try { el.currentTime = 0; } catch (err) {}
+        el.dataset.sfTimedArmed = '1';
+        var idx = sfPendingMedia.indexOf(el);
+        if (idx >= 0) sfPendingMedia.splice(idx, 1);
+        if (!sfPendingMedia.length) sfShowMediaUnlock(false);
+      }
     }
     function sfResetMedia(slideEl) {
       if (!slideEl) return;
       slideEl.querySelectorAll('video, audio').forEach(function (el) {
         el.pause();
         try { el.currentTime = 0; } catch (e) {}
+        delete el.dataset.sfTimedArmed;
+        delete el.dataset.sfTimedAudienceSent;
+        var idx = sfPendingMedia.indexOf(el);
+        if (idx >= 0) sfPendingMedia.splice(idx, 1);
       });
     }
     function sfArmMediaTriggers(slideEl, playTimers) {
       playTimers.forEach(function (t) { clearTimeout(t); });
       playTimers.length = 0;
       if (!slideEl) return;
-      slideEl.querySelectorAll('[data-play-delay]').forEach(function (el) {
+      // Nur timed (data-play-delay); pro Folienbesuch höchstens einmal — sonst wirkt
+      // fehlendes HTML-loop wie eine Dauerschleife (Re-Arm nach ended/canplay/Live).
+      slideEl.querySelectorAll('audio[data-play-delay], video[data-play-delay]').forEach(function (el) {
+        if (el.dataset.sfTimedArmed === '1') return;
+        el.dataset.sfTimedArmed = '1';
         var delay = parseInt(el.getAttribute('data-play-delay'), 10) || 0;
         sfWhenMediaReady(el, function () {
+          if (el.dataset.sfTimedArmed !== '1') return;
+          if (!el.loop && el.ended) return;
           if (delay <= 0) sfPlayMedia(el);
-          else playTimers.push(setTimeout(function () { sfPlayMedia(el); }, delay));
+          else playTimers.push(setTimeout(function () {
+            if (el.dataset.sfTimedArmed !== '1') return;
+            if (!el.loop && el.ended) return;
+            sfPlayMedia(el);
+          }, delay));
         });
       });
     }
+    (function sfMediaClickPlaySetup() {
+      if (window.__sfMediaClickPlaySetup) return;
+      window.__sfMediaClickPlaySetup = true;
+      document.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        // Native Controls behalten ihr eigenes Verhalten.
+        if (t.closest('audio, video')) {
+          var mediaSelf = t.closest('audio, video');
+          if (mediaSelf && (mediaSelf.getAttribute('data-play-trigger') === 'click')) {
+            sfPlayMedia(mediaSelf);
+          }
+          return;
+        }
+        var obj = t.closest('.sf-object');
+        if (!obj) return;
+        var media = obj.querySelector('audio[data-play-trigger], video[data-play-trigger]');
+        if (!media) return;
+        var trigger = media.getAttribute('data-play-trigger') || 'manual';
+        // «Bei Klick»: Klick auf Objektfläche startet. «Manuell»: nur Controls / Medienpanel.
+        if (trigger === 'click') {
+          e.preventDefault();
+          sfPlayMedia(media);
+        }
+      }, true);
+    })();
 JS;
     }
 

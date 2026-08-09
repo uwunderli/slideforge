@@ -467,7 +467,8 @@ class Presentation
             return 0;
         }
         $start = max(0, min(count($flags) - 1, $start));
-        if (!$flags[$start]) {
+        // $flags[$i] === true → Folie deaktiviert. Nur dann ausweichen.
+        if (!empty($flags[$start])) {
             $next = self::nearestPresentEnabledIndex($flags, $start, 1);
             if ($next !== null) {
                 return $next;
@@ -1549,8 +1550,10 @@ class Presentation
         $command = null;
         if (!empty($raw['command']) && is_array($raw['command'])) {
             $cmd = $raw['command'];
+            // Länger als 2s: Hintergrund-Tabs/Tablets drosseln Polls oft stark;
+            // sonst gehen Remote-Schritte während Wartezeiten verloren.
             $age = microtime(true) - (float)($cmd['cmd_ts'] ?? 0);
-            if ($age >= 0 && $age < 2.0) {
+            if ($age >= 0 && $age < 30.0) {
                 $command = $cmd;
             }
         }
@@ -1583,6 +1586,59 @@ class Presentation
         if (file_exists($path)) {
             @unlink($path);
         }
+    }
+
+    /**
+     * Beim Öffnen der Present-Konsole: Live-Index auf Startfolie setzen, alte Step-Commands verwerfen.
+     */
+    public static function seedPresentStart(string $id, int $startIndex, ?string $userId = null): void
+    {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($startIndex, $userId) {
+            if (!is_array($data)) {
+                $data = [];
+            }
+            $data['present'] = [
+                'index' => max(0, $startIndex),
+                'frag' => null,
+                'ts' => time(),
+                'source' => 'present',
+            ];
+            unset($data['command']);
+            if (!isset($data['sessions']) || !is_array($data['sessions'])) {
+                $data['sessions'] = [];
+            }
+            $data['sessions']['present'] = [
+                'ts' => time(),
+                'user_id' => $userId,
+            ];
+
+            return $data;
+        }, []);
+    }
+
+    /**
+     * Present-Konsole beendet: Session/Leader freigeben, Live-Position für Remote/view behalten.
+     */
+    public static function endPresentSession(string $id, string $clientId = ''): void
+    {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($clientId) {
+            if (!is_array($data)) {
+                $data = [];
+            }
+            if (isset($data['sessions']) && is_array($data['sessions'])) {
+                unset($data['sessions']['present']);
+            }
+            $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
+            $leaderId = is_array($leader) ? (string)($leader['client_id'] ?? '') : '';
+            if ($clientId === '' || $leaderId === '' || $leaderId === $clientId) {
+                unset($data['present_leader']);
+            }
+            if (isset($data['control_clients']) && is_array($data['control_clients']) && $clientId !== '') {
+                unset($data['control_clients'][$clientId]);
+            }
+
+            return $data;
+        }, []);
     }
 
     public static function addSlide(string $id, ?int $afterIndex = null): array

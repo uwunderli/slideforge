@@ -16,19 +16,21 @@ $slides = $slidesData['slides'] ?? [];
 $slideCount = count($slides);
 $slideDisabled = Presentation::slidePresentDisabledFlags($slidesData);
 
-// Startfolie: expliziter Link aus dem Editor, sonst letzte Live-Position, sonst 0.
+// Startfolie: expliziter Link aus dem Editor (?slide=), sonst immer Folie 1.
+// Kein Resume aus live.json — sonst landet man oft auf einer alten Live-Position.
 $startSlide = 0;
 if (isset($_GET['slide'])) {
     $startSlide = max(0, min($slideCount - 1, (int)$_GET['slide']));
-} else {
-    $live = Presentation::getLivePosition($id, 'present');
-    if ($live && isset($live['index'])) {
-        $startSlide = max(0, min($slideCount - 1, (int)$live['index']));
-    }
 }
 $startSlide = Presentation::normalizePresentStartIndex($slideDisabled, $startSlide);
 $nextPreviewIdx = Presentation::nextPresentEnabledIndex($slideDisabled, $startSlide)
     ?? $startSlide;
+
+// Live-Position + alte Remote-Steps beim Öffnen der Konsole zurücksetzen,
+// sonst springt die Ansicht sofort auf die letzte Live-Folie / einen alten «next».
+if ($canBroadcast) {
+    Presentation::seedPresentStart($id, $startSlide, $me['id'] ?? null);
+}
 
 // Notizen serverseitig zu HTML vorrendern (Markdown), damit present.js keinen
 // eigenen Markdown-Parser braucht.
@@ -418,6 +420,7 @@ window.SF_BOOTSTRAP = {
 };
 window.SF_PRESENT = {
   id: <?= json_encode($id) ?>,
+  title: <?= json_encode($meta['title'] ?? '', JSON_UNESCAPED_UNICODE) ?>,
   csrfToken: <?= json_encode(csrf_token()) ?>,
   canBroadcast: <?= $canBroadcast ? 'true' : 'false' ?>,
   remoteUrl: <?= json_encode($canBroadcast && $remoteUrl ? $remoteUrl : '') ?>,
@@ -441,7 +444,13 @@ window.SF_PRESENT = {
   ], JSON_UNESCAPED_UNICODE) ?>,
   i18n: {
     copied: <?= json_encode(t('present.copied')) ?>,
+    shared: <?= json_encode(t('present.shared')) ?>,
+    downloaded: <?= json_encode(t('present.downloaded')) ?>,
     copy: <?= json_encode(t('present.copy')) ?>,
+    shareText: <?= json_encode(t('present.share_text')) ?>,
+    shareFileBody: <?= json_encode(t('present.share_file_body')) ?>,
+    shareFileSuffix: <?= json_encode(t('present.share_file_suffix')) ?>,
+    publicLinkDefaultTitle: <?= json_encode(t('present.public_link_default_title')) ?>,
     screenPrimary: <?= json_encode(t('present.screen_primary')) ?>,
     screenSecondary: <?= json_encode(t('present.screen_secondary')) ?>,
     screenN: <?= json_encode(t('present.screen_n')) ?>,

@@ -29,9 +29,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $body = json_decode($raw, true) ?? [];
     $token = $body['csrf_token'] ?? '';
     if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+        // Nach Idle/Schlaf oft neue PHP-Session via Hub-Cookie → Client hat altes Token.
+        // Neues Token zurückgeben, damit Present/Remote ohne F5 weiterlaufen.
         http_response_code(403);
-        echo json_encode(['ok' => false, 'error' => 'Ungültiges CSRF-Token.']);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'csrf',
+            'csrf_token' => csrf_token(),
+        ]);
         exit;
+    }
+
+    // Heartbeats halten die Sitzung bewusst am Leben (GD-Wartezeit).
+    if (function_exists('extend_session_cookie')) {
+        extend_session_cookie(14);
     }
 
     $action = (string)($body['action'] ?? '');
@@ -46,7 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
     } elseif ($action === 'claim_leader') {
-        if (!$canEdit) {
+        $claimKind = (string)($body['client_kind'] ?? 'present');
+        // Remote darf mit View-Recht führen; Present-Konsole braucht Edit.
+        if ($claimKind !== 'remote' && !$canEdit) {
             http_response_code(403);
             echo json_encode(['ok' => false, 'error' => 'Keine Present-Rechte.']);
             exit;
@@ -73,15 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'stop') {
-        Presentation::clearLivePosition($id);
-        echo json_encode(['ok' => true]);
+        $clientId = (string)($body['client_id'] ?? '');
+        Presentation::endPresentSession($id, $clientId);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()]);
         exit;
     }
 
     if ($action === 'present_heartbeat') {
         $clientId = (string)($body['client_id'] ?? '');
         $leader = Presentation::presentHeartbeat($id, $clientId, $me['id']);
-        echo json_encode(['ok' => true] + $leader);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $leader);
         exit;
     }
 
@@ -94,14 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         $leader = Presentation::resolvePresentLeader($id, $clientId, $me['id'], true, $clientKind);
-        echo json_encode(['ok' => true] + $leader);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $leader);
         exit;
     }
 
     if ($action === 'remote_heartbeat') {
         $clientId = (string)($body['client_id'] ?? '');
         $leader = Presentation::remoteHeartbeat($id, $clientId, $me['id']);
-        echo json_encode(['ok' => true] + $leader);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $leader);
         exit;
     }
 
@@ -113,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($partial) {
             Presentation::setLiveConfig($id, $partial);
         }
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()]);
         exit;
     }
 
@@ -126,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $clientId = (string)($body['client_id'] ?? '');
         $result = Presentation::setLiveStep($id, $direction, $clientId, $me['id']);
-        echo json_encode(['ok' => true] + $result);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $result);
         exit;
     }
 
@@ -139,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         Presentation::setLiveMediaCommand($id, $mediaId, $mediaAction);
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()]);
         exit;
     }
 
@@ -153,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $trail = !empty($body['trail']);
         $clientId = (string)($body['client_id'] ?? '');
         $result = Presentation::setLiveLaser($id, $active, $x, $y, $slideIndex, $color, $size, $trail, $clientId, $me['id']);
-        echo json_encode(['ok' => true] + $result);
+        echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $result);
         exit;
     }
 
@@ -169,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($source === 'remote') {
         Presentation::touchLiveSession($id, 'remote', $me['id']);
     }
-    echo json_encode(['ok' => true] + $result);
+    echo json_encode(['ok' => true, 'csrf_token' => csrf_token()] + $result);
     exit;
 }
 

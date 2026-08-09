@@ -642,7 +642,14 @@ class Auth
             'laserPointerEnabled' => true,
             'showSlideGhost' => true,
             'slideGhostOpacity' => 25,
+            'notesMode' => 'carry',
+            'notesCollapsed' => false,
         ];
+    }
+
+    private static function normalizeNotesMode($mode): string
+    {
+        return in_array($mode, ['always_open', 'always_closed', 'carry'], true) ? $mode : 'carry';
     }
 
     private static function normalizeLaserPointerTrail($trail): bool
@@ -729,6 +736,10 @@ class Auth
                 ? (bool)$layout['showSlideGhost']
                 : $defaults['showSlideGhost'],
             'slideGhostOpacity' => max(5, min(80, (int)($layout['slideGhostOpacity'] ?? $defaults['slideGhostOpacity']))),
+            'notesMode' => self::normalizeNotesMode($layout['notesMode'] ?? $defaults['notesMode']),
+            'notesCollapsed' => array_key_exists('notesCollapsed', $layout)
+                ? (bool)$layout['notesCollapsed']
+                : $defaults['notesCollapsed'],
         ];
     }
 

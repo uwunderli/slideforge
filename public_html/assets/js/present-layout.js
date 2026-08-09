@@ -29,6 +29,8 @@
       laserPointerEnabled: true,
       showSlideGhost: true,
       slideGhostOpacity: 25,
+      notesMode: 'carry',
+      notesCollapsed: false,
     };
   }
 
@@ -81,6 +83,10 @@
       laserPointerEnabled: src.laserPointerEnabled != null ? !!src.laserPointerEnabled : base.laserPointerEnabled,
       showSlideGhost: src.showSlideGhost != null ? !!src.showSlideGhost : base.showSlideGhost,
       slideGhostOpacity: src.slideGhostOpacity != null ? src.slideGhostOpacity : base.slideGhostOpacity,
+      notesMode: (src.notesMode === 'always_open' || src.notesMode === 'always_closed' || src.notesMode === 'carry')
+        ? src.notesMode
+        : base.notesMode,
+      notesCollapsed: src.notesCollapsed != null ? !!src.notesCollapsed : base.notesCollapsed,
     };
   }
 
@@ -489,6 +495,12 @@
     if (partial.laserPointerEnabled != null) layoutState.laserPointerEnabled = !!partial.laserPointerEnabled;
     if (partial.showSlideGhost != null) layoutState.showSlideGhost = !!partial.showSlideGhost;
     if (partial.slideGhostOpacity != null) layoutState.slideGhostOpacity = partial.slideGhostOpacity;
+    if (partial.notesMode != null) {
+      layoutState.notesMode = (partial.notesMode === 'always_open' || partial.notesMode === 'always_closed' || partial.notesMode === 'carry')
+        ? partial.notesMode
+        : 'carry';
+    }
+    if (partial.notesCollapsed != null) layoutState.notesCollapsed = !!partial.notesCollapsed;
     if (P) P.presentLayout = cloneLayout(layoutState);
     saveLayout();
     if (partial.laserPointerColor || partial.laserPointerSize != null || partial.laserPointerTrail != null || partial.laserPointerEnabled != null) broadcastLaserConfig();
