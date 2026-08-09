@@ -1259,22 +1259,16 @@
   function applyMediaLocally(mediaId, action, time) {
     const el = findFrameMedia(mediaId);
     if (!el) return;
+    // Presenter-Iframe bleibt immer stumm — Ton nur auf dem Präsentationsbildschirm.
+    el.muted = true;
     if (action === 'play') {
-      // Panel-Steuerung = bewusste Aktion → Ton auch auf der Presenter-Konsole
-      el.muted = false;
-      el.setAttribute('data-sf-presenter-audible', '1');
       el.play && el.play().catch(() => {});
     } else if (action === 'pause') {
       el.pause && el.pause();
     } else if (action === 'stop') {
       el.pause && el.pause();
       try { el.currentTime = 0; } catch (e) { /* ignore */ }
-      el.muted = true;
-      el.removeAttribute('data-sf-presenter-audible');
     } else if (action === 'seek' && Number.isFinite(time)) {
-      if (el.getAttribute('data-sf-presenter-audible') === '1') {
-        el.muted = false;
-      }
       try { el.currentTime = Math.max(0, time); } catch (e) { /* ignore */ }
     }
   }

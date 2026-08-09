@@ -454,6 +454,7 @@ return [
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stop',
     'present.media_seek' => 'Position',
+    'present.media_audio_unlock' => 'Tap or click to enable sound',
     'present.clock_section' => 'Clock',
     'present.timer_section' => 'Timer',
     'present.slide_control' => 'Slide control',

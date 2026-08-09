@@ -247,10 +247,47 @@ JS : '';
       });
       update();
     }
+    var sfPendingAudible = [];
+    function sfFlushPendingAudiblePlay() {
+      var list = sfPendingAudible.splice(0);
+      var hint = document.getElementById('sf-audio-unlock');
+      if (hint) hint.remove();
+      list.forEach(function (el) {
+        if (!el || !el.play) return;
+        if (window.SF_MEDIA_AUDIBLE) el.muted = false;
+        el.play().catch(function () {});
+      });
+    }
+    function sfQueueAudiblePlay(el) {
+      if (!el) return;
+      if (sfPendingAudible.indexOf(el) < 0) sfPendingAudible.push(el);
+      if (document.getElementById('sf-audio-unlock')) return;
+      var overlay = document.createElement('div');
+      overlay.id = 'sf-audio-unlock';
+      overlay.setAttribute('role', 'button');
+      overlay.tabIndex = 0;
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);cursor:pointer;padding:24px;text-align:center;';
+      var card = document.createElement('div');
+      card.style.cssText = 'max-width:360px;color:#fff;font:15px/1.45 system-ui,sans-serif;background:rgba(30,30,30,.95);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:22px 26px;';
+      card.textContent = window.SF_MEDIA_UNLOCK_HINT || 'Tippen oder klicken, um Ton freizugeben';
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+      var unlock = function () {
+        window.__sfMediaUnlocked = true;
+        sfFlushPendingAudiblePlay();
+      };
+      overlay.addEventListener('click', unlock);
+      overlay.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); unlock(); }
+      });
+    }
     (function sfMediaUnlockSetup() {
       if (window.__sfMediaUnlockSetup) return;
       window.__sfMediaUnlockSetup = true;
-      function unlock() { window.__sfMediaUnlocked = true; }
+      function unlock() {
+        window.__sfMediaUnlocked = true;
+        sfFlushPendingAudiblePlay();
+      }
       ['click', 'keydown', 'touchstart'].forEach(function (ev) {
         document.addEventListener(ev, unlock, { once: true, capture: true });
       });
@@ -268,11 +305,16 @@ JS : '';
     }
     function sfPlayMedia(el) {
       if (!el || !el.play) return;
+      if (window.SF_MEDIA_AUDIBLE) el.muted = false;
       sfWhenMediaReady(el, function () {
         var attempt = function () {
           var p = el.play();
           if (p && p.catch) {
             p.catch(function () {
+              if (window.SF_MEDIA_AUDIBLE) {
+                sfQueueAudiblePlay(el);
+                return;
+              }
               var retry = function () {
                 el.play().catch(function () {});
               };

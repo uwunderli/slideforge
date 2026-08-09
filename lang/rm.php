@@ -437,6 +437,7 @@ return [
     'present.media_pause' => 'Pausa',
     'present.media_stop' => 'Stop',
     'present.media_seek' => 'Posiziun',
+    'present.media_audio_unlock' => 'Tuccar u cliccar per activar il tun',
     'present.clock_section' => 'Ura',
     'present.timer_section' => 'Temporizatur',
     'present.slide_control' => 'Controlla da slides',

@@ -70,6 +70,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     touch: false
   });
 
+  // Ton gehört auf diese Beamer-/Zweitbildschirm-Ansicht.
+  window.SF_MEDIA_AUDIBLE = true;
+  window.SF_MEDIA_UNLOCK_HINT = <?= json_encode(t('present.media_audio_unlock'), JSON_UNESCAPED_UNICODE) ?>;
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
 
@@ -178,17 +181,20 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
             lastMediaCmdTs = media.cmd_ts;
             var el = document.querySelector('[data-media-id="' + media.id + '"]');
             if (el) {
-              if (media.action === 'play') { el.play && el.play().catch(function () {}); }
-              else if (media.action === 'pause') { el.pause && el.pause(); }
+              el.muted = false;
+              if (media.action === 'play') {
+                if (typeof sfPlayMedia === 'function') sfPlayMedia(el);
+                else { el.play && el.play().catch(function () {}); }
+              } else if (media.action === 'pause') { el.pause && el.pause(); }
               else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (e) {} }
               else if (media.action === 'seek' && typeof media.time === 'number') {
-                try { el.currentTime = media.time; } catch (e) {}
+                try { el.currentTime = Math.max(0, media.time); } catch (e) {}
               }
             }
           }
         })
         .catch(function () {});
-    }, 1500);
+    }, 400);
 
     Reveal.on('ready', function () {
       SlideForgePresentLaserAudience?.init({

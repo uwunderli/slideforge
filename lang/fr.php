@@ -445,6 +445,7 @@ return [
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stop',
     'present.media_seek' => 'Position',
+    'present.media_audio_unlock' => 'Appuyez ou cliquez pour activer le son',
     'present.clock_section' => 'Horloge',
     'present.timer_section' => 'Minuteur',
     'present.slide_control' => 'Contrôle des diapositives',

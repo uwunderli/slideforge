@@ -503,6 +503,7 @@ return [
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stopp',
     'present.media_seek' => 'Position',
+    'present.media_audio_unlock' => 'Tippen oder klicken, um den Ton freizugeben',
     'present.clock_section' => 'Uhr',
     'present.timer_section' => 'Timer',
     'present.slide_control' => 'Folien steuern',

@@ -70,6 +70,9 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
   });
 
   // Medien: Ladehinweis, automatische Wiedergabe nach Verzögerung.
+  // Ton gehört auf die Zuschauer-/Beamer-Ansicht (nicht die Presenter-Konsole).
+  window.SF_MEDIA_AUDIBLE = true;
+  window.SF_MEDIA_UNLOCK_HINT = <?= json_encode(t('present.media_audio_unlock'), JSON_UNESCAPED_UNICODE) ?>;
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
 
@@ -104,6 +107,24 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
       } catch (e) { /* ignore */ }
     }
 
+    function applyLiveMedia(media) {
+      if (!media || !media.id) return;
+      const el = document.querySelector('[data-media-id="' + media.id + '"]');
+      if (!el) return;
+      el.muted = false;
+      if (media.action === 'play') {
+        if (typeof sfPlayMedia === 'function') sfPlayMedia(el);
+        else { el.play && el.play().catch(function () {}); }
+      } else if (media.action === 'pause') {
+        el.pause && el.pause();
+      } else if (media.action === 'stop') {
+        el.pause && el.pause();
+        try { el.currentTime = 0; } catch (err) {}
+      } else if (media.action === 'seek' && typeof media.time === 'number') {
+        try { el.currentTime = Math.max(0, media.time); } catch (err) {}
+      }
+    }
+
     function pollLive() {
       fetch('live.php?id=<?= urlencode($id) ?>&token=<?= urlencode($token) ?>&channel=present')
         .then(function (r) { return r.json(); })
@@ -113,15 +134,7 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
           const media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
             lastMediaCmdTs = media.cmd_ts;
-            const el = document.querySelector('[data-media-id="' + media.id + '"]');
-            if (el) {
-              if (media.action === 'play') { el.play && el.play().catch(function () {}); }
-              else if (media.action === 'pause') { el.pause && el.pause(); }
-              else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (err) {} }
-              else if (media.action === 'seek' && typeof media.time === 'number') {
-                try { el.currentTime = media.time; } catch (err) {}
-              }
-            }
+            applyLiveMedia(media);
           }
         })
         .catch(function () {});

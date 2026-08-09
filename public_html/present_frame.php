@@ -289,14 +289,11 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
 <?= Exporter::mediaRuntimeJs(false) ?>
     sfMediaStatusInit();
     function prepMedia() {
-      // Im Präsentationsmodus standardmässig stumm (Ton auf dem Präsentationsbildschirm).
-      // Explizit über «Medien steuern» gestartete Clips bleiben hörbar (sfPresenterAudible).
+      // Im Präsentationsmodus soll der Ton NICHT hier abgespielt werden (das übernimmt
+      // die echte Präsentation auf dem zweiten Bildschirm) - dafür immer Steuerelemente
+      // zeigen, damit man von hier aus starten/stoppen kann.
       document.querySelectorAll('video, audio').forEach(function (el) {
-        if (el.getAttribute('data-sf-presenter-audible') === '1') {
-          el.muted = false;
-        } else {
-          el.muted = true;
-        }
+        el.muted = true;
         el.setAttribute('controls', '');
       });
     }
