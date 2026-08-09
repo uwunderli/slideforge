@@ -1436,14 +1436,19 @@
   }
 
   function updatePresentLink() {
+    const presentHref = 'present.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex;
+    const previewHref = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex;
     const link = document.getElementById('presentModeLink');
-    if (link) {
-      link.href = 'present.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex;
-    }
+    if (link) link.href = presentHref;
     const previewLink = document.getElementById('previewTabLink');
-    if (previewLink) {
-      previewLink.href = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex;
-    }
+    if (previewLink) previewLink.href = previewHref;
+    // Ribbon rendert eigene <a>-Links aus meta.urls — Href bei Folienwechsel nachziehen.
+    document.querySelectorAll('a[data-ribbon-command="present_mode"]').forEach((el) => {
+      el.href = presentHref;
+    });
+    document.querySelectorAll('a[data-ribbon-command="preview_tab"]').forEach((el) => {
+      el.href = previewHref;
+    });
   }
 
   function initialSlideIndexFromUrl() {

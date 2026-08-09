@@ -314,7 +314,8 @@ class SlideRenderer
                 $attrs .= ' data-transition="' . h($slide['transition']) . '"';
             }
             if (!empty($slide['autoAdvance'])) {
-                $attrs .= ' data-autoslide="' . ((int)$slide['autoAdvance'] * 1000) . '"';
+                // Nicht data-autoslide: das wertet reveal.js nativ aus (Boot-Pause greift nicht).
+                $attrs .= ' data-sf-slide-autoslide="' . ((int)$slide['autoAdvance'] * 1000) . '"';
             } elseif (!empty($plan['firstUnitAutoMs'])) {
                 $attrs .= ' data-sf-first-autoadvance="' . (int)$plan['firstUnitAutoMs'] . '"';
             }
@@ -391,12 +392,8 @@ class SlideRenderer
     {
         $autoAdvanceForOrder = $plan['autoAdvanceForOrder'] ?? [];
         if (isset($autoAdvanceForOrder[$order]) && (int)$autoAdvanceForOrder[$order] > 0) {
-            return ' data-autoslide="' . (int)$autoAdvanceForOrder[$order] . '"';
-        }
-        // data-autoslide="0" nur wenn die Folie ein ganzes-Folie-AutoAdvance hat
-        // (sonst erzeugt reveal.js nach dem letzten Fragment einen Leerschritt).
-        if (!empty($plan['slideHasAutoAdvance'])) {
-            return ' data-autoslide="0"';
+            // Nicht data-autoslide: reveal.js würde nativ weiterlaufen (Startfolie springt).
+            return ' data-sf-fragment-autoslide="' . (int)$autoAdvanceForOrder[$order] . '"';
         }
         return '';
     }
@@ -577,11 +574,14 @@ class SlideRenderer
         } elseif ($type === 'video' || $type === 'audio') {
             $src = self::assetUrl($obj['src'] ?? '', $publicToken);
             $trigger = $obj['playTrigger'] ?? 'manual';
+            if (!in_array($trigger, ['manual', 'click', 'timed'], true)) {
+                $trigger = 'manual';
+            }
             $mediaId = 'data-media-id="' . h($obj['id'] ?? '') . '"';
-            $extraAttrs = ' preload="auto"' . (!empty($obj['hideControls']) ? '' : ' controls') . (!empty($obj['loop']) ? ' loop' : '') . ' ' . $mediaId;
-            if ($trigger === 'click') {
-                $extraAttrs .= ' onclick="this.play()"';
-            } elseif ($trigger === 'timed') {
+            $extraAttrs = ' preload="auto"' . (!empty($obj['hideControls']) ? '' : ' controls')
+                . (!empty($obj['loop']) ? ' loop' : '') . ' ' . $mediaId
+                . ' data-play-trigger="' . h($trigger) . '"';
+            if ($trigger === 'timed') {
                 $delay = max(0, (int)($obj['playDelay'] ?? 0));
                 $extraAttrs .= ' data-play-delay="' . $delay . '"';
             }

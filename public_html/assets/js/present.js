@@ -9,6 +9,33 @@
   let multipleControllers = false;
   let globalLeaderKind = null;
 
+  function applyCsrfFromResponse(data) {
+    if (data && typeof data.csrf_token === 'string' && data.csrf_token !== '') {
+      P.csrfToken = data.csrf_token;
+      if (window.SF_BOOTSTRAP) window.SF_BOOTSTRAP.csrfToken = data.csrf_token;
+    }
+  }
+
+  function livePost(body, retried) {
+    return fetch('live.php?id=' + encodeURIComponent(P.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ csrf_token: P.csrfToken }, body || {})),
+    })
+      .then((r) => r.json().then((data) => ({ status: r.status, data })))
+      .then(({ status, data }) => {
+        applyCsrfFromResponse(data);
+        if (!retried && data && data.error === 'csrf' && data.csrf_token) {
+          return livePost(body, true);
+        }
+        if (status === 401) {
+          return { ok: false, error: 'auth' };
+        }
+        return data;
+      })
+      .catch(() => null);
+  }
+
   function slideDisabledFlags() {
     return Array.isArray(P.slideDisabled) ? P.slideDisabled : [];
   }
@@ -353,6 +380,7 @@
   const presentConfigApi = window.SlideForgePresentConfig?.init({
     id: P.id,
     csrfToken: P.csrfToken,
+    presentationTitle: P.title || '',
     i18n: P.i18n,
   });
 
@@ -552,6 +580,10 @@
     const radios = [...modal.querySelectorAll('input[name="presentNotesMode"]')];
 
     function readMode() {
+      const fromLayout = P.presentLayout?.notesMode;
+      if (fromLayout === 'always_open' || fromLayout === 'always_closed' || fromLayout === 'carry') {
+        return fromLayout;
+      }
       try {
         const v = localStorage.getItem(MODE_KEY);
         if (v === 'always_open' || v === 'always_closed' || v === 'carry') return v;
@@ -562,6 +594,8 @@
     function writeMode(mode) {
       const next = (mode === 'always_open' || mode === 'always_closed' || mode === 'carry') ? mode : 'carry';
       try { localStorage.setItem(MODE_KEY, next); } catch (e) { /* ignore */ }
+      if (P.presentLayout) P.presentLayout.notesMode = next;
+      window.SlideForgePresentLayout?.patchUserPrefs?.({ notesMode: next });
       window.SlideForgePresentNotes?.applyMode?.(next);
       return next;
     }
@@ -902,8 +936,15 @@
   const mainFrame = document.getElementById('mainFrame');
   const nextPreview = document.getElementById('nextSlidePreview');
   let mainReveal = null;
-  let currentIndex = P.startSlide || 0;
+  const bootStartIndex = Math.max(0, parseInt(P.startSlide, 10) || 0);
+  let currentIndex = bootStartIndex;
   let controlsBound = false;
+  // Verhindert, dass eine offene Remote-/Live-Position die Startfolie überschreibt
+  // (Race: Poll setzt Follower → Folie 3, Claim kommt zu spät und broadcastet die falsche Folie).
+  let presentBootLocked = true;
+  let presentBootTimer = null;
+  /** Nach Boot kurz keine Live-Follow/Leader-Demotion (Reload-Race mit alter Session). */
+  let presentStartStickyUntil = 0;
 
   function presentSlideIndex(preferredDir) {
     if (!mainReveal) return currentIndex;
@@ -917,6 +958,19 @@
   document.querySelectorAll('.filmstrip-item').forEach((btn) => {
     btn.classList.toggle('active', parseInt(btn.dataset.index, 10) === currentIndex);
   });
+
+  (function initFilmstripWheelScroll() {
+    const strip = document.getElementById('filmstrip');
+    if (!strip) return;
+    strip.addEventListener('wheel', (e) => {
+      // Vertikales Mausrad / Touchpad → horizontal scrollen.
+      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!dx) return;
+      if (strip.scrollWidth <= strip.clientWidth + 1) return;
+      e.preventDefault();
+      strip.scrollLeft += dx;
+    }, { passive: false });
+  })();
 
   function waitForReveal(win, cb) {
     const check = () => {
@@ -1034,11 +1088,26 @@
     const i18n = P.i18n || {};
 
     function readMode() {
+      const fromLayout = P.presentLayout?.notesMode;
+      if (fromLayout === 'always_open' || fromLayout === 'always_closed' || fromLayout === 'carry') {
+        return fromLayout;
+      }
       try {
         const v = localStorage.getItem(MODE_KEY);
         if (v === 'always_open' || v === 'always_closed' || v === 'carry') return v;
       } catch (e) { /* ignore */ }
       return 'carry';
+    }
+
+    function readCollapsedCarry() {
+      if (typeof P.presentLayout?.notesCollapsed === 'boolean') {
+        return !!P.presentLayout.notesCollapsed;
+      }
+      try {
+        return localStorage.getItem(STORAGE_KEY) === '1';
+      } catch (e) {
+        return false;
+      }
     }
 
     function isCollapsed() {
@@ -1056,6 +1125,8 @@
         try {
           localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
         } catch (e) { /* ignore */ }
+        if (P.presentLayout) P.presentLayout.notesCollapsed = !!on;
+        window.SlideForgePresentLayout?.patchUserPrefs?.({ notesCollapsed: !!on });
       }
     }
 
@@ -1066,11 +1137,7 @@
       } else if (m === 'always_closed') {
         setCollapsed(true, false);
       } else {
-        try {
-          setCollapsed(localStorage.getItem(STORAGE_KEY) === '1', false);
-        } catch (e) {
-          setCollapsed(false, false);
-        }
+        setCollapsed(readCollapsedCarry(), false);
       }
     }
 
@@ -1114,10 +1181,45 @@
     layoutNextPreview,
   });
 
+  function finishPresentBoot() {
+    if (!presentBootLocked) return;
+    presentBootLocked = false;
+    if (presentBootTimer) {
+      clearTimeout(presentBootTimer);
+      presentBootTimer = null;
+    }
+    // Alles, was während des Starts in live.json lag, nicht nachträglich anwenden.
+    lastRemoteCommandTs = Date.now() / 1000;
+    presentStartStickyUntil = Date.now() + 5000;
+    applyBootStartSlide();
+    try {
+      mainFrame.contentWindow?.postMessage({ type: 'sf-present-boot-done' }, '*');
+    } catch (e) { /* ignore */ }
+    scheduleRemotePoll();
+  }
+
+  function inPresentStartSticky() {
+    return presentBootLocked || Date.now() < presentStartStickyUntil;
+  }
+
+  function applyBootStartSlide() {
+    if (!mainReveal) return;
+    const target = normalizeSlideJumpIndex(bootStartIndex);
+    applyingRemote = true;
+    try {
+      mainReveal.slide(target, 0);
+    } catch (e) { /* ignore */ }
+    applyingRemote = false;
+    currentIndex = target;
+    updateUI(target);
+    if (isPresentLeader) broadcastPosition(target);
+  }
+
   mainFrame.addEventListener('load', () => {
     waitForReveal(mainFrame.contentWindow, (reveal) => {
       mainReveal = reveal;
       mainReveal.on('slidechanged', (e) => {
+        if (presentBootLocked) return;
         const prevH = typeof e.previousIndexh === 'number' ? e.previousIndexh : currentIndex;
         const dir = (typeof e.indexh === 'number' ? e.indexh : currentIndex) >= prevH ? 1 : -1;
         requestAnimationFrame(() => updateUI(presentSlideIndex(dir)));
@@ -1126,9 +1228,18 @@
       // 'slidechanged' aus, müssen aber genauso live übertragen werden - sonst bleibt
       // die Zuschauer-Ansicht (view.php) beim vorherigen Fragment-Stand hängen und
       // überspringt ihn beim nächsten echten Folienwechsel.
-      mainReveal.on('fragmentshown', () => broadcastPosition(currentIndex));
-      mainReveal.on('fragmenthidden', () => broadcastPosition(currentIndex));
-      updateUI((mainReveal.getIndices() || { h: 0 }).h || 0);
+      mainReveal.on('fragmentshown', () => {
+        if (!presentBootLocked) broadcastPosition(currentIndex);
+      });
+      mainReveal.on('fragmenthidden', () => {
+        if (!presentBootLocked) broadcastPosition(currentIndex);
+      });
+      applyBootStartSlide();
+      claimPresentLeader().then(() => {
+        applyBootStartSlide();
+        finishPresentBoot();
+      });
+      presentBootTimer = setTimeout(finishPresentBoot, 2500);
       window.SlideForgePresentLayout?.broadcastLaserConfig?.();
       window.SlideForgePresentLayout?.broadcastSlideGhost?.();
       try { mainFrame.contentWindow?.focus(); } catch (err) { /* ignore */ }
@@ -1158,6 +1269,101 @@
     syncNextPreview();
     broadcastPosition(h);
     updateMediaControls();
+    if (!presentBootLocked) autoPlayTimedMediaForAudience();
+  }
+
+  /** Timed-Medien auf der Beamer-/view-Ansicht anstoßen (Autoplay-Policy umgehen). */
+  function autoPlayTimedMediaForAudience() {
+    if (!P.canBroadcast || !mainFrame?.contentDocument) return;
+    let slide = null;
+    try {
+      slide = mainFrame.contentDocument.querySelector('.reveal .slides > section.present');
+    } catch (e) { return; }
+    if (!slide) return;
+    slide.querySelectorAll('audio[data-play-trigger="timed"], video[data-play-trigger="timed"]').forEach((el) => {
+      const mid = el.getAttribute('data-media-id');
+      if (!mid) return;
+      // Pro Folienbesuch nur einmal — sonst restart nach ended (= falsche «Dauerschleife»).
+      if (el.dataset.sfTimedAudienceSent === '1') return;
+      if (!el.loop && el.ended) return;
+      if (!el.paused && !el.ended) {
+        el.dataset.sfTimedAudienceSent = '1';
+        return;
+      }
+      el.dataset.sfTimedAudienceSent = '1';
+      sendMediaCommand(mid, 'play');
+    });
+  }
+
+  function formatMediaTimecode(sec) {
+    if (!Number.isFinite(sec) || sec < 0) sec = 0;
+    const total = Math.floor(sec);
+    const s = total % 60;
+    const m = Math.floor(total / 60) % 60;
+    const h = Math.floor(total / 3600);
+    const pad = (n) => (n < 10 ? '0' : '') + n;
+    if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
+    return pad(m) + ':' + pad(s);
+  }
+
+  function mediaTimecodeText(el) {
+    if (!el) return '00:00 / —';
+    const cur = formatMediaTimecode(el.currentTime || 0);
+    const dur = Number.isFinite(el.duration) && el.duration > 0
+      ? formatMediaTimecode(el.duration)
+      : '—';
+    return cur + ' / ' + dur;
+  }
+
+  function findLocalMediaEl(mediaId) {
+    try {
+      return mainFrame.contentDocument?.querySelector('[data-media-id="' + mediaId + '"]') || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function syncLocalMediaForTimecode(mediaId, action) {
+    const el = findLocalMediaEl(mediaId);
+    if (!el) return;
+    try {
+      el.muted = true;
+      el.volume = 0;
+      // Verhindert play→postMessage→sendMediaCommand-Rückkopplung aus der Konsole.
+      el.dataset.sfSyncing = '1';
+      if (action === 'play') {
+        const p = el.play();
+        if (p && p.catch) p.catch(() => {});
+      } else if (action === 'pause') {
+        el.pause();
+      } else if (action === 'stop') {
+        el.pause();
+        try { el.currentTime = 0; } catch (err) { /* ignore */ }
+      }
+      const clearSync = () => { try { delete el.dataset.sfSyncing; } catch (err) { /* ignore */ } };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(clearSync);
+      else setTimeout(clearSync, 0);
+    } catch (e) { /* ignore */ }
+    refreshMediaTimecodes();
+  }
+
+  function refreshMediaTimecodes() {
+    const list = document.getElementById('mediaControlList');
+    if (!list) return;
+    list.querySelectorAll('.media-control-row[data-media-id]').forEach((row) => {
+      const mid = row.getAttribute('data-media-id');
+      const timeEl = row.querySelector('.media-control-time');
+      if (!timeEl || !mid) return;
+      const media = findLocalMediaEl(mid);
+      timeEl.textContent = mediaTimecodeText(media);
+      row.classList.toggle('is-playing', !!(media && !media.paused && !media.ended));
+    });
+  }
+
+  let mediaTimecodeTimer = null;
+  function ensureMediaTimecodeTimer() {
+    if (mediaTimecodeTimer) return;
+    mediaTimecodeTimer = setInterval(refreshMediaTimecodes, 250);
   }
 
   function getCurrentSlideSection() {
@@ -1445,7 +1651,7 @@
   }
 
   function syncFollowerPosition(live) {
-    if (isPresentLeader || !mainReveal || !live || typeof live.index !== 'number') return;
+    if (presentBootLocked || isPresentLeader || !mainReveal || !live || typeof live.index !== 'number') return;
     const targetIndex = normalizeSlideJumpIndex(live.index);
     const frag = typeof live.frag === 'number' ? live.frag : null;
     const indices = mainReveal.getIndices() || {};
@@ -1461,32 +1667,40 @@
 
   function claimPresentLeader() {
     if (!P.canBroadcast) return Promise.resolve(false);
-    return fetch('live.php?id=' + encodeURIComponent(P.id), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'claim_leader',
-        client_id: presentClientId,
-        client_kind: 'present',
-        csrf_token: P.csrfToken,
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) return false;
-        isPresentLeader = !!data.is_leader;
-        globalLeaderKind = data.leader_kind || 'present';
-        updateLeaderUI();
-        if (isPresentLeader && mainReveal) broadcastPosition(currentIndex);
-        return isPresentLeader;
-      })
-      .catch(() => false);
+    return livePost({
+      action: 'claim_leader',
+      client_id: presentClientId,
+      client_kind: 'present',
+    }).then((data) => {
+      if (!data || !data.ok) return false;
+      isPresentLeader = !!data.is_leader;
+      globalLeaderKind = data.leader_kind || 'present';
+      updateLeaderUI();
+      if (isPresentLeader && mainReveal) broadcastPosition(currentIndex);
+      return isPresentLeader;
+    });
   }
 
   function withLeaderControl(fn) {
     if (!P.canBroadcast) return;
     if (isPresentLeader) { fn(); return; }
     claimPresentLeader().then((ok) => { if (ok) fn(); });
+  }
+
+  let presentAutoEnabled = false;
+  function enablePresentAutoAdvance() {
+    if (presentAutoEnabled) return;
+    presentAutoEnabled = true;
+    try {
+      mainFrame.contentWindow?.postMessage({ type: 'sf-present-enable-auto' }, '*');
+    } catch (e) { /* ignore */ }
+  }
+
+  function presentUserNavigate(fn) {
+    withLeaderControl(() => {
+      enablePresentAutoAdvance();
+      fn();
+    });
   }
 
   function broadcastPosition(h, fragOverride) {
@@ -1496,58 +1710,63 @@
       const indices = mainReveal ? mainReveal.getIndices() : null;
       frag = indices && typeof indices.f === 'number' ? indices.f : null;
     }
-    fetch('live.php?id=' + encodeURIComponent(P.id), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        index: h,
-        frag: frag,
-        channel: 'present',
-        client_id: presentClientId,
-        csrf_token: P.csrfToken,
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) return;
-        if (data.is_leader === false) {
-          isPresentLeader = false;
-          updateLeaderUI();
-        } else if (data.is_leader === true) {
-          isPresentLeader = true;
-          updateLeaderUI();
-        }
-      })
-      .catch(() => {});
+    livePost({
+      index: h,
+      frag: frag,
+      channel: 'present',
+      client_id: presentClientId,
+    }).then((data) => {
+      if (!data || !data.ok) return;
+      if (data.is_leader === false) {
+        isPresentLeader = false;
+        updateLeaderUI();
+      } else if (data.is_leader === true) {
+        isPresentLeader = true;
+        updateLeaderUI();
+      }
+    });
   }
 
   let laserBroadcastTimer = null;
   function broadcastLaser(data) {
     if (!P.canBroadcast || !data || P.presentLayout?.laserPointerEnabled === false) return;
-    fetch('live.php?id=' + encodeURIComponent(P.id), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'laser',
-        active: !!data.active,
-        x: data.x,
-        y: data.y,
-        slide_index: data.slideIndex,
-        color: data.color,
-        size: data.size,
-        trail: !!data.trail,
-        csrf_token: P.csrfToken,
-      }),
-    }).catch(() => {});
+    livePost({
+      action: 'laser',
+      active: !!data.active,
+      x: data.x,
+      y: data.y,
+      slide_index: data.slideIndex,
+      color: data.color,
+      size: data.size,
+      trail: !!data.trail,
+      client_id: presentClientId,
+    });
   }
 
   window.addEventListener('message', (e) => {
     if (!e.data || e.data.type !== 'sf-present-position') return;
     if (!mainFrame?.contentWindow || e.source !== mainFrame.contentWindow) return;
     if (typeof e.data.index !== 'number') return;
+    if (presentBootLocked) return;
     currentIndex = e.data.index;
     const frag = typeof e.data.frag === 'number' ? e.data.frag : null;
     broadcastPosition(e.data.index, frag);
+  });
+
+  window.addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'sf-media-cmd') return;
+    if (!mainFrame?.contentWindow || e.source !== mainFrame.contentWindow) return;
+    if (!P.canBroadcast || presentBootLocked) return;
+    const mid = e.data.mediaId;
+    const action = e.data.action;
+    if (!mid || !['play', 'pause', 'stop'].includes(action)) return;
+    withLeaderControl(() => sendMediaCommand(mid, action));
+  });
+
+  window.addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'sf-present-user-nav') return;
+    if (!mainFrame?.contentWindow || e.source !== mainFrame.contentWindow) return;
+    enablePresentAutoAdvance();
   });
 
   window.addEventListener('message', (e) => {
@@ -1589,10 +1808,10 @@
       if (!mainReveal || shouldSkipPresentNav(e)) return;
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
         e.preventDefault();
-        withLeaderControl(() => mainReveal.next());
+        presentUserNavigate(() => mainReveal.next());
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
-        withLeaderControl(() => mainReveal.prev());
+        presentUserNavigate(() => mainReveal.prev());
       }
     }
 
@@ -1601,17 +1820,17 @@
 
   function bindControls() {
     document.getElementById('presPrevBtn').addEventListener('click', () => {
-      withLeaderControl(() => { if (mainReveal) mainReveal.prev(); });
+      presentUserNavigate(() => { if (mainReveal) mainReveal.prev(); });
     });
     document.getElementById('presNextBtn').addEventListener('click', () => {
-      withLeaderControl(() => { if (mainReveal) mainReveal.next(); });
+      presentUserNavigate(() => { if (mainReveal) mainReveal.next(); });
     });
 
     document.querySelectorAll('.filmstrip-item').forEach((btn) => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.index, 10);
         if (isSlideDisabled(idx)) return;
-        withLeaderControl(() => {
+        presentUserNavigate(() => {
           if (!mainReveal) return;
           if (idx === currentIndex) {
             // Gleiche Folie: nächster Animationsschritt, oder nächste Folie wenn fertig
@@ -1631,7 +1850,8 @@
   }
 
   // Heartbeat: Live-Sitzung auch ohne Navigation "aktiv" halten (siehe getLivePosition()-Timeout serverseitig).
-  let lastRemoteCommandTs = 0;
+  // Befehle von vor diesem Seitenladen ignorieren (sonst: alter «next» → sofort Folie 2).
+  let lastRemoteCommandTs = Date.now() / 1000;
   let lastRemoteConfigTs = 0;
   let remotePollMs = 500;
 
@@ -1668,14 +1888,17 @@
           }
         }
 
-        if (data.present_leader) {
+        if (data.present_leader && !inPresentStartSticky()) {
           applyLeaderState(data.present_leader, data.control_clients);
         }
 
         const remoteControls = globalLeaderKind === 'remote';
 
-        if (data.command && data.command.type === 'step' && data.command.cmd_ts > lastRemoteCommandTs && mainReveal && (isPresentLeader || remoteControls)) {
+        if (inPresentStartSticky()) {
+          // Startphase: keine Remote-Steps / kein Follow auf alte Live-Position.
+        } else if (data.command && data.command.type === 'step' && data.command.cmd_ts > lastRemoteCommandTs && mainReveal && (isPresentLeader || remoteControls)) {
           lastRemoteCommandTs = data.command.cmd_ts;
+          enablePresentAutoAdvance();
           applyingRemote = true;
           const stepDir = data.command.direction === 'prev' ? -1 : 1;
           if (data.command.direction === 'next') mainReveal.next();
@@ -1685,8 +1908,12 @@
             const h = presentSlideIndex(stepDir);
             updateUI(h);
           });
-        } else if (!isPresentLeader && data.live && !remoteControls) {
-          syncFollowerPosition(data.live);
+        } else if (!isPresentLeader && data.live) {
+          if (P.canBroadcast) {
+            claimPresentLeader();
+          } else {
+            syncFollowerPosition(data.live);
+          }
         }
 
         if (data.live && data.live.laser) {
@@ -1704,42 +1931,57 @@
       scheduleRemotePoll();
     }, remotePollMs);
   }
-  scheduleRemotePoll();
+  // Poll erst nach Boot — sonst Follow/Commands vor Claim.
+
+  function sendPresentHeartbeat() {
+    if (!P.canBroadcast) return Promise.resolve(null);
+    return livePost({
+      action: 'present_heartbeat',
+      client_id: presentClientId,
+    }).then((data) => {
+      if (!data || !data.ok) return data;
+      if (inPresentStartSticky()) {
+        // Während Sticky Leadership nicht entziehen lassen.
+        if (data.is_leader === true) isPresentLeader = true;
+      } else if (data.is_leader === false) {
+        isPresentLeader = false;
+      } else if (data.is_leader === true) {
+        isPresentLeader = true;
+      }
+      if (data.leader_kind && !inPresentStartSticky()) globalLeaderKind = data.leader_kind;
+      updateLeaderUI();
+      return data;
+    });
+  }
 
   setInterval(() => {
-    if (!P.canBroadcast) return;
-    fetch('live.php?id=' + encodeURIComponent(P.id), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'present_heartbeat',
-        client_id: presentClientId,
-        csrf_token: P.csrfToken,
-      }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) return;
-        if (data.is_leader === false) {
-          isPresentLeader = false;
-        } else if (data.is_leader === true) {
-          isPresentLeader = true;
-        }
-        if (data.leader_kind) globalLeaderKind = data.leader_kind;
-        updateLeaderUI();
-      })
-      .catch(() => {});
+    sendPresentHeartbeat();
     if (isPresentLeader && mainReveal) {
       broadcastPosition(currentIndex);
     }
   }, 8000);
 
+  // Nach Tab-Schlaf / Bildschirm aus: sofort Heartbeat + Poll (CSRF/Session erneuern).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    sendPresentHeartbeat();
+    pollLiveRemote();
+    remotePollMs = 80;
+    scheduleRemotePoll();
+  });
+  window.addEventListener('focus', () => {
+    sendPresentHeartbeat();
+    pollLiveRemote();
+  });
+
   window.addEventListener('beforeunload', () => {
     if (P.canBroadcast && isPresentLeader && navigator.sendBeacon) {
-      navigator.sendBeacon(
-        'live.php?id=' + encodeURIComponent(P.id),
-        JSON.stringify({ action: 'stop', csrf_token: P.csrfToken })
-      );
+      const payload = JSON.stringify({
+        action: 'stop',
+        client_id: presentClientId,
+        csrf_token: P.csrfToken,
+      });
+      navigator.sendBeacon('live.php?id=' + encodeURIComponent(P.id), payload);
     }
   });
 

@@ -675,8 +675,8 @@ $bootstrap = [
         'apiUrl' => 'ribbon.php',
         'meta' => [
             'urls' => [
-                'present' => 'present.php?id=' . urlencode($id),
-                'preview' => 'preview.php?id=' . urlencode($id),
+                'present' => 'present.php?id=' . urlencode($id) . '&slide=0',
+                'preview' => 'preview.php?id=' . urlencode($id) . '&slide=0',
                 'share' => 'presentation_share.php?id=' . urlencode($id),
                 'export' => 'export.php?id=' . urlencode($id),
             ],

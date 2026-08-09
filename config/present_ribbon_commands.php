@@ -11,7 +11,7 @@ function present_ribbon_command_catalog(): array
 
         ['id' => 'show_progress', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_progress_short', 'icon' => 'progress_bar', 'domId' => 'showProgressToggle', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_controls', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_controls_short', 'icon' => 'navigation', 'domId' => 'showControlsToggle', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-        ['id' => 'widget:audience', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'ribbon.present_public_short', 'templateId' => 'widget-present-audience', 'visibleWhen' => ['canBroadcast', 'isOwner'], 'gridSpan' => ['cols' => 4, 'rows' => 2]],
+        ['id' => 'widget:audience', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'ribbon.present_public_short', 'templateId' => 'widget-present-audience', 'visibleWhen' => ['canBroadcast', 'isOwner'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
         ['id' => 'widget:remote', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'remote.qr_section', 'templateId' => 'widget-present-remote', 'visibleWhen' => ['canBroadcast', 'hasRemote'], 'gridSpan' => ['cols' => 6, 'rows' => 2]],
         ['id' => 'widget:local_present', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'present.local_present', 'templateId' => 'widget-present-local', 'visibleWhen' => ['canBroadcast'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
 

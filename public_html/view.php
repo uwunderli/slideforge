@@ -134,11 +134,24 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
           const media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
             lastMediaCmdTs = media.cmd_ts;
-            applyLiveMedia(media);
+            if (typeof sfApplyLiveMediaCommand === 'function') {
+              sfApplyLiveMediaCommand(media);
+            } else {
+              applyLiveMedia(media);
+            }
           }
         })
         .catch(function () {});
     }
+
+    // Nach Live-Folienwechsel Timed-Medien erneut scharf schalten.
+    Reveal.on('slidechanged', function () {
+      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+      if (slide && typeof sfArmMediaTriggers === 'function') {
+        if (!window.__sfViewPlayTimers) window.__sfViewPlayTimers = [];
+        sfArmMediaTriggers(slide, window.__sfViewPlayTimers);
+      }
+    });
 
     pollLive();
     setInterval(pollLive, 400);

@@ -171,24 +171,41 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
           if (!data.ok || !data.live) return;
           var frag = typeof data.live.frag === 'number' ? data.live.frag : null;
           if (data.live.index !== lastIndex || frag !== lastFrag) {
+            var indexChanged = data.live.index !== lastIndex;
             lastIndex = data.live.index;
             lastFrag = frag;
             if (frag !== null) { Reveal.slide(data.live.index, 0, frag); }
             else { Reveal.slide(data.live.index, 0); }
+            // Nur bei Folienwechsel neu scharf schalten — Fragment-Polls würden
+            // Timed-Audio sonst nach jedem Sync erneut starten (falsche Schleife).
+            // mediaSlideBootJs macht dasselbe auf slidechanged; Guard in sfArmMediaTriggers.
+            if (indexChanged) {
+              try {
+                var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+                if (slide && typeof sfArmMediaTriggers === 'function') {
+                  if (!window.__sfAudiencePlayTimers) window.__sfAudiencePlayTimers = [];
+                  sfArmMediaTriggers(slide, window.__sfAudiencePlayTimers);
+                }
+              } catch (err) { /* ignore */ }
+            }
           }
           var media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
             lastMediaCmdTs = media.cmd_ts;
-            var el = document.querySelector('[data-media-id="' + media.id + '"]');
-            if (el) {
-              el.muted = false;
-              if (media.action === 'play') {
-                if (typeof sfPlayMedia === 'function') sfPlayMedia(el);
-                else { el.play && el.play().catch(function () {}); }
-              } else if (media.action === 'pause') { el.pause && el.pause(); }
-              else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (e) {} }
-              else if (media.action === 'seek' && typeof media.time === 'number') {
-                try { el.currentTime = Math.max(0, media.time); } catch (e) {}
+            if (typeof sfApplyLiveMediaCommand === 'function') {
+              sfApplyLiveMediaCommand(media);
+            } else {
+              var el = document.querySelector('[data-media-id="' + media.id + '"]');
+              if (el) {
+                el.muted = false;
+                if (media.action === 'play') {
+                  if (typeof sfPlayMedia === 'function') sfPlayMedia(el);
+                  else { el.play && el.play().catch(function () {}); }
+                } else if (media.action === 'pause') { el.pause && el.pause(); }
+                else if (media.action === 'stop') { el.pause && el.pause(); try { el.currentTime = 0; } catch (e) {} }
+                else if (media.action === 'seek' && typeof media.time === 'number') {
+                  try { el.currentTime = Math.max(0, media.time); } catch (e) {}
+                }
               }
             }
           }

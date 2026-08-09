@@ -745,10 +745,11 @@ html.sf-tablet body.present-mode .button-sm {
 
 /* Ribbon-Kopieren bleibt kompakt wie im Editor (nicht Touch-Upscale). */
 /* Ribbon-Kopieren / Präsentieren bleiben kompakt wie im Editor (nicht Touch-Upscale). */
-html.sf-tablet body.present-mode .ribbon-present-display-copy.button-sm {
+html.sf-tablet body.present-mode .ribbon-present-display-copy.button-sm,
+html.sf-tablet body.present-mode .ribbon-present-display-col--link-grid .ribbon-present-display-copy.button-sm {
   min-height: 0;
   height: 22px;
-  padding: 1px 8px;
+  padding: 1px 6px;
   font-size: 0.72rem;
   line-height: 1.2;
   border-radius: 999px;

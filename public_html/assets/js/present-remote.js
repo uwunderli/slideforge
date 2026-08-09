@@ -76,7 +76,13 @@
     return 'live.php?id=' + encodeURIComponent(R.id) + (full ? '&full=1' : '');
   }
 
-  function post(body) {
+  function applyCsrfFromResponse(data) {
+    if (data && typeof data.csrf_token === 'string' && data.csrf_token !== '') {
+      R.csrfToken = data.csrf_token;
+    }
+  }
+
+  function post(body, retried) {
     return fetch(apiUrl(false), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,7 +90,16 @@
         csrf_token: R.csrfToken,
         client_id: remoteClientId,
       }, body)),
-    }).then(function (r) { return r.json(); }).catch(function () { return null; });
+    }).then(function (r) {
+      return r.json().then(function (data) { return { status: r.status, data: data }; });
+    }).then(function (res) {
+      var data = res.data;
+      applyCsrfFromResponse(data);
+      if (!retried && data && data.error === 'csrf' && data.csrf_token) {
+        return post(body, true);
+      }
+      return data;
+    }).catch(function () { return null; });
   }
 
   function updateLeaderUI() {
@@ -585,22 +600,33 @@
   applyLaserUi();
   setMode('nav');
   loadCurrentSlide();
-  post({ action: 'remote_heartbeat' }).then(function (data) {
-    if (data && data.ok) {
-      if (data.is_leader === false) isRemoteLeader = false;
-      else if (data.is_leader === true) isRemoteLeader = true;
-      updateLeaderUI();
-    }
-  });
-  poll();
-  setInterval(function () {
-    post({ action: 'remote_heartbeat' }).then(function (data) {
+  function sendRemoteHeartbeat() {
+    return post({ action: 'remote_heartbeat' }).then(function (data) {
       if (data && data.ok) {
         if (data.is_leader === false) isRemoteLeader = false;
         else if (data.is_leader === true) isRemoteLeader = true;
         updateLeaderUI();
       }
+      return data;
     });
+  }
+
+  sendRemoteHeartbeat();
+  poll();
+  setInterval(function () {
+    sendRemoteHeartbeat();
     poll();
   }, 800);
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    sendRemoteHeartbeat().then(function () {
+      if (!isRemoteLeader) claimRemoteLeader();
+    });
+    poll();
+  });
+  window.addEventListener('focus', function () {
+    sendRemoteHeartbeat();
+    poll();
+  });
 })();
