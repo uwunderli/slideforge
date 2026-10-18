@@ -53,7 +53,8 @@ define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
 // Fehleranzeige: Meldungstexte gehoeren ins Protokoll, nicht auf die Seite — sie
 // nennen Dateipfade und Innereien. Deprecated-Hinweise bleiben ganz aussen vor.
 // Zum Entwickeln mit SLIDEFORGE_DEBUG=1 wieder einschalten; auf Prod ist die
-// Variable nicht gesetzt, dort gilt also 0 (Befund 18.10., Pendenz U53).
+// Variable nicht gesetzt, dort gilt also 0. Siehe
+// befund-fehleranzeige-prod-2026-10-18.md.
 error_reporting(E_ALL & ~E_DEPRECATED);
 ini_set('display_errors', getenv('SLIDEFORGE_DEBUG') === '1' ? '1' : '0');
 ini_set('log_errors', '1');

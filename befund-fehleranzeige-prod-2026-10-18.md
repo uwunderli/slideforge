@@ -1,4 +1,9 @@
-# PHP-Meldungen erscheinen auf Prod in der Seite (U53)
+# PHP-Meldungen erscheinen auf Prod in der Seite («Fehleranzeige»)
+
+> **Bezeichnung:** Diese Sache heisst **«Fehleranzeige»**, nicht U53 — unter U53 führt Urs
+> PlanForge (Hinweis Koordinator, 18.10.). Frühere Fassungen dieses Befunds und der
+> Commit-Titel `3a91b97` nennen noch «U53»; der Commit-Text bleibt stehen, weil der Prüfwert
+> beim Koordinator protokolliert ist und nicht nachträglich wandern soll.
 
 **Datum:** 18.10.2026 · **Umfang:** eine Stelle in `config.php` (Zeilen 53-61)
 **Herkunft:** Nebenbefund aus dem Review zu U50. Auftrag des Koordinators vom 18.10.:
@@ -148,6 +153,20 @@ Alles aus der Liste B des Reviews, nachgeprüft und bewusst nicht mitgeliefert:
    `resend_verification.php` **200** (3806 Bytes), beide mit **0** Meldungszeilen im Rumpf
    (gesucht nach `<b>Warning</b>`, `<b>Notice</b>`, `<b>Fatal error</b>`, `on line <b>`).
 5. Nur `slides.bkbiel.ch`. Die Demo auf wunder.li wurde nicht angefasst.
+
+**Eine Zeile Abweichung Arbeitsbaum ↔ Prod, bewusst so gelassen.** Nach der Lieferung kam der
+Hinweis, dass «U53» bei Urs PlanForge ist. Der Kommentar in `config.php` nennt darum im
+Arbeitsbaum keine Nummer mehr, sondern diesen Befund. Damit gilt:
+
+| | sha256 |
+|---|---|
+| Prod (ausgeliefert, **in Betrieb**) | `f48d27839fc7b6843e21afc7a350fb3f1d47f07593d07850b787a1affe4c854a` |
+| Arbeitsbaum (nur der Kommentar anders) | `b9cb2463aeefc0964a7728efb581cce5f29a908ded64dd707fad920d5c6fc554` |
+
+Der Unterschied ist **ein Kommentar**, kein Verhalten. Für eine eigene Lieferung ist das zu
+wenig — die Korrektur reist mit der nächsten Lieferung von `config.php` mit. Wer vorher
+vergleicht, soll sich nicht erschrecken: **nicht** HEAD oder den Arbeitsbaum als Prod-Stand
+annehmen, sondern die laufende Datei lesen.
 
 > **Rückbau-Satz:** `config.php` und `README.md` aus
 > `.sicherung/fehleranzeige-20261018-1452/`
