@@ -127,6 +127,10 @@ Alles aus der Liste B des Reviews, nachgeprüft und bewusst nicht mitgeliefert:
 
 ## Auslieferung
 
+**Einordnung: sicherheitsrelevant** (neue Regel von Urs, 18.10.). Begründung: es geht um die
+Ausgabe von Fehlermeldungen nach aussen — Dateipfade und Innereien. Der unabhängige Review hat
+darum stattgefunden; seine Auflage A hat einen echten blinden Fleck geschlossen.
+
 - **Vorher-Digest, geprüft und gleich:** Arbeitsbaum = Prod =
   `2a77f134b19eaeb5fade745e7cf7ed6b35194834270c0ccfe0343f5bdf4a5387`
 - **Nachher (Arbeitsbaum), nach Umsetzung der Auflage:**

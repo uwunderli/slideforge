@@ -157,6 +157,13 @@ nicht bauen, Favoriten in Hub-Reihenfolge reichen vorerst.
 
 ## Auslieferung
 
+**Einordnung: sicherheitsrelevant** (neue Regel von Urs, 18.10.: «Nachgeprüft werden nur noch
+Sicherheitsrelevanten Code»). Begründung: die Änderung entscheidet über **Sichtbarkeit**
+(`userMaySee`, eigene `managed`-Programme) und liest **Daten einer anderen Anwendung**
+(`user-prefs.json` des Hubs). Der unabhängige Review hat darum stattgefunden und ist oben
+festgehalten; vor der Lieferung lässt der Koordinator zusätzlich einen von mir unabhängigen
+Review machen.
+
 Noch nicht geschehen. Vorbereitet:
 
 - Lieferumfang: `src/Launcher.php` (geändert) und `src/HubFavorites.php` (neu). Zwei Dateien,
