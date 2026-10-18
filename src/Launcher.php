@@ -9,10 +9,10 @@ class Launcher
         $variantClass = $variant === 'shell' ? 'cf-launcher--shell' : 'cf-launcher--topbar';
 
         echo '<nav class="cf-launcher ' . $variantClass . '" aria-label="ChurchForge Programme">';
-        echo '<div class="cf-launcher-dock" role="list">';
+        echo '<div class="cf-launcher-dock" role="list" data-hub-fav-dock>';
 
         $hubActive = $currentModuleId === 'hub';
-        echo '<a class="cf-launcher-item' . ($hubActive ? ' is-active' : '') . '" href="' . self::h($hubUrl . '/') . '" role="listitem" title="GemeindeSchmiede">';
+        echo '<a class="cf-launcher-item' . ($hubActive ? ' is-active' : '') . '" href="' . self::h($hubUrl . '/') . '" role="listitem" title="GemeindeSchmiede" data-hub-home draggable="false">';
         echo self::hubIconMarkup();
         echo '<span class="cf-launcher-label">Hub</span>';
         echo '</a>';
@@ -29,7 +29,7 @@ class Launcher
                 $attrs .= ' target="_blank" rel="noopener noreferrer"';
             }
 
-            echo '<a ' . $attrs . '>';
+            echo '<a ' . $attrs . ' data-module-id="' . self::h($id) . '">';
             echo self::moduleIconMarkup($module);
             echo '<span class="cf-launcher-label">' . self::h(self::shortLabel($label)) . '</span>';
             echo '</a>';
@@ -49,7 +49,7 @@ class Launcher
         if ($type === '' && class_exists('IntegrationStore')) {
             $type = IntegrationStore::typeOf($id);
         }
-        return in_array($type, ['groupoffice', 'nextcloud'], true);
+        return in_array($type, ['groupoffice', 'nextcloud', 'paperless'], true);
     }
 
     /**
@@ -80,16 +80,31 @@ class Launcher
             $visible[] = $module;
         }
 
-        $favorites = class_exists('UserPrefs') ? UserPrefs::favorites() : [];
-        usort($visible, static function ($a, $b) use ($favorites) {
-            $af = in_array((string)($a['id'] ?? ''), $favorites, true) ? 0 : 1;
-            $bf = in_array((string)($b['id'] ?? ''), $favorites, true) ? 0 : 1;
-            if ($af !== $bf) {
-                return $af <=> $bf;
+        // Dock = Hub-Zeichen + **Favoriten**, in der Reihenfolge des Hubs — wie dort
+        // (hub/src/Launcher.php). Vorgabe Urs 18.10.2026, U50: «Launcher ja».
+        // Gepflegt werden die Favoriten im Hub (Stern an der Kachel, Ziehen/Ablegen);
+        // dieses Dock zeigt sie nur, es schreibt nichts.
+        $favorites = class_exists('HubFavorites') ? HubFavorites::favorites() : null;
+        if ($favorites === null) {
+            // Favoriten unbekannt (kein Hub-Datenordner erreichbar): alte Anzeige
+            // behalten — alles Sichtbare — statt ein leeres Dock zu zeigen.
+            usort($visible, static function ($a, $b) {
+                return strcmp((string)($a['sort'] ?? $a['id']), (string)($b['sort'] ?? $b['id']));
+            });
+            return $visible;
+        }
+        $byId = [];
+        foreach ($visible as $module) {
+            $byId[(string)($module['id'] ?? '')] = $module;
+        }
+        $ordered = [];
+        foreach ($favorites as $favId) {
+            $favId = (string)$favId;
+            if ($favId !== '' && isset($byId[$favId])) {
+                $ordered[] = $byId[$favId];
             }
-            return strcmp((string)($a['sort'] ?? $a['id']), (string)($b['sort'] ?? $b['id']));
-        });
-        return $visible;
+        }
+        return $ordered;
     }
 
     /** @return list<array<string,mixed>> */
@@ -115,7 +130,10 @@ class Launcher
         }
         if (!empty($module['managed']) && empty($module['shared'])) {
             $owner = (string)($module['owner'] ?? '');
-            $key = class_exists('UserPrefs') ? UserPrefs::userKey() : '';
+            // `UserPrefs` gibt es in der FolienSchmiede nicht; die Kennung kam darum
+            // immer leer heraus und eigene (managed) Programme waren hier nie
+            // sichtbar. Review 18.10.: dieselbe Kennung wie der Hub bilden.
+            $key = class_exists('HubFavorites') ? HubFavorites::userKey() : '';
             return $key !== '' && $owner === $key;
         }
         if (class_exists('HubAuth') && HubAuth::isAdmin()) {
@@ -166,7 +184,7 @@ class Launcher
             return churchforge_hub_url() . '/app/embed.php?m=' . rawurlencode($id);
         }
         if (!empty($module['external']) && empty($module['openInNewTab'])) {
-            if (in_array($type, ['groupoffice', 'nextcloud'], true)) {
+            if (in_array($type, ['groupoffice', 'nextcloud', 'paperless'], true)) {
                 return churchforge_hub_url() . '/app/bridge.php?m=' . rawurlencode($id);
             }
             return churchforge_hub_url() . '/app/embed.php?m=' . rawurlencode($id);
