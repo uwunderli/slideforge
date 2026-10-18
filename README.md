@@ -213,7 +213,7 @@ Beim ersten Admin werden zudem sieben Standard-Folienvorlagen aus `seed/template
 ### Sicherheitshinweise
 
 - HTTPS im Produktivbetrieb verwenden (Session-Cookies, Passwörter).
-- `error_reporting` / `display_errors` in `config.php` für den Live-Betrieb auf `0` stellen.
+- `display_errors` ist seit 18.10.2026 **standardmässig aus** (`config.php`): PHP-Meldungen nennen Dateipfade und Innereien und gehören darum nur ins Protokoll (`log_errors` bleibt an). Zum Entwickeln mit der Umgebungsvariablen `SLIDEFORGE_DEBUG=1` einschalten – unter PHP-FPM dafür `env[SLIDEFORGE_DEBUG]` im Pool setzen oder `clear_env=no`, sonst sieht `getenv()` die Variable nicht.
 - Präsentations-IDs sind zufällige Hex-Strings – dienen **nicht** als alleiniger Schutz; Zugriff wird immer über Berechtigungsprüfung gesteuert.
 - Öffentliche Links sind immer **nur Ansehen** – Bearbeitungsrechte per öffentlichem Link gibt es bewusst nicht.
 - Bild-Uploads: max. 15 MB, Videos: max. 60 MB (in `config.php` über `MAX_IMAGE_SIZE` / `MAX_VIDEO_SIZE` anpassbar).

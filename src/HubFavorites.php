@@ -67,8 +67,9 @@ class HubFavorites
         }
         $out = [];
         foreach ($fav as $id) {
-            // Verschachteltes nicht in Text zwingen — das gaebe eine sichtbare
-            // Warnung mitten im Seitenkopf (display_errors steht auf 1).
+            // Verschachteltes nicht in Text zwingen — das gaebe eine PHP-Warnung
+            // mitten im Seitenkopf (vor dem 18.10. auch sichtbar, seither nur im
+            // Protokoll, siehe befund-fehleranzeige-prod-2026-10-18.md).
             if (!is_string($id) && !is_int($id)) {
                 continue;
             }

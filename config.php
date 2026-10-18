@@ -7,6 +7,11 @@
 
 // Basisverzeichnisse
 define('BASE_PATH', __DIR__);
+/* Modulwurzel fuer die Hub-Bibliothek: hub_asset() sucht im Alleinbetrieb die
+   mitgefuehrte Kopie unter SLIDEFORGE_ROOT.'/public_html' (shared/bootstrap.php).
+   Ohne die Konstante faellt es auf DOCUMENT_ROOT zurueck - das stimmt hier, haengt
+   aber am Webserver; mit der Konstante ist der Pfad eindeutig. */
+define('SLIDEFORGE_ROOT', __DIR__);
 define('DATA_PATH', BASE_PATH . '/data');
 define('PRESENTATIONS_PATH', DATA_PATH . '/presentations');
 define('USERS_FILE', DATA_PATH . '/users.json');
@@ -40,17 +45,20 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '610');
+define('ASSET_VERSION', '679');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
 
-// Fehleranzeige während der Entwicklung: Deprecated-Hinweise (z.B. durch neuere
-// PHP-Versionen) landen nur noch im Server-Log, echte Fehler/Warnungen bleiben
-// sichtbar. Für den Produktivbetrieb display_errors ganz auf 0 setzen.
+// Fehleranzeige: Meldungstexte gehoeren ins Protokoll, nicht auf die Seite — sie
+// nennen Dateipfade und Innereien. Deprecated-Hinweise bleiben ganz aussen vor.
+// Zum Entwickeln mit SLIDEFORGE_DEBUG=1 wieder einschalten; auf Prod ist die
+// Variable nicht gesetzt, dort gilt also 0 (Befund 18.10., Pendenz U53).
 error_reporting(E_ALL & ~E_DEPRECATED);
-ini_set('display_errors', '1');
+ini_set('display_errors', getenv('SLIDEFORGE_DEBUG') === '1' ? '1' : '0');
 ini_set('log_errors', '1');
+// Hinweis: `display_startup_errors` hier zu setzen waere wirkungslos — die
+// Startphase ist vorbei, wenn diese Zeile laeuft. Das gehoert in die Server-ini.
 
 // Session starten (muss vor jedem Output passieren)
 if (session_status() === PHP_SESSION_NONE) {
@@ -99,7 +107,7 @@ if (!function_exists('churchforge_hub_url')) {
     function churchforge_hub_url(): string
     {
         $url = trim((string)(getenv('CHURCHFORGE_HUB_URL') ?: ''));
-        return $url !== '' ? rtrim($url, '/') : 'https://bkbiel.ch';
+        return $url !== '' ? rtrim($url, '/') : 'https://hub.bkbiel.ch';
     }
 }
 if (!function_exists('churchforge_modules_file')) {
@@ -304,6 +312,10 @@ TextTemplate::ensureFallback();
 
 // Verständliche Fehlermeldung statt rohem PHP-Fatal-Error bei Schreibproblemen
 set_exception_handler(function (Throwable $e) {
+    // Zuerst ins Protokoll: diese Seite zeigt bewusst keine Innereien, und ohne
+    // diese Zeile bliebe eine nicht gefangene Ausnahme voellig spurlos — gemessen
+    // im Review vom 18.10. (Auflage A). Der Text geht nur ins Protokoll.
+    error_log('SlideForge: nicht gefangene Ausnahme: ' . $e);
     http_response_code(500);
     if ($e instanceof RuntimeException) {
         echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Fehler</title></head><body style="font-family:sans-serif; max-width:600px; margin:60px auto;">';
@@ -336,6 +348,31 @@ function csrf_check(): void {
 
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+}
+
+/**
+ * Hub UI asset (V2.0a). Prefer local copies under public_html/assets/.
+ * Paths: css/hub-confirm.css or shared/cf-status.js (no leading slash).
+ */
+function sf_hub_asset(string $hubPath, ?string $localPath = null): string
+{
+    $hubPath = ltrim(str_replace('\\', '/', $hubPath), '/');
+    if ($localPath === null || $localPath === '') {
+        if (str_starts_with($hubPath, 'shared/')) {
+            $localPath = 'assets/js/' . substr($hubPath, 7);
+        } else {
+            $localPath = 'assets/' . $hubPath;
+        }
+    }
+    $localPath = ltrim(str_replace('\\', '/', $localPath), '/');
+    $file = BASE_PATH . '/public_html/' . $localPath;
+    if (is_file($file)) {
+        return $localPath . '?v=' . rawurlencode((string)ASSET_VERSION);
+    }
+    if (function_exists('hub_asset')) {
+        return hub_asset($hubPath);
+    }
+    return $localPath . '?v=' . rawurlencode((string)ASSET_VERSION);
 }
 
 function redirect(string $path): void {
