@@ -1982,6 +1982,14 @@ class LayoutSet
                 }
                 $text = self::contentTextFromRoleMap($contentByRole, $role);
                 if ($text === '') {
+                    // Unbefüllte Rolle: reinen «…»-Platzhalter nicht in die erzeugte
+                    // Folie übernehmen (sonst steht z. B. «Untertitel» sichtbar drauf).
+                    // Ein Layout-Objekt mit echtem Standardtext bleibt erhalten.
+                    $phText = trim((string)($layoutObj['text'] ?? ''));
+                    if ($phText === '' || self::isPlaceholderText($phText)) {
+                        $filledRoles[$role] = true;
+                        continue;
+                    }
                     $objects[] = self::mergePlaceholderObject($layoutObj, null);
                 } else {
                     $objects[] = self::mergePlaceholderObject($layoutObj, ['text' => $text, 'setRole' => $role]);

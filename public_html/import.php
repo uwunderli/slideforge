@@ -3,53 +3,6 @@ require __DIR__ . '/../config.php';
 Auth::requireLogin();
 $me = Auth::currentUser();
 
-@ini_set('memory_limit', '1024M');
-@set_time_limit(180);
-
-function sf_cleanup_dir(string $dir): void
-{
-    if (!is_dir($dir)) return;
-    $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::CHILD_FIRST
-    );
-    foreach ($files as $f) {
-        $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname());
-    }
-    rmdir($dir);
-}
-
-/** @param list<array<string,mixed>> $owned */
-function sf_resolve_import_section_id(string $userId, array $owned): string
-{
-    $sectionId = trim((string)($_POST['dashboard_section_id'] ?? ''));
-    $sections = Dashboard::ensureSections($userId, $owned);
-    $ids = array_map(fn($s) => (string)$s['id'], $sections);
-    if ($sectionId !== '' && in_array($sectionId, $ids, true)) {
-        return $sectionId;
-    }
-    foreach ($sections as $s) {
-        if (!empty($s['is_default'])) {
-            return (string)$s['id'];
-        }
-    }
-    return $sections[0]['id'] ?? '';
-}
-
-function sf_import_assign_section(string $userId, string $presentationId): void
-{
-    [$owned] = Presentation::listForUser($userId);
-    $sectionId = sf_resolve_import_section_id($userId, $owned);
-    if ($sectionId === '') {
-        return;
-    }
-    try {
-        Dashboard::moveItem($userId, $presentationId, $sectionId, 0);
-    } catch (Throwable $e) {
-        // Ungültiger Bereich — Präsentation bleibt beim nächsten Dashboard-Besuch im Standard-Bereich.
-    }
-}
-
 $error = '';
 $logosImporterEnabled = Auth::logosImporterEnabled($me);
 [$layoutSetsMine, $layoutSetsShared] = LayoutSet::listForUser($me['id']);
@@ -66,6 +19,25 @@ foreach ($importSections as $importSection) {
 }
 if ($defaultImportSectionId === '' && $importSections !== []) {
     $defaultImportSectionId = (string)$importSections[0]['id'];
+}
+
+if (($_GET['action'] ?? '') === 'status') {
+    header('Content-Type: application/json; charset=utf-8');
+    $jobId = trim((string)($_GET['job'] ?? ''));
+    $job = BackgroundJob::read($jobId);
+    if ($job === null || ($job['type'] ?? '') !== 'import' || ($job['user_id'] ?? '') !== $me['id']) {
+        http_response_code(404);
+        echo json_encode(['ok' => false, 'error' => t('import.job_not_found')], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if (($job['status'] ?? '') === 'done') {
+        $warnings = $job['result']['warnings'] ?? [];
+        if (is_array($warnings) && $warnings !== []) {
+            $_SESSION['import_warnings'] = $warnings;
+        }
+    }
+    echo json_encode(['ok' => true, 'job' => BackgroundJob::publicStatus($job)], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['logos_preview'])) {
@@ -101,223 +73,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['logos_preview'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-
-    if (empty($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
-        $error = t('import.no_file');
-    } else {
-        $file = $_FILES['import_file'];
-        $origName = strtolower($file['name']);
-        $htmlContent = null;
-        $zipAssetsDir = null;
-        $zipTmpDir = null;
-
-        try {
-            if (str_ends_with($origName, '.pptx')) {
-                $newId = Presentation::create($me['id'], trim((string)pathinfo($origName, PATHINFO_FILENAME)) . t('import.title_suffix'), DEFAULT_SLIDE_WIDTH, DEFAULT_SLIDE_HEIGHT);
-                try {
-                    $result = PptxImporter::import($file['tmp_name'], $newId);
-                } catch (Throwable $e) {
-                    Presentation::delete($newId);
-                    throw new RuntimeException(t('import.pptx_failed', ['error' => $e->getMessage()]));
-                }
-                Presentation::updateMeta($newId, ['width' => $result['width'], 'height' => $result['height']]);
-                $slides = $result['slides'] ?: [Presentation::defaultSlide()];
-                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides]);
-
-                if (!empty($result['warnings'])) {
-                    $_SESSION['import_warnings'] = $result['warnings'];
-                }
-                sf_import_assign_section($me['id'], $newId);
-                redirect('editor.php?id=' . urlencode($newId));
-                exit;
-            }
-
-            if (str_ends_with($origName, '.odp')) {
-                $newId = Presentation::create($me['id'], trim((string)pathinfo($origName, PATHINFO_FILENAME)) . t('import.title_suffix'), DEFAULT_SLIDE_WIDTH, DEFAULT_SLIDE_HEIGHT);
-                try {
-                    $result = OdpImporter::import($file['tmp_name'], $newId);
-                } catch (Throwable $e) {
-                    Presentation::delete($newId);
-                    throw new RuntimeException(t('import.odp_failed', ['error' => $e->getMessage()]));
-                }
-                Presentation::updateMeta($newId, ['width' => $result['width'], 'height' => $result['height']]);
-                $slides = $result['slides'] ?: [Presentation::defaultSlide()];
-                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides]);
-
-                if (!empty($result['warnings'])) {
-                    $_SESSION['import_warnings'] = $result['warnings'];
-                }
-                sf_import_assign_section($me['id'], $newId);
-                redirect('editor.php?id=' . urlencode($newId));
-                exit;
-            }
-
-            if (str_ends_with($origName, '.pdf')) {
-                if (!class_exists('Imagick')) {
-                    throw new RuntimeException(t('import.pdf_no_imagick'));
-                }
-                $pdfTmpDir = sys_get_temp_dir() . '/sfimportpdf_' . bin2hex(random_bytes(6));
-                mkdir($pdfTmpDir, 0770, true);
-
-                try {
-                    $probe = new Imagick();
-                    $probe->pingImage($file['tmp_name']);
-                    $pageCount = max(1, $probe->getNumberImages());
-                    $probe->clear();
-                } catch (Throwable $e) {
-                    sf_cleanup_dir($pdfTmpDir);
-                    throw new RuntimeException(t('import.pdf_read_failed', ['error' => $e->getMessage()]));
-                }
-                if ($pageCount > 200) {
-                    sf_cleanup_dir($pdfTmpDir);
-                    throw new RuntimeException(t('import.pdf_too_many_pages'));
-                }
-
-                $pageImages = [];
-                $pageWidth = DEFAULT_SLIDE_WIDTH;
-                $pageHeight = DEFAULT_SLIDE_HEIGHT;
-                for ($p = 0; $p < $pageCount; $p++) {
-                    $im = new Imagick();
-                    $im->setResolution(150, 150); // vor readImage setzen, wirkt sich auf die Rasterisierung von Vektor-PDFs aus
-                    $im->readImage($file['tmp_name'] . '[' . $p . ']');
-                    $im->setImageFormat('png');
-                    $im->setImageBackgroundColor('white');
-                    $im = $im->mergeImageLayers(Imagick::LAYERMETHOD_FLATTEN);
-                    if ($p === 0) {
-                        $pageWidth = $im->getImageWidth();
-                        $pageHeight = $im->getImageHeight();
-                    }
-                    $pagePath = $pdfTmpDir . '/page' . ($p + 1) . '.png';
-                    $im->writeImage($pagePath);
-                    $im->clear();
-                    $pageImages[] = $pagePath;
-                }
-
-                $title = trim((string)pathinfo($origName, PATHINFO_FILENAME)) . t('import.title_suffix');
-                $newId = Presentation::create($me['id'], $title ?: t('import.default_title'), $pageWidth, $pageHeight);
-                $assetsDir = Presentation::dir($newId) . '/assets';
-
-                $slides = [];
-                foreach ($pageImages as $i => $srcPath) {
-                    $filename = 'pdfpage' . ($i + 1) . '_' . bin2hex(random_bytes(4)) . '.png';
-                    copy($srcPath, $assetsDir . '/' . $filename);
-                    $slides[] = [
-                        'id' => 'slide' . bin2hex(random_bytes(4)),
-                        'background' => ['type' => 'color', 'value' => '#ffffff'],
-                        'objects' => [[
-                            'id' => 'o' . bin2hex(random_bytes(4)),
-                            'type' => 'image', 'x' => 0, 'y' => 0, 'w' => $pageWidth, 'h' => $pageHeight,
-                            'rotation' => 0, 'opacity' => 1,
-                            'src' => 'asset.php?id=' . urlencode($newId) . '&file=' . urlencode($filename),
-                        ]],
-                        'notes' => '', 'transition' => 'slide', 'autoAdvance' => 0,
-                    ];
-                }
-                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides]);
-                sf_cleanup_dir($pdfTmpDir);
-
-                sf_import_assign_section($me['id'], $newId);
-                redirect('editor.php?id=' . urlencode($newId));
-                exit;
-            }
-
-            if (str_ends_with($origName, '.chs') || LayoutSet::isLayoutSetArchiveFile($file['tmp_name'])) {
-                $newId = LayoutSet::importArchive($me['id'], $file['tmp_name']);
-                redirect('editor.php?id=' . urlencode($newId));
-                exit;
-            }
-
-            if (str_ends_with($origName, '.zip')) {
-                $zip = new ZipArchive();
-                if ($zip->open($file['tmp_name']) !== true) {
-                    throw new RuntimeException(t('import.zip_open_failed'));
-                }
-                $zipTmpDir = sys_get_temp_dir() . '/sfimport_' . bin2hex(random_bytes(6));
-                mkdir($zipTmpDir, 0770, true);
-                $zip->extractTo($zipTmpDir);
-                $zip->close();
-                $indexPath = $zipTmpDir . '/index.html';
-                if (!is_file($indexPath)) {
-                    throw new RuntimeException(t('import.no_index_html'));
-                }
-                $htmlContent = file_get_contents($indexPath);
-                if (is_dir($zipTmpDir . '/assets')) {
-                    $zipAssetsDir = $zipTmpDir . '/assets';
-                }
-            } elseif (str_ends_with($origName, '.html') || str_ends_with($origName, '.htm')) {
-                $htmlContent = file_get_contents($file['tmp_name']);
-            } else {
-                throw new RuntimeException(t('import.unsupported_type'));
-            }
-
-            if (LogosSermonImporter::isLogosExport($htmlContent)) {
-                if (!$logosImporterEnabled) {
-                    throw new RuntimeException(t('import.logos_disabled'));
-                }
-                $layoutSetId = trim((string)($_POST['layout_set_id'] ?? ''));
-                if ($layoutSetId === '' || !LayoutSet::isLayoutSet($layoutSetId)) {
-                    throw new RuntimeException(strip_tags(t('import.layout_set_required')));
-                }
-                $result = LogosSermonImporter::import($htmlContent, $layoutSetId);
-                $title = trim($result['title']) . t('import.title_suffix');
-                $newId = Presentation::create($me['id'], $title ?: t('import.default_title'), $result['width'], $result['height']);
-                if (!empty($result['layout_set_id'])) {
-                    Presentation::updateMeta($newId, ['layout_set_id' => $result['layout_set_id']]);
-                }
-                if (!empty($result['footer_text'])) {
-                    Presentation::updateMeta($newId, ['footer_text' => $result['footer_text']]);
-                }
-                $slides = $result['slides'] ?: [Presentation::defaultSlide()];
-                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides]);
-                if (!empty($result['warnings'])) {
-                    $_SESSION['import_warnings'] = $result['warnings'];
-                }
-                sf_import_assign_section($me['id'], $newId);
-                redirect('editor.php?id=' . urlencode($newId));
-                exit;
-            }
-
-            if (!preg_match('/<script type="application\/json" id="slideforge-source-data">(.*?)<\/script>/s', $htmlContent, $m)) {
-                throw new RuntimeException(t('import.no_source_data'));
-            }
-            $data = json_decode($m[1], true);
-            if (!is_array($data) || empty($data['meta']) || !isset($data['slides'])) {
-                throw new RuntimeException(t('import.corrupt_data'));
-            }
-
-            $meta = $data['meta'];
-            $width = max(100, (int)($meta['width'] ?? DEFAULT_SLIDE_WIDTH));
-            $height = max(100, (int)($meta['height'] ?? DEFAULT_SLIDE_HEIGHT));
-            $title = trim((string)($meta['title'] ?? t('import.default_title'))) . t('import.title_suffix');
-
-            $newId = Presentation::create($me['id'], $title, $width, $height);
-            $restored = Exporter::metaFromReimport($meta, $me['id']);
-            if ($restored['fields'] !== []) {
-                Presentation::updateMeta($newId, $restored['fields']);
-            }
-            if ($restored['warnings'] !== []) {
-                $_SESSION['import_warnings'] = array_merge($_SESSION['import_warnings'] ?? [], $restored['warnings']);
-            }
-
-            $slidesData = ['slides' => $data['slides']];
-            $slidesData = Exporter::importAssets($slidesData, $newId, $zipAssetsDir);
-            if (empty($slidesData['slides'])) {
-                $slidesData['slides'] = [Presentation::defaultSlide()];
-            }
-            Storage::write(Presentation::dir($newId) . '/slides.json', $slidesData);
-
-            if ($zipTmpDir) {
-                sf_cleanup_dir($zipTmpDir);
-            }
-
-            sf_import_assign_section($me['id'], $newId);
-            redirect('editor.php?id=' . urlencode($newId));
+    $wantsJson = !empty($_POST['async'])
+        || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+        || str_contains($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest');
+    try {
+        if (empty($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+            throw new RuntimeException(t('import.no_file'));
+        }
+        $job = ImportJob::enqueueFromUpload(
+            $me['id'],
+            $_FILES['import_file'],
+            trim((string)($_POST['dashboard_section_id'] ?? '')),
+            trim((string)($_POST['layout_set_id'] ?? ''))
+        );
+        if ($wantsJson) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true, 'job_id' => $job['id'], 'job' => BackgroundJob::publicStatus($job)], JSON_UNESCAPED_UNICODE);
             exit;
-        } catch (Throwable $e) {
-            if ($zipTmpDir && is_dir($zipTmpDir)) {
-                sf_cleanup_dir($zipTmpDir);
+        }
+        // Fallback ohne JS: kurze Poll-Seite
+        redirect('import.php?wait=' . urlencode($job['id']));
+        exit;
+    } catch (Throwable $e) {
+        if ($wantsJson) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $error = $e->getMessage();
+    }
+}
+
+$waitJobId = trim((string)($_GET['wait'] ?? ''));
+if ($waitJobId !== '') {
+    $waitJob = BackgroundJob::read($waitJobId);
+    if ($waitJob && ($waitJob['user_id'] ?? '') === $me['id'] && ($waitJob['type'] ?? '') === 'import') {
+        if (($waitJob['status'] ?? '') === 'done') {
+            $warnings = $waitJob['result']['warnings'] ?? [];
+            if (is_array($warnings) && $warnings !== []) {
+                $_SESSION['import_warnings'] = $warnings;
             }
-            $error = $e->getMessage();
+            redirect((string)($waitJob['result']['redirect'] ?? 'index.php'));
+            exit;
+        }
+        if (($waitJob['status'] ?? '') === 'failed') {
+            $error = (string)($waitJob['error'] ?? t('import.job_failed'));
         }
     }
 }
@@ -446,6 +247,7 @@ require __DIR__ . '/includes/header.php';
     previewFailed: <?= json_encode(t('import.preview_failed')) ?>,
     previewShow: <?= json_encode(t('import.preview_show')) ?>,
     submit: <?= json_encode(t('import.submit')) ?>,
+    busy: <?= json_encode(t('import.busy')) ?>,
     logosDisabled: <?= json_encode(t('import.logos_disabled')) ?>,
     layoutSetRequired: <?= json_encode(strip_tags(t('import.layout_set_required'))) ?>
   };
@@ -460,7 +262,7 @@ require __DIR__ . '/includes/header.php';
   }
 
   function isLogosExportText(text) {
-    return /sermonpromptrichtextstyle|ref\.ly\/|Exportiert aus\s+<a[^>]+logos\.com/i.test(text);
+    return /sermonpromptrichtextstyle|lighttextstyle|ref\.ly\/|Export(?:iert aus|ed from)\s+<a[^>]+logos\.com/i.test(text);
   }
 
   function setPreviewLoading(loading) {
@@ -596,7 +398,50 @@ require __DIR__ . '/includes/header.php';
     }
     dialogConfirmed.value = '1';
     modal.classList.remove('open');
-    form.requestSubmit();
+    if (window.SFBusy) {
+      SFBusy.show(i18n.busy || 'Import läuft…');
+    } else if (window.HubPageBusy) {
+      HubPageBusy.show({ title: i18n.busy || 'Import läuft…', soft: true });
+    }
+    var fd = new FormData(form);
+    fd.set('async', '1');
+    fetch(window.location.pathname, {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok || !data.job_id) {
+          throw new Error(data.error || i18n.busy);
+        }
+        return pollImport(data.job_id);
+      })
+      .catch(function (err) {
+        if (window.SFBusy) SFBusy.hide();
+        else if (window.HubPageBusy) HubPageBusy.hide();
+        dialogConfirmed.value = '';
+        if (window.SFDialog && SFDialog.alert) SFDialog.alert(String(err.message || err));
+        else if (window.CfStatus) CfStatus.show('error', String(err.message || err));
+      });
+  }
+
+  function pollImport(jobId) {
+    return fetch('import.php?action=status&job=' + encodeURIComponent(jobId), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error || i18n.busy);
+        var st = data.job && data.job.status;
+        if (st === 'done') {
+          var redirect = (data.job.result && data.job.result.redirect) || 'index.php';
+          window.location.href = redirect;
+          return;
+        }
+        if (st === 'failed') throw new Error((data.job && data.job.error) || i18n.busy);
+        return new Promise(function (resolve) { setTimeout(resolve, 700); })
+          .then(function () { return pollImport(jobId); });
+      });
   }
 
   function fetchLogosPreview() {
@@ -664,6 +509,17 @@ require __DIR__ . '/includes/header.php';
     btnReload.addEventListener('click', function () {
       if (!isLogosHtml || !previewShown) return;
       fetchLogosPreview();
+    });
+  }
+
+  var waitJobId = <?= json_encode($waitJobId !== '' && empty($error) ? $waitJobId : '', JSON_UNESCAPED_UNICODE) ?>;
+  if (waitJobId) {
+    if (window.SFBusy) SFBusy.show(i18n.busy || 'Import läuft…');
+    else if (window.HubPageBusy) HubPageBusy.show({ title: i18n.busy || 'Import läuft…', soft: true });
+    pollImport(waitJobId).catch(function (err) {
+      if (window.SFBusy) SFBusy.hide();
+      else if (window.HubPageBusy) HubPageBusy.hide();
+      if (window.CfStatus) CfStatus.show('error', String(err.message || err));
     });
   }
 })();
