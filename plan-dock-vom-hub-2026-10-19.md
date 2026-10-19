@@ -117,15 +117,23 @@ Zwischenspeicher zurück.
 diesem Plan ersetzt, nicht ausgeliefert. Das ist ehrlicher, als etwas zu liefern, das wir
 anschliessend sofort wieder ersetzen.
 
-## Was ich an diesem Plan für offen halte
+## Entschieden (Koordinator, 19.10.)
 
-- **Ein Endpunkt oder zwei?** Apps und Favoriten in einer Antwort ist weniger Verkehr und
-  immer in sich stimmig. Getrennt wäre flexibler. Mein Vorschlag: eine Antwort.
-- **Darf das Dock in der Reihenfolge der Favoriten *nur* Favoriten zeigen** (so wie der Hub
-  heute) oder alles Erlaubte mit den Favoriten vorne? Das hat Urs am 18.10. für den Hub
-  entschieden («Launcher ja» = nur Favoriten); dasselbe für das Modul anzunehmen ist
-  naheliegend, aber es ist seine Sache, nicht meine.
-- **Soll die Oberfläche der FolienSchmiede eigene Rechte kennen?** Heute macht der Hub beim
-  Anmelden aus der Gruppe «Admin» einen lokalen Administrator (Fund 2, eigenes Paket). Wenn der
-  Hub künftig `isAdmin` je Person liefert, wäre das die bessere Quelle als ein Gruppenname im
-  Code — passt zusammen, gehört aber in Fund 2 und braucht Urs' Wort.
+1. **Ein Endpunkt, eine Antwort.** Die Bestellung ist beim Hub; der Vertrag (Felder,
+   `version`, `ttl`, Fehlerfälle) kommt an mich. Bis er da ist, baue ich nichts — die Form der
+   Antwort bestimmt, wie der Zwischenspeicher und die Prüffälle aussehen.
+2. **Das Dock zeigt nur die Favoriten**, wie im Hub (Urs, 18.10.), und der Hub liefert sie in
+   derselben Antwort mit. Damit entfällt im Modul auch die letzte eigene Sortierung.
+3. **`isAdmin` aus der Hub-Antwort** wird die Quelle für Administratorrechte, im Prinzip ja —
+   Menschen bestimmen das im Hub. Weil es aussperren kann, **nur mit Urs' direktem Wort**;
+   vorbereitet in `paket-admin-gruppe-feld-2026-10-19.md`, nicht gebaut.
+
+Das **Modul-Token** legt ein Mensch im Hub an, nicht ich. **U67 entfällt für das Dock**, falls
+Urs nichts anderes will.
+
+## Noch offen
+
+- Der **Vertrag des Endpunkts**. Sobald er da ist: Abfrage, Zwischenspeicher, Rendern,
+  Prüffälle umstellen, Review, Lieferung.
+- Was mit `src/HubFavorites.php` geschieht — ersetzen (reiner Leser der Antwort) oder ganz
+  entfernen. Entscheidet sich am Vertrag.
