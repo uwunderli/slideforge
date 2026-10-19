@@ -47,6 +47,27 @@ mit falschem Geheimnis gilt der Keks gar nicht.
 kommen im ganzen Modul nur in `src/SharedAuth.php` vor. Das `unset()` kann hier also nichts
 brechen.
 
+## wunder.li: nichts zu liefern, und warum der vorbereitete Patch in den Papierkorb geht
+
+Gemessen von wun-srv07 (20.10., nur gelesen): die Demo lädt die **geteilte** `SharedAuth`
+(sha `031504e6…`, Phase 1 schon drin), die **Modul-Kopie** (`a366b657…`, 454 Zeilen vom 9.8.)
+wird **nie** `require`t. S-1 ist dort über die geteilte Datei also bereits vorhanden.
+
+Damit ist auch der Dev-Rückfall in dieser Kopie **schlafend** — er lebt in einer Datei, die
+niemand lädt. Aufgeräumt wird er nicht mit einer eigenen Lieferung in die eingefrorene Demo,
+sondern mit dem nächsten ohnehin fälligen Stand: **unsere Repo-Fassung hat beides schon**
+(`grep -c 'churchforge-dev-secret-change-me'` = **0**, S-1 drin, sha256 `2dfb74ed…`). Eine
+gewöhnliche Auslieferung des Repo-Stands überschreibt die alte Kopie und erledigt es nebenbei.
+
+**Den vorbereiteten Patch für die Demo (`b00eeeee…`) verwerfe ich darum**, statt ihn als Commit
+abzulegen: er flickt eine **Momentaufnahme eines ausgelieferten Stands**, den es im Repo
+nirgends gibt (454 Zeilen, vor dem Dev-Schlüssel-Riegel vom 15.10.). Ein solcher Commit würde
+später wie eine zweite, ältere Linie aussehen und jemanden dazu verleiten, sie weiterzupflegen.
+Was zählt, steht im Repo; die Prüfwerte der Momentaufnahme sind hier festgehalten, falls jemand
+den Weg nachvollziehen will: vorher `a366b65700e2e86930c2b12567c6bc947e2c16c27e64d8573d58f1746765ed56`,
+Patch `b00eeeee3dc90b7d50863f45d17386e0ac2466ecd56c9bcbc0bb5ad9e8b9f3b0`, Ergebnis
+`196abdc9146a3f1735ef32560c47bd74863cb71218ccaed9169ef8b985b463cd`.
+
 ## Zwei Dinge, die zum Auftrag nicht passen
 
 1. **Der md5 in der Weitergabe ist nicht meine Datei.** Angegeben war `0ce3015626`
