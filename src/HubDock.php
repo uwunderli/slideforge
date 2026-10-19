@@ -9,8 +9,10 @@
  * Grundlage: Regel Urs 19.10.2026 «ACL's werden ueber die User definiert und stehen nicht fest
  * im Code. Wer was sehen darf, wird von Menschen gesagt und nicht von der Maschine.»
  *
- * Vertrag: `_berichte/hub/vertrag-dock-2026-10-19.md`
- * (sha256 `b9035dfe9574d115cecdbde7f7800e66d2f23296ac86b2f6089520bb95b1541a`).
+ * Vertrag: `_berichte/hub/vertrag-dock-2026-10-19.md`, **Fassung 2**
+ * (sha256 `a60de895e9dae9244ac9e85f2ef57586170eb6cb724116153c9676cf3ca69d10`).
+ * Fassung 2 bringt: `isAdmin` wie in `acl.php` (eine Admin-Rolle allein zaehlt nicht),
+ * `locked` immer in der Antwort, und `503 lock_unknown` = wie «Hub nicht erreichbar».
  *
  * Verhalten, wenn keine Auskunft kommt — hier steht es an einer Stelle, damit nichts
  * «nach Gefuehl» passiert:
@@ -39,6 +41,16 @@ class HubDock
     private const GNADE = 4;
 
     private const TTL_VORGABE = 300;
+
+    /** Grenzen fuer die Frist aus der Antwort — eine fremde Zahl darf sie nicht sprengen. */
+    private const TTL_MIN = 30;
+    private const TTL_MAX = 600;
+
+    /**
+     * Hat der Hub eben nicht geantwortet, wird so lange nicht erneut gewartet. Sonst
+     * kostet ein toter Hub bei jedem Seitenaufbau das Zeitlimit (Auflage Review 19.10.).
+     */
+    private const STUMM_PAUSE = 60;
 
     /** @var array<string,mixed>|null|false false = noch nicht geholt */
     private static $stand = false;
@@ -97,7 +109,7 @@ class HubDock
         }
         $speicher = self::lese($key);
         $jetzt = time();
-        $ttl = isset($speicher['ttl']) ? max(30, (int)$speicher['ttl']) : self::TTL_VORGABE;
+        $ttl = self::frist($speicher['ttl'] ?? null);
         $gespeichert = is_array($speicher['stand'] ?? null) ? self::sauber($speicher['stand']) : null;
 
         // Frisch genug: gar nicht fragen.
@@ -106,13 +118,20 @@ class HubDock
             return $gespeichert;
         }
 
-        $antwort = self::frage($key, is_array($speicher) ? (string)($speicher['version'] ?? '') : '');
+        // Negativ-Marke: der Hub hat eben nicht geantwortet. Dann nicht erneut ins
+        // Zeitlimit laufen — sonst wartet jeder Seitenaufbau 2 s auf einen toten Hub.
+        if (isset($speicher['stummSeit']) && $jetzt - (int)$speicher['stummSeit'] < self::STUMM_PAUSE) {
+            $antwort = ['art' => 'stumm'];
+        } else {
+            $antwort = self::frage($key, is_array($speicher) ? (string)($speicher['version'] ?? '') : '');
+        }
 
         switch ($antwort['art']) {
             case 'liste':
+                // Die Negativ-Marke faellt mit der neuen Antwort weg.
                 self::schreibe($key, [
                     'version' => (string)$antwort['version'],
-                    'ttl' => (int)$antwort['ttl'],
+                    'ttl' => self::frist($antwort['ttl']),
                     'geholt' => $jetzt,
                     'stand' => $antwort['stand'],
                 ]);
@@ -120,6 +139,7 @@ class HubDock
 
             case 'unchanged':
                 $speicher['geholt'] = $jetzt;
+                unset($speicher['stummSeit']);
                 self::schreibe($key, $speicher);
                 return $gespeichert;
 
@@ -139,13 +159,24 @@ class HubDock
             default:
                 // Hub schweigt (Netz, Zeitlimit, kaputte Antwort, 503 unlesbarer Sperrstand):
                 // letzte Antwort noch eine Weile gelten lassen, dann nichts. Nichts
-                // herabsetzen, nichts raten.
+                // herabsetzen, nichts raten. Die Marke verhindert, dass der naechste
+                // Seitenaufbau wieder ins Zeitlimit laeuft.
+                $speicher = is_array($speicher) ? $speicher : [];
+                $speicher['stummSeit'] = $jetzt;
+                self::schreibe($key, $speicher);
                 if ($gespeichert !== null && isset($speicher['geholt'])
                     && $jetzt - (int)$speicher['geholt'] < $ttl * self::GNADE) {
                     return $gespeichert;
                 }
                 return null;
         }
+    }
+
+    /** Frist aus der Antwort, in Grenzen gehalten. */
+    private static function frist($roh): int
+    {
+        $ttl = is_numeric($roh) ? (int)$roh : self::TTL_VORGABE;
+        return max(self::TTL_MIN, min(self::TTL_MAX, $ttl));
     }
 
     /**
@@ -157,7 +188,14 @@ class HubDock
      */
     private static function frage(string $key, string $version): array
     {
-        $url = rtrim(churchforge_hub_url(), '/') . '/api/dock.php?for=' . rawurlencode($key);
+        $hub = rtrim(churchforge_hub_url(), '/');
+        if (!self::verschluesselt($hub)) {
+            // Das Token geht nur ueber eine verschluesselte Verbindung hinaus. Ausnahme ist
+            // allein der eigene Rechner (Pruefstand) -- Auflage Review 19.10.
+            error_log('SlideForge: Hub-Leiste nicht abgefragt, Hub-Adresse ist nicht https.');
+            return ['art' => 'stumm'];
+        }
+        $url = $hub . '/api/dock.php?for=' . rawurlencode($key);
         if ($version !== '') {
             $url .= '&version=' . rawurlencode($version);
         }
@@ -245,7 +283,7 @@ class HubDock
         return [
             'label' => self::text($roh['label'] ?? 'Hub', 60),
             'href' => self::adresse($roh['href'] ?? ''),
-            'iconUrl' => self::adresse($roh['iconUrl'] ?? ''),
+            'iconUrl' => self::zeichenAdresse($roh['iconUrl'] ?? ''),
         ];
     }
 
@@ -271,7 +309,7 @@ class HubDock
                 'label' => $label,
                 'shortLabel' => self::text($eintrag['shortLabel'] ?? $label, 120),
                 'href' => $href,
-                'iconUrl' => self::adresse($eintrag['iconUrl'] ?? ''),
+                'iconUrl' => self::zeichenAdresse($eintrag['iconUrl'] ?? ''),
                 'newTab' => !empty($eintrag['newTab']),
             ];
         }
@@ -291,6 +329,11 @@ class HubDock
      * Nur `https:`/`http:`-Adressen aus der Antwort uebernehmen. Das ist keine Rechtefrage,
      * sondern eine harte Grenze: ein `javascript:`-Verweis im Markup waere ein Einfallstor,
      * auch wenn die Antwort vom eigenen Hub kommt.
+     *
+     * **Warum die Ziele der Eintraege nicht auf den Hub-Host beschraenkt sind** (Frage aus dem
+     * Review): die Apps liegen auf eigenen Hosts — Group-Office, Nextcloud, die FolienSchmiede
+     * selbst. Eine Bindung an den Hub-Host wuerde die Leiste leerraeumen. Beschraenkt wird
+     * darum das, was dort hingehoert: die **Zeichen** (`zeichenAdresse()`).
      */
     private static function adresse($roh): string
     {
@@ -302,6 +345,46 @@ class HubDock
             return '';
         }
         return preg_match('#^https?://#i', $s) === 1 ? $s : '';
+    }
+
+    /**
+     * Zeichen (Icons) liefert laut Vertrag der Hub. Darum muss die Adresse beim Hub liegen —
+     * sonst holt der Browser jeder Person ein Bild von einem fremden Host (Auflage Review
+     * 19.10.). Passt sie nicht, bleibt das Zeichen leer; die Leiste steht trotzdem.
+     */
+    private static function zeichenAdresse($roh): string
+    {
+        $s = self::adresse($roh);
+        if ($s === '') {
+            return '';
+        }
+        $hub = rtrim(churchforge_hub_url(), '/');
+        $eigen = self::herkunft($hub);
+        $fremd = self::herkunft($s);
+        return ($eigen !== '' && $fremd === $eigen) ? $s : '';
+    }
+
+    /** https, oder http nur auf dem eigenen Rechner (Pruefstand). */
+    private static function verschluesselt(string $url): bool
+    {
+        $t = parse_url($url);
+        $schema = strtolower((string)($t['scheme'] ?? ''));
+        $host = strtolower((string)($t['host'] ?? ''));
+        if ($schema === 'https') {
+            return true;
+        }
+        return $schema === 'http' && in_array($host, ['127.0.0.1', '::1', 'localhost'], true);
+    }
+
+    /** Schema + Host + Port einer Adresse, klein geschrieben. */
+    private static function herkunft(string $url): string
+    {
+        $t = parse_url($url);
+        if (!is_array($t) || ($t['scheme'] ?? '') === '' || ($t['host'] ?? '') === '') {
+            return '';
+        }
+        return strtolower($t['scheme']) . '://' . strtolower($t['host'])
+            . (isset($t['port']) ? ':' . (int)$t['port'] : '');
     }
 
     /** Der Wert wird nie protokolliert oder gemeldet. */

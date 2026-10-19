@@ -79,7 +79,7 @@ laut Vertrag beim Modul ab; `data/` steht in `.gitignore` und wird nicht mit aus
 FolienSchmiede) — ich erzeuge und rotiere keine Schlüssel. Der Wert steht in keiner Meldung,
 keinem Befund, keinem Protokoll: die Hinweiszeile bei 401/403 nennt nur den Status.
 
-## Prüfung: 47 Fälle, alle grün
+## Prüfung: 53 Fälle, alle grün
 
 `php _pruefungen/dock-vom-hub.php` — startet eine Attrappe des Endpunkts
 (`_pruefungen/dock-attrappe/`) mit `php -S` und prüft gegen sie, ohne echten Hub:
@@ -108,6 +108,31 @@ keinem Befund, keinem Protokoll: die Hinweiszeile bei 401/403 nennt nur den Stat
 
 Dass nur `https:`/`http:`-Adressen übernommen werden, ist **keine** Rechtefrage, sondern eine
 harte Grenze — die darf im Code stehen.
+
+## Auflagen aus dem Review des Koordinators (19.10.), eingebaut
+
+| Auflage | Umsetzung |
+|---|---|
+| Frist (`ttl`) deckeln | auf 30–600 s begrenzt, beim Ablegen **und** beim Lesen; eine masslose Zahl im Zwischenspeicher wird nicht geglaubt |
+| Adressen an den Hub-Host binden | **für die Zeichen** umgesetzt (`zeichenAdresse()`: Schema, Host und Port müssen der Hub-Adresse entsprechen, sonst bleibt das Zeichen leer) |
+| HTTPS erzwingen | der Aufruf geht nur über `https` hinaus; `http` allein für Loopback (Prüfstand), sonst gar kein Aufruf und ein Hinweis ins Protokoll |
+| Negativ-Marke bei Hub-Ausfall | nach einer stummen Antwort wird 60 s nicht erneut gewartet — sonst kostet ein toter Hub jeden Seitenaufbau 2 s |
+| Vertragsfassung 2 im Kopf | Fassung und Prüfwert stehen im Kopf von `HubDock.php` |
+| `data/cache` härten | **Prod-Schritt, nicht Code** — Voraussetzung für die Lieferung, siehe unten |
+
+**Eine Auflage habe ich bewusst nur zur Hälfte umgesetzt, mit Begründung:** die **Ziele der
+Einträge** (`href`) bleiben an jeden `http(s)`-Host erlaubt. Die Apps liegen auf eigenen Hosts
+— Group-Office, Nextcloud, die FolienSchmiede selbst. Eine Bindung an den Hub-Host würde die
+Leiste leerräumen, also genau das Gegenteil von «zeigen, was Menschen freigegeben haben».
+Beschränkt ist, was dorthin gehört: die **Zeichen** liefert laut Vertrag der Hub, und ein
+fremder Bildverweis würde bei jeder Person einen Abruf auf einem fremden Host auslösen. Prüffall
+dazu: fremdes Zeichen wird verworfen, der Eintrag bleibt.
+
+**Zur Zahl der Prüffälle:** sie ist von 47 auf 53 gewachsen. Vier Fälle sind beim ersten Lauf
+nach dem Umbau **rot** gewesen — Ursache war der Prüfstand selbst, nicht der Code: `php -S`
+nimmt einstrangig keine neue Verbindung an, solange der absichtlich langsame Fall schläft, und
+die folgenden Fälle liefen dadurch in einen leeren Hub. Mit `PHP_CLI_SERVER_WORKERS=4` und
+3 s Schlafzeit ist es stabil; zweimal hintereinander 53 grün.
 
 ## Zwei Dinge, die beim Ablegen des Tokens zählen (gemessen 19.10.)
 

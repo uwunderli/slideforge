@@ -48,7 +48,9 @@ require $modul . '/src/Launcher.php';
 @unlink($attrappe . '/aufrufe.log');
 $log = $sand . '/server.log';
 $pid = null;
-$cmd = sprintf('php -S 127.0.0.1:%d -t %s > %s 2>&1 & echo $!', $port, escapeshellarg($attrappe), escapeshellarg($log));
+// Mehrere Arbeiter, sonst blockiert ein absichtlich langsamer Fall den ganzen
+// Pruefstand: `php -S` nimmt sonst erst nach dem Schlafen die naechste Verbindung an.
+$cmd = sprintf('PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:%d -t %s > %s 2>&1 & echo $!', $port, escapeshellarg($attrappe), escapeshellarg($log));
 $pid = (int)trim((string)shell_exec($cmd));
 register_shutdown_function(static function () use ($pid) {
     if ($pid > 0) {
@@ -292,7 +294,48 @@ pruefe('aus dem Speicher kommt kein javascript:-Eintrag', ids($dock), ['planforg
 $m = markup();
 pruefe('und kein javascript: im Markup', stripos($m, 'javascript:'), false);
 
-// --- 18. Aktive App ----------------------------------------------------
+// --- 18. Auflagen aus dem Review 19.10. --------------------------------
+leereSpeicher();
+setzeFall('liste');
+$dock = HubDock::current();
+pruefe('Zeichen vom Hub-Host wird uebernommen',
+    str_contains((string)($dock['items'][0]['iconUrl'] ?? ''), '127.0.0.1'), true);
+$m = markup();
+pruefe('fremdes Zeichen (hub.test) landet nicht im Markup', str_contains($m, 'hub.test/i.svg'), false);
+
+// Zeichen von fremder Herkunft wird verworfen, der Eintrag bleibt
+leereSpeicher();
+setzeFall('boese');
+$dock = HubDock::current();
+pruefe('fremdes Zeichen wird verworfen, der Eintrag bleibt',
+    [(string)($dock['items'][0]['id'] ?? ''), (string)($dock['items'][0]['iconUrl'] ?? '')], ['ok', '']);
+
+// Frist aus der Antwort wird gedeckelt
+leereSpeicher();
+setzeFall('liste');
+HubDock::current();
+$datei = (glob($sand . '/data/cache/hub-dock-*.json') ?: [])[0];
+$d = json_decode((string)file_get_contents($datei), true);
+pruefe('Frist wird abgelegt wie geliefert (300)', (int)$d['ttl'], 300);
+$d['ttl'] = 999999;
+file_put_contents($datei, json_encode($d));
+$d['geholt'] = time() - 700;
+file_put_contents($datei, json_encode($d));
+HubDock::reset();
+setzeFall('langsam');
+$t0 = microtime(true);
+HubDock::current();
+pruefe('eine masslose Frist im Speicher wird nicht geglaubt (es wird gefragt)',
+    microtime(true) - $t0 > 1.5, true);
+
+// Negativ-Marke: der zweite Aufbau wartet nicht erneut
+$t0 = microtime(true);
+HubDock::reset();
+HubDock::current();
+pruefe('nach einem stummen Hub wartet der naechste Aufbau nicht erneut',
+    microtime(true) - $t0 < 0.5, true);
+
+// --- 19. Aktive App ----------------------------------------------------
 leereSpeicher();
 setzeFall('liste');
 $m = markup('planforge');

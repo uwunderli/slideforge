@@ -4,6 +4,8 @@
  * Der Fall steht in ../fall.json: {"fall": "...", "version": "..."}.
  */
 $steuer = json_decode((string)@file_get_contents(__DIR__ . '/../fall.json'), true);
+// Die Zeichen muss der Hub selbst ausliefern; das Modul verwirft fremde Herkunft.
+$eigen = 'http://' . ($_SERVER['HTTP_HOST'] ?? '127.0.0.1:8121');
 $fall = is_array($steuer) ? (string)($steuer['fall'] ?? 'liste') : 'liste';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -19,7 +21,7 @@ $raus = static function (int $status, array $daten): void {
     . ' auth=' . (isset($_SERVER['HTTP_AUTHORIZATION']) ? 'ja' : 'nein') . "\n", FILE_APPEND);
 
 if ($fall === 'langsam') {
-    sleep(5);
+    sleep(3);   // laenger als das Zeitlimit des Moduls (2 s), aber nicht ewig
 }
 if ($fall === 'unauthorized') {
     $raus(401, ['ok' => false, 'error' => 'unauthorized']);
@@ -40,12 +42,12 @@ if ($fall === 'kaputt') {
 }
 if ($fall === 'leer') {
     $raus(200, ['ok' => true, 'version' => 'v-leer', 'subject' => 'u:eva', 'isAdmin' => false,
-        'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => 'https://hub.test/icons/hub.svg'],
+        'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => $eigen . '/icons/hub.svg'],
         'items' => [], 'locked' => false, 'ttl' => 300]);
 }
 if ($fall === 'gesperrt') {
     $raus(200, ['ok' => true, 'version' => 'v-sperre', 'subject' => 'u:eva', 'isAdmin' => false,
-        'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => 'https://hub.test/icons/hub.svg'],
+        'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => $eigen . '/icons/hub.svg'],
         'items' => [], 'locked' => true, 'ttl' => 300]);
 }
 if ($fall === 'boese') {
@@ -70,12 +72,12 @@ $raus(200, [
     'version' => $version,
     'subject' => (string)($_GET['for'] ?? ''),
     'isAdmin' => false,
-    'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => 'https://hub.test/icons/hub.svg'],
+    'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => $eigen . '/icons/hub.svg'],
     'items' => [
         ['id' => 'planforge', 'label' => 'PlanSchmiede', 'shortLabel' => 'Plan',
-         'href' => 'https://plan.test/', 'iconUrl' => 'https://hub.test/i/plan.svg', 'newTab' => false],
+         'href' => 'https://plan.test/', 'iconUrl' => $eigen . '/i/plan.svg', 'newTab' => false],
         ['id' => 'go', 'label' => 'Group-Office', 'shortLabel' => 'Group-Office',
-         'href' => 'https://go.test/', 'iconUrl' => 'https://hub.test/i/go.svg', 'newTab' => true],
+         'href' => 'https://go.test/', 'iconUrl' => $eigen . '/i/go.svg', 'newTab' => true],
     ],
     'locked' => false,
     'ttl' => 300,
