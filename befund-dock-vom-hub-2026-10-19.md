@@ -42,7 +42,10 @@ keine Tags, keine Gruppen, kein `modules.json`.
 Unverändert bleiben die zwei Fälle davor: in der Hub-Hülle (`?hub_theme=`) zeichnet der Hub
 sein Dock, und ohne Hub-Anmeldung gibt es das Solo-Zeichen.
 
-**`src/HubFavorites.php` ist gelöscht.** Damit liest die FolienSchmiede nicht mehr in den
+**`src/HubFavorites.php` ist aus dem Arbeitsbaum gelöscht** — **auf Prod hat die Datei nie
+gelegen** (gemessen 19.10.: nicht vorhanden), denn U50 wurde nie ausgeliefert. Bei der
+Lieferung ist darum auf Prod nichts zu entfernen und nichts umzubenennen; es gehen zwei
+geänderte und eine neue Datei hinaus. Damit liest die FolienSchmiede nicht mehr in den
 Dateien einer anderen Anwendung (`user-prefs.json`, `identity-links.json`) — das war die
 schwächste Stelle am alten Entwurf. Die Favoriten kommen in derselben Antwort mit.
 
