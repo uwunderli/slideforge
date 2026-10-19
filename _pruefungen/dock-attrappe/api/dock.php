@@ -50,6 +50,14 @@ if ($fall === 'gesperrt') {
         'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => $eigen . '/icons/hub.svg'],
         'items' => [], 'locked' => true, 'ttl' => 300]);
 }
+if ($fall === 'gesperrt-mit-eintrag') {
+    // Eine Antwort, die sich selbst widerspricht: gesperrt, aber mit Eintrag.
+    $raus(200, ['ok' => true, 'version' => 'v-sperre2', 'subject' => 'u:eva', 'isAdmin' => true,
+        'hub' => ['label' => 'Hub', 'href' => 'https://hub.test/', 'iconUrl' => $eigen . '/icons/hub.svg'],
+        'items' => [['id' => 'planforge', 'label' => 'PlanSchmiede', 'href' => 'https://plan.test/',
+                     'iconUrl' => $eigen . '/i/plan.svg', 'newTab' => false]],
+        'locked' => true, 'ttl' => 300]);
+}
 if ($fall === 'boese') {
     // Adressen, die nicht ins Markup duerfen, und Unsinn in den Feldern.
     $raus(200, ['ok' => true, 'version' => 'v-boese', 'subject' => 'u:eva', 'isAdmin' => true,

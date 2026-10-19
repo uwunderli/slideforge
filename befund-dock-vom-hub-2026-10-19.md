@@ -79,7 +79,7 @@ laut Vertrag beim Modul ab; `data/` steht in `.gitignore` und wird nicht mit aus
 FolienSchmiede) — ich erzeuge und rotiere keine Schlüssel. Der Wert steht in keiner Meldung,
 keinem Befund, keinem Protokoll: die Hinweiszeile bei 401/403 nennt nur den Status.
 
-## Prüfung: 53 Fälle, alle grün
+## Prüfung: 57 Fälle, alle grün
 
 `php _pruefungen/dock-vom-hub.php` — startet eine Attrappe des Endpunkts
 (`_pruefungen/dock-attrappe/`) mit `php -S` und prüft gegen sie, ohne echten Hub:
@@ -159,9 +159,57 @@ anfassen, Urs wird gesondert gefragt). Daraus folgen zwei Punkte:
    Zwischenspeicher** — sonst könnte eine untergeschobene Datei eine Adresse ins Markup
    bringen. Das ist Tiefenstaffelung, keine Rechtefrage.
 
+## Auflagen aus dem eigenen unabhängigen Review (19.10.), eingebaut
+
+Der Review fand fünf echte Punkte — drei davon hatte ich während seines Laufs schon aus den
+Auflagen des Koordinators behoben (Säuberung beim Lesen, `ttl`-Deckel, Negativ-Marke,
+https-Pflicht); er hat sie unabhängig nachgemessen und bestätigt. Neu eingebaut:
+
+1. **`locked: true` wird jetzt durchgesetzt, nicht nur gemerkt.** Vorher hätte eine Antwort,
+   die sich selbst widerspricht (gesperrt **und** mit Eintrag), den Eintrag gezeigt — die
+   Sperre hing allein an der Gegenseite. Jetzt setzt `sauber()` bei einer Sperre Liste **und**
+   `isAdmin` auf leer. Prüffall dazu.
+2. **Der Token hängt nicht mehr am Anfragekopf.** Das war der schwerste Fund:
+   `churchforge_hub_url()` leitet den Hub notfalls aus `HTTP_HOST` ab, und damit hätte ein
+   angemeldeter Mensch mit `Host: hub.wunder.li` unser bkbiel-Token an einen **anderen** Hub
+   ausleiten können (im Review gemessen). Für den Leisten-Aufruf gilt jetzt **nur** die
+   ausdrücklich gesetzte Umgebungsvariable `CHURCHFORGE_HUB_URL`; fehlt sie, geht **kein**
+   Aufruf hinaus. Dieselbe Adresse prüft auch die Herkunft der Zeichen.
+3. **Token-Form wird geprüft** (`[A-Za-z0-9_-.]{8,512}`). Eine Token-Datei mit einem
+   Zeilenumbruch hätte sich sonst in die Kopfzeilen der Anfrage geschrieben. Prüffall mit
+   eingebautem `\nX-Boese: 1`.
+4. **Keine dauerhaft leere Leiste mehr.** Lag im Speicher eine `version` ohne gültigen Stand,
+   antwortete der Hub immer `unchanged` und die Leiste blieb leer, ohne sich zu erholen. Jetzt
+   wird eine Version nur mitgesendet, wenn auch ein brauchbarer Stand dazu liegt.
+5. **Die Tabelle im Kopf von `HubDock.php`** nennt jetzt auch 400, 405 und 503 und sagt, dass
+   `404` einen alten Stand löscht.
+
+**Einen Punkt habe ich bewusst nicht umgesetzt — `subject` gegen den angefragten Schlüssel
+prüfen.** Der Review hat recht, dass die Antwort ungeprüft übernommen wird; eine Gleichheit zu
+verlangen wäre aber **falsch**: der Vertrag sagt ausdrücklich, dass eine verknüpfte Kennung als
+Hauptkonto zählt und `subject` dann **absichtlich** abweicht (`for=216` → `subject=u:urs`). Eine
+Prüfung auf Gleichheit würde also genau die Zweitkonten brechen, für die das Feld gemacht ist,
+und die Zuordnung selbst kann ich nicht nachrechnen — `identity-links.json` liegt beim Hub, und
+dort hineinzulesen haben wir gerade abgeschafft. Der Hub ist für die Leiste die Autorität: wer
+ihn kontrolliert, bestimmt die Liste ohnehin. Abgelegt wird weiterhin unter **unserem**
+Schlüssel, eine Vermischung zwischen Personen ist darum nicht möglich.
+
+**Kleinigkeiten aus dem Review, abgehandelt:** `_pruefungen/` wird **nicht** ausgeliefert — die
+Positivliste in `.deploy/deploy.sh:90` überträgt nur `README.md config src lang seed docker
+public_html scripts` und `config.php`; die Prüfdateien schreiben ihren Sandkasten in einen
+Ordner, der in `.gitignore` steht. Die Vorgabe-Portnummer ist von 8121 auf **8151** geändert.
+`isAdmin` hat im Modul weiterhin **keinen Verbraucher** — das ist Fund 2 der ACL-Prüfung und
+wartet auf Urs' Wort; bis dahin wird das Feld nur durchgereicht.
+
 ## Noch offen, bevor das ausgeliefert werden kann
 
-1. **Der Hub-Endpunkt ist gebaut, aber noch nicht ausgeliefert** (Hub-Commit `6604dad`).
+0. **`CHURCHFORGE_HUB_URL` muss in der Prod-Umgebung des Containers gesetzt sein** — sonst
+   fragt das Modul die Leiste bewusst nicht ab (siehe Auflage 2). **Achtung, das wirkt weiter:**
+   dieselbe Variable schaltet in `shared/bootstrap.php:113` auch `hub_ui_integrated()` auf
+   «live». Auf Prod kommen Kit und `cf-fine.css` schon vom Hub, es wäre also keine Änderung —
+   aber ob die Variable heute gesetzt ist, weiss ich nicht; das muss bkb-srv10 sagen, und nach
+   dem Setzen gehört eine Sichtprobe der Seite dazu.
+1. **Der Hub-Endpunkt ist gebaut, aber noch nicht ausgeliefert.**
 2. **Das Modul-Token muss ein Mensch ausstellen** und bkb-srv10 beim Modul ablegen
    (`data/.hub-token`, 0600, lesbar für den Dienst — uid 101).
 3. **Unabhängiger Review** (sicherheitsrelevant) — läuft.

@@ -17,15 +17,18 @@
  * Verhalten, wenn keine Auskunft kommt — hier steht es an einer Stelle, damit nichts
  * «nach Gefuehl» passiert:
  *
- * | Lage                                   | Rueckgabe                                  |
- * |----------------------------------------|--------------------------------------------|
- * | 200 mit Liste                          | diese Liste                                |
- * | 200, Liste leer                        | leere Liste (Person hat keine Favoriten)   |
- * | 200 `unchanged`                        | der Zwischenspeicher, Frist neu            |
- * | 404 `unknown_subject`                  | `null` = unbekannt, **nicht** «darf nichts» |
- * | 401 / 403 (Token/Recht fehlt)          | `null`, Hinweis ins Protokoll              |
- * | Hub stumm, Zwischenspeicher frisch     | letzte Liste (bis TTL x 4)                 |
- * | Hub stumm, nichts im Speicher          | `null`                                     |
+ * | Lage                                     | Rueckgabe                                     |
+ * |------------------------------------------|-----------------------------------------------|
+ * | 200 mit Liste                            | diese Liste                                   |
+ * | 200, Liste leer                          | leere Liste (Person hat keine Favoriten)      |
+ * | 200 `unchanged`                          | der Zwischenspeicher, Frist neu               |
+ * | 200 mit `locked: true`                   | leere Liste (die Sperre gilt, auch wenn die Antwort Eintraege nennt) |
+ * | 404 `unknown_subject`, 400               | `null` = unbekannt, **nicht** «darf nichts»; ein alter Stand wird **geloescht** |
+ * | 401 / 403 (Token/Recht fehlt)            | `null`, Hinweis ins Protokoll; der Speicher wird **nicht** benutzt, bleibt aber liegen |
+ * | 503 `lock_unknown`, 405, kaputte Antwort | wie «Hub stumm»                               |
+ * | Hub stumm, Zwischenspeicher frisch       | letzte Liste (bis TTL x 4)                    |
+ * | Hub stumm, nichts im Speicher            | `null`                                        |
+ * | keine Hub-Adresse gesetzt, kein Token    | gar kein Aufruf, `null`                       |
  *
  * `null` heisst fuer die Leiste: nur das Hub-Zeichen. Nie «vorsichtshalber alles zeigen».
  *
@@ -123,7 +126,11 @@ class HubDock
         if (isset($speicher['stummSeit']) && $jetzt - (int)$speicher['stummSeit'] < self::STUMM_PAUSE) {
             $antwort = ['art' => 'stumm'];
         } else {
-            $antwort = self::frage($key, is_array($speicher) ? (string)($speicher['version'] ?? '') : '');
+            // Nur fragen mit einer Version, zu der auch ein brauchbarer Stand liegt: sonst
+            // antwortet der Hub `unchanged` und die Leiste bliebe fuer immer leer
+            // (Auflage Review 19.10.).
+            $version = ($gespeichert !== null && is_array($speicher)) ? (string)($speicher['version'] ?? '') : '';
+            $antwort = self::frage($key, $version);
         }
 
         switch ($antwort['art']) {
@@ -188,7 +195,11 @@ class HubDock
      */
     private static function frage(string $key, string $version): array
     {
-        $hub = rtrim(churchforge_hub_url(), '/');
+        $hub = self::hubAdresse();
+        if ($hub === '') {
+            error_log('SlideForge: Hub-Leiste nicht abgefragt, CHURCHFORGE_HUB_URL ist nicht gesetzt.');
+            return ['art' => 'stumm'];
+        }
         if (!self::verschluesselt($hub)) {
             // Das Token geht nur ueber eine verschluesselte Verbindung hinaus. Ausnahme ist
             // allein der eigene Rechner (Pruefstand) -- Auflage Review 19.10.
@@ -265,10 +276,14 @@ class HubDock
      */
     private static function sauber(array $daten): array
     {
+        // Gesperrte Person: die Sperre wird **hier** durchgesetzt, nicht nur gemerkt.
+        // Heute liefert der Hub bei einer Sperre ohnehin keine Eintraege; verlassen wir
+        // uns darauf, haengt die Sperre allein an der Gegenseite (Auflage Review 19.10.).
+        $gesperrt = !empty($daten['locked']);
         return [
             'hub' => self::saubereHub($daten['hub'] ?? null),
-            'items' => self::saubereItems($daten['items'] ?? null),
-            'isAdmin' => !empty($daten['isAdmin']),
+            'items' => $gesperrt ? [] : self::saubereItems($daten['items'] ?? null),
+            'isAdmin' => !$gesperrt && !empty($daten['isAdmin']),
             // Laut Vertrag Fassung 2 ist das Feld immer da; fehlt es (aeltere Fassung),
             // gilt der Sperrstand als unbekannt und die Liste trotzdem.
             'locked' => array_key_exists('locked', $daten) ? (bool)$daten['locked'] : null,
@@ -358,10 +373,24 @@ class HubDock
         if ($s === '') {
             return '';
         }
-        $hub = rtrim(churchforge_hub_url(), '/');
-        $eigen = self::herkunft($hub);
+        $eigen = self::herkunft(self::hubAdresse());
         $fremd = self::herkunft($s);
         return ($eigen !== '' && $fremd === $eigen) ? $s : '';
+    }
+
+    /**
+     * **Die Adresse, an die das Token geht, darf nicht am Anfragekopf hängen.**
+     *
+     * `churchforge_hub_url()` leitet den Hub notfalls aus `HTTP_HOST` ab (shared/bootstrap.php) —
+     * fuer Stile und Zeichen ist das richtig, fuer ein Geheimnis nicht: ein angemeldeter Mensch
+     * koennte mit `Host: hub.wunder.li` unser bkbiel-Token an einen anderen Hub ausleiten
+     * (gemessen im Review 19.10.). Darum gilt hier **nur** die ausdruecklich gesetzte
+     * Umgebungsvariable. Fehlt sie, geht kein Aufruf hinaus und die Leiste zeigt das
+     * Hub-Zeichen — fail-closed.
+     */
+    private static function hubAdresse(): string
+    {
+        return rtrim(trim((string)(getenv('CHURCHFORGE_HUB_URL') ?: '')), '/');
     }
 
     /** https, oder http nur auf dem eigenen Rechner (Pruefstand). */
@@ -399,6 +428,12 @@ class HubDock
             if (is_file($datei) && is_readable($datei)) {
                 $token = trim((string)@file_get_contents($datei));
             }
+        }
+        // Form pruefen: ein Zeilenumbruch oder Leerzeichen im Wert wuerde sich in die
+        // Kopfzeilen der Anfrage schreiben (Auflage Review 19.10.). Lieber kein Token.
+        if ($token !== '' && preg_match('/^[A-Za-z0-9_\-.]{8,512}$/', $token) !== 1) {
+            error_log('SlideForge: Hub-Token hat eine unerwartete Form und wird nicht benutzt.');
+            $token = '';
         }
         self::$token = $token;
         return self::$token;

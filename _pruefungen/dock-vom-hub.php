@@ -10,7 +10,7 @@
 $modul = dirname(__DIR__);
 $sand = __DIR__ . '/sand-dock';
 $attrappe = __DIR__ . '/dock-attrappe';
-$port = (int)(getenv('DOCK_PORT') ?: 8121);
+$port = (int)(getenv('DOCK_PORT') ?: 8151);
 
 @mkdir($sand . '/data/cache', 0770, true);
 
@@ -38,7 +38,7 @@ class ModuleIcon
 $hubUrl = 'http://127.0.0.1:' . $port;
 function churchforge_hub_url(): string
 {
-    return 'http://127.0.0.1:' . (int)(getenv('DOCK_PORT') ?: 8121);
+    return 'http://127.0.0.1:' . (int)(getenv('DOCK_PORT') ?: 8151);
 }
 
 require $modul . '/src/HubDock.php';
@@ -111,6 +111,8 @@ function ids(?array $dock): array
 }
 
 putenv('SLIDEFORGE_HUB_TOKEN=cfm_pruefstand');
+// Die Adresse fuer den Aufruf kommt nur aus der Umgebung, nie aus dem Anfragekopf.
+putenv('CHURCHFORGE_HUB_URL=http://127.0.0.1:' . $port);
 
 // --- 1. Normalfall -------------------------------------------------------
 leereSpeicher();
@@ -335,7 +337,43 @@ HubDock::current();
 pruefe('nach einem stummen Hub wartet der naechste Aufbau nicht erneut',
     microtime(true) - $t0 < 0.5, true);
 
-// --- 19. Aktive App ----------------------------------------------------
+// --- 19. Auflagen aus meinem eigenen Review ----------------------------
+leereSpeicher();
+setzeFall('gesperrt-mit-eintrag');
+$dock = HubDock::current();
+pruefe('locked true setzt die Liste leer, auch wenn Eintraege kommen',
+    [$dock['locked'] ?? null, ids($dock), $dock['isAdmin'] ?? null], [true, [], false]);
+
+leereSpeicher();
+setzeFall('liste');
+putenv('CHURCHFORGE_HUB_URL=');
+HubDock::reset();
+$vorher = aufrufe();
+pruefe('ohne CHURCHFORGE_HUB_URL kein Aufruf', [HubDock::current(), aufrufe()], [null, $vorher]);
+putenv('CHURCHFORGE_HUB_URL=http://127.0.0.1:' . $port);
+
+leereSpeicher();
+putenv('SLIDEFORGE_HUB_TOKEN=cfm_gut' . "\n" . 'X-Boese: 1');
+HubDock::reset();
+$vorher = aufrufe();
+pruefe('Token mit Zeilenumbruch wird verworfen, kein Aufruf',
+    [HubDock::current(), aufrufe()], [null, $vorher]);
+putenv('SLIDEFORGE_HUB_TOKEN=cfm_pruefstand');
+HubDock::reset();
+
+leereSpeicher();
+setzeFall('liste');
+HubDock::current();
+$datei = (glob($sand . '/data/cache/hub-dock-*.json') ?: [])[0];
+$d = json_decode((string)file_get_contents($datei), true);
+unset($d['stand']);
+$d['geholt'] = time() - 400;
+file_put_contents($datei, json_encode($d));
+HubDock::reset();
+pruefe('Version ohne Stand: es wird voll gefragt, die Liste kommt wieder',
+    ids(HubDock::current()), ['planforge', 'go']);
+
+// --- 20. Aktive App ----------------------------------------------------
 leereSpeicher();
 setzeFall('liste');
 $m = markup('planforge');
