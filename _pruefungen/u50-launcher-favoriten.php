@@ -35,11 +35,15 @@ require $modul . '/src/Launcher.php';
 
 // --- Sandkasten anlegen --------------------------------------------------
 @mkdir($hubData, 0700, true);
+// Hinweis: seit 19.10.2026 gilt fail-closed — ein Modul OHNE requireAnyGroup ist
+// fuer niemanden sichtbar. Die drei normalen Module tragen darum die Gruppe, die
+// unsere Pruefperson hat ('Mitarbeiter'); 'ohnegruppe' prueft genau den Rueckfall.
 file_put_contents($hubData . '/modules.json', json_encode(['modules' => [
-    ['id' => 'slideforge', 'labels' => ['de' => 'FolienSchmiede'], 'url' => 'https://slides.test/', 'sort' => '20'],
-    ['id' => 'planforge', 'labels' => ['de' => 'PlanSchmiede'], 'url' => 'https://plan.test/', 'sort' => '10'],
-    ['id' => 'officeforge', 'labels' => ['de' => 'BueroSchmiede'], 'url' => 'https://buero.test/', 'sort' => '30'],
+    ['id' => 'slideforge', 'labels' => ['de' => 'FolienSchmiede'], 'url' => 'https://slides.test/', 'requireAnyGroup' => ['Mitarbeiter'], 'sort' => '20'],
+    ['id' => 'planforge', 'labels' => ['de' => 'PlanSchmiede'], 'url' => 'https://plan.test/', 'requireAnyGroup' => ['Mitarbeiter'], 'sort' => '10'],
+    ['id' => 'officeforge', 'labels' => ['de' => 'BueroSchmiede'], 'url' => 'https://buero.test/', 'requireAnyGroup' => ['Mitarbeiter'], 'sort' => '30'],
     ['id' => 'geheim', 'labels' => ['de' => 'Nur Admin'], 'url' => 'https://x.test/', 'requireAnyGroup' => ['Vorstand'], 'sort' => '40'],
+    ['id' => 'ohnegruppe', 'labels' => ['de' => 'Ohne Gruppeneintrag'], 'url' => 'https://o.test/', 'sort' => '45'],
     ['id' => 'versteckt', 'labels' => ['de' => 'Versteckt'], 'hidden' => true, 'sort' => '50'],
 ]]));
 
@@ -73,42 +77,42 @@ SharedAuth::$user = ['sub' => '4711', 'username' => 'urs', 'tags' => [], 'groups
 // 1) Favoriten bekannt: nur diese, in dieser Reihenfolge
 setzePrefs($hubData, ['4711' => ['favorites' => ['officeforge', 'planforge']]]);
 pruefe('Favoriten bekannt -> nur Favoriten in Hub-Reihenfolge',
-    ids(Launcher::modulesForUser([], 'de')), ['officeforge', 'planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['officeforge', 'planforge']);
 
 // 2) Favorit, den die Person nicht sehen darf, fliegt raus
 setzePrefs($hubData, ['4711' => ['favorites' => ['geheim', 'planforge']]]);
 pruefe('Favorit ohne Berechtigung wird weggelassen',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge']);
 pruefe('mit Gruppe Vorstand ist er dabei',
-    ids(Launcher::modulesForUser(['Vorstand'], 'de')), ['geheim', 'planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter', 'Vorstand'], 'de')), ['geheim', 'planforge']);
 
 // 3) Leere Favoritenliste: leeres Dock (wie im Hub)
 setzePrefs($hubData, ['4711' => ['favorites' => []]]);
-pruefe('keine Favoriten -> leeres Dock', ids(Launcher::modulesForUser([], 'de')), []);
+pruefe('keine Favoriten -> leeres Dock', ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 
 // 4) Person im Hub-Stand nicht gefuehrt -> wie im Hub: keine Favoriten -> leeres Dock
 //    (Auflage aus dem Review: nicht "unbekannt", sonst kippt das Dock spaeter von
 //     "alles" auf "leer", sobald im Hub irgendeine Einstellung einen Eintrag anlegt)
 setzePrefs($hubData, ['9999' => ['favorites' => ['planforge']]]);
 pruefe('Person nicht im Hub-Stand -> leeres Dock (wie im Hub)',
-    ids(Launcher::modulesForUser([], 'de')), []);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 setzePrefs($hubData, ['4711' => ['theme' => 'dark']]);
 pruefe('Eintrag ohne favorites -> leeres Dock',
-    ids(Launcher::modulesForUser([], 'de')), []);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 
 // 5) Zweitkonto zeigt auf Hauptkonto
 setzePrefs($hubData, ['4711' => ['favorites' => ['officeforge']], '5000' => ['favorites' => ['planforge']]]);
 file_put_contents($hubData . '/identity-links.json', json_encode(['links' => ['4711' => ['to' => '5000']]]));
 HubFavorites::reset();
 pruefe('Zweitkonto -> Favoriten des Hauptkontos',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge']);
 unlink($hubData . '/identity-links.json');
 
 // 6) Datei nicht lesbar -> unbekannt -> alte Anzeige
 unlink($hubData . '/user-prefs.json');
 HubFavorites::reset();
 pruefe('kein Hub-Datenordner -> alles Sichtbare',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge', 'slideforge', 'officeforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge', 'slideforge', 'officeforge']);
 
 // 7) Nicht angemeldet -> unbekannt
 SharedAuth::$user = [];
@@ -119,7 +123,7 @@ pruefe('ohne Hub-Anmeldung -> Favoriten unbekannt', HubFavorites::favorites(), n
 SharedAuth::$user = ['sub' => '4711', 'username' => 'urs'];
 setzePrefs($hubData, ['4711' => ['favorites' => ['planforge']]]);
 ob_start();
-Launcher::render('slideforge', [], 'de');
+Launcher::render('slideforge', ['Mitarbeiter'], 'de');
 $markup = (string)ob_get_clean();
 pruefe('Dock traegt data-hub-fav-dock', str_contains($markup, 'data-hub-fav-dock'), true);
 pruefe('Hub-Zeichen traegt data-hub-home', str_contains($markup, 'data-hub-home'), true);
@@ -130,14 +134,26 @@ pruefe('kein zweites Hub-Zeichen', substr_count($markup, 'data-hub-home'), 1);
 file_put_contents($hubData . '/user-prefs.json', '{das ist kein json');
 HubFavorites::reset();
 pruefe('kaputtes user-prefs.json -> unbekannt (alte Anzeige)',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge', 'slideforge', 'officeforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge', 'slideforge', 'officeforge']);
 
 setzePrefs($hubData, ['4711' => ['favorites' => 'planforge']]);
-pruefe('favorites ist kein Feld -> leeres Dock', ids(Launcher::modulesForUser([], 'de')), []);
+pruefe('favorites ist kein Feld -> leeres Dock', ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 
 setzePrefs($hubData, ['4711' => ['favorites' => ['planforge', '', 'planforge', 'gibtsnicht', 42]]]);
 pruefe('leere/doppelte/unbekannte Eintraege werden gefiltert',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge']);
+
+// 8b) **Fail-closed**: ein Modul ohne requireAnyGroup ist fuer niemanden sichtbar —
+//     auch nicht, wenn es als Favorit eingetragen ist (Regel Urs 19.10.2026).
+setzePrefs($hubData, ['4711' => ['favorites' => ['ohnegruppe', 'planforge']]]);
+pruefe('Modul ohne Gruppeneintrag ist nicht sichtbar, auch als Favorit nicht',
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge']);
+unlink($hubData . '/user-prefs.json');
+HubFavorites::reset();
+pruefe('auch im Rueckfall (Favoriten unbekannt) bleibt es weg',
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge', 'slideforge', 'officeforge']);
+pruefe('Gruppe "Admin" sieht es weiterhin (unveraendert, eigener Entscheid offen)',
+    in_array('ohnegruppe', ids(Launcher::modulesForUser(['Admin'], 'de')), true), true);
 
 // 9b) Verschachtelter Wert darf keine Warnung ausloesen (display_errors = 1)
 setzePrefs($hubData, ['4711' => ['favorites' => ['planforge', ['officeforge'], null, true]]]);
@@ -146,7 +162,7 @@ set_error_handler(static function ($nr, $text) use (&$warnung) {
     $warnung = $text;
     return true;
 });
-$ids = ids(Launcher::modulesForUser([], 'de'));
+$ids = ids(Launcher::modulesForUser(['Mitarbeiter'], 'de'));
 restore_error_handler();
 pruefe('verschachtelter Wert -> keine Warnung', $warnung, '');
 pruefe('verschachtelter Wert -> nur die brauchbaren Eintraege', $ids, ['planforge']);
@@ -156,7 +172,7 @@ file_put_contents($hubData . '/user-prefs.json',
     '{"4711":{"favorites":["planforge"],"fuell":"' . str_repeat('x', 4200000) . '"}}');
 HubFavorites::reset();
 pruefe('Datei ueber der Grenze -> unbekannt (alte Anzeige)',
-    ids(Launcher::modulesForUser([], 'de')), ['planforge', 'slideforge', 'officeforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['planforge', 'slideforge', 'officeforge']);
 
 // 9d) Eigenes (managed) Programm wird jetzt ueber die Hub-Kennung sichtbar
 $module = json_decode((string)file_get_contents($hubData . '/modules.json'), true);
@@ -165,12 +181,12 @@ $module['modules'][] = ['id' => 'meins', 'labels' => ['de' => 'Mein Programm'],
 file_put_contents($hubData . '/modules.json', json_encode($module));
 setzePrefs($hubData, ['4711' => ['favorites' => ['meins', 'planforge']]]);
 pruefe('eigenes Programm (managed, owner = Hub-Kennung) ist dabei',
-    ids(Launcher::modulesForUser([], 'de')), ['meins', 'planforge']);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), ['meins', 'planforge']);
 setzePrefs($hubData, ['4711' => ['favorites' => ['meins', 'planforge']], '0' => []]);
 SharedAuth::$user = ['sub' => '5001', 'username' => 'andere'];
 HubFavorites::reset();
 pruefe('fremdes managed-Programm bleibt fuer andere weg',
-    ids(Launcher::modulesForUser([], 'de')), []);
+    ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 SharedAuth::$user = ['sub' => '4711', 'username' => 'urs'];
 HubFavorites::reset();
 
@@ -179,9 +195,9 @@ HubFavorites::reset();
 unlink($hubData . '/user-prefs.json');
 unlink($hubData . '/modules.json');
 HubFavorites::reset();
-pruefe('ohne Hub-Daten -> keine Module', ids(Launcher::modulesForUser([], 'de')), []);
+pruefe('ohne Hub-Daten -> keine Module', ids(Launcher::modulesForUser(['Mitarbeiter'], 'de')), []);
 ob_start();
-Launcher::render('slideforge', [], 'de');
+Launcher::render('slideforge', ['Mitarbeiter'], 'de');
 $ohne = (string)ob_get_clean();
 pruefe('ohne Hub-Daten -> genau ein Eintrag (das Hub-Zeichen)',
     substr_count($ohne, 'class="cf-launcher-item'), 1);

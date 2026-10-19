@@ -143,10 +143,13 @@ class Launcher
         if (self::hasAnyTag($userTags, ['Admin'])) {
             return true;
         }
-        // Leere requireAnyGroup = für Hub-Nutzer sichtbar; sonst Gruppen-Match
+        // **Ohne Gruppeneintrag ist ein Modul nicht sichtbar.** Wer was sehen darf,
+        // sagt ein Mensch in der Hub-Konfiguration, nicht der Code — und ohne Eintrag
+        // gilt zu, nicht offen (Regel Urs 19.10.2026: «ACL's werden über die User
+        // definiert und stehen nicht fest im Code»). Vorher stand hier `true`.
         $groups = $module['requireAnyGroup'] ?? null;
         if (!is_array($groups) || $groups === []) {
-            return true;
+            return false;
         }
         return self::hasAnyTag($userTags, $groups);
     }
