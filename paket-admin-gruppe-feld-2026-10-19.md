@@ -42,6 +42,13 @@ halten. Fehlt das Feld (älterer Hub), heisst das für ein Modul **kein Admin**.
 4. Im Code bleibt **kein** Gruppenname mehr stehen. Die Regel ist damit nicht nur erfüllt,
    sondern es gibt auch keine zweite Liste, die jemand pflegen müsste.
 
+**Ein Punkt, den Urs wissen muss, bevor er Weg B wählt** (aus Fassung 2 des Dock-Vertrags,
+19.10.): `isAdmin` heisst dort **Mitglied der Hub-Gruppe «Administratoren»**, direkt oder über
+eine verknüpfte ChurchTools-Gruppe — **eine Admin-Rolle allein zählt nicht.** Wer im Hub also
+nur über eine Rolle Administrator ist, wäre nach Weg B in der FolienSchmiede **kein**
+Administrator mehr. Vor dem Umstellen gehört darum geprüft, wie Urs' eigener Zugang im Hub
+zustande kommt. Lässt sich das nicht klären, ist Weg A der sichere.
+
 **Die drei Regeln, die dabei zählen — sonst wird genau das daraus, was Urs nicht will:**
 
 - **Nie aus einem Fehler heraus herabsetzen.** Antwort fehlt, Zeitlimit, `404`, Hub nicht

@@ -26,15 +26,7 @@ if (!$useFullDock) {
     return;
 }
 
-$launcherTags = [];
-if (class_exists('SharedAuth')) {
-    $cfUser = SharedAuth::read();
-    if (is_array($cfUser)) {
-        $launcherTags = array_merge(
-            is_array($cfUser['tags'] ?? null) ? $cfUser['tags'] : [],
-            is_array($cfUser['groups'] ?? null) ? $cfUser['groups'] : []
-        );
-    }
-}
-
-Launcher::render('slideforge', $launcherTags, I18n::currentLang());
+// Welche Apps die Person sieht, sagt der Hub (HubDock). Hier werden keine Tags und
+// keine Gruppen mehr uebergeben -- das Modul entscheidet darueber nichts mehr
+// (Regel Urs 19.10.2026).
+Launcher::render('slideforge');
