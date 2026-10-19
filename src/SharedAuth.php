@@ -331,7 +331,16 @@ class SharedAuth
         }
 
         [$header, $body, $sig] = $parts;
-        $expected = self::b64url(hash_hmac('sha256', $header . '.' . $body, self::secret(), true));
+        /* Fehlt der Schluessel, gilt KEIN Token: lieber niemand angemeldet als
+           jemand mit einer Unterschrift, die wir nicht pruefen koennen. Die
+           Ausnahme wird nur hier gefangen - beim Ausstellen (encode) soll sie
+           durchschlagen, damit nie ein unpruefbares Cookie entsteht. */
+        try {
+            $key = self::secret();
+        } catch (RuntimeException $e) {
+            return null;
+        }
+        $expected = self::b64url(hash_hmac('sha256', $header . '.' . $body, $key, true));
         if (!hash_equals($expected, $sig)) {
             return null;
         }
@@ -341,9 +350,33 @@ class SharedAuth
             return null;
         }
 
+        // S-1 Phase 1 (Entwurf ct-persoenlich v2, Review M2/M3): das CT-Token kann verschlüsselt kommen
+        // (`ct_login_token_enc`). Für alle Leser wie bisher als `ct_login_token`; misslingt das Entschlüsseln, gibt
+        // es kein Token — nie eine Abmeldung. Die alte Klartext-Form gilt weiter, bis Phase 2 überall steht.
+        if (isset($json['ct_login_token_enc'])) {
+            $klar = self::feldEntschluesseln((string)$json['ct_login_token_enc'], (string)($json['sub'] ?? ''));
+            if (trim((string)($json['ct_login_token'] ?? '')) === '') {
+                $json['ct_login_token'] = $klar;
+            }
+            unset($json['ct_login_token_enc']);
+        }
+        // GO ist weg (Urs 19.10.) — ein altes Feld wird nicht mehr weitergereicht (Review M1).
+        unset($json['go_access_token']);
         return $json;
     }
 
+    /**
+     * Der Unterschrift-Schluessel. Hier stand bis 15.10.2026 ein fester Wert aus
+     * dem Quelltext als Rueckfall; wer den Quelltext lesen konnte, konnte damit
+     * Sitzungen faelschen - inklusive Admin ueber die Tags im Nutzinhalt
+     * (SlideForge, 16.09., rund sieben Stunden). Darum: ohne echte Quelle KEIN
+     * Schluessel und kein neuer Vorgabewert, auch kein abgeleiteter.
+     *
+     * @throws RuntimeException wenn weder Umgebungsvariable noch eine der
+     *         Kandidatendateien einen nicht leeren Wert liefert. Die Meldung
+     *         nennt nur die Zahl der Kandidaten, nie einen Pfad und nie einen
+     *         Schluesselwert (die landen sonst im Webserver-Protokoll).
+     */
     private static function secret(): string
     {
         $secret = trim((string)(getenv('CHURCHFORGE_AUTH_SECRET') ?: ''));
@@ -351,7 +384,8 @@ class SharedAuth
             return $secret;
         }
 
-        foreach (self::secretFiles() as $file) {
+        $files = self::secretFiles();
+        foreach ($files as $file) {
             if (is_readable($file)) {
                 $raw = trim((string)file_get_contents($file));
                 if ($raw !== '') {
@@ -360,7 +394,22 @@ class SharedAuth
             }
         }
 
-        return 'churchforge-dev-secret-change-me';
+        self::logSecretMissing(count($files));
+        throw new RuntimeException('secret.missing');
+    }
+
+    /** Eine Protokollzeile je Anfrage - ohne Schluesselwert, ohne Pfade. */
+    private static function logSecretMissing(int $candidates): void
+    {
+        static $logged = false;
+        if ($logged) {
+            return;
+        }
+        $logged = true;
+        error_log(sprintf(
+            'SharedAuth secret.missing: kein Sitzungsschluessel gefunden (Umgebungsvariable leer, 0 von %d Kandidatendateien lesbar und nicht leer)',
+            $candidates
+        ));
     }
 
     /** @return list<string> */
@@ -435,6 +484,46 @@ class SharedAuth
     {
         return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    }
+
+    /**
+     * Schlüssel für verschlüsselte Felder im JWT: HKDF aus dem **rohen** gemeinsamen Geheimnis, Zweck
+     * `cf-session-feld-v1` — byte-gleich in jeder Fassung von SharedAuth (Review M3). Kein neuer Schlüssel.
+     * Schutz gegen Protokolle, Proxys und Übergabe-Adressen; nicht gegen ein Modul mit dem Geheimnis.
+     */
+    private static function feldSchluessel(): string
+    {
+        return hash_hkdf('sha256', self::secret(), 32, 'cf-session-feld-v1');
+    }
+
+    /** `v1.<nonce>.<tag>.<daten>` (base64url), AES-256-GCM, AAD = `cf-session|<sub>` (Review N4). */
+    public static function feldVerschluesseln(string $klar, string $sub): string
+    {
+        if ($klar === '') {
+            return '';
+        }
+        $nonce = random_bytes(12);
+        $tag = '';
+        $ct = openssl_encrypt($klar, 'aes-256-gcm', self::feldSchluessel(), OPENSSL_RAW_DATA, $nonce, $tag, 'cf-session|' . $sub, 16);
+        return $ct === false ? '' : 'v1.' . self::b64url($nonce) . '.' . self::b64url($tag) . '.' . self::b64url($ct);
+    }
+
+    private static function feldEntschluesseln(string $enc, string $sub): string
+    {
+        $teile = explode('.', $enc);
+        if (count($teile) !== 4 || $teile[0] !== 'v1') {
+            return '';
+        }
+        try {
+            [$n, $t, $c] = [self::b64urlDecode($teile[1]), self::b64urlDecode($teile[2]), self::b64urlDecode($teile[3])];
+            if (strlen($n) !== 12 || strlen($t) !== 16) {
+                return '';
+            }
+            $klar = openssl_decrypt($c, 'aes-256-gcm', self::feldSchluessel(), OPENSSL_RAW_DATA, $n, $t, 'cf-session|' . $sub);
+            return is_string($klar) ? $klar : '';
+        } catch (Throwable $e) {
+            return '';
+        }
     }
 
     private static function b64url(string $bin): string
