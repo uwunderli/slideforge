@@ -80,7 +80,33 @@ des Hubs (Review M2 der Vorgabe).
   Sprung), `register.php` **200** ohne Meldungszeilen, und im Container-Protokoll dürfen keine
   `secret.missing`-Zeilen auftauchen.
 
-> **Rückbau-Satz:** `src/SharedAuth.php` aus `.sicherung/s1-lesestelle-<stempel>/` zurücklegen
+### Lieferprotokoll bkbiel (20.10.2026, erledigt)
+
+Freigabe des Koordinators, getrennt vom Dock geliefert.
+
+1. **Vorher auf Prod geprüft:** `d7d6d2e9c931dc070efdddddc5d4b738ff67d455fc7f20f79ad05161b5256df7`
+   — wie erwartet (sonst hätte ich angehalten).
+2. **Sicherung:** `/data/slideforge/.sicherung/s1-lesestelle-20261020-1310/SharedAuth.php`,
+   gegen die laufende Datei geprüft, gleicher Prüfwert.
+3. Übertragen mit `scp -p`, eine Datei.
+4. **Nachher auf Prod:** `2dfb74ed35496dfebd95e1478c93e7067fe2bf5c720797a953ac3d8ff2abab45`
+   — genau der Wert aus dem Arbeitsbaum; Besitzer und Rechte unverändert (`99:100`, `644`);
+   8 Treffer für die neuen Namen in der Datei.
+5. **Takt-Probe**, jede Abfrage mit Cache-Buster:
+   - `login.php` **302**, und zwar in **einem** Sprung nach
+     `https://hub.bkbiel.ch/login.php?return=…` — der Anmeldeweg steht.
+   - `login.php` mit einem **ungültigen** Sitzungskeks (`cf_session=kaputt.kaputt.kaputt`)
+     ebenfalls **302**, kein Fehler: eine kaputte Signatur führt weiterhin sauber zur
+     Anmeldung statt in eine Fehlerseite.
+   - `register.php` **200**, 3347 Bytes, **0** Meldungszeilen; der Quelltext ist gegenüber dem
+     Bild **vor** der Lieferung identisch, bis auf den Cache-Buster und den CSRF-Wert.
+   - `index.php` **302**, `sw.php` liefert `slideforge-679` (Version unverändert).
+6. **Was die Probe nicht zeigt:** eine angemeldete Sitzung und das Container-Protokoll
+   (`secret.missing`) — für beides fehlt mir der Zugang, und für die Anmeldung soll er fehlen.
+   Der neue Zweig greift ohnehin erst, wenn der Hub **Phase 2** ausliefert und `_enc`
+   mitschickt; bis dahin läuft auf Prod genau der alte Pfad.
+
+> **Rückbau-Satz:** `src/SharedAuth.php` aus `.sicherung/s1-lesestelle-20261020-1310/` zurücklegen
 > (Prüfwert `d7d6d2e9c931…`) — die Datei ist der ganze Umfang, es wandern keine Daten mit, und
 > es gibt keinen Zustand, der danach noch von der Änderung abhängt.
 
