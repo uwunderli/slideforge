@@ -173,13 +173,13 @@ require __DIR__ . '/includes/header.php';
           <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
           <input type="hidden" name="action" value="upload_avatar">
           <input type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif" required>
-          <button type="submit" class="button button-sm"><?= h(t('profile.upload')) ?></button>
+          <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('profile.upload')) ?></button>
         </form>
         <?php if (!empty($me['avatar'])): ?>
           <form method="post">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
             <input type="hidden" name="action" value="remove_avatar">
-            <button type="submit" class="button button-ghost button-sm"><?= h(t('profile.remove_avatar')) ?></button>
+            <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('profile.remove_avatar')) ?></button>
           </form>
         <?php endif; ?>
       </div>
@@ -193,7 +193,7 @@ require __DIR__ . '/includes/header.php';
       <input type="text" id="username" name="username" value="<?= h($me['username']) ?>" required>
       <label for="email"><?= h(t('profile.email')) ?></label>
       <input type="email" id="email" name="email" value="<?= h($me['email']) ?>" required>
-      <button type="submit" class="button" style="margin-top:16px;"><?= h(t('common.save')) ?></button>
+      <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('common.save')) ?></button>
     </form>
   </div>
 
@@ -219,7 +219,7 @@ require __DIR__ . '/includes/header.php';
           <option value="<?= h($code) ?>" <?= ($me['spellcheck_lang'] ?? '') === $code ? 'selected' : '' ?>><?= h($label) ?></option>
         <?php endforeach; ?>
       </select>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
     </form>
   </div>
 
@@ -255,15 +255,15 @@ require __DIR__ . '/includes/header.php';
               <label><?= h(t('profile.webdav_root')) ?></label>
               <input type="text" name="drive_root_path" value="<?= h($drive['root_path']) ?>" placeholder="<?= h(t('profile.webdav_root_placeholder')) ?>">
               <div class="profile-form-actions">
-                <button type="submit" class="button button-sm"><?= h(t('common.save')) ?></button>
-                <button type="button" class="button button-ghost button-sm webdav-test-btn" data-drive-id="<?= h($drive['id']) ?>"><?= h(t('profile.webdav_test')) ?></button>
+                <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('common.save')) ?></button>
+                <button type="button" class="button button-ghost button-sm webdav-test-btn hub-btn hub-btn--ghost hub-btn--sm" data-drive-id="<?= h($drive['id']) ?>"><?= h(t('profile.webdav_test')) ?></button>
               </div>
             </form>
             <form method="post" class="profile-inline-form" data-sf-confirm="<?= h(t('profile.webdav_delete_confirm')) ?>" data-sf-confirm-danger>
               <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
               <input type="hidden" name="action" value="delete_webdav_drive">
               <input type="hidden" name="drive_id" value="<?= h($drive['id']) ?>">
-              <button type="submit" class="button button-ghost button-sm"><?= h(t('profile.webdav_delete')) ?></button>
+              <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('profile.webdav_delete')) ?></button>
             </form>
             <p class="webdav-test-result" hidden></p>
           </details>
@@ -288,8 +288,8 @@ require __DIR__ . '/includes/header.php';
       <label><?= h(t('profile.webdav_root')) ?></label>
       <input type="text" name="drive_root_path" placeholder="<?= h(t('profile.webdav_root_placeholder')) ?>">
       <div class="profile-form-actions">
-        <button type="submit" class="button button-sm"><?= h(t('profile.webdav_add_btn')) ?></button>
-        <button type="button" class="button button-ghost button-sm" id="webdavTestNewBtn"><?= h(t('profile.webdav_test')) ?></button>
+        <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('profile.webdav_add_btn')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="webdavTestNewBtn"><?= h(t('profile.webdav_test')) ?></button>
       </div>
       <p class="webdav-test-result" id="webdavTestNewResult" hidden></p>
     </form>
@@ -307,7 +307,7 @@ require __DIR__ . '/includes/header.php';
         <?= h(t('profile.logos_importer_enable')) ?>
       </label>
       <p class="profile-intro" style="margin-top:10px;"><?= h(t('profile.logos_importer_enable_desc')) ?></p>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
     </form>
     <div class="profile-logos-help">
       <?= t('profile.logos_importer_help') ?>
@@ -327,7 +327,7 @@ require __DIR__ . '/includes/header.php';
       <input type="password" id="new_password" name="new_password" required minlength="6">
       <label for="new_password2"><?= h(t('profile.new_password_repeat')) ?></label>
       <input type="password" id="new_password2" name="new_password2" required minlength="6">
-      <button type="submit" class="button" style="margin-top:16px;"><?= h(t('profile.change_password')) ?></button>
+      <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('profile.change_password')) ?></button>
     </form>
   </div>
 </div>
@@ -342,7 +342,7 @@ require __DIR__ . '/includes/header.php';
       <?= t('profile.webdav_help_body') ?>
     </div>
     <div class="modal-actions">
-      <button type="button" class="button" id="webdavHelpOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="webdavHelpOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>

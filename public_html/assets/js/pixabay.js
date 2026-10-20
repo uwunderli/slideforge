@@ -100,8 +100,8 @@
     metaEl.textContent = metaParts.join(' · ');
 
     actionsEl.innerHTML =
-      '<button type="button" class="button button-sm pixabay-lightbox-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
-      '<button type="button" class="button button-ghost button-sm pixabay-lightbox-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>';
+      '<button type="button" class="button button-sm pixabay-lightbox-use-obj hub-btn hub-btn--primary hub-btn--sm" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
+      '<button type="button" class="button button-ghost button-sm pixabay-lightbox-use-bg hub-btn hub-btn--ghost hub-btn--sm" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>';
 
     actionsEl.querySelector('.pixabay-lightbox-use-bg')?.addEventListener('click', () => {
       importHit(hit, isVideo ? 'background-video' : 'background-image');
@@ -141,6 +141,36 @@
     const vidFilters = $('pixabayVideoFilters');
     if (imgFilters) imgFilters.hidden = isVideo;
     if (vidFilters) vidFilters.hidden = !isVideo;
+    syncSwitches();
+  }
+
+  /* Die Einstellungen werden über Symbolschalter bedient; die <select> dahinter bleiben
+     der Zustandsspeicher, damit die Suchlogik unverändert deren .value liest. */
+  function syncSwitches() {
+    document.querySelectorAll('#pixabayFilters [data-pxb-target]').forEach((btn) => {
+      const sel = $(btn.dataset.pxbTarget);
+      const aktiv = !!sel && sel.value === btn.dataset.pxbValue;
+      btn.classList.toggle('active', aktiv);
+      btn.setAttribute('aria-pressed', aktiv ? 'true' : 'false');
+    });
+  }
+
+  function initSwitches() {
+    const box = $('pixabayFilters');
+    if (!box) return;
+    box.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pxb-target]');
+      if (!btn || !box.contains(btn)) return;
+      const sel = $(btn.dataset.pxbTarget);
+      if (!sel || sel.value === btn.dataset.pxbValue) return;
+      sel.value = btn.dataset.pxbValue;
+      /* Über das Ereignis, damit der vorhandene Zuhörer an #pixabayMedia greift
+         (Filter umschalten und neu suchen) — keine zweite Stelle mit derselben Logik. */
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      syncSwitches();
+      if (btn.dataset.pxbTarget !== 'pixabayMedia' && lastQuery) runSearch(1);
+    });
+    syncSwitches();
   }
 
   async function runSearch(page, opts) {
@@ -231,8 +261,8 @@
             (meta ? '<span class="pixabay-card-size">' + escapeHtml(meta) + '</span>' : '') +
           '</div>' +
           '<div class="pixabay-card-actions">' +
-            '<button type="button" class="button button-sm pixabay-use-obj" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
-            '<button type="button" class="button button-ghost button-sm pixabay-use-bg" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>' +
+            '<button type="button" class="button button-sm pixabay-use-obj hub-btn hub-btn--primary hub-btn--sm" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useObject')) + '</button>' +
+            '<button type="button" class="button button-ghost button-sm pixabay-use-bg hub-btn hub-btn--ghost hub-btn--sm" data-kind="' + (isVideo ? 'video' : 'image') + '">' + escapeHtml(t('useBackground')) + '</button>' +
           '</div>' +
         '</div>'
       );
@@ -329,6 +359,7 @@
         runSearch(1, {});
       }
     });
+    initSwitches();
     $('pixabayMedia')?.addEventListener('change', () => {
       updateFilterVisibility();
       if (lastQuery) runSearch(1);

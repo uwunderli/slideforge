@@ -93,7 +93,7 @@
 
   function spellFooterHtml() {
     return '<div class="spell-panel-footer">' +
-      '<button type="button" class="button button-sm spell-rerun-btn">' + escapeHtml(t('run')) + '</button>' +
+      '<button type="button" class="button button-sm spell-rerun-btn hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('run')) + '</button>' +
       '</div>';
   }
 
@@ -138,9 +138,9 @@
           (issue.message ? '<div class="spell-issue-msg">' + escapeHtml(issue.message) + '</div>' : '') +
           (suggestion ? '<div class="spell-issue-suggest">' + escapeHtml(t('suggestion')) + ': <strong>' + escapeHtml(suggestion) + '</strong></div>' : '') +
           '<div class="spell-issue-actions">' +
-            (suggestion ? '<button type="button" class="button button-sm spell-apply-btn" data-issue-index="' + idx + '">' + escapeHtml(t('apply')) + '</button>' : '') +
-            '<button type="button" class="button button-ghost button-sm spell-goto-btn" data-issue-index="' + idx + '">' + escapeHtml(t('goto')) + '</button>' +
-            '<button type="button" class="button button-ghost button-sm spell-ignore-btn" data-issue-index="' + idx + '">' + escapeHtml(t('ignore')) + '</button>' +
+            (suggestion ? '<button type="button" class="button button-sm spell-apply-btn hub-btn hub-btn--primary hub-btn--sm" data-issue-index="' + idx + '">' + escapeHtml(t('apply')) + '</button>' : '') +
+            '<button type="button" class="button button-ghost button-sm spell-goto-btn hub-btn hub-btn--ghost hub-btn--sm" data-issue-index="' + idx + '">' + escapeHtml(t('goto')) + '</button>' +
+            '<button type="button" class="button button-ghost button-sm spell-ignore-btn hub-btn hub-btn--ghost hub-btn--sm" data-issue-index="' + idx + '">' + escapeHtml(t('ignore')) + '</button>' +
           '</div>' +
         '</article>'
       );

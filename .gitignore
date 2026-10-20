@@ -31,3 +31,6 @@ docs/samples/*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Eigene Arbeitsordner (nie ausliefern, nie versionieren)
+_coredumps-*/

@@ -1,0 +1,2976 @@
+/*!
+ * hub-kit.css — Bausteine der Hub-Bibliothek in einer Datei.
+ * ERZEUGT von hub/scripts/build-hub-kit.php — nicht von Hand bearbeiten;
+ * die Quellen sind die Einzeldateien unten.
+ *
+ * Einbinden im Modul: <link rel="stylesheet" href="<Hub>/assets/css/hub-kit.css?v=<Asset-Nummer>">
+ * und die mitgeführten Kopien derselben Dateien danach entfernen.
+ *
+ * Teile:
+ *   hub-alpha-index.css       fcdee914a196
+ *   hub-avatar-crop.css       d6904ae8211c
+ *   hub-color-picker.css      a48e6b4e8c29
+ *   hub-confirm.css           011f9beabcec
+ *   hub-date-picker.css       fea9f767ddb9
+ *   hub-dialog-actions.css    cc442c9c1033
+ *   hub-emoji-palette.css     f797dd5e9867
+ *   hub-files.css             17256804c53b
+ *   hub-float-dialog.css      1899183bba3e
+ *   hub-help.css              a9061e83ef32
+ *   hub-list.css              82bc1a9e5723
+ *   hub-page-busy.css         11fd53136240
+ *   hub-ribbon-customize.css  0b878f871de7
+ *   hub-scroll.css            4eb6f633bf44
+ *   hub-secure-delete.css     9382cb894437
+ *   hub-soft-busy.css         1738a9caf67f
+ *   hub-stages.css            86683b8fc152
+ *   hub-status.css            b72cad21cde9
+ *   hub-theme-tag.css         63c80674275a
+ *   hub-timeline.css          cf3e1091b37c
+ *   hub-user-menu.css         362c8fbd87cc
+ */
+
+/* ==== hub-alpha-index.css ============================================================= */
+
+/**
+ * HubAlphaIndex — Alphabet-Index für lange Listen (Sticky-Buchstaben + rechte Leiste).
+ * Quelle für Module: diese Datei + hub-alpha-index.js vendorn, nicht forken.
+ * Abnahme: Lab → Layout → Alphabet-Index.
+ *
+ * Tokens: Hub --surface* / --border / --text* / --accent; Module --of-* Fallback.
+ */
+.hub-alpha {
+  --hub-alpha-surface: var(--surface, var(--of-surface, #242830));
+  --hub-alpha-raised: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-alpha-border: var(--border, var(--of-border, #3a4150));
+  --hub-alpha-text: var(--text, var(--of-text, #e8eaed));
+  --hub-alpha-muted: var(--text-muted, var(--of-muted, #9aa3b2));
+  --hub-alpha-accent: var(--accent, var(--of-work-accent, var(--of-accent, #428bbe)));
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hub-alpha__scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.hub-alpha__list {
+  padding-bottom: 1rem;
+}
+
+.hub-alpha__section {
+  margin: 0;
+}
+
+.hub-alpha__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  color: var(--hub-alpha-muted);
+  background: var(--hub-alpha-raised);
+  border-bottom: 1px solid var(--hub-alpha-border);
+}
+
+.hub-alpha__rail {
+  --hub-alpha-rail-size: 1.35rem;
+  flex: 0 0 calc(var(--hub-alpha-rail-size) + 0.35rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.08rem;
+  padding: 0.35rem 0.2rem;
+  box-sizing: border-box;
+  user-select: none;
+  background: var(--hub-alpha-surface);
+  border-left: 1px solid var(--hub-alpha-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.hub-alpha__rail[hidden] {
+  display: none !important;
+}
+
+.hub-alpha__rail-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hub-alpha-rail-size);
+  height: var(--hub-alpha-rail-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--hub-alpha-muted);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+.hub-alpha__rail-btn:disabled {
+  opacity: 0.22;
+  cursor: default;
+  pointer-events: none;
+}
+
+.hub-alpha__rail-btn:not(:disabled):hover,
+.hub-alpha__rail-btn:not(:disabled):focus-visible {
+  color: var(--hub-alpha-text);
+  background: var(--hub-alpha-raised);
+  outline: none;
+}
+
+.hub-alpha__rail-btn.is-active:not(:disabled) {
+  color: var(--hub-alpha-accent);
+  background: color-mix(in srgb, var(--hub-alpha-accent) 16%, var(--hub-alpha-raised));
+}
+
+/* ==== hub-avatar-crop.css ============================================================= */
+
+/** HubAvatarCrop — Entity/Cover crop. Quelle Hub, Module vendorn. */
+.hub-avatar-crop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, .55);
+  padding: 1rem;
+}
+.hub-avatar-crop[hidden] { display: none; }
+.hub-avatar-crop__dialog {
+  width: min(520px, 100%);
+  background: var(--surface, var(--of-surface, #1a1d22));
+  color: var(--text, var(--of-text, #e8eaed));
+  border: 1px solid var(--border, var(--of-border, #3a4150));
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .35);
+}
+.hub-avatar-crop__dialog h2 {
+  margin: 0 0 .75rem;
+  font-size: 1.05rem;
+}
+.hub-avatar-crop__inner {
+  min-width: 0;
+}
+.hub-avatar-crop__stage {
+  position: relative;
+  width: min(320px, 70vw);
+  height: min(320px, 70vw);
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #d8d8d8;
+  background-image:
+    linear-gradient(45deg, #bbb 25%, transparent 25%),
+    linear-gradient(-45deg, #bbb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #bbb 75%),
+    linear-gradient(-45deg, transparent 75%, #bbb 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  touch-action: none;
+  cursor: grab;
+  border: 1px solid var(--border, var(--of-border, #3a4150));
+}
+.hub-avatar-crop__stage.is-dragging { cursor: grabbing; }
+.hub-avatar-crop__stage.is-picking { cursor: crosshair; }
+.hub-avatar-crop__stage canvas {
+  display: block;
+  margin: 0 auto;
+}
+.hub-avatar-crop__mask {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, .45);
+}
+.hub-avatar-crop__inner[data-crop-shape="square"] .hub-avatar-crop__mask {
+  display: none;
+}
+.hub-avatar-crop__grid {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, transparent 0, transparent calc(33.333% - .5px), rgba(255,255,255,.28) calc(33.333% - .5px), rgba(255,255,255,.28) calc(33.333% + .5px), transparent calc(33.333% + .5px)),
+    linear-gradient(to right, transparent 0, transparent calc(66.666% - .5px), rgba(255,255,255,.28) calc(66.666% - .5px), rgba(255,255,255,.28) calc(66.666% + .5px), transparent calc(66.666% + .5px)),
+    linear-gradient(to bottom, transparent 0, transparent calc(33.333% - .5px), rgba(255,255,255,.28) calc(33.333% - .5px), rgba(255,255,255,.28) calc(33.333% + .5px), transparent calc(33.333% + .5px)),
+    linear-gradient(to bottom, transparent 0, transparent calc(66.666% - .5px), rgba(255,255,255,.28) calc(66.666% - .5px), rgba(255,255,255,.28) calc(66.666% + .5px), transparent calc(66.666% + .5px));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent, #c4a35a) 85%, transparent);
+}
+.hub-avatar-crop__inner[data-crop-shape="square"] .hub-avatar-crop__grid {
+  display: block;
+}
+.hub-avatar-crop__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  align-items: center;
+  margin-top: .85rem;
+}
+.hub-avatar-crop__zoom,
+.hub-avatar-crop__tol {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .85rem;
+  color: var(--text-muted, var(--muted, var(--of-muted, #9aa3b2)));
+  flex: 1;
+  min-width: 8rem;
+}
+.hub-avatar-crop__zoom input,
+.hub-avatar-crop__tol input { flex: 1; min-width: 5rem; }
+.hub-avatar-crop__swatch {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border, var(--of-border, #3a4150));
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+.hub-avatar-crop__toolbar .hub-btn.is-on,
+.hub-avatar-crop__toolbar .of-btn.is-on {
+  outline: 2px solid var(--accent, var(--of-work-accent, var(--of-accent, #428bbe)));
+  outline-offset: 1px;
+}
+.hub-avatar-crop__actions {
+  display: flex;
+  gap: .45rem;
+  margin-left: auto;
+}
+.hub-avatar-crop__hint {
+  margin: .65rem 0 0;
+  font-size: .8rem;
+  color: var(--text-muted, var(--muted, var(--of-muted, #9aa3b2)));
+}
+
+/* In HubFloatDialog: etwas mehr Stage-Platz */
+.hub-float-dialog .hub-avatar-crop__stage {
+  width: min(360px, 72vw);
+  height: min(360px, 72vw);
+}
+
+@media (max-width: 860px) {
+  .of-contact-edit__head { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .of-contact-edit__cols { grid-template-columns: 1fr; }
+}
+
+/* ==== hub-color-picker.css ============================================================ */
+
+/**
+ * HubColorPicker — Markenfarben + natives color-input.
+ * Quelle: hub/public/assets/css/hub-color-picker.css — Module vendorn, nicht forken.
+ */
+.hub-color-field {
+  display: grid;
+  gap: 0.35rem;
+}
+.hub-color-field__label {
+  font-size: 0.88rem;
+  color: var(--text-muted, #888);
+  font-weight: 600;
+}
+.hub-color-field__row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.hub-color-field input[type="color"] {
+  width: 3rem;
+  min-width: 3rem;
+  max-width: 3rem;
+  height: 2.35rem;
+  min-height: 2.35rem;
+  flex: 0 0 3rem;
+  padding: 0.12rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 8px;
+  background: var(--surface-raised, var(--surface, #fff));
+  cursor: pointer;
+}
+.hub-color-dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+.hub-color-dropdown__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hub-color-dropdown__preview {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+  border: 1px solid var(--border, #ccc);
+  flex-shrink: 0;
+}
+.hub-color-dropdown__chev {
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+.hub-color-dropdown__panel,
+.hub-color-palette {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1.65rem);
+  gap: 0.35rem;
+  padding: 0.55rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 10px;
+  background: var(--surface-raised, var(--surface, #fff));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--text, #000) 14%, transparent);
+}
+.hub-color-dropdown.is-open > .hub-color-dropdown__panel {
+  display: grid;
+}
+.hub-color-dropdown:not(.is-open) > .hub-color-dropdown__panel[hidden] {
+  display: none !important;
+}
+.hub-color-swatch {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--text, #000) 18%, transparent);
+  padding: 0;
+  cursor: pointer;
+}
+.hub-color-swatch:hover,
+.hub-color-swatch:focus-visible {
+  outline: 2px solid var(--accent, #3a6c8d);
+  outline-offset: 1px;
+}
+.hub-color-swatch.is-on {
+  outline: 2px solid var(--accent, #3a6c8d);
+  outline-offset: 1px;
+  box-shadow: inset 0 0 0 1px var(--surface-raised, #fff);
+}
+
+/* ==== hub-confirm.css ================================================================= */
+
+/* HubConfirm overlay — Abbrechen + OK / Mehrfach-Wahl */
+.hub-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 14000;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 1rem;
+}
+.hub-confirm-overlay[hidden] {
+  display: none !important;
+}
+.hub-confirm-dialog {
+  width: min(420px, 94vw);
+  padding: 1.15rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid var(--border, #2a3140);
+  background: var(--surface, #1a1f2a);
+  color: var(--text, #e8ecf4);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+.hub-confirm-dialog h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+}
+.hub-confirm-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--muted, var(--text-muted, #9aa3b5));
+  white-space: pre-wrap;
+}
+.hub-confirm-body[hidden] {
+  display: none !important;
+}
+.hub-confirm-extra {
+  margin-top: 0.85rem;
+}
+.hub-confirm-extra[hidden] {
+  display: none !important;
+}
+.hub-confirm-remember {
+  margin: 0;
+}
+.hub-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+/* Buttons self-contained (module may not load admin.css) */
+.hub-confirm-overlay .hub-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border, #2a3140);
+  background: var(--surface-raised, var(--surface, #1a1f2a));
+  color: var(--text, #e8ecf4);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.84rem;
+  min-height: 32px;
+  padding: 0.3rem 0.72rem;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.hub-confirm-overlay .hub-btn:hover {
+  border-color: var(--accent, #4f7cff);
+}
+/* Getönt statt satt, wie im feinen Stil (Urs, 17.10.: «Schlicht, getönt»). */
+.hub-confirm-overlay .hub-btn--primary {
+  background: color-mix(in srgb, var(--accent, #4f7cff) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #4f7cff) 45%, var(--border, transparent));
+  color: var(--text, #e8ecf4);
+}
+.hub-confirm-overlay .hub-btn--ghost {
+  background: transparent;
+  color: var(--muted, var(--text-muted, #9aa3b5));
+}
+/* Destruktiv ebenfalls getönt (wie cf-fine.css): rote Schrift und Rahmen, keine rote Fläche. */
+.hub-confirm-overlay .hub-btn--danger {
+  background: color-mix(in srgb, var(--danger, #e8636f) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #e8636f) 40%, var(--border, transparent));
+  color: var(--danger, #e8636f);
+}
+.hub-btn--danger {
+  background: color-mix(in srgb, var(--danger, #e8636f) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #e8636f) 40%, var(--border, transparent));
+  color: var(--danger, #e8636f);
+}
+.hub-btn--sm {
+  font-size: 0.82rem;
+  padding: 0.28rem 0.65rem;
+}
+
+.hub-rev-block {
+  margin-top: 1.15rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border, #2a3140);
+}
+.hub-rev-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+.hub-rev-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.hub-rev-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border, #2a3140);
+  background: color-mix(in srgb, var(--surface, #1a1f2a) 88%, transparent);
+}
+.hub-rev-item.is-active {
+  border-color: color-mix(in srgb, var(--accent, #4f7cff) 55%, var(--border, #2a3140));
+  background: color-mix(in srgb, var(--accent, #4f7cff) 10%, var(--surface, #1a1f2a));
+}
+.hub-rev-item.is-fallback {
+  border-color: color-mix(in srgb, #22c55e 40%, var(--border, #2a3140));
+}
+.hub-rev-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.hub-rev-label {
+  font-size: 0.88rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.hub-rev-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.hub-prov-hero .hub-rev-block {
+  margin-top: 0.85rem;
+  width: 100%;
+}
+
+.hub-confirm-prompt {
+  display: block;
+  margin: 0;
+}
+.hub-confirm-prompt input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a3140);
+  background: var(--surface-raised, var(--surface, #1a1f2a));
+  color: var(--text, #e8ecf4);
+  font: inherit;
+}
+
+/* ==== hub-date-picker.css ============================================================= */
+
+/**
+ * HubDatePicker — Mini-Kalender-Popover.
+ * Quelle: hub/public/assets/css/hub-date-picker.css — Module vendorn, nicht forken.
+ */
+.hub-date-picker {
+  position: fixed;
+  z-index: 12000;
+  box-sizing: border-box;
+  width: 17.5rem;
+  padding: .55rem .6rem .5rem;
+  border: 1px solid var(--border, var(--of-border, #c9cdd4));
+  border-radius: 10px;
+  background: var(--surface-raised, var(--of-surface, #fff));
+  color: var(--text, var(--of-text, #1a1d24));
+  box-shadow: var(--shadow, var(--of-shadow, 0 10px 28px rgba(0, 0, 0, .18)));
+  font: inherit;
+}
+.hub-date-picker[hidden] {
+  display: none !important;
+}
+.hub-date-picker__head {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin-bottom: .4rem;
+}
+.hub-date-picker__title {
+  flex: 1;
+  text-align: center;
+  font-size: .88rem;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+.hub-date-picker__nav {
+  appearance: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.hub-date-picker__nav:hover {
+  background: color-mix(in srgb, var(--accent, var(--of-work-accent, var(--of-accent, #428bbe))) 12%, transparent);
+}
+.hub-date-picker__wds,
+.hub-date-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .15rem;
+}
+.hub-date-picker__wd {
+  text-align: center;
+  font-size: .68rem;
+  color: var(--text-muted, var(--of-muted, #6b7280));
+  padding: .15rem 0;
+}
+.hub-date-picker__day {
+  appearance: none;
+  min-height: 1.85rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+}
+.hub-date-picker__day:hover {
+  background: color-mix(in srgb, var(--accent, var(--of-work-accent, var(--of-accent, #428bbe))) 14%, transparent);
+}
+.hub-date-picker__day.is-out {
+  opacity: .38;
+}
+.hub-date-picker__day.is-today {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent, var(--of-work-accent, var(--of-accent, #428bbe))) 55%, transparent);
+}
+.hub-date-picker__day.is-selected {
+  background: var(--accent, var(--of-work-accent, var(--of-accent, #428bbe)));
+  color: #fff;
+}
+.hub-date-picker__foot {
+  display: flex;
+  justify-content: center;
+  margin-top: .35rem;
+  padding-top: .3rem;
+  border-top: 1px solid color-mix(in srgb, var(--border, var(--of-border, #c9cdd4)) 80%, transparent);
+}
+.hub-date-picker__today {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent, var(--of-work-accent, var(--of-accent, #428bbe)));
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  padding: .25rem .5rem;
+  border-radius: 6px;
+}
+.hub-date-picker__today:hover {
+  background: color-mix(in srgb, var(--accent, var(--of-work-accent, var(--of-accent, #428bbe))) 12%, transparent);
+}
+
+/* ==== hub-dialog-actions.css ========================================================== */
+
+/* Kanonische Dialog-Aktionszeile — Module ohne Lab-CSS.
+ * Extrahiert aus style.css (G6) — Quelle bleibt style.css, diese Datei ist
+ * die vendorbare Kopie für Module, die style.css nicht laden.
+ */
+.hub-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hub-dialog-actions__start {
+  margin-right: auto;
+}
+
+/* ==== hub-emoji-palette.css =========================================================== */
+
+/**
+ * HubEmojiPalette — kuratierte ChurchForge-Emoji-Auswahl (Unicode).
+ * Quelle: hub/public/assets/css/hub-emoji-palette.css — Module vendorn, nicht forken.
+ */
+.hub-emoji-field {
+  display: grid;
+  gap: 0.35rem;
+}
+.hub-emoji-field__label {
+  font-size: 0.88rem;
+  color: var(--text-muted, #888);
+  font-weight: 600;
+}
+.hub-emoji-field__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.hub-emoji-field__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 2.5rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.55rem;
+}
+.hub-emoji-field__preview {
+  font-size: 1.25rem;
+  line-height: 1;
+  min-width: 1.25rem;
+  text-align: center;
+}
+.hub-emoji-field__preview.is-empty {
+  opacity: 0.45;
+  font-size: 0.95rem;
+}
+.hub-emoji-field__clear {
+  min-width: 2rem;
+}
+
+.hub-emoji-palette {
+  position: fixed;
+  z-index: 14000;
+  width: min(22rem, calc(100vw - 1rem));
+  max-height: min(22rem, calc(100vh - 1rem));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 12px;
+  background: var(--surface-raised, var(--surface, #fff));
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--text, #000) 18%, transparent);
+  overflow: hidden;
+}
+.hub-emoji-palette[hidden] {
+  display: none !important;
+}
+.hub-emoji-palette__head {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--border, #ccc);
+  background: var(--surface, #fff);
+}
+.hub-emoji-palette__tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #888);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hub-emoji-palette__tab.is-on {
+  background: color-mix(in srgb, var(--accent, #3a6c8d) 16%, transparent);
+  color: var(--text, #222);
+  font-weight: 600;
+}
+.hub-emoji-palette__body {
+  padding: 0.45rem;
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.hub-emoji-palette__group-title {
+  margin: 0.35rem 0.15rem 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #888);
+}
+.hub-emoji-palette__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.2rem;
+}
+.hub-emoji-palette__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 0.35rem;
+  cursor: pointer;
+}
+.hub-emoji-palette__btn:hover,
+.hub-emoji-palette__btn:focus-visible {
+  background: color-mix(in srgb, var(--accent, #3a6c8d) 14%, transparent);
+  outline: none;
+}
+.hub-emoji-palette__btn.is-on {
+  background: color-mix(in srgb, var(--accent, #3a6c8d) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent, #3a6c8d);
+}
+.hub-emoji-palette__empty {
+  margin: 0.75rem;
+  color: var(--text-muted, #888);
+  font-size: 0.9rem;
+}
+
+/* ==== hub-files.css =================================================================== */
+
+/**
+ * HubFiles — Dialog «Speichern unter / Öffnen» (Urs, 16.10.). Der Inhalt ist FileForges pick.php im iframe; hier nur
+ * der Rahmen und der Hinweis zur Anmeldung. JS: hub-files.js.
+ */
+.hub-files__frame { display: block; width: 100%; height: 480px; min-height: 200px; border: 0; background: transparent; }
+.hub-files__login { display: grid; gap: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; }
+.hub-files__login p { margin: 0; }
+.hub-files__login[hidden] { display: none; }
+
+/* ==== hub-float-dialog.css ============================================================ */
+
+/**
+ * HubFloatDialog — kanonischer Fenster-Chrome (DESIGN § Dialogfenster).
+ * Quelle für Module: diese Datei vendorn / hub_asset(), nicht forken.
+ * Abnahme: Lab → Dialogfenster.
+ *
+ * Markup: .hub-float-dialog > __titlebar / __body.hub-scroll / __footer / __handle--*
+ * Klassen is-minimized / is-maximized.
+ */
+
+.hub-float-host {
+  position: fixed;
+  inset: 0;
+  z-index: 11990;
+  pointer-events: none;
+}
+
+.hub-float-host .hub-float-dialog {
+  pointer-events: auto;
+}
+
+.hub-float-dialog {
+  position: fixed;
+  z-index: 12000;
+  left: 20vw;
+  top: 18vh;
+  width: 420px;
+  height: 280px;
+  min-width: 320px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.hub-float-dialog[hidden] {
+  display: none !important;
+}
+
+.hub-float-dialog.is-minimized {
+  height: auto !important;
+  min-height: 0;
+}
+
+.hub-float-dialog.is-minimized .hub-float-dialog__body,
+.hub-float-dialog.is-minimized .hub-float-dialog__footer,
+.hub-float-dialog.is-minimized .hub-float-dialog__handle {
+  display: none !important;
+}
+
+.hub-float-dialog.is-minimized .hub-float-dialog__titlebar,
+.hub-float-dialog.is-minimized .hub-float-dialog__title {
+  border-bottom: none;
+  border-radius: 12px;
+}
+
+/**
+ * Vollbild (Urs-Feedback 2026-09-02, ausgelöst durch OfficeForges EuroOffice-Viewer):
+ * "Maximieren" füllt den ECHTEN Viewport, nicht nur den Content-Bereich innerhalb der
+ * App-Chrome — 100vw/100vh statt 96vw/96vh+Rand. Kein Randabstand mehr zur Hub-Kopf-
+ * zeile, da .hub-float-dialog schon position:fixed mit hohem z-index ist (deckt sie
+ * automatisch ab, kein JS/Header-Eingriff nötig). Eckige Ecken im Vollbild (auch bei
+ * Klassisch), da abgerundete Ecken am Viewport-Rand nur unschöne Lücken zeigen würden.
+ */
+.hub-float-dialog.is-maximized {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  right: auto !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.hub-float-dialog.is-maximized .hub-float-dialog__handle {
+  display: none !important;
+}
+
+.hub-float-dialog.is-maximized .hub-float-dialog__titlebar,
+.hub-float-dialog.is-maximized .hub-float-dialog__footer {
+  border-radius: 0 !important;
+}
+
+.hub-float-dialog__titlebar,
+.hub-float-dialog__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  cursor: move;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 80%, var(--border));
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.hub-float-dialog__title-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.hub-float-dialog__win-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.hub-float-dialog__win-btns .hub-btn {
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.15rem 0.45rem;
+  line-height: 1;
+}
+
+.hub-float-dialog__body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.hub-float-dialog__body.hub-float-dialog__body--fill {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hub-float-dialog__footer {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.85rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, var(--border));
+  border-radius: 0 0 12px 12px;
+}
+
+.hub-float-dialog__footer[hidden] {
+  display: none !important;
+}
+
+.hub-float-dialog__footer > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hub-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hub-dialog-actions__start {
+  margin-right: auto;
+}
+
+.hub-float-dialog__handle {
+  position: absolute;
+  z-index: 4;
+}
+
+/* Griffzonen ragen halb über den Rand hinaus: breiter zu treffen und nicht über der Scrollleiste des Bodys. */
+.hub-float-dialog__handle--n { top: -5px; left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+.hub-float-dialog__handle--e { right: -5px; top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
+.hub-float-dialog__handle--s { bottom: -5px; left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+.hub-float-dialog__handle--w { left: -5px; top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
+.hub-float-dialog__handle--ne { top: -6px; right: -6px; width: 18px; height: 18px; cursor: nesw-resize; }
+.hub-float-dialog__handle--nw { top: -6px; left: -6px; width: 18px; height: 18px; cursor: nwse-resize; }
+.hub-float-dialog__handle--se { bottom: -6px; right: -6px; width: 18px; height: 18px; cursor: nwse-resize; }
+.hub-float-dialog__handle--sw { bottom: -6px; left: -6px; width: 18px; height: 18px; cursor: nesw-resize; }
+
+/* Während Ziehen/Resize (Klasse von hub-float-dialog.js): iframes schlucken sonst die Mausereignisse
+   (Modul-Shell), kein Text markieren, Cursor bleibt stehen, auch wenn die Maus den Griff verlässt. */
+html.hub-float-dragging,
+html.hub-float-dragging * {
+  user-select: none !important;
+  cursor: inherit !important;
+}
+html.hub-float-dragging iframe {
+  pointer-events: none !important;
+}
+
+/* Minimale hub-btn-Varianten, falls Modul admin.css nicht lädt — im Gewicht des feinen Stils (cf-fine.css):
+   Rahmen statt Füllung (Urs, 17.10.: «Schlicht, getönt» auch im Dialog). */
+.hub-float-dialog .hub-btn {
+  appearance: none;
+  min-height: 32px;
+  padding: 0.3rem 0.72rem;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text);
+}
+
+.hub-float-dialog .hub-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.hub-float-dialog .hub-btn--ghost:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+/* Hauptknopf getönt in der gewählten Dialogfarbe, nicht satt (Urs, 17.10.: «Schlicht, getönt»). */
+.hub-float-dialog .hub-btn--primary {
+  background: color-mix(in srgb, var(--hub-dialog-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--hub-dialog-accent) 45%, var(--border, transparent));
+  color: var(--text);
+}
+
+.hub-float-dialog .hub-btn--primary:hover {
+  background: color-mix(in srgb, var(--hub-dialog-accent) 26%, transparent);
+  border-color: var(--hub-dialog-accent);
+}
+
+/* Destruktiv im Dialog: rote Schrift und Rahmen, getönt (die Grundregel oben übersteuerte sonst jede Farbe). */
+.hub-float-dialog .hub-btn--danger {
+  background: color-mix(in srgb, var(--danger, #e8636f) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #e8636f) 40%, var(--border, transparent));
+  color: var(--danger, #e8636f);
+}
+
+/**
+ * Chrome-Variante & Akzentfarbe (DESIGN.md § Dialogfenster → Chrome-Variante
+ * & Akzentfarbe). Per-Nutzer wählbar, getrennt Hell/Dunkel — Attribute leben
+ * auf <html> (data-dialog-chrome, data-dialog-accent), serverseitig gesetzt
+ * (header.php) und von cf-theme.js beim Theme-Wechsel nachgeführt. Ohne
+ * Attribut = heutiges Verhalten (Klassisch, Hub --accent) — abwärtskompatibel
+ * für Module, die die Auswahl (noch) nicht anbieten. Lab-Vorschau/Herkunft:
+ * Lab → Chrome-Vorschlag (public/lab/chrome-redesign.php).
+ */
+:root {
+  --hub-dialog-accent: var(--accent);
+}
+:root[data-dialog-accent="blau"] { --hub-dialog-accent: #3a6c8d; }       /* Brilliant Blau — Hub-Standard */
+:root[data-dialog-accent="gruen"] { --hub-dialog-accent: #87b42b; }      /* Blümchen Grün — Hub --accent-green / PlanForge-Familie */
+:root[data-dialog-accent="indigo"] { --hub-dialog-accent: #4449a5; }     /* Indigo — EventForge-Familie */
+:root[data-dialog-accent="terracotta"] { --hub-dialog-accent: #d67d5d; } /* Terracotta — SlideForge View-Akzent */
+/* Flach: eckig statt abgerundet (Rahmen, Titelleiste, Footer, Formularfelder,
+ * alle Buttons), Hauptbutton ohne Füllung — fette Akzentschrift statt Pille. */
+html[data-dialog-chrome="flach"] .hub-float-dialog {
+  border-radius: 0;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__titlebar {
+  background: transparent;
+  border-bottom-color: color-mix(in srgb, var(--border) 55%, transparent);
+  padding-top: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__win-btns .hub-btn {
+  border: none;
+  background: transparent;
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  border-radius: 0;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__win-btns .hub-btn:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog .hub-admin-field input,
+html[data-dialog-chrome="flach"] .hub-float-dialog .hub-admin-field select,
+html[data-dialog-chrome="flach"] .hub-float-dialog .hub-admin-field textarea {
+  border-radius: 0;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer {
+  background: transparent;
+  border-top-color: color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--ghost {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  color: var(--text-muted);
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--ghost:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--danger {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  color: var(--danger, #e8636f);
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--danger:hover {
+  background: color-mix(in srgb, var(--danger, #e8636f) 12%, transparent);
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--primary {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  color: color-mix(in srgb, var(--hub-dialog-accent) 78%, var(--text));
+  font-weight: 700;
+}
+
+html[data-dialog-chrome="flach"] .hub-float-dialog__footer .hub-btn--primary:hover {
+  background: color-mix(in srgb, var(--hub-dialog-accent) 12%, transparent);
+}
+
+/* ==== hub-help.css ==================================================================== */
+
+/**
+ * HubHelp — Feld-Hilfe-Popover (Lab → Dialogfenster → Formularfelder).
+ * Quelle für Module: diese Datei vendorn, nicht forken.
+ *
+ * Tokens: Hub `--surface*` / `--border` / `--text*` / `--accent`.
+ * Module ohne Hub-Tokens: `--of-*` als Fallback (OfficeForge).
+ */
+.hub-field-help-wrap {
+  --hub-help-surface: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-help-bg: var(--surface, var(--of-bg, #1e2229));
+  --hub-help-border: var(--border, var(--of-border, #3a4150));
+  --hub-help-text: var(--text, var(--of-text, #e8eaed));
+  --hub-help-muted: var(--text-muted, var(--of-muted, #9aa3b2));
+  --hub-help-accent: var(--accent, var(--of-work-accent, var(--of-accent, #428bbe)));
+  --hub-help-shadow: var(--shadow, var(--of-shadow, 0 8px 24px rgba(0, 0, 0, 0.28)));
+  position: relative;
+  min-width: 0;
+}
+
+.hub-field-help__head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  min-height: 1.1rem;
+  width: 100%;
+}
+
+.hub-field-help__head > label,
+.hub-field-help-wrap > .hub-field-help__head > .hub-admin-field > span {
+  margin-bottom: 0;
+}
+
+.hub-field-help__head > [data-hub-help-trigger],
+.hub-field-help__head > .hub-field-hint {
+  margin-left: auto;
+}
+
+.hub-field-hint {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hub-help-border);
+  border-radius: 999px;
+  background: var(--hub-help-surface);
+  color: var(--hub-help-muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.hub-field-hint:hover,
+.hub-field-hint:focus-visible,
+.hub-field-hint[aria-expanded="true"] {
+  color: var(--hub-help-text);
+  border-color: var(--hub-help-accent);
+  outline: none;
+}
+
+.hub-field-help {
+  position: absolute;
+  top: 1.75rem;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--hub-help-border);
+  border-radius: 10px;
+  background: var(--hub-help-surface);
+  box-shadow: var(--hub-help-shadow);
+  color: var(--hub-help-text);
+}
+
+.hub-field-help[hidden] {
+  display: none !important;
+}
+
+.hub-field-help__text {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--hub-help-text);
+}
+
+/* Inline-Icon wie Theme-Rail-Kachel (z. B. «Alle Themen») */
+.hub-field-help__tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 1.65rem;
+  height: 1.65rem;
+  margin: 0 0.2rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, #4a4f57 55%, var(--hub-help-border));
+  background: color-mix(in srgb, #4a4f57 88%, var(--hub-help-bg));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.hub-field-help__tile svg {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* ==== hub-list.css ==================================================================== */
+
+/**
+ * hub-list — Listen der Hub-Bibliothek (Urs, 2026-10-15: «Im Hub haben wir das Design geändert und viel
+ * mit Listen gearbeitet. Kannst du dafür sorgen, dass dies zum Standard-Design gemacht wird?»).
+ *
+ * Herkunft: `admin/includes/listen-stil.php` (Apps & Plattformen, Themen, Kategorien, Rechte, Cron).
+ * Neutral benannt (`hub-list…`), damit Module dieselbe Liste bekommen. Seit dem 15.10. benutzen auch
+ * die Hub-Seiten nur noch diese Namen; die Übergangs-Aliase `hub-apps-*` sind entfernt.
+ *
+ * Standard ist die **Tabelle mit Spaltenköpfen** (Urs, 15.10., Lab › Listen: «A gefällt mir besser.»),
+ * auch für kurze Listen wie Mailkonten. Die schlanke Form ohne Köpfe ist damit verworfen.
+ * Verhalten (markieren, öffnen, ordnen): hub-list.js.
+ */
+
+/* --- Tabelle: Werte 1:1 aus `shared/cf-fine.css` (.hub-table), der Form, die Urs gewählt hat --------- */
+.hub-list { width: 100%; border-collapse: collapse; font-size: 0.855rem; }
+.hub-list th { padding: 0.45rem 0.6rem; text-align: left; font-family: var(--font-display, inherit);
+  font-size: 0.645rem; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase;
+  color: var(--text-muted, #6b5648); background: transparent; border-bottom: 1px solid var(--border, #d8dde6);
+  white-space: nowrap; }
+.hub-list td { padding: 0.5rem 0.6rem; vertical-align: middle;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #d8dde6) 55%, transparent); }
+.hub-list tbody tr:hover { background: color-mix(in srgb, var(--text, #2a1f18) 4%, transparent); }
+.hub-list tbody tr:last-child td { border-bottom: 0; }
+.hub-list td.num { font-variant-numeric: tabular-nums; }
+
+/* --- Symbole ----------------------------------------------------------------------------------- */
+.hub-list__icon { display: inline-block; width: 22px; height: 22px; vertical-align: -5px;
+  margin-right: 0.45rem; flex: 0 0 auto; }
+.hub-list__icon img { width: 100%; height: 100%; display: block; object-fit: contain; }
+/* `HubIcon::svg()` bringt keine Attribute mit — Strich und `fill: none` setzt die Stelle, die es zeigt. */
+.hub-list__icon svg, .hub-icon-btn svg {
+  stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.hub-list__icon svg { width: 100%; height: 100%; display: block;
+  color: var(--text-muted, #6b5648); }
+
+/* --- Zeilen und Zellen ------------------------------------------------------------------------- */
+.hub-list td .hub-pill { margin-right: 0.25rem; }
+.hub-list td small.muted { opacity: 0.7; }
+.hub-list__name { color: inherit; text-decoration: none; }
+.hub-list__name:hover, .hub-list__name:focus-visible { text-decoration: underline; }
+.hub-list__url { display: inline-block; max-width: 22rem; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; font-size: 0.9rem; }
+/* Eine Zeile je Eintrag: nichts bricht untereinander um. */
+.hub-list__row > td { white-space: nowrap; }
+.hub-list__desc { max-width: 26rem; overflow: hidden; text-overflow: ellipsis; }
+/* Ein Klick markiert die Zeile — sichtbar, aber ruhig. */
+.hub-list__row { cursor: default; }
+.hub-list__row.is-marked > td {
+  background: color-mix(in srgb, currentColor 10%, transparent); }
+.hub-list__row:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+
+/* --- Themen als Symbole in der Zeile ----------------------------------------------------------- */
+.hub-list__themen { white-space: nowrap; }
+.hub-list__thema { display: inline-flex; width: 18px; height: 18px; margin-right: 0.25rem;
+  vertical-align: -3px; }
+.hub-list__thema svg { width: 100%; height: 100%; display: block; stroke: currentColor;
+  fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hub-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* --- Reiter über der Liste, mit Zahl ----------------------------------------------------------- */
+.hub-list-tabs { display: flex; flex-wrap: wrap; gap: 0.15rem; margin: 0.2rem 0 0.9rem;
+  border-bottom: 1px solid var(--border, #d8dde6); }
+.hub-list-tab { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem;
+  color: var(--text-muted, #6b5648); text-decoration: none; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; white-space: nowrap; }
+.hub-list-tab:hover, .hub-list-tab:focus-visible { color: var(--text, #2a1f18); }
+.hub-list-tab.is-active { color: var(--text, #2a1f18); font-weight: 600;
+  border-bottom-color: currentColor; }
+.hub-list-tab__zahl { font-size: 0.78rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
+
+/* --- Sortieren über die Überschrift ------------------------------------------------------------ */
+.hub-list th a.hub-list-sort { color: inherit; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; }
+.hub-list th a.hub-list-sort:hover, .hub-list th a.hub-list-sort:focus-visible { text-decoration: underline; }
+.hub-list-sort.is-active { font-weight: 700; }
+.hub-list-sort__pfeil { font-size: 0.7rem; line-height: 1; opacity: 0.8; }
+
+/* --- [+]-Menü oben rechts ---------------------------------------------------------------------- */
+.hub-list-add { position: relative; }
+.hub-list-add > summary { list-style: none; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center; min-width: 38px; font-size: 1.15rem; line-height: 1; }
+.hub-list-add > summary::-webkit-details-marker { display: none; }
+.hub-list-add__menu { position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 30;
+  margin: 0; padding: 0.4rem; list-style: none; display: grid; gap: 0.3rem; min-width: 16rem; max-height: 60vh;
+  overflow: auto; background: var(--surface, #fff); border: 1px solid var(--border, #d8dde6);
+  border-radius: 0.6rem; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12); }
+.hub-list-add__menu a, .hub-list-add__menu button { display: block; width: 100%; text-align: left; }
+.hub-list-add__menu form { margin: 0; }
+.hub-list-add__suche { position: sticky; top: -0.4rem; padding: 0.2rem 0 0.35rem;
+  background: var(--surface, #fff); }
+.hub-list-add__suche input { width: 100%; }
+
+/* Ein Formular im [+]-Menü (z. B. «Kategorie anlegen») — breiter, Felder untereinander. */
+.hub-list-add__form { min-width: 20rem; }
+.hub-list-add__form .hub-admin-form { display: grid; gap: 0.5rem; }
+
+/* Kopf eines Abschnitts mit [+] rechts */
+.hub-list-head, .hub-detail-section-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin: 1.2rem 0 0.4rem; }
+.hub-list-head h3, .hub-detail-section-head h3 { margin: 0; }
+
+/* --- Aktionen rechts: Bleistift, Abfalleimer --------------------------------------------------- */
+.hub-list__tools { white-space: nowrap; text-align: right; }
+.hub-list__tools-head { text-align: right; }
+.hub-icon-form { display: inline; margin: 0; }
+.hub-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+  padding: 0; margin-left: 0.2rem; border: 1px solid transparent; border-radius: 0.4rem; background: none;
+  cursor: pointer; vertical-align: middle; color: var(--text-muted, #6b5648); }
+.hub-icon-btn svg { width: 17px; height: 17px; display: block; }
+.hub-icon-btn:hover, .hub-icon-btn:focus-visible { color: var(--text, #2a1f18); border-color: var(--border, #d8dde6);
+  background: color-mix(in srgb, var(--text, #2a1f18) 10%, transparent); }
+.hub-icon-btn--danger:hover, .hub-icon-btn--danger:focus-visible { color: #e06055; border-color: #e06055;
+  background: color-mix(in srgb, #e06055 14%, transparent); }
+.hub-icon-btn--off { opacity: 0.3; cursor: default; }
+
+/* --- Leere Liste ------------------------------------------------------------------------------- */
+.hub-list-empty { padding: 0.9rem 0.6rem; color: var(--text-muted, #6b5648); }
+
+/* --- Ziehen zum Ordnen (hub-list.js, `data-hub-list-sortable`) ---------------------------------- */
+.hub-list__griff { display: inline-flex; width: 16px; height: 16px; margin-right: 0.35rem; vertical-align: -3px;
+  color: var(--text-muted, #6b5648); opacity: 0.45; cursor: grab; touch-action: none; }
+.hub-list__griff svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 2.4;
+  stroke-linecap: round; }
+.hub-list__row:hover .hub-list__griff { opacity: 0.85; }
+.hub-list__row.is-dragging > td { opacity: 0.5; }
+
+/* ==== hub-page-busy.css =============================================================== */
+
+/**
+ * Hub page busy overlay — blocking wait with status bar.
+ * Quelle: hub/public/assets/css/hub-page-busy.css — Module vendorn, nicht forken.
+ * Demo: Lab → Statusmeldungen.
+ */
+
+.hub-page-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(2px);
+}
+.hub-page-busy[hidden] {
+  display: none !important;
+}
+.hub-page-busy__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: min(22rem, 92vw);
+  max-width: 28rem;
+  padding: 1rem 1.15rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.hub-page-busy__row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 600;
+  padding-right: 1.75rem;
+}
+.hub-page-busy__detail {
+  margin: 0;
+  padding-left: calc(1.05rem + 0.65rem);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.hub-page-busy__detail[hidden] {
+  display: none !important;
+}
+.hub-page-busy__progress {
+  width: 100%;
+  margin-top: 0.55rem;
+}
+.hub-page-busy__progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.hub-page-busy__pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.hub-page-busy__bar {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  overflow: hidden;
+}
+.hub-page-busy__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+.hub-page-busy.is-indeterminate .hub-page-busy__fill {
+  width: 40% !important;
+  animation: hub-busy-slide 1.2s ease-in-out infinite;
+}
+@keyframes hub-busy-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(280%); }
+}
+.hub-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: hub-spin 0.7s linear infinite;
+}
+@keyframes hub-spin {
+  to { transform: rotate(360deg); }
+}
+/* Close — CfStatus/Dialog-Muster; nie leerer .hub-btn */
+.hub-page-busy__dismiss {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  appearance: none;
+  margin: 0;
+  padding: 0 0.35rem;
+  min-height: 0;
+  min-width: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.hub-page-busy__dismiss:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.hub-page-busy__dismiss[hidden] {
+  display: none !important;
+}
+
+/* ==== hub-ribbon-customize.css ======================================================== */
+
+/* Ribbon anpassen — HubRibbonCustomize (Lab Navigation; Module vendorn).
+ * Extrahiert aus style.css (G6) — Quelle bleibt style.css, diese Datei ist
+ * die vendorbare Kopie für Module, die style.css nicht laden.
+ */
+.hub-ribbon-customize__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.hub-ribbon-customize__appearance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+.hub-ribbon-customize__appearance-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.hub-ribbon-customize__icon-tools { display: inline-flex; gap: 0.2rem; }
+.hub-ribbon-customize__tool {
+  appearance: none;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.hub-ribbon-customize__tool:hover { background: var(--surface-raised, var(--bg)); }
+.hub-ribbon-customize__tool.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+}
+.hub-ribbon-customize__tool.is-labels-off .hub-ribbon-customize__tool-letter {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+.hub-ribbon-customize__body {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 1.25fr);
+  gap: 0.85rem;
+  min-height: 14rem;
+}
+.hub-ribbon-customize__col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.hub-ribbon-customize__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.hub-ribbon-customize__command-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.hub-ribbon-customize__command-list li { margin: 0; border-bottom: 1px solid var(--border); }
+.hub-ribbon-customize__command-list li:last-child { border-bottom: 0; }
+.hub-ribbon-customize__catalog-row.is-dragging { opacity: 0.45; }
+.hub-ribbon-customize__catalog-item {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.hub-ribbon-customize__catalog-item:hover { background: var(--surface-raised, var(--bg)); }
+.hub-ribbon-customize__catalog-row.is-layout-marker .hub-ribbon-customize__catalog-item { color: var(--text-muted); }
+.hub-ribbon-customize__catalog-icon {
+  display: inline-flex;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+.hub-ribbon-customize__catalog-icon svg { width: 100%; height: 100%; }
+.hub-ribbon-customize__layout-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+.hub-ribbon-customize__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.hub-ribbon-customize__btn:hover { background: var(--surface-raised, var(--bg)); }
+/* Getönt wie der Hauptknopf im feinen Stil und im Dialog (Urs 17.10.: «Schlicht, getönt»). */
+.hub-ribbon-customize__btn--primary {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--text);
+}
+.hub-ribbon-customize__btn--primary:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: var(--accent);
+}
+.hub-ribbon-customize__group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.65rem;
+  background: var(--surface);
+}
+.hub-ribbon-customize__group.is-dragging { opacity: 0.45; }
+.hub-ribbon-customize__group.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.hub-ribbon-customize__group.is-drop-target {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.hub-ribbon-customize__group-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+.hub-ribbon-customize__group.is-collapsed .hub-ribbon-customize__group-head {
+  margin-bottom: 0;
+}
+.hub-ribbon-customize__toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+.hub-ribbon-customize__toggle::before {
+  content: '▸';
+  display: block;
+  font-size: 0.85rem;
+  line-height: 1.35rem;
+  text-align: center;
+  transition: transform 0.15s ease;
+}
+.hub-ribbon-customize__group:not(.is-collapsed) > .hub-ribbon-customize__group-head .hub-ribbon-customize__toggle::before {
+  transform: rotate(90deg);
+}
+.hub-ribbon-customize__meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+}
+.hub-ribbon-customize__group-head input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.hub-ribbon-customize__grip {
+  flex-shrink: 0;
+  width: 1.1rem;
+  text-align: center;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+  font-size: 0.85rem;
+}
+.hub-ribbon-customize__grip:active { cursor: grabbing; }
+.hub-ribbon-customize__cmds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 1.75rem;
+  border-radius: 6px;
+  padding: 0.15rem 0;
+}
+.hub-ribbon-customize__group.is-collapsed .hub-ribbon-customize__cmds {
+  display: none !important;
+}
+.hub-ribbon-customize__cmds.is-drop-target {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: 1px dashed var(--accent);
+}
+.hub-ribbon-customize__cmd {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.2rem;
+  border-radius: 4px;
+}
+.hub-ribbon-customize__cmd.is-dragging { opacity: 0.45; }
+.hub-ribbon-customize__cmd.is-drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.hub-ribbon-customize__cmd.is-drop-target { box-shadow: inset 0 -2px 0 var(--accent); }
+.hub-ribbon-customize__cmd.is-separator .hub-ribbon-customize__cmd-label,
+.hub-ribbon-customize__cmd.is-row-separator .hub-ribbon-customize__cmd-label {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.hub-ribbon-customize__cmd-icon {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+.hub-ribbon-customize__cmd-icon svg { width: 100%; height: 100%; }
+.hub-ribbon-customize__cmd-label { flex: 1; min-width: 0; font-size: 0.85rem; }
+.hub-ribbon-customize__item-tiles {
+  display: inline-flex;
+  gap: 0.15rem;
+  flex-shrink: 0;
+  margin-left: 0.15rem;
+}
+.hub-ribbon-customize__item-tiles .hub-ribbon-customize__tool {
+  min-width: 1.65rem;
+  height: 1.65rem;
+  font-size: 0.7rem;
+  padding: 0;
+}
+.hub-ribbon-customize__icon-btn {
+  appearance: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+.hub-ribbon-customize__icon-btn:hover { color: var(--text); background: var(--bg); }
+.hub-ribbon-customize__meta {
+  margin: 0.25rem 0.2rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.hub-ribbon-customize__groups.is-drop-target {
+  outline: 1px dashed var(--accent);
+  border-radius: 8px;
+  min-height: 3rem;
+}
+.hub-ribbon-customize__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+@media (max-width: 640px) {
+  .hub-ribbon-customize__body { grid-template-columns: 1fr; }
+}
+
+/* ==== hub-scroll.css ================================================================== */
+
+/**
+ * HubScroll — Theme-Scrollleiste (.hub-scroll).
+ * Quelle für Module: diese Datei vendorn, nicht forken.
+ * Abnahme: Lab → Dialogfenster → Scrollleiste; Layout → Split-Bodies.
+ *
+ * Tokens: --scroll-thumb / --scroll-thumb-hover / --scroll-track
+ * Fallback: Hub --border / --accent-dim; Module --of-border / --of-accent
+ */
+.hub-scroll,
+.hub-admin-field textarea,
+.hub-admin-field select[multiple] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb, var(--border, var(--of-border, #3a4150)))
+    var(--scroll-track, transparent);
+}
+
+.hub-scroll::-webkit-scrollbar,
+.hub-admin-field textarea::-webkit-scrollbar,
+.hub-admin-field select[multiple]::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.hub-scroll::-webkit-scrollbar-track,
+.hub-admin-field textarea::-webkit-scrollbar-track,
+.hub-admin-field select[multiple]::-webkit-scrollbar-track {
+  background: var(--scroll-track, transparent);
+}
+
+.hub-scroll::-webkit-scrollbar-thumb,
+.hub-admin-field textarea::-webkit-scrollbar-thumb,
+.hub-admin-field select[multiple]::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb, var(--border, var(--of-border, #3a4150)));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.hub-scroll::-webkit-scrollbar-thumb:hover,
+.hub-admin-field textarea::-webkit-scrollbar-thumb:hover,
+.hub-admin-field select[multiple]::-webkit-scrollbar-thumb:hover {
+  background-color: var(
+    --scroll-thumb-hover,
+    var(--accent-dim, var(--of-accent, #5a6d86))
+  );
+}
+
+.hub-scroll::-webkit-scrollbar-thumb:active,
+.hub-admin-field textarea::-webkit-scrollbar-thumb:active,
+.hub-admin-field select[multiple]::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent-dim, var(--of-accent, #2c5570));
+}
+
+.hub-scroll::-webkit-scrollbar-corner,
+.hub-admin-field textarea::-webkit-scrollbar-corner,
+.hub-admin-field select[multiple]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ==== hub-secure-delete.css =========================================================== */
+
+/**
+ * HubSecureDelete — Sichere Löschmethode (Wort eintippen).
+ * Quelle: hub/public/assets/css/hub-secure-delete.css — Module vendorn, nicht forken.
+ */
+.hub-secure-delete {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #000 55%, transparent);
+  box-sizing: border-box;
+}
+.hub-secure-delete[hidden] {
+  display: none !important;
+}
+.hub-secure-delete__dialog {
+  width: min(26rem, 100%);
+  padding: 1.15rem 1.25rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--danger, #c44) 35%, var(--border, #3a4150));
+  background: var(--surface-raised, var(--surface, #2c313c));
+  color: var(--text, #e8eaed);
+  box-shadow: var(--shadow, 0 18px 50px rgba(0, 0, 0, 0.45));
+  box-sizing: border-box;
+}
+.hub-secure-delete__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.hub-secure-delete__msg,
+.hub-secure-delete__hint {
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  color: var(--text, #e8eaed);
+}
+.hub-secure-delete__hint {
+  color: var(--text-muted, #9aa3b2);
+}
+.hub-secure-delete__word {
+  color: var(--text, #e8eaed);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.hub-secure-delete__extra {
+  margin: 0 0 0.85rem;
+}
+.hub-secure-delete__extra fieldset {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #3a4150);
+}
+.hub-secure-delete__extra legend {
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #9aa3b2);
+}
+.hub-secure-delete__extra label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--text, #e8eaed);
+  cursor: pointer;
+}
+.hub-secure-delete__extra label.is-danger {
+  color: color-mix(in srgb, var(--danger, #e8636f) 80%, var(--text, #e8eaed));
+}
+.hub-secure-delete__warn {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--danger, #e8636f) 40%, var(--border, #3a4150));
+  background: color-mix(in srgb, var(--danger, #e8636f) 12%, var(--surface-raised, #2c313c));
+  color: var(--text, #e8eaed);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.hub-secure-delete__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+}
+.hub-secure-delete__field > span {
+  font-size: 0.85rem;
+  color: var(--text-muted, #9aa3b2);
+}
+.hub-secure-delete__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #3a4150);
+  background: var(--surface, #1e2229);
+  color: var(--text, #e8eaed);
+  font: inherit;
+}
+.hub-secure-delete__input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent, #428bbe) 70%, transparent);
+  outline-offset: 1px;
+}
+.hub-secure-delete__actions {
+  margin-top: 0.25rem;
+}
+.hub-secure-delete__actions button {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border, #3a4150);
+  background: var(--surface, #1e2229);
+  color: var(--text, #e8eaed);
+}
+.hub-secure-delete__actions [data-hub-secure-cancel]:hover {
+  background: color-mix(in srgb, var(--surface-raised, #2c313c) 80%, var(--border, #3a4150));
+}
+.hub-secure-delete__actions [data-hub-secure-ok] {
+  border-color: var(--danger, #e8636f);
+  background: var(--danger, #e8636f);
+  color: #fff;
+}
+.hub-secure-delete__actions [data-hub-secure-ok]:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.hub-secure-delete__actions [data-hub-secure-ok]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* ==== hub-soft-busy.css =============================================================== */
+
+/**
+ * HubSoftBusy — weiches Laden eines Bereichs (Urs, 2026-10-16: «Weicher Übergang … mit dem laufenden Streifen.
+ * Und nur an den Orten, an denen auch geladen wird.»). Vorlage: OfficeForge Mail (softPaneBusy).
+ *
+ * Der ladende Bereich trägt `.hub-soft-busy`; im Zustand `.is-loading` verschwimmt sein Inhalt
+ * (`[data-soft-busy-body]`, sonst die direkten Kinder) und oben läuft ein schmaler Streifen in der Akzentfarbe.
+ * Demo: Lab › Statusmeldungen › Weiches Laden. JS: hub-soft-busy.js.
+ */
+.hub-soft-busy { position: relative; }
+.hub-soft-busy.is-loading > [data-soft-busy-body],
+.hub-soft-busy.is-loading:not(:has(> [data-soft-busy-body])) > * {
+  filter: blur(3px);
+  opacity: .55;
+  pointer-events: none;
+  transition: filter .18s ease, opacity .18s ease;
+}
+/* Übergang nur für filter/opacity des Inhalts (ohne Markierung: alle direkten Kinder) — bewusst, damit das
+   Verschwimmen weich ein- und ausblendet; andere Eigenschaften der Kinder bleiben unberührt. */
+.hub-soft-busy > [data-soft-busy-body],
+.hub-soft-busy:not(:has(> [data-soft-busy-body])) > * { transition: filter .18s ease, opacity .18s ease; }
+.hub-soft-busy.is-loading::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--accent, #3b82f6), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: hub-soft-busy-run 1s linear infinite;
+}
+@keyframes hub-soft-busy-run {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub-soft-busy > [data-soft-busy-body],
+  .hub-soft-busy:not(:has(> [data-soft-busy-body])) > * { transition: none; }
+  .hub-soft-busy.is-loading::after { animation: none; background-size: 100% 100%; opacity: .5; }
+}
+
+/* ==== hub-stages.css ================================================================== */
+
+/*
+ * hub-stages — Stadienleiste (Planung → Bearbeitung → Archiviert), zur Abnahme im Lab › Dossier.
+ * Hub-Baustein (für hub/public/assets/css/ und hub-kit.css), gebaut von der Sitzung Dossier. Nur Theme-Tokens.
+ * Markup: ol.hub-stages > li.hub-stages__step(.is-done|.is-current, aria-current="step")
+ */
+.hub-stages { display: flex; gap: 0; margin: .5rem 0 0; padding: 0; list-style: none; font-size: .8rem; }
+.hub-stages__step { padding: .3rem .8rem; border: 1px solid var(--border, #d8dde6); color: var(--text-muted, #6b7280); }
+.hub-stages__step + .hub-stages__step { border-left: 0; }
+.hub-stages__step:first-child { border-radius: 9px 0 0 9px; }
+.hub-stages__step:last-child { border-radius: 0 9px 9px 0; }
+.hub-stages__step.is-done { color: var(--text, #2a1f18); }
+.hub-stages__step.is-current { color: var(--text, #2a1f18); font-weight: 600;
+  background: color-mix(in srgb, var(--accent, #428bbe) 16%, var(--surface-raised, #f4f4f4)); border-color: var(--accent, #428bbe); }
+
+/* ==== hub-status.css ================================================================== */
+
+/* Hub flash status — Quelle style.css; Module vendorn diese Datei */
+/* Zentraler Flash-Host — fixed Overlay, kein Layout-Sprung */
+.cf-status-host {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 13050;
+  width: min(1100px, calc(100% - 1.5rem));
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.cf-status-host[hidden]:not(.is-active),
+.cf-status-host:not(.is-active):empty {
+  display: none !important;
+}
+.cf-status-host.is-active {
+  display: block;
+}
+.cf-status-host .hub-status {
+  pointer-events: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+}
+
+.hub-status {
+  --hub-status-base: var(--surface-raised, var(--of-surface-raised, #2a303a));
+  --hub-status-accent: var(--accent, var(--of-accent, #428bbe));
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border, var(--of-border, #3a4150));
+  background-color: var(--hub-status-base);
+  color: var(--text, var(--of-text, #e8eaed));
+}
+.hub-status__icon {
+  flex: 0 0 auto;
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  background-color: color-mix(in srgb, var(--text-muted, var(--of-muted, #9aa3b2)) 28%, var(--hub-status-base));
+}
+.hub-status__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.hub-status__body strong { font-size: 0.88rem; }
+.hub-status__detail {
+  opacity: 0.9;
+  font-size: 0.88rem;
+}
+.hub-status__close {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.65;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.hub-status__close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--text, #e8eaed) 10%, transparent);
+}
+/* Gegen Modul-Regeln wie `button { width:100%; background: field }` */
+html[data-theme="light"] .hub-status__close,
+html[data-theme="dark"] .hub-status__close {
+  width: auto;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  color-scheme: inherit;
+}
+.hub-status__bar {
+  margin-top: 0.35rem;
+  height: 5px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--text, #e8eaed) 14%, var(--hub-status-base));
+  overflow: hidden;
+}
+.hub-status__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hub-status-accent);
+  transition: width 0.25s ease;
+}
+.hub-status--ok {
+  background-color: #3a432c;
+  background-color: color-mix(in srgb, #87b42b 28%, var(--hub-status-base));
+  border-color: color-mix(in srgb, #87b42b 55%, var(--border, #3a4150));
+}
+.hub-status--ok .hub-status__icon {
+  background-color: color-mix(in srgb, #87b42b 42%, var(--hub-status-base));
+  color: #c8e887;
+}
+html[data-theme="light"] .hub-status--ok {
+  background-color: #e7efd4;
+  background-color: color-mix(in srgb, #87b42b 28%, var(--hub-status-base));
+}
+html[data-theme="light"] .hub-status--ok .hub-status__icon { color: #3d5c12; }
+
+.hub-status--error {
+  background-color: #4a2e32;
+  background-color: color-mix(in srgb, #e8636f 28%, var(--hub-status-base));
+  border-color: color-mix(in srgb, #e8636f 55%, var(--border, #3a4150));
+}
+.hub-status--error .hub-status__icon {
+  background-color: color-mix(in srgb, #e8636f 42%, var(--hub-status-base));
+  color: #f0a0a8;
+}
+html[data-theme="light"] .hub-status--error {
+  background-color: #f4dce0;
+  background-color: color-mix(in srgb, #e8636f 28%, var(--hub-status-base));
+}
+html[data-theme="light"] .hub-status--error .hub-status__icon { color: #8a1f2a; }
+
+.hub-status--info,
+.hub-status--progress {
+  background-color: #2c3a48;
+  background-color: color-mix(in srgb, var(--hub-status-accent) 28%, var(--hub-status-base));
+  border-color: color-mix(in srgb, var(--hub-status-accent) 50%, var(--border, #3a4150));
+}
+.hub-status--info .hub-status__icon,
+.hub-status--progress .hub-status__icon {
+  background-color: color-mix(in srgb, var(--hub-status-accent) 40%, var(--hub-status-base));
+  color: var(--text, var(--of-text, #e8eaed));
+}
+html[data-theme="light"] .hub-status--info,
+html[data-theme="light"] .hub-status--progress {
+  background-color: #dce8f2;
+  background-color: color-mix(in srgb, var(--hub-status-accent) 22%, var(--hub-status-base));
+}
+
+.hub-status--warn {
+  background-color: #4a4028;
+  background-color: color-mix(in srgb, #d4a843 28%, var(--hub-status-base));
+  border-color: color-mix(in srgb, #d4a843 55%, var(--border, #3a4150));
+}
+.hub-status--warn .hub-status__icon {
+  background-color: color-mix(in srgb, #d4a843 42%, var(--hub-status-base));
+  color: #e8c86a;
+}
+html[data-theme="light"] .hub-status--warn {
+  background-color: #f3e8d2;
+  background-color: color-mix(in srgb, #d4a843 28%, var(--hub-status-base));
+}
+html[data-theme="light"] .hub-status--warn .hub-status__icon { color: #6a4e10; }
+
+/* ==== hub-theme-tag.css =============================================================== */
+
+/**
+ * Themen-Zuordnung — nur Farbe + Icon (kein Label).
+ * Optik wie OfficeForge Mail-Markierung (`.of-mail__theme-chip`).
+ * Token `--sw` = Themenfarbe. Name in title / aria-label.
+ *
+ * Markup: .hub-theme-tags > label.hub-theme-tag > input.hub-theme-tag__input + .hub-theme-tag__icon
+ * Ohne Checkbox: button.hub-theme-tag.is-on
+ */
+.hub-theme-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hub-theme-tag {
+  --_sw: var(--sw, var(--hub-tile-color, var(--of-work-accent, var(--accent, #428bbe))));
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--_sw) 55%, transparent);
+  background: color-mix(in srgb, var(--_sw) 12%, var(--surface, var(--of-surface, var(--bg, #1b1f27))));
+  color: var(--_sw);
+  cursor: pointer;
+  opacity: 0.55;
+  filter: grayscale(0.35);
+  line-height: 0;
+}
+
+.hub-theme-tag__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.hub-theme-tag__icon {
+  display: inline-flex;
+  width: 0.95rem;
+  height: 0.95rem;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.hub-theme-tag__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: currentColor;
+}
+
+.hub-theme-tag:hover {
+  opacity: 0.85;
+  filter: none;
+}
+
+.hub-theme-tag:has(:checked),
+.hub-theme-tag.is-on,
+.hub-theme-tag[aria-pressed="true"] {
+  opacity: 1;
+  filter: none;
+  border-color: color-mix(in srgb, var(--_sw) 70%, transparent);
+  background: color-mix(in srgb, var(--_sw) 28%, var(--surface, var(--of-surface, var(--bg, #1b1f27))));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--_sw) 35%, transparent);
+}
+
+.hub-theme-tag:has(:focus-visible),
+.hub-theme-tag:focus-visible {
+  outline: 2px solid var(--_sw);
+  outline-offset: 2px;
+}
+
+/* ==== hub-timeline.css ================================================================ */
+
+/*
+ * hub-timeline — waagrechte Zeitachse, Einträge abwechselnd über und unter der Achse (Urs, 16.10.).
+ * Hub-Baustein (für hub/public/assets/css/ und hub-kit.css), gebaut von der Sitzung Dossier. Nur Theme-Tokens,
+ * damit hell/dunkel und die gewählte Grundfarbe gelten. Verhalten: hub-timeline.js (HubTimeline).
+ */
+.hub-timeline { --hub-tl-row: 3.4rem; position: relative; width: 100%; }
+.hub-timeline__track { position: relative; height: calc((var(--hub-tl-row) * var(--hub-tl-levels, 1) + 3.6rem) * 2); }
+.hub-timeline__axis { position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent, #428bbe) 55%, var(--border, #d8dde6)); border-radius: 1px; }
+.hub-timeline__item { position: absolute; top: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .4rem;
+  max-width: 11rem; padding: 0; border: 0; background: none; color: var(--text, #2a1f18); font: inherit; text-align: left; cursor: pointer; }
+/* Der Stiel verbindet Symbol und Achse; weiter entfernte Ebenen haben einen längeren Stiel. */
+.hub-timeline__item[data-side="up"] { flex-direction: column-reverse; transform: translate(-50%, -100%); }
+.hub-timeline__item[data-side="down"] { flex-direction: column; transform: translate(-50%, 0); }
+.hub-timeline__item[data-level="1"] { --lv: 1; }
+.hub-timeline__item[data-level="2"] { --lv: 2; }
+.hub-timeline__stem { width: 1px; height: calc(.6rem + var(--hub-tl-row) * var(--lv, 0)); background: var(--border, #d8dde6); }
+.hub-timeline__icon { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; flex: none;
+  border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--accent, #428bbe) 70%, var(--border, #d8dde6));
+  background: var(--surface, #fff); color: var(--accent, #428bbe); }
+.hub-timeline__icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hub-timeline__item.is-muted .hub-timeline__icon { color: var(--text-muted, #6b7280); border-color: var(--border, #d8dde6); }
+.hub-timeline__item.is-warn .hub-timeline__icon { color: var(--danger, #b42318); border-color: color-mix(in srgb, var(--danger, #b42318) 60%, var(--border, #d8dde6)); }
+.hub-timeline__text { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.hub-timeline__label { font-size: .78rem; line-height: 1.2; max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hub-timeline__meta { font-size: .685rem; color: var(--text-muted, #6b7280); white-space: nowrap; }
+.hub-timeline__item:hover .hub-timeline__label, .hub-timeline__item:focus-visible .hub-timeline__label { text-decoration: underline; }
+.hub-timeline__item:focus-visible { outline: none; }
+.hub-timeline__item:focus-visible .hub-timeline__icon { box-shadow: 0 0 0 2px var(--surface, #fff), 0 0 0 4px var(--accent, #428bbe); }
+.hub-timeline__foot { display: flex; justify-content: space-between; font-size: .685rem; color: var(--text-muted, #6b7280); padding: 0 .2rem; }
+.hub-timeline--scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.hub-timeline--scroll .hub-timeline__foot { width: max-content; min-width: 100%; }
+.hub-timeline__empty { color: var(--text-muted, #6b7280); font-size: .84rem; margin: .4rem 0; }
+
+/* Schmal: senkrecht, Achse links, ein Eintrag je Zeile, zeitlich sortiert (order setzt hub-timeline.js) */
+.hub-timeline--vertical .hub-timeline__track { height: auto; display: flex; flex-direction: column; gap: .5rem; padding-left: 1.4rem; }
+.hub-timeline--vertical .hub-timeline__axis { left: .55rem; right: auto; top: 0; bottom: 0; width: 2px; height: auto; transform: none; }
+.hub-timeline--vertical .hub-timeline__item { position: relative; top: auto; left: auto !important; transform: none; margin: 0;
+  flex-direction: row; max-width: none; }
+.hub-timeline--vertical .hub-timeline__stem { display: none; }
+.hub-timeline--vertical .hub-timeline__icon { margin-left: -1.55rem; }
+.hub-timeline--vertical .hub-timeline__text { align-items: flex-start; text-align: left; }
+.hub-timeline--vertical .hub-timeline__label { max-width: none; white-space: normal; }
+.hub-timeline--vertical .hub-timeline__foot { display: none; }
+
+/* ==== hub-user-menu.css =============================================================== */
+
+/**
+ * HubUserMenu — Header-Benutzerchip + Dropdown (Lab → Branding → Benutzer).
+ * Quelle für Module: diese Datei vendorn, nicht forken.
+ *
+ * Tokens: Hub `--surface*` / `--border` / `--text*` / `--accent`.
+ * Module ohne Hub-Tokens: `--of-*` als Fallback (OfficeForge).
+ */
+.hub-user-menu {
+  --hub-um-chip-bg: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-um-surface: var(--surface, var(--of-surface, #242830));
+  --hub-um-raised: var(--surface-raised, var(--of-surface-2, #2c313c));
+  --hub-um-border: var(--border, var(--of-border, #3a4150));
+  --hub-um-text: var(--text, var(--of-text, #e8eaed));
+  --hub-um-muted: var(--text-muted, var(--of-muted, #9aa3b2));
+  --hub-um-accent: var(--accent, var(--of-accent, #428bbe));
+  --hub-um-shadow: var(--shadow, var(--of-shadow, 0 8px 24px rgba(0, 0, 0, 0.3)));
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hub-user-chip {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: auto;
+  height: auto;
+  min-height: 34px;
+  margin: 0;
+  padding: 0.15rem 0.2rem 0.15rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-chip-bg);
+  color: var(--hub-um-text);
+  cursor: pointer;
+  overflow: hidden;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-decoration: none;
+  /* Explizit: Modul-`button:hover` darf Hintergrund nicht überschreiben */
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.hub-user-chip:hover {
+  border-color: var(--hub-um-accent);
+  background: color-mix(in srgb, var(--hub-um-accent) 14%, var(--hub-um-chip-bg));
+}
+.hub-user-chip:focus-visible {
+  outline: 2px solid var(--hub-um-accent);
+  outline-offset: 2px;
+}
+
+.hub-user-chip__name {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.hub-user-chip__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+.hub-user-chip__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hub-user-chip__initial {
+  line-height: 1;
+  color: #fff;
+}
+
+.hub-user-menu__dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--hub-um-surface);
+  border: 1px solid var(--hub-um-border);
+  border-radius: 10px;
+  box-shadow: var(--hub-um-shadow);
+  padding: 6px;
+  z-index: 120;
+  box-sizing: border-box;
+}
+
+.hub-user-menu__dropdown.is-open,
+.hub-user-menu__dropdown.open {
+  display: block;
+}
+
+.hub-user-menu__name {
+  display: grid;
+  gap: 0.1rem;
+  padding: 8px 10px 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--hub-um-text);
+  border-bottom: 1px solid var(--hub-um-border);
+  margin-bottom: 4px;
+}
+
+.hub-user-menu__pref {
+  margin: 0;
+  padding: 4px 6px 6px;
+}
+.hub-user-menu__pref label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--hub-um-muted);
+  font-weight: 600;
+}
+.hub-user-menu__pref select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-raised);
+  color: var(--hub-um-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.25rem 0.45rem;
+  box-sizing: border-box;
+}
+
+.hub-user-menu__dropdown a,
+.hub-user-menu__dropdown a:link,
+.hub-user-menu__dropdown a:visited {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--hub-um-text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.hub-user-menu__dropdown a:hover {
+  background: var(--hub-um-raised);
+  text-decoration: none;
+  color: var(--hub-um-text);
+}
+
+.hub-user-menu__chrome {
+  display: grid;
+  gap: 0.4rem;
+}
+.hub-user-menu__chrome-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--hub-um-muted);
+  font-weight: 600;
+}
+.hub-user-menu__chrome-saved {
+  color: var(--accent-green, #87b42b);
+  font-weight: 700;
+}
+.hub-user-menu__chrome-row {
+  display: grid;
+  gap: 0.4rem;
+}
+.hub-user-menu__chrome-row + .hub-user-menu__chrome-row {
+  margin-top: 0.35rem;
+}
+.hub-user-menu__chrome-row-label {
+  font-size: 0.72rem;
+  color: var(--hub-um-muted);
+  font-weight: 600;
+}
+
+/**
+ * Fenster-Stil-Auswahl als Kacheln: je Hell/Dunkel zwei Mini-Fenster (Klassisch, Flach) +
+ * Farbpunkte. Die Mini-Fenster zeigen den Modus unabhängig vom aktuellen Seiten-Theme
+ * (Vorschau-Tokens --hct-*, Hub-Tokens hell/dunkel wie Lab → Chrome-Vorschlag) und die
+ * gewählte Farbe über --hub-chrome-pick (vom Skript in user_menu.php auf der Zeile gesetzt).
+ */
+.hub-chrome-mode--light {
+  --hct-bg: #f4efe6;
+  --hct-surface: #fffaf3;
+  --hct-border: #5c1a1a;
+  --hct-text: #2a1f18;
+  --hct-accent: #85612d;
+}
+.hub-chrome-mode--dark {
+  --hct-bg: #14171c;
+  --hct-surface: #1b1f27;
+  --hct-border: #2c3240;
+  --hct-text: #edeae3;
+  --hct-accent: #3a6c8d;
+}
+/* Gewählte Farbe: Grundtöne im Farbton der Farbe — gleiche Rechnung wie style.css (html[data-dialog-accent]) */
+.hub-chrome-mode--light[data-picked] {
+  --hct-bg: oklch(0.968 0.008 var(--hct-hue));
+  --hct-surface: oklch(0.99 0.005 var(--hct-hue));
+  --hct-border: oklch(0.325 0.0967 var(--hct-hue));
+  --hct-text: oklch(0.25 0.0214 var(--hct-hue));
+  --hct-accent: oklch(0.519 0.083 var(--hct-hue));
+}
+.hub-chrome-mode--dark[data-picked] {
+  --hct-bg: oklch(0.204 0.011 var(--hct-hue));
+  --hct-surface: oklch(0.239 0.0165 var(--hct-hue));
+  --hct-border: oklch(0.317 0.0265 var(--hct-hue));
+  --hct-accent: oklch(0.511 0.0754 var(--hct-hue));
+}
+
+.hub-chrome-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.hub-chrome-tile {
+  appearance: none;
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.hub-chrome-tile:hover {
+  border-color: color-mix(in srgb, var(--text) 35%, var(--border));
+}
+.hub-chrome-tile[aria-checked="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.hub-chrome-tile[aria-checked="true"] .hub-chrome-tile__label::after {
+  content: " ✓";
+}
+.hub-chrome-tile:focus-visible,
+.hub-chrome-swatch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hub-chrome-tile__desk {
+  display: block;
+  padding: 0.45rem;
+  border-radius: 6px;
+  background: var(--hct-bg);
+}
+.hub-chrome-tile__win {
+  --hct-acc: var(--hub-chrome-pick, var(--hct-accent));
+  display: flex;
+  flex-direction: column;
+  height: 3.6rem;
+  border: 1px solid var(--hct-border);
+  border-radius: 6px;
+  background: var(--hct-surface);
+  overflow: hidden;
+}
+.hub-chrome-tile__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 3px 5px;
+  background: color-mix(in srgb, var(--hct-surface) 80%, var(--hct-border));
+  border-bottom: 1px solid var(--hct-border);
+}
+.hub-chrome-tile__bar i,
+.hub-chrome-tile__bar b,
+.hub-chrome-tile__body i,
+.hub-chrome-tile__foot b {
+  display: block;
+  border-radius: 2px;
+}
+.hub-chrome-tile__bar i {
+  width: 40%;
+  height: 4px;
+  background: var(--hct-text);
+  opacity: 0.7;
+}
+.hub-chrome-tile__bar b {
+  width: 14px;
+  height: 4px;
+  background: var(--hct-text);
+  opacity: 0.35;
+}
+.hub-chrome-tile__body {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  padding: 4px 5px;
+}
+.hub-chrome-tile__body i {
+  height: 3px;
+  background: var(--hct-text);
+  opacity: 0.25;
+}
+.hub-chrome-tile__body i + i {
+  width: 60%;
+}
+.hub-chrome-tile__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 5px 4px;
+}
+/* Klassisch: gefüllter Hauptbutton */
+.hub-chrome-tile__foot b {
+  width: 18px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--hct-acc);
+}
+/* Flach: eckig, Titelleiste ohne Fläche, Hauptbutton als fette Akzentschrift */
+.hub-chrome-tile--flach .hub-chrome-tile__win {
+  border-radius: 0;
+}
+.hub-chrome-tile--flach .hub-chrome-tile__bar {
+  background: transparent;
+  border-bottom-color: color-mix(in srgb, var(--hct-border) 55%, transparent);
+}
+.hub-chrome-tile--flach .hub-chrome-tile__foot b {
+  width: 14px;
+  height: 3px;
+  border-radius: 0;
+}
+.hub-chrome-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+}
+.hub-chrome-swatch {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem 0.15rem 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hub-chrome-swatch:hover {
+  color: var(--text);
+}
+.hub-chrome-swatch[aria-checked="true"] {
+  color: var(--text);
+  border-color: var(--border);
+}
+.hub-chrome-swatch__dot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--hub-chrome-swatch, var(--hct-accent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 15%, transparent);
+}
+.hub-chrome-swatch[aria-checked="true"] .hub-chrome-swatch__dot {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px currentColor;
+}
+
+.hub-user-menu__sep {
+  height: 1px;
+  background: var(--hub-um-border);
+  margin: 4px 2px;
+}
+
+@media (max-width: 640px) {
+  .hub-user-chip__name {
+    max-width: 7rem;
+  }
+}
+
+.hub-user-menu__settings-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--hub-um-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hub-user-menu__settings-btn:hover {
+  background: var(--hub-um-raised);
+}
+
+/**
+ * Einstellungen-Dialog (Persönliche Einstellungen / Design) — Inhalt aus
+ * #hubUserSettingsTpl, geöffnet über HubFloatDialog. Eigene, schlanke
+ * Feld-/Tab-Klassen statt admin.css' .hub-admin-field/.page-tabs, da dieser
+ * Dialog global (jede Seite) erreichbar ist, admin.css aber nur auf
+ * Admin-Seiten geladen wird.
+ */
+.hub-usersettings {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.hub-usersettings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
+}
+
+.hub-usersettings-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+.hub-usersettings-tab:hover {
+  color: var(--text);
+}
+.hub-usersettings-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+
+.hub-usersettings-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+.hub-usersettings-panel[hidden] {
+  display: none;
+}
+
+.hub-usersettings-managed-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.hub-usersettings-field {
+  display: grid;
+  gap: 0.4rem;
+}
+.hub-usersettings-field label {
+  display: grid;
+  gap: 0.25rem;
+}
+.hub-usersettings-field span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.hub-usersettings-field input:not([type="file"]) {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  box-sizing: border-box;
+}
+.hub-usersettings-field input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hub-usersettings-field-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hub-usersettings-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.hub-usersettings-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hub-usersettings-avatar-preview {
+  width: 48px;
+  height: 48px;
+  font-size: 1rem;
+}
+
+/* „Meine Zugänge" (Benutzermenü → Einstellungen → Zugänge).
+ * Der Verbindungscode erscheint genau einmal; deshalb steht er hervorgehoben oben, mit
+ * Kopieren-Knopf, und die Verfallszeit gleich daneben. Alles andere zeigt nur Fingerabdrücke. */
+.hub-useraccess { display:grid; gap:1rem; }
+.hub-useraccess-intro { margin:0; font-size:0.9rem; color:var(--text-muted); }
+.hub-useraccess-notice { margin:0; font-size:0.88rem; font-weight:600; }
+.hub-useraccess-fresh { display:grid; gap:0.4rem; padding:0.75rem; border-radius:10px;
+  border:1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background:color-mix(in srgb, var(--accent) 10%, transparent); }
+.hub-useraccess-label { font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+/**
+ * 🔴 **Das Feld mit dem Verbindungscode** (Urs, 14.10.: «Mach das Feld noch grösser...»). Die
+ * Klasse `hub-copy-field` gibt es auch in `admin.css` — die wird hier aber **nicht** geladen:
+ * Diese Tafel steht in den Benutzereinstellungen, nicht in der Administration. Also stand hier
+ * ein Eingabefeld in Browser-Grundbreite (~20 Zeichen) für einen Code aus 44, und abgeschnitten
+ * ist er unbrauchbar: Er erscheint nur einmal. Darum eigene Regeln, mit Mindestbreite und ohne
+ * Zerdrücken neben dem Knopf.
+ */
+.hub-useraccess .hub-copy-field { display:flex; gap:0.4rem; align-items:stretch; flex-wrap:wrap; }
+.hub-useraccess .hub-copy-field input {
+  flex:1 1 26rem; min-width:min(100%, 24rem); width:100%; box-sizing:border-box;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:0.95rem; letter-spacing:0.01em; padding:0.5rem 0.6rem;
+  border:1px solid var(--border); border-radius:8px;
+  background:var(--surface, #fff); color:var(--text);
+}
+.hub-useraccess .hub-copy-field .hub-btn { flex:0 0 auto; }
+.hub-useraccess-block { display:grid; gap:0.5rem; }
+/* Verbinden-Formular wie die übrigen Felder der Benutzereinstellungen (Urs, 15.10.: «Pass das noch dem
+   Design an.»): Beschriftung über dem Feld, zwei Spalten, auf schmalen Fenstern untereinander. */
+.hub-useraccess-connect { display:grid; grid-template-columns:repeat(auto-fit, minmax(14rem, 1fr)); gap:0.6rem;
+  align-items:end; }
+.hub-useraccess-connect label { display:grid; gap:0.25rem; min-width:0; }
+.hub-useraccess-connect label > span { font-size:0.8rem; color:var(--text-muted); font-weight:600; }
+.hub-useraccess-connect input {
+  width:100%; min-height:38px; padding:0.4rem 0.65rem; border-radius:8px; box-sizing:border-box;
+  border:1px solid var(--border); background:var(--surface-raised); color:var(--text); font:inherit;
+}
+.hub-useraccess-connect input[name="code"] { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.hub-useraccess-connect .hub-btn { justify-self:start; min-height:38px; }
+.hub-useraccess-block h4 { margin:0; font-size:0.95rem; }
+.hub-useraccess-hint, .hub-useraccess-empty { margin:0; font-size:0.85rem; color:var(--text-muted); }
+.hub-useraccess-list { list-style:none; margin:0; padding:0; display:grid; gap:0.4rem; }
+.hub-useraccess-list li { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;
+  padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:8px; font-size:0.88rem; }
+.hub-useraccess-list form { margin-left:auto; }
+.hub-useraccess-fp { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:0.8rem; color:var(--text-muted); }

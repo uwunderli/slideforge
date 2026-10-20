@@ -119,7 +119,7 @@ require __DIR__ . '/includes/header.php';
         </select>
       </div>
     </div>
-    <button type="submit" class="button" style="margin-top:16px;" <?= empty($availableUsers) ? 'disabled' : '' ?>><?= h(t('share.share_btn')) ?></button>
+    <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;" <?= empty($availableUsers) ? 'disabled' : '' ?>><?= h(t('share.share_btn')) ?></button>
   </form>
 
   <ul class="share-list">
@@ -134,7 +134,7 @@ require __DIR__ . '/includes/header.php';
           <input type="hidden" name="action" value="remove_share">
           <input type="hidden" name="id" value="<?= h($id) ?>">
           <input type="hidden" name="user_id" value="<?= h($s['user_id']) ?>">
-          <button type="submit" class="button button-ghost button-sm"><?= h(t('common.remove')) ?></button>
+          <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('common.remove')) ?></button>
         </form>
       </li>
     <?php endforeach; ?>
@@ -151,19 +151,19 @@ require __DIR__ . '/includes/header.php';
       <input type="checkbox" name="enabled" style="width:auto;" <?= !empty($acl['public']['enabled']) ? 'checked' : '' ?>>
       <?= h(t('share.enable_public_link')) ?>
     </label>
-    <button type="submit" class="button button-sm" style="margin-top:12px;"><?= h(t('common.save')) ?></button>
+    <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:12px;"><?= h(t('common.save')) ?></button>
   </form>
 
   <?php if (!empty($acl['public']['enabled']) && $publicUrl): ?>
     <div class="public-link-box">
       <input type="text" readonly value="<?= h($publicUrl) ?>" onclick="this.select()">
-      <button class="button button-ghost button-sm" onclick="navigator.clipboard.writeText('<?= h($publicUrl) ?>')" type="button"><?= h(t('present.copy')) ?></button>
+      <button class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" onclick="navigator.clipboard.writeText('<?= h($publicUrl) ?>')" type="button"><?= h(t('present.copy')) ?></button>
     </div>
     <form method="post" style="margin-top:10px;">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="regenerate_token">
       <input type="hidden" name="id" value="<?= h($id) ?>">
-      <button type="submit" class="button button-ghost button-sm" data-sf-confirm="<?= h(t('share.reset_confirm')) ?>"><?= h(t('share.reset_link')) ?></button>
+      <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" data-sf-confirm="<?= h(t('share.reset_confirm')) ?>"><?= h(t('share.reset_link')) ?></button>
     </form>
   <?php endif; ?>
 </div>

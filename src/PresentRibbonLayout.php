@@ -428,6 +428,33 @@ class PresentRibbonLayout
         return $layout;
     }
 
+    /**
+     * @param array<string,mixed> $prefsPartial
+     * @return array<string,mixed>
+     */
+    public static function patchPrefs(string $userId, array $prefsPartial): array
+    {
+        $user = Auth::findById($userId);
+        $stored = is_array($user[self::USER_KEY] ?? null) ? $user[self::USER_KEY] : self::defaultLayout();
+        $prefs = is_array($stored['prefs'] ?? null) ? $stored['prefs'] : [];
+        if (isset($prefsPartial['activeTab']) && is_string($prefsPartial['activeTab']) && $prefsPartial['activeTab'] !== '') {
+            $prefs['activeTab'] = $prefsPartial['activeTab'];
+        }
+        if (array_key_exists('collapsed', $prefsPartial)) {
+            $prefs['collapsed'] = !empty($prefsPartial['collapsed']);
+        }
+        if (isset($prefsPartial['iconSize']) && in_array($prefsPartial['iconSize'], ['small', 'medium', 'large'], true)) {
+            $prefs['iconSize'] = $prefsPartial['iconSize'];
+        }
+        if (array_key_exists('showLabels', $prefsPartial)) {
+            $prefs['showLabels'] = !empty($prefsPartial['showLabels']);
+        }
+        $stored['prefs'] = $prefs;
+        $sanitized = self::sanitizeLayout($stored, self::persistContext());
+        self::saveLayout($userId, $sanitized);
+        return $sanitized['prefs'];
+    }
+
     public static function resetLayout(string $userId): void
     {
         Storage::update(USERS_FILE, function (array $users) use ($userId) {

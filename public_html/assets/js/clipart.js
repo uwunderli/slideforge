@@ -76,7 +76,7 @@
     metaEl.textContent = hit.name || hit.id || '';
 
     actionsEl.innerHTML =
-      '<button type="button" class="button button-sm openclipart-lightbox-use-obj">' + escapeHtml(t('useObject')) + '</button>';
+      '<button type="button" class="button button-sm openclipart-lightbox-use-obj hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('useObject')) + '</button>';
 
     actionsEl.querySelector('.openclipart-lightbox-use-obj')?.addEventListener('click', () => {
       importHit(hit);
@@ -176,7 +176,7 @@
             '<span class="pixabay-card-user">' + escapeHtml(label) + '</span>' +
           '</div>' +
           '<div class="pixabay-card-actions">' +
-            '<button type="button" class="button button-sm openclipart-use-obj">' + escapeHtml(t('useObject')) + '</button>' +
+            '<button type="button" class="button button-sm openclipart-use-obj hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('useObject')) + '</button>' +
           '</div>' +
         '</div>'
       );

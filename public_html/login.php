@@ -93,7 +93,7 @@ require __DIR__ . '/includes/header.php';
         <?= h(t('auth.remember_me')) ?>
       </label>
 
-      <button type="submit" class="button" style="margin-top:16px;"><?= h(t('auth.login_btn')) ?></button>
+      <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('auth.login_btn')) ?></button>
     </form>
 
     <div class="switch"><?= h(t('auth.no_account')) ?> <a href="register.php"><?= h(t('auth.to_register')) ?></a></div>

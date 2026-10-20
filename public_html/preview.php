@@ -52,9 +52,28 @@ $sections = SlideRenderer::renderSections($slidesData);
   // Medien: Ladehinweis, automatische Wiedergabe nach Verzögerung.
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
+  /* In der Vorschau alle Einblendungen sofort zeigen.
+     Die Vorschau dient dem Prüfen der Gestaltung, nicht dem Vorführen: Der Editor
+     zeigt immer die fertige Folie, reveal.js dagegen baut Fragmente nacheinander auf.
+     Dadurch fehlten in der Vorschau Objekte, die im Editor sichtbar waren — was wie
+     ein Darstellungsfehler aussah, aber der Animationsstand war. Präsentation und
+     Export bleiben unberührt. */
+  function sfShowAllFragments() {
+    var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+    if (!slide) return;
+    slide.querySelectorAll('.fragment').forEach(function (el) {
+      el.classList.add('visible');
+      el.classList.remove('current-fragment');
+    });
+  }
+
   Reveal.on('ready', function () {
     window.SlideForgeRevealAutoSlide?.install(Reveal);
+    sfShowAllFragments();
   });
+  Reveal.on('slidechanged', sfShowAllFragments);
+  Reveal.on('fragmentshown', sfShowAllFragments);
+  Reveal.on('fragmenthidden', sfShowAllFragments);
   <?php if (isset($_GET['slide'])): ?>
   Reveal.on('ready', function () { Reveal.slide(<?= (int)$startSlide ?>, 0); });
   <?php endif; ?>

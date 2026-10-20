@@ -86,9 +86,7 @@ html[data-theme="light"] .tab-num {
   background: var(--scrim);
 }
 
-html[data-theme="light"] .modal-backdrop,
-html[data-theme="light"] .confirm-overlay,
-html[data-theme="light"] .cf-page-busy {
+html[data-theme="light"] .modal-backdrop {
   background: var(--overlay-bg);
 }
 
@@ -171,10 +169,17 @@ h1, h2, h3 {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Fliesstext wie auf den Hub-Seiten (Vorgabe 17.10., Punkt 4: ca. 0.875rem).
+   Bewusst am Inhaltsrahmen der Seiten und NICHT an `body`: `.container` tragen
+   genau die Seiten mit Fliesstext (Buehne, Einstellungen, Profil, Vorlagen,
+   An-/Abmeldung, Import, Export). Editor und Praesentationsansichten benutzen
+   ihn nicht - deren Werkzeugflaechen behalten ihr eigenes Mass, und die Wurzel
+   bleibt bei 16px, damit jedes rem (auch in cf-fine.css) gleich bleibt. */
 .container {
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 24px 80px;
+  font-size: 0.875rem;
 }
 
 /* ---------- Demo-Banner (DEMO_MODE) ---------- */
@@ -415,36 +420,58 @@ body[data-sf-hub-embedded="1"] .topbar-user {
 .anon-lang-switch a.active { border-color: var(--accent); color: var(--accent); }
 
 /* ---------- Buttons & Forms ---------- */
+/* Aussehen der Knoepfe (Fuellung, Rahmen, Groesse, Rundung) kommt aus dem
+   Hub-Kanon: hub-btn / hub-btn--primary / --ghost / --danger / --sm in
+   cf-fine.css. Hier bleibt nur das Layout. Vorgabe 17.10., Paket 2. */
 .button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--accent);
-  color: #f4f8fb;
-  font-weight: 700;
-  border: none;
-  padding: 10px 18px;
-  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.92rem;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-.button:hover {
-  box-shadow: 0 0 0 3px rgba(58, 108, 141, 0.35);
-  text-decoration: none;
+.button:hover { text-decoration: none; }
+
+/* Ersatz-Aussehen, falls cf-fine.css vom Hub nicht kommt. Diese Datei wird
+   VOR dem Kit und vor cf-fine geladen; bei gleicher Spezifitaet gewinnt also
+   immer der Hub-Kanon, sobald er da ist. Hier steht nur das Noetigste, damit
+   ein Knopf ohne Hub kein nackter Browser-Knopf ist (Auflage aus dem Review
+   zu Paket 2, 17.10.). */
+.hub-btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 600;
+  min-height: 32px;
+  padding: 0.3rem 0.72rem;
+  cursor: pointer;
+}
+.hub-btn--primary {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--text);
+}
+.hub-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.hub-btn--danger {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  color: var(--danger);
+}
+.hub-btn--sm {
+  min-height: 26px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.78rem;
 }
 .button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, button:focus-visible {
   outline: 2px solid var(--accent-view);
   outline-offset: 2px;
 }
-.button-ghost {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-}
-.button-ghost:hover { color: var(--text); border-color: var(--text-muted); text-decoration: none; }
+a.button-ghost:hover { text-decoration: none; }
 .button.icon-only {
-  padding: 6px 9px;
   display: inline-flex;
   align-items: center;
 }
@@ -483,8 +510,6 @@ body[data-sf-hub-embedded="1"] .topbar-user {
 .props-accordion-group.open .props-accordion-body { display: block; }
 .props-icon-row { display: flex; gap: 6px; }
 .props-icon-row .button { flex: 1; }
-.button-danger { background: var(--danger); color: #2a0a0d; }
-.button-sm { padding: 6px 12px; font-size: 0.82rem; }
 
 label {
   display: block;
@@ -512,9 +537,11 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   border-radius: var(--radius);
   padding: 32px;
 }
-.form-card h1 { font-size: 1.4rem; }
+/* Groesse des Seitentitels kommt aus cf-fine.css (Punkt 2). */
 .form-card .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; }
-.form-card .button { width: 100%; justify-content: center; margin-top: 22px; }
+/* Punkt 3 der Vorgabe: ein Knopf ist so breit wie sein Text. Vorher zog er sich
+   ueber die ganze Karte. */
+.form-card .button { margin-top: 22px; }
 .form-card .switch { margin-top: 18px; font-size: 0.87rem; color: var(--text-muted); text-align: center; }
 
 .alert {
@@ -852,28 +879,6 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   z-index: 50;
 }
 .modal-backdrop.open { display: flex; }
-.modal-backdrop.sf-ui-dialog-backdrop { z-index: 2500; }
-.sf-ui-dialog-message {
-  margin: 0;
-  padding: 12px 14px 8px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  font-size: 0.92rem;
-}
-.sf-ui-dialog-field {
-  padding: 8px 14px 4px;
-  margin: 0;
-}
-.sf-ui-dialog-label {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-.sf-ui-dialog-input { width: 100%; box-sizing: border-box; }
 .modal-backdrop#elementLinksModal {
   z-index: 1300;
   padding: 20px;
@@ -1028,8 +1033,9 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   justify-content: center;
 }
 .import-dialog-body {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  max-height: calc(100vh - 210px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px 14px;
@@ -1430,10 +1436,11 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   border: none !important;
 }
 
+/* Abstand, Groesse und Gewicht der Reiter kommen aus cf-fine.css (Vorgabe 17.10.,
+   Punkt 2). Hier bleibt nur, was die Datei nicht setzt: die Anordnung und die
+   Trennlinie unter der Reihe. */
 .page-tabs {
   display: flex;
-  gap: 4px;
-  margin: 20px 0 4px;
   border-bottom: 1px solid var(--border);
 }
 .page-tab-btn {
@@ -1441,14 +1448,12 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   border: none;
   border-bottom: 2px solid transparent;
   font-family: inherit;
-  padding: 10px 16px;
-  font-size: 0.9rem;
   color: var(--text-muted);
   margin-bottom: -1px;
   cursor: pointer;
 }
 .page-tab-btn:hover { color: var(--text); text-decoration: none; }
-.page-tab-btn.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.page-tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
 .color-row {
   display: flex;
   align-items: center;
@@ -2110,7 +2115,11 @@ body.present-panel-resizing {
   margin-top: 4px;
   padding-top: 12px;
 }
+/* Abstand nach oben ausdruecklich auf 0: cf-fine.css gibt jedem h3 eine Luft von
+   1.1rem darueber. Das ist fuer Seiten richtig, nicht fuer Werkzeugfenster - hier
+   sass der Titel bisher direkt am Block darueber (Stilprobe 17.10.). */
 .present-config-section-title {
+  margin-top: 0;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -2352,8 +2361,8 @@ body.present-panel-resizing {
   min-height: 0;
   box-sizing: border-box;
   padding: 12px max(48px, 8%) 16px max(48px, 8%);
-  font-size: 0.92rem;
-  line-height: 1.55;
+  font-size: clamp(1rem, 0.9rem + 0.4vw, 1.25rem);
+  line-height: 1.6;
   color: var(--present-notes-fg);
   background: var(--present-notes-bg);
   backdrop-filter: blur(8px);
@@ -2422,6 +2431,200 @@ body.present-panel-resizing {
   list-style-position: inside;
 }
 .present-notes-overlay-inner li { margin-bottom: 0.25em; padding-left: 0; }
+
+/* Gemeinsames Folien-Dock: Tabs Notizen | Player */
+.present-slide-dock {
+  --present-dock-register-h: 48px;
+  --present-dock-fg: #f4f1ea;
+  --present-dock-bg: rgba(14, 16, 20, 0.88);
+  --present-dock-tab-bg: rgba(255, 255, 255, 0.06);
+  --present-dock-tab-active-bg: rgba(255, 255, 255, 0.14);
+  --present-dock-tab-hover: rgba(255, 255, 255, 0.1);
+  --present-dock-border: rgba(255, 255, 255, 0.14);
+  --present-dock-grip: rgba(255, 255, 255, 0.45);
+  --present-dock-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --present-notes-fg: var(--present-dock-fg);
+  --present-notes-bg: transparent;
+  --present-notes-code-bg: rgba(255, 255, 255, 0.1);
+  --present-notes-shadow: var(--present-dock-shadow);
+  --present-media-fg: var(--present-dock-fg);
+  --present-media-bg: transparent;
+  --present-media-border: var(--present-dock-border);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  overflow: hidden;
+  pointer-events: none;
+}
+.present-slide-dock[hidden] {
+  display: none;
+}
+.present-slide-dock[data-notes-contrast="on-light"] {
+  --present-dock-fg: #1c1914;
+  --present-dock-bg: #f3f0e8;
+  --present-dock-tab-bg: #e5e0d4;
+  --present-dock-tab-active-bg: #fffcf6;
+  --present-dock-tab-hover: #efebe2;
+  --present-dock-border: rgba(28, 25, 20, 0.16);
+  --present-dock-grip: rgba(28, 25, 20, 0.4);
+  --present-dock-shadow: none;
+  --present-notes-code-bg: rgba(28, 25, 20, 0.08);
+}
+.present-slide-dock-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-height: 48%;
+  box-sizing: border-box;
+  transform: translateY(0);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  pointer-events: auto;
+  background: var(--present-dock-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.22);
+  color: var(--present-dock-fg);
+}
+.present-slide-dock.is-collapsed .present-slide-dock-sheet {
+  transform: translateY(calc(100% - var(--present-dock-register-h)));
+}
+.present-slide-dock.is-collapsed {
+  pointer-events: none;
+}
+.present-slide-dock.is-collapsed .present-slide-dock-tabs {
+  pointer-events: auto;
+}
+.present-slide-dock-tabs {
+  flex: 0 0 var(--present-dock-register-h);
+  height: var(--present-dock-register-h);
+  min-height: var(--present-dock-register-h);
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-bottom: 1px solid var(--present-dock-border);
+  position: relative;
+}
+.present-slide-dock-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0 14px;
+  border: none;
+  border-right: 1px solid var(--present-dock-border);
+  background: var(--present-dock-tab-bg);
+  color: var(--present-dock-fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+  opacity: 0.72;
+}
+.present-slide-dock-tab[hidden] {
+  display: none;
+}
+.present-slide-dock-tab:last-of-type {
+  border-right: none;
+}
+.present-slide-dock-tab:hover,
+.present-slide-dock-tab:focus-visible {
+  background: var(--present-dock-tab-hover);
+  outline: none;
+  opacity: 1;
+}
+.present-slide-dock-tab[aria-selected="true"] {
+  background: var(--present-dock-tab-active-bg);
+  opacity: 1;
+}
+.present-slide-dock-toggle {
+  flex: 0 0 52px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--present-dock-border);
+  background: transparent;
+  color: var(--present-dock-fg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+.present-slide-dock-toggle:hover,
+.present-slide-dock-toggle:focus-visible {
+  background: var(--present-dock-tab-hover);
+  outline: none;
+}
+.present-slide-dock-grip {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--present-dock-grip);
+  display: block;
+}
+.present-slide-dock-panels {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.present-slide-dock-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+.present-slide-dock-panel[hidden] {
+  display: none !important;
+}
+.present-slide-dock .present-notes-overlay-inner,
+.present-slide-dock .present-media-overlay-inner,
+.present-slide-dock-panel.present-notes-overlay-inner,
+.present-slide-dock-panel.present-media-overlay-inner {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: var(--present-dock-fg);
+  padding: 12px max(36px, 6%) 16px max(36px, 6%);
+}
+.present-slide-dock .present-media-overlay-inner .media-control-row,
+.present-slide-dock-panel.present-media-overlay-inner .media-control-row {
+  background: color-mix(in srgb, var(--present-dock-fg) 7%, transparent);
+  border: 1px solid var(--present-dock-border);
+  color: var(--present-dock-fg);
+  margin-bottom: 0;
+  border-radius: 10px;
+}
+.present-slide-dock .present-media-overlay-inner .media-control-row + .media-control-row {
+  margin-top: 8px;
+}
+.present-slide-dock .media-control-btns button {
+  border-color: var(--present-dock-border);
+  color: var(--present-dock-fg);
+  background: color-mix(in srgb, var(--present-dock-fg) 4%, transparent);
+}
+.present-slide-dock .media-control-btns button:hover {
+  border-color: var(--accent, #3a6c8d);
+  color: var(--accent, #3a6c8d);
+}
+.present-slide-dock .media-control-time {
+  color: color-mix(in srgb, var(--present-dock-fg) 68%, transparent);
+}
+.present-slide-dock[data-notes-contrast="on-light"] .media-control-row.is-playing {
+  border-color: color-mix(in srgb, var(--accent, #3a6c8d) 45%, var(--present-dock-border));
+  background: #fff;
+}
+.present-slide-dock[data-notes-contrast="on-light"] .media-control-seek input[type="range"] {
+  accent-color: var(--accent, #3a6c8d);
+}
 .present-notes-overlay-inner strong { font-weight: 700; }
 .present-notes-overlay-inner code {
   font-family: var(--font-mono);
@@ -4005,6 +4208,38 @@ body.editor-grid-dragging .editor-slide-grid-item {
   overflow-y: hidden;
   scrollbar-width: thin;
 }
+.editor-ribbon-tab-customize {
+  appearance: none;
+  margin-left: auto;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.editor-ribbon-tab-customize:hover {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+.editor-ribbon-tab-customize__icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+}
+.editor-ribbon-tab-customize__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 .editor-ribbon-tab {
   appearance: none;
   background: none;
@@ -4649,13 +4884,11 @@ body.editor-grid-dragging .editor-slide-grid-item {
   white-space: nowrap;
   min-width: 0;
 }
-/* Panel öffnet nach unten und deckt die Transparenzzeile ab */
+/* Panel öffnet nach unten und deckt die Transparenzzeile ab.
+   Bewusst KEIN position/left/right/top/z-index hier: das überschrieb die
+   Grundregel (position: fixed, z-index: 400), und erst dadurch beschnitt
+   .ribbon-group { overflow: hidden } das Panel an der Gruppenkante. */
 .ribbon-widget-grid--farben .ribbon-brand-dropdown-panel {
-  position: absolute;
-  left: 0;
-  right: auto;
-  top: calc(100% + 2px);
-  z-index: 40;
   min-width: 148px;
   width: max-content;
   max-width: min(220px, calc(100vw - 16px));
@@ -7988,9 +8221,43 @@ body.editor-grid-dragging .editor-slide-grid-item {
 #stageContainer { position: relative; }
 
 .notes-panel-editor {
+  position: relative;
   border-top: 1px solid var(--border);
   padding: 10px 16px 12px;
   flex-shrink: 0;
+}
+/* Trennlinie als Ziehgriff: liegt auf der Oberkante, greift 7px hoch/runter. */
+.notes-resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 9px;
+  cursor: ns-resize;
+  z-index: 2;
+  background: transparent;
+}
+.notes-resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.notes-resize-handle:hover::after,
+body.notes-resizing .notes-resize-handle::after {
+  opacity: 1;
+  background: var(--accent);
+}
+body.notes-resizing {
+  cursor: ns-resize;
+  user-select: none;
 }
 .notes-panel-header {
   display: flex;
@@ -8003,7 +8270,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 }
 #slideNotesInput {
   width: 100%;
-  height: 140px;
+  height: var(--notes-height, 140px);
   min-height: 90px;
   max-height: 70vh;
   resize: vertical;
@@ -9751,8 +10018,6 @@ body:has(.editor-layout) > .editor-layout {
 }
 .pixabay-card-actions .button {
   flex: 1;
-  font-size: 0.75rem;
-  padding: 6px 8px;
 }
 .pixabay-pager {
   display: flex;
@@ -10005,8 +10270,6 @@ body:has(.editor-layout) > .editor-layout {
 }
 .media-library-actions .button {
   width: 100%;
-  font-size: 0.75rem;
-  padding: 5px 8px;
 }
 .media-library-slide-link {
   background: none;
@@ -11445,3 +11708,206 @@ body:has(.editor-layout) > .editor-layout {
     grid-template-columns: 1fr;
   }
 }
+
+/* Folien-Zwischenablage im rechten Seitenbereich. */
+.slide-clip-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.slide-clip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slide-clip-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Miniatur der Folie: feste Breite, Seitenverhältnis aus der Quelle. */
+.slide-clip-thumb {
+  display: block;
+  width: 72px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #000;
+  flex: 0 0 auto;
+}
+
+.slide-clip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.slide-clip-item input {
+  width: auto;
+  margin: 0;
+}
+
+.slide-clip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slide-clip-source {
+  font-size: 0.78rem;
+  opacity: 0.65;
+}
+
+.slide-clip-empty {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin: 4px 0;
+}
+
+/* Zoom: bei starker Vergrösserung bis an den oberen und linken Rand scrollen können.
+   `align-items/justify-content: center` verteilt den Überstand auf beide Seiten, und
+   der Überstand vor dem Anfang ist nicht erreichbar — `scrollTop` kann nicht negativ
+   werden. `margin: auto` zentriert bei freiem Platz und klemmt korrekt, sobald der
+   Inhalt grösser ist als der Bereich. */
+.canvas-scroll {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.canvas-scroll > .stage-wrap {
+  margin: auto;
+}
+
+/* ---- Suchen und Ersetzen ---- */
+.find-replace-modal { width: min(560px, 94vw); }
+.find-replace-fields { display: grid; gap: 10px; margin: 4px 0 12px; }
+.find-replace-field { display: grid; gap: 4px; }
+.find-replace-field > span { font-size: 0.85rem; color: var(--text-muted); }
+.find-replace-field .input { width: 100%; }
+.find-replace-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.find-replace-status { min-height: 1.2em; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 6px; }
+.find-replace-results { max-height: 38vh; overflow: auto; display: grid; gap: 4px; }
+.find-replace-hit {
+  display: grid; grid-template-columns: 2.2em 1fr auto; align-items: center; gap: 8px;
+  width: 100%; text-align: left; padding: 6px 8px; cursor: pointer;
+  background: var(--surface-2, rgba(127,127,127,0.08));
+  border: 1px solid transparent; border-radius: 6px; color: inherit; font: inherit;
+}
+.find-replace-hit:hover { border-color: var(--accent, #b7de45); }
+.find-replace-hit-no { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.find-replace-hit-text { overflow: hidden; }
+.find-replace-hit-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.find-replace-hit-excerpt {
+  display: block; font-size: 0.8rem; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.find-replace-hit-count { font-size: 0.82rem; color: var(--text-muted); }
+
+/* ---- Gliederung in den Notizen umstellen ---- */
+.notes-outline-modal { width: min(560px, 94vw); }
+.notes-outline-choices { display: grid; gap: 10px; margin: 4px 0 10px; }
+.notes-outline-choice {
+  display: grid; gap: 6px; text-align: left; width: 100%;
+  padding: 10px 12px; cursor: pointer; color: inherit; font: inherit;
+  background: var(--surface-2, rgba(127,127,127,0.08));
+  border: 1px solid transparent; border-radius: 8px;
+}
+.notes-outline-choice:hover { border-color: var(--accent, #b7de45); }
+.notes-outline-choice-label { font-weight: 600; }
+.notes-outline-choice-demo {
+  font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.notes-outline-status { min-height: 1.2em; font-size: 0.88rem; color: var(--text-muted); }
+
+/* ---- Helles Erscheinungsbild: Markierungen deutlicher ----------------------
+   Gemeldet 2026-09-26: Im hellen Bild sieht man schlechter, welche Vorlage einer
+   Folie zugrunde liegt und welcher Effekt gewählt ist. Ursache ist nicht die
+   Regel, sondern die Farbe: `--accent` ist hier das Braun #85612d. Als Füllung
+   liegt es mit 16 % auf cremefarbenem Grund, als Ring liegt es auf einer
+   schwarzen Folien-Miniatur — beides mit viel weniger Abstand zum Untergrund
+   als das Blau im dunklen Bild. Darum hier kräftiger, und für den Ring auf der
+   dunklen Miniatur das Gold aus der Markenpalette, das darauf trägt. */
+html[data-theme="light"] {
+  --ribbon-bg-active: rgba(133, 97, 45, 0.42);
+}
+html[data-theme="light"] .layout-picker-item.selected .layout-picker-thumb {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px var(--brand-gold);
+}
+html[data-theme="light"] .layout-picker-item.selected {
+  background: rgba(209, 182, 51, 0.30);
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--brand-gold);
+  outline-offset: 1px;
+}
+html[data-theme="light"] .layout-picker-item.selected .layout-picker-label {
+  color: var(--text);
+  font-weight: 700;
+}
+html[data-theme="light"] .format-toggle-btn.active,
+html[data-theme="light"] .format-toggle-btn:has(input:checked),
+html[data-theme="light"] .editor-ribbon .format-toggle-btn.active,
+html[data-theme="light"] .editor-ribbon .effect-icon-btn.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  color: var(--text);
+}
+
+/* ---- Pixabay: Suche und Einstellungen auf zwei Zeilen ----------------------
+   Zeile 1 die Suche, Zeile 2 die Einstellungen als Symbolschalter. Die <select>
+   dahinter bleiben als Zustandsspeicher im Dokument, werden aber nicht gezeigt.
+
+   ALLES unter #pixabayModal: `.pixabay-modal-toolbar` und `.pixabay-search-block`
+   benutzen auch die Dialoge für Icons, Clipart und WebDAV. Ungenaue Regeln haben
+   dort am 10.10. die Suche unbrauchbar gemacht. */
+#pixabayModal .pixabay-modal-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+#pixabayModal .pixabay-state-selects { display: none; }
+#pixabayModal .pixabay-search-block,
+#pixabayModal .pixabay-filters { flex: 0 0 auto; }
+#pixabayModal .pixabay-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 22px;
+}
+/* `display: contents` stach bisher das hidden-Attribut aus — darum standen die
+   Video-Einstellungen auch im Bild-Modus da, mit zwei Feldern namens „Typ". */
+#pixabayModal .pixabay-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 22px;
+}
+#pixabayModal .pixabay-filter-group[hidden] { display: none; }
+#pixabayModal .pixabay-switch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#pixabayModal .pixabay-switch-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+#pixabayModal .pixabay-switch-row { display: flex; gap: 4px; }
+#pixabayModal .pixabay-switch {
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#pixabayModal .pixabay-switch svg { display: block; }

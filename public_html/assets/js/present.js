@@ -1,6 +1,9 @@
 (function () {
   'use strict';
   const P = window.SF_PRESENT;
+  let dockHasNotes = false;
+  let dockHasMedia = false;
+  let dockActiveTab = 'notes';
   const presentClientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
     ? crypto.randomUUID()
     : ('sf-' + Date.now() + '-' + Math.random().toString(36).slice(2));
@@ -715,7 +718,10 @@
       if (!group) return;
       if (p.id === 'media') {
         group.dataset.userVisible = p.visible ? '1' : '0';
-        if (!p.visible) group.hidden = true;
+        group.hidden = true;
+        const tabMedia = document.getElementById('presentDockTabMedia');
+        if (tabMedia) tabMedia.dataset.userVisible = p.visible ? '1' : '0';
+        syncDockVisibility();
       } else {
         group.hidden = !p.visible;
       }
@@ -1055,37 +1061,114 @@
     return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
   }
 
-  function applyNotesContrastForSlide(h) {
-    const overlay = document.getElementById('presentNotesOverlay');
-    if (!overlay) return;
+  function applyDockContrastForSlide(h) {
+    const dock = document.getElementById('presentSlideDock');
+    if (!dock) return;
     const swatches = Array.isArray(P.slideBgSwatches) ? P.slideBgSwatches : [];
     const sample = sampleSlideBgColor(swatches[h] != null ? swatches[h] : '#222222');
     const onLight = relativeLuminance(sample) >= 0.45;
-    overlay.dataset.notesContrast = onLight ? 'on-light' : 'on-dark';
+    dock.dataset.notesContrast = onLight ? 'on-light' : 'on-dark';
+  }
+
+  function syncDockVisibility() {
+    const dock = document.getElementById('presentSlideDock');
+    const tabNotes = document.getElementById('presentDockTabNotes');
+    const tabMedia = document.getElementById('presentDockTabMedia');
+    const panelNotes = document.getElementById('presentDockPanelNotes');
+    const panelMedia = document.getElementById('presentDockPanelMedia');
+    if (!dock || !tabNotes || !tabMedia || !panelNotes || !panelMedia) return;
+
+    const mediaAllowed = isPanelUserVisible('media') && tabMedia.dataset.userVisible !== '0';
+    const showMedia = dockHasMedia && mediaAllowed;
+    const showNotes = dockHasNotes;
+    const showDock = showNotes || showMedia;
+
+    dock.hidden = !showDock;
+    tabNotes.hidden = !showNotes;
+    tabMedia.hidden = !showMedia;
+
+    let active = dockActiveTab;
+    if (active === 'notes' && !showNotes) active = showMedia ? 'media' : 'notes';
+    if (active === 'media' && !showMedia) active = showNotes ? 'notes' : 'media';
+    dockActiveTab = active;
+
+    const notesOn = showDock && active === 'notes' && showNotes;
+    const mediaOn = showDock && active === 'media' && showMedia;
+    tabNotes.setAttribute('aria-selected', notesOn ? 'true' : 'false');
+    tabMedia.setAttribute('aria-selected', mediaOn ? 'true' : 'false');
+    panelNotes.hidden = !notesOn || dock.classList.contains('is-collapsed');
+    panelMedia.hidden = !mediaOn || dock.classList.contains('is-collapsed');
+    // Collapsed: keep panels hidden but tabs visible
+    if (dock.classList.contains('is-collapsed')) {
+      panelNotes.hidden = true;
+      panelMedia.hidden = true;
+    } else {
+      panelNotes.hidden = !notesOn;
+      panelMedia.hidden = !mediaOn;
+    }
+  }
+
+  function setDockTab(tab, persist) {
+    if (tab !== 'notes' && tab !== 'media') return;
+    dockActiveTab = tab;
+    if (persist !== false) {
+      if (P.presentLayout) P.presentLayout.dockTab = tab;
+      window.SlideForgePresentLayout?.patchUserPrefs?.({ dockTab: tab });
+    }
+    syncDockVisibility();
+  }
+
+  /** Notizen haben Vorrang; Player nur wenn keine Notizen. */
+  function applyDockDefaultTab() {
+    if (dockHasNotes) setDockTab('notes', false);
+    else if (dockHasMedia) setDockTab('media', false);
+  }
+
+  /** Timed-Autoplay → Player-Tab öffnen (ohne Preference zu überschreiben). */
+  function focusDockPlayerForAutoplay() {
+    if (!dockHasMedia) return;
+    setDockTab('media', false);
+    window.SlideForgePresentMedia?.expand?.(false);
   }
 
   function syncNotesForSlide(h) {
-    const overlay = document.getElementById('presentNotesOverlay');
     const notesPanel = document.getElementById('notesPanel');
     const html = P.notesHtml[h];
     const hasNotes = !!(html && html.trim() !== '');
     if (notesPanel) notesPanel.innerHTML = hasNotes ? html : '';
-    if (overlay) overlay.hidden = !hasNotes;
-    applyNotesContrastForSlide(h);
+    dockHasNotes = hasNotes;
+    applyDockContrastForSlide(h);
+    syncDockVisibility();
     if (hasNotes) {
       window.SlideForgePresentNotes?.onSlideChange?.();
     }
   }
 
-  (function initPresentNotesCollapse() {
-    const overlay = document.getElementById('presentNotesOverlay');
-    const body = document.getElementById('presentNotesBody');
-    const register = document.getElementById('presentNotesRegister');
-    if (!overlay || !body || !register) return;
+  (function initPresentSlideDock() {
+    const dock = document.getElementById('presentSlideDock');
+    const tabNotes = document.getElementById('presentDockTabNotes');
+    const tabMedia = document.getElementById('presentDockTabMedia');
+    const toggle = document.getElementById('presentDockToggle');
+    const notesPanelWrap = document.getElementById('presentDockPanelNotes');
+    if (!dock || !toggle) return;
 
     const STORAGE_KEY = 'sf_present_notes_collapsed';
     const MODE_KEY = 'sf_present_notes_mode';
     const i18n = P.i18n || {};
+
+    try {
+      const localTab = localStorage.getItem('sf_present_dock_tab');
+      if (localTab === 'notes' || localTab === 'media') {
+        dockActiveTab = localTab;
+        if (P.presentLayout?.dockTab !== localTab) {
+          window.SlideForgePresentLayout?.patchUserPrefs?.({ dockTab: localTab });
+        }
+        localStorage.removeItem('sf_present_dock_tab');
+      } else {
+        const savedTab = P.presentLayout?.dockTab;
+        if (savedTab === 'notes' || savedTab === 'media') dockActiveTab = savedTab;
+      }
+    } catch (e) { /* ignore */ }
 
     function readMode() {
       const fromLayout = P.presentLayout?.notesMode;
@@ -1111,16 +1194,16 @@
     }
 
     function isCollapsed() {
-      return overlay.classList.contains('is-collapsed');
+      return dock.classList.contains('is-collapsed');
     }
 
     function setCollapsed(on, persist) {
-      overlay.classList.toggle('is-collapsed', !!on);
-      register.setAttribute('aria-expanded', on ? 'false' : 'true');
-      register.title = on
-        ? (i18n.notesExpandHint || i18n.toggleNotes || register.title)
-        : (i18n.notesCollapseHint || i18n.toggleNotes || register.title);
-      body.title = on ? '' : (i18n.notesCollapseHint || '');
+      dock.classList.toggle('is-collapsed', !!on);
+      toggle.setAttribute('aria-expanded', on ? 'false' : 'true');
+      toggle.title = on
+        ? (i18n.notesExpandHint || i18n.mediaExpandHint || toggle.title)
+        : (i18n.notesCollapseHint || i18n.mediaCollapseHint || toggle.title);
+      syncDockVisibility();
       if (persist !== false) {
         try {
           localStorage.setItem(STORAGE_KEY, on ? '1' : '0');
@@ -1143,13 +1226,43 @@
 
     applyMode();
 
+    function onTabClick(tab) {
+      if (isCollapsed()) {
+        setDockTab(tab, true);
+        setCollapsed(false, readMode() === 'carry');
+        return;
+      }
+      if (dockActiveTab === tab) {
+        setCollapsed(true, readMode() === 'carry');
+        return;
+      }
+      setDockTab(tab, true);
+    }
+
+    tabNotes?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onTabClick('notes');
+    });
+    tabMedia?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onTabClick('media');
+    });
+    toggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCollapsed(!isCollapsed(), readMode() === 'carry');
+    });
+
+    // Notizen-Inhalt tippen → einklappen (wie bisher), nicht bei Textauswahl
     let ptr = null;
-    body.addEventListener('pointerdown', (e) => {
+    notesPanelWrap?.addEventListener('pointerdown', (e) => {
       if (e.button != null && e.button !== 0) return;
       if (isCollapsed()) return;
       ptr = { x: e.clientX, y: e.clientY, id: e.pointerId };
     });
-    body.addEventListener('pointerup', (e) => {
+    notesPanelWrap?.addEventListener('pointerup', (e) => {
       if (!ptr || ptr.id !== e.pointerId) return;
       const dx = Math.abs(e.clientX - ptr.x);
       const dy = Math.abs(e.clientY - ptr.y);
@@ -1158,18 +1271,18 @@
       if (window.getSelection && String(window.getSelection()).length > 0) return;
       setCollapsed(true, readMode() === 'carry');
     });
-    body.addEventListener('pointercancel', () => { ptr = null; });
-
-    register.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setCollapsed(!isCollapsed(), readMode() === 'carry');
-    });
+    notesPanelWrap?.addEventListener('pointercancel', () => { ptr = null; });
 
     window.SlideForgePresentNotes = {
       applyMode,
       onSlideChange: () => applyMode(),
       getMode: readMode,
+    };
+    window.SlideForgePresentMedia = {
+      setCollapsed,
+      isCollapsed,
+      expand: (persist) => setCollapsed(false, persist !== false),
+      showTab: () => setDockTab('media', true),
     };
   })();
 
@@ -1268,18 +1381,27 @@
 
     syncNextPreview();
     broadcastPosition(h);
+    clearConsoleMediaClocks();
     updateMediaControls();
     if (!presentBootLocked) autoPlayTimedMediaForAudience();
   }
 
   /** Timed-Medien auf der Beamer-/view-Ansicht anstoßen (Autoplay-Policy umgehen). */
+  let timedAudienceTimers = [];
+  function clearTimedAudienceTimers() {
+    timedAudienceTimers.forEach((t) => clearTimeout(t));
+    timedAudienceTimers = [];
+  }
+
   function autoPlayTimedMediaForAudience() {
+    clearTimedAudienceTimers();
     if (!P.canBroadcast || !mainFrame?.contentDocument) return;
     let slide = null;
     try {
       slide = mainFrame.contentDocument.querySelector('.reveal .slides > section.present');
     } catch (e) { return; }
     if (!slide) return;
+    const slideIndexAtArm = currentIndex;
     slide.querySelectorAll('audio[data-play-trigger="timed"], video[data-play-trigger="timed"]').forEach((el) => {
       const mid = el.getAttribute('data-media-id');
       if (!mid) return;
@@ -1288,10 +1410,21 @@
       if (!el.loop && el.ended) return;
       if (!el.paused && !el.ended) {
         el.dataset.sfTimedAudienceSent = '1';
+        focusDockPlayerForAutoplay();
         return;
       }
       el.dataset.sfTimedAudienceSent = '1';
-      sendMediaCommand(mid, 'play');
+      const delay = Math.max(0, parseInt(el.getAttribute('data-play-delay'), 10) || 0);
+      const start = () => {
+        if (currentIndex !== slideIndexAtArm) return;
+        if (el.dataset.sfTimedAudienceSent !== '1') return;
+        focusDockPlayerForAutoplay();
+        // Konsole stumm mitsyncen (Timecode/▶-Status); Ton nur Zuschauer via live.
+        applyMediaLocally(mid, 'play');
+        sendMediaCommand(mid, 'play');
+      };
+      if (delay <= 0) start();
+      else timedAudienceTimers.push(setTimeout(start, delay));
     });
   }
 
@@ -1303,48 +1436,100 @@
     const h = Math.floor(total / 3600);
     const pad = (n) => (n < 10 ? '0' : '') + n;
     if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
-    return pad(m) + ':' + pad(s);
+    return m + ':' + pad(s);
   }
 
-  function mediaTimecodeText(el) {
-    if (!el) return '00:00 / —';
-    const cur = formatMediaTimecode(el.currentTime || 0);
-    const dur = Number.isFinite(el.duration) && el.duration > 0
-      ? formatMediaTimecode(el.duration)
-      : '—';
-    return cur + ' / ' + dur;
+  function stableMediaDuration(el) {
+    if (!el) return NaN;
+    const raw = el.duration;
+    if (!Number.isFinite(raw) || raw <= 0) return NaN;
+    // Einmal gelernte Dauer nicht mehr durch Mini-Schwankungen ersetzen.
+    const prev = parseFloat(el.dataset.sfStableDur || '');
+    if (Number.isFinite(prev) && prev > 0) {
+      if (Math.abs(raw - prev) < 0.75) return prev;
+    }
+    el.dataset.sfStableDur = String(raw);
+    return raw;
   }
 
-  function findLocalMediaEl(mediaId) {
-    try {
-      return mainFrame.contentDocument?.querySelector('[data-media-id="' + mediaId + '"]') || null;
-    } catch (e) {
-      return null;
+  /** Virtuelle Konsole-Uhr: Audio wird lokal nicht abgespielt (kein Raum-Ton). */
+  const consoleMediaClock = Object.create(null);
+
+  function clearConsoleMediaClocks() {
+    Object.keys(consoleMediaClock).forEach((k) => { delete consoleMediaClock[k]; });
+  }
+
+  function consoleMediaPlaying(mediaId) {
+    return !!(consoleMediaClock[mediaId] && consoleMediaClock[mediaId].playing);
+  }
+
+  function consoleMediaNow(mediaId, el) {
+    const c = consoleMediaClock[mediaId];
+    if (c && c.playing) {
+      let t = c.originTime + (performance.now() - c.originWall) / 1000;
+      const dur = stableMediaDuration(el);
+      if (Number.isFinite(dur) && dur > 0 && t >= dur) {
+        c.playing = false;
+        t = dur;
+        try { if (el) el.currentTime = dur; } catch (e) { /* ignore */ }
+      }
+      return t;
+    }
+    if (el && el.tagName === 'VIDEO' && !el.paused) {
+      return Number.isFinite(el.currentTime) ? el.currentTime : 0;
+    }
+    return el && Number.isFinite(el.currentTime) ? el.currentTime : (c ? c.originTime : 0);
+  }
+
+  function setConsoleMediaClock(mediaId, el, action, time) {
+    const c = consoleMediaClock[mediaId] || (consoleMediaClock[mediaId] = {
+      playing: false,
+      originWall: 0,
+      originTime: 0,
+    });
+    if (action === 'play') {
+      c.originTime = el && Number.isFinite(el.currentTime) ? el.currentTime : (c.originTime || 0);
+      c.originWall = performance.now();
+      c.playing = true;
+    } else if (action === 'pause') {
+      if (c.playing) {
+        const t = consoleMediaNow(mediaId, el);
+        c.originTime = t;
+        try { if (el) el.currentTime = t; } catch (e) { /* ignore */ }
+      }
+      c.playing = false;
+    } else if (action === 'stop') {
+      c.playing = false;
+      c.originTime = 0;
+      try { if (el) el.currentTime = 0; } catch (e) { /* ignore */ }
+    } else if (action === 'seek' && Number.isFinite(time)) {
+      c.originTime = Math.max(0, time);
+      c.originWall = performance.now();
+      try { if (el) el.currentTime = c.originTime; } catch (e) { /* ignore */ }
     }
   }
 
-  function syncLocalMediaForTimecode(mediaId, action) {
-    const el = findLocalMediaEl(mediaId);
-    if (!el) return;
+  function mediaTimecodeText(el, mediaId) {
+    if (!el) return '0:00 / —';
+    const mid = mediaId || el.getAttribute('data-media-id');
+    const cur = formatMediaTimecode(consoleMediaNow(mid, el));
+    const dur = stableMediaDuration(el);
+    return cur + ' / ' + (Number.isFinite(dur) ? formatMediaTimecode(dur) : '—');
+  }
+
+  /** Echtes Folien-Medium — nicht #slideGhostStore (dort liegen Klone mit gleicher data-media-id). */
+  function findLocalMediaEl(mediaId) {
     try {
-      el.muted = true;
-      el.volume = 0;
-      // Verhindert play→postMessage→sendMediaCommand-Rückkopplung aus der Konsole.
-      el.dataset.sfSyncing = '1';
-      if (action === 'play') {
-        const p = el.play();
-        if (p && p.catch) p.catch(() => {});
-      } else if (action === 'pause') {
-        el.pause();
-      } else if (action === 'stop') {
-        el.pause();
-        try { el.currentTime = 0; } catch (err) { /* ignore */ }
-      }
-      const clearSync = () => { try { delete el.dataset.sfSyncing; } catch (err) { /* ignore */ } };
-      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(clearSync);
-      else setTimeout(clearSync, 0);
-    } catch (e) { /* ignore */ }
-    refreshMediaTimecodes();
+      const doc = mainFrame.contentDocument;
+      if (!doc || !mediaId) return null;
+      const safe = String(mediaId).replace(/"/g, '');
+      const sel = '[data-media-id="' + safe + '"]';
+      return doc.querySelector('.reveal .slides > section ' + sel)
+        || doc.querySelector('.reveal .slides ' + sel)
+        || null;
+    } catch (e) {
+      return null;
+    }
   }
 
   function refreshMediaTimecodes() {
@@ -1353,10 +1538,26 @@
     list.querySelectorAll('.media-control-row[data-media-id]').forEach((row) => {
       const mid = row.getAttribute('data-media-id');
       const timeEl = row.querySelector('.media-control-time');
+      const range = row.querySelector('[data-media-seek]');
       if (!timeEl || !mid) return;
       const media = findLocalMediaEl(mid);
-      timeEl.textContent = mediaTimecodeText(media);
-      row.classList.toggle('is-playing', !!(media && !media.paused && !media.ended));
+      const next = mediaTimecodeText(media, mid);
+      if (timeEl.textContent !== next) timeEl.textContent = next;
+      const playing = consoleMediaPlaying(mid)
+        || !!(media && media.tagName === 'VIDEO' && !media.paused && !media.ended);
+      row.classList.toggle('is-playing', playing);
+      if (range && media && range.dataset.scrubbing !== '1') {
+        const dur = stableMediaDuration(media);
+        if (Number.isFinite(dur) && dur > 0) {
+          const maxStr = dur.toFixed(1);
+          if (range.max !== maxStr) range.max = maxStr;
+        }
+        const cur = consoleMediaNow(mid, media);
+        const prev = parseFloat(range.value);
+        if (!Number.isFinite(prev) || Math.abs(prev - cur) >= 0.2) {
+          range.value = cur.toFixed(1);
+        }
+      }
     });
   }
 
@@ -1380,7 +1581,9 @@
     if (!slide) return false;
     return Array.from(slide.querySelectorAll('video, audio')).some((el) => {
       try {
-        return !el.paused && !el.ended && el.readyState > 0;
+        const mid = el.getAttribute('data-media-id');
+        if (mid && consoleMediaPlaying(mid)) return true;
+        return el.tagName === 'VIDEO' && !el.paused && !el.ended && el.readyState > 0;
       } catch (e) {
         return false;
       }
@@ -1455,73 +1658,95 @@
   }
 
   function findFrameMedia(mediaId) {
-    try {
-      return mainFrame.contentDocument.querySelector('[data-media-id="' + mediaId.replace(/"/g, '') + '"]');
-    } catch (e) {
-      return null;
-    }
+    return findLocalMediaEl(mediaId);
   }
 
   function applyMediaLocally(mediaId, action, time) {
     const el = findFrameMedia(mediaId);
     if (!el) return;
-    // Presenter-Iframe bleibt immer stumm — Ton nur auf dem Präsentationsbildschirm.
+    // Presenter-Iframe: kein Ton. Audio gar nicht abspielen; Video nur stumm (Bild).
     el.muted = true;
-    if (action === 'play') {
-      el.play && el.play().catch(() => {});
-    } else if (action === 'pause') {
-      el.pause && el.pause();
-    } else if (action === 'stop') {
-      el.pause && el.pause();
-      try { el.currentTime = 0; } catch (e) { /* ignore */ }
-    } else if (action === 'seek' && Number.isFinite(time)) {
-      try { el.currentTime = Math.max(0, time); } catch (e) { /* ignore */ }
+    el.volume = 0;
+    // Verhindert play/pause → postMessage → erneutes sendMediaCommand (Doppelstart).
+    el.dataset.sfSyncing = '1';
+    try {
+      setConsoleMediaClock(mediaId, el, action, time);
+      if (el.tagName === 'VIDEO') {
+        if (action === 'play') {
+          el.play && el.play().catch(() => {});
+        } else if (action === 'pause') {
+          el.pause && el.pause();
+        } else if (action === 'stop') {
+          el.pause && el.pause();
+          try { el.currentTime = 0; } catch (e) { /* ignore */ }
+        } else if (action === 'seek' && Number.isFinite(time)) {
+          try { el.currentTime = Math.max(0, time); } catch (e) { /* ignore */ }
+        }
+      } else {
+        // AUDIO: nur Uhr / Seek — play() würde Raum-Ton erzeugen.
+        el.pause && el.pause();
+        if (action === 'stop') {
+          try { el.currentTime = 0; } catch (e) { /* ignore */ }
+        } else if (action === 'seek' && Number.isFinite(time)) {
+          try { el.currentTime = Math.max(0, time); } catch (e) { /* ignore */ }
+        } else if (action === 'pause') {
+          try { el.currentTime = consoleMediaNow(mediaId, el); } catch (e) { /* ignore */ }
+        }
+      }
+    } finally {
+      const clearSync = () => { try { delete el.dataset.sfSyncing; } catch (err) { /* ignore */ } };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(clearSync);
+      else setTimeout(clearSync, 0);
     }
+    refreshMediaTimecodes();
   }
 
   function updateMediaControls() {
     const accordion = document.getElementById('mediaControlAccordion');
+    const tabMedia = document.getElementById('presentDockTabMedia');
     const list = document.getElementById('mediaControlList');
-    if (!accordion || !list || !P.canBroadcast) return;
-    const header = accordion.querySelector('.props-accordion-header');
-    if (header && !header.querySelector('.present-panel-drag-handle')) {
-      const handle = document.createElement('span');
-      handle.className = 'present-panel-drag-handle';
-      handle.setAttribute('aria-hidden', 'true');
-      handle.title = (P.i18n && P.i18n.reorderPanel) || 'Ziehen zum Sortieren';
-      handle.textContent = '⋮⋮';
-      header.insertBefore(handle, header.firstChild);
+    if (!list || !P.canBroadcast) {
+      dockHasMedia = false;
+      syncDockVisibility();
+      return;
     }
-    const userWants = isPanelUserVisible('media');
+
+    const userWants = isPanelUserVisible('media')
+      && (tabMedia ? tabMedia.dataset.userVisible !== '0' : true)
+      && (accordion ? accordion.dataset.userVisible !== '0' : true);
+
     let mediaEls = [];
-    let allSlides = [];
     try {
-      mediaEls = Array.from(mainFrame.contentDocument.querySelectorAll('[data-media-id]'));
-      allSlides = Array.from(mainFrame.contentDocument.querySelectorAll('.reveal .slides > section'));
+      const slide = getCurrentSlideSection();
+      mediaEls = slide
+        ? Array.from(slide.querySelectorAll('audio[data-media-id], video[data-media-id]'))
+        : [];
     } catch (e) { /* Frame evtl. noch nicht bereit */ }
-    if (!mediaEls.length) {
-      accordion.hidden = true;
+
+    const show = userWants && mediaEls.length > 0;
+    dockHasMedia = show;
+    if (accordion) accordion.hidden = true;
+    syncDockVisibility();
+    applyDockContrastForSlide(currentIndex);
+
+    if (!show) {
       list.innerHTML = '';
+      applyDockDefaultTab();
       return;
     }
-    accordion.hidden = !userWants;
-    if (!userWants) {
-      list.innerHTML = '';
-      return;
-    }
+
+    applyDockDefaultTab();
+
     const i18n = P.i18n || {};
     list.innerHTML = mediaEls.map((el) => {
       const mid = el.getAttribute('data-media-id');
       const label = el.tagName === 'AUDIO' ? 'Audio' : 'Video';
-      const slideEl = el.closest('section');
-      const slideIdx = allSlides.indexOf(slideEl);
-      const slideLabel = slideIdx >= 0 ? (' &ndash; Folie ' + (slideIdx + 1)) : '';
-      const dur = Number.isFinite(el.duration) ? el.duration : 0;
+      const dur = stableMediaDuration(el);
       const cur = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-      const max = dur > 0 ? dur : Math.max(cur, 1);
-      return '<div class="media-control-row" data-media-row="' + mid + '">' +
+      const max = Number.isFinite(dur) && dur > 0 ? dur : Math.max(cur, 1);
+      return '<div class="media-control-row" data-media-row="' + mid + '" data-media-id="' + mid + '">' +
         '<div class="media-control-row-top">' +
-          '<span>' + label + slideLabel + '</span>' +
+          '<span>' + label + '</span>' +
           '<div class="media-control-btns">' +
             '<button type="button" data-media-cmd="play" data-media-id="' + mid + '" title="' + (i18n.mediaPlay || 'Abspielen') + '">▶</button>' +
             '<button type="button" data-media-cmd="pause" data-media-id="' + mid + '" title="' + (i18n.mediaPause || 'Pause') + '">⏸</button>' +
@@ -1530,13 +1755,14 @@
         '</div>' +
         '<div class="media-control-seek">' +
           '<input type="range" min="0" max="' + max + '" step="0.1" value="' + cur + '" data-media-seek="' + mid + '" aria-label="' + (i18n.mediaSeek || 'Position') + '">' +
-          '<span class="media-control-time" data-media-time="' + mid + '">' + formatMediaTime(cur) + ' / ' + formatMediaTime(dur) + '</span>' +
+          '<span class="media-control-time" data-media-time="' + mid + '">' + mediaTimecodeText(el, mid) + '</span>' +
         '</div>' +
       '</div>';
     }).join('');
 
     list.querySelectorAll('[data-media-cmd]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         withLeaderControl(() => {
           applyMediaLocally(btn.dataset.mediaId, btn.dataset.mediaCmd);
           sendMediaCommand(btn.dataset.mediaId, btn.dataset.mediaCmd);
@@ -1546,18 +1772,6 @@
 
     list.querySelectorAll('[data-media-seek]').forEach((range) => {
       const mid = range.dataset.mediaSeek;
-      let scrubbing = false;
-      const syncFromEl = () => {
-        if (scrubbing) return;
-        const el = findFrameMedia(mid);
-        if (!el) return;
-        const dur = Number.isFinite(el.duration) ? el.duration : 0;
-        const cur = Number.isFinite(el.currentTime) ? el.currentTime : 0;
-        if (dur > 0) range.max = String(dur);
-        range.value = String(cur);
-        const timeEl = list.querySelector('[data-media-time="' + mid + '"]');
-        if (timeEl) timeEl.textContent = formatMediaTime(cur) + ' / ' + formatMediaTime(dur);
-      };
       const commitSeek = () => {
         const t = parseFloat(range.value);
         if (!Number.isFinite(t)) return;
@@ -1566,25 +1780,34 @@
           sendMediaCommand(mid, 'seek', t);
         });
       };
-      range.addEventListener('pointerdown', () => { scrubbing = true; });
-      range.addEventListener('pointerup', () => { scrubbing = false; commitSeek(); });
-      range.addEventListener('change', () => { scrubbing = false; commitSeek(); });
+      range.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        range.dataset.scrubbing = '1';
+      });
+      range.addEventListener('pointerup', () => {
+        range.dataset.scrubbing = '0';
+        commitSeek();
+      });
+      range.addEventListener('change', () => {
+        range.dataset.scrubbing = '0';
+        commitSeek();
+      });
+      range.addEventListener('click', (e) => e.stopPropagation());
       range.addEventListener('input', () => {
         const t = parseFloat(range.value);
         const el = findFrameMedia(mid);
-        const dur = el && Number.isFinite(el.duration) ? el.duration : parseFloat(range.max) || 0;
+        const dur = stableMediaDuration(el);
         const timeEl = list.querySelector('[data-media-time="' + mid + '"]');
-        if (timeEl) timeEl.textContent = formatMediaTime(t) + ' / ' + formatMediaTime(dur);
-        // Live-Vorschau lokal während Wischen (ohne Live-Flood)
+        if (timeEl) {
+          timeEl.textContent = formatMediaTimecode(t) + ' / ' +
+            (Number.isFinite(dur) ? formatMediaTimecode(dur) : '—');
+        }
         applyMediaLocally(mid, 'seek', t);
       });
-      const el = findFrameMedia(mid);
-      if (el) {
-        el.addEventListener('timeupdate', syncFromEl);
-        el.addEventListener('loadedmetadata', syncFromEl);
-        el.addEventListener('durationchange', syncFromEl);
-      }
     });
+
+    ensureMediaTimecodeTimer();
+    refreshMediaTimecodes();
   }
 
   function sendMediaCommand(mediaId, action, time) {
@@ -1792,6 +2015,11 @@
     const t = e.target;
     if (!t || !(t instanceof Element)) return false;
     if (isPresentTypingTarget(t)) return true;
+    /* Die Folien im Filmstreifen sind Knöpfe. Stand die Eingabemarke nach einem
+       Klick noch darauf, sprang Enter zurück auf dieselbe Folie, statt
+       weiterzugehen. Für die Navigationstasten zählt der Filmstreifen darum
+       nicht als Bedienelement — angeklickt wird er weiterhin ganz normal. */
+    if (t.closest('.filmstrip-item')) return false;
     if (t.closest('button, a, [role="button"], #presentClockArea')) return true;
     const qrModal = document.getElementById('presentRemoteQrModal');
     if (qrModal && qrModal.classList.contains('open')) return true;
@@ -1805,6 +2033,20 @@
     presentNavKeysBound = true;
 
     function handleParentNavKey(e) {
+      if (e.key === 'Escape') {
+        const t = e.target;
+        if (t instanceof Element && isPresentTypingTarget(t)) return;
+        /* Ein offenes Fenster hat Vorrang: Dessen eigener Esc-Zuhörer schliesst es.
+           Sonst verliesse man mit einem Tastendruck gleich die ganze Präsentation. */
+        if (document.querySelector('.modal-backdrop.open')) return;
+        /* Adresse selbst bauen statt den Knopf im Menüband zu suchen: Den kann
+           man sich wegkonfigurieren, die Taste soll trotzdem gehen. Gleiche
+           Bildung wie in updateUI(). */
+        if (!P || !P.id) return;
+        e.preventDefault();
+        window.location.href = 'editor.php?id=' + encodeURIComponent(P.id) + '&slide=' + currentIndex;
+        return;
+      }
       if (!mainReveal || shouldSkipPresentNav(e)) return;
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
         e.preventDefault();

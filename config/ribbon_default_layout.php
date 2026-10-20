@@ -25,6 +25,9 @@ function ribbon_default_layout(): array
                         ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                         ['id' => 'ungroup', 'gridSpan' => ['cols' => 1, 'rows' => 1], 'showLabel' => false],
                         ['id' => 'group', 'gridSpan' => ['cols' => 1, 'rows' => 1], 'showLabel' => false],
+                        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+                        ['id' => 'find_replace', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'notes_to_path', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     ['id' => 'g_zeichen', 'labelKey' => 'ribbon.group_zeichen', 'items' => [
                         ['id' => 'widget:zeichen'],
@@ -72,6 +75,7 @@ function ribbon_default_layout(): array
                         ['id' => 'media:pixabay', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'media:iconify', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'media:openclipart', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'media:fromurl', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     /* Nur im Folien-Set-Editor sichtbar (visibleWhen layoutSetMode). */
                     ['id' => 'g_layout_elements', 'labelKey' => 'editor.tab_elements', 'items' => [

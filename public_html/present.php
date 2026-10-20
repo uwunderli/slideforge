@@ -122,20 +122,61 @@ require __DIR__ . '/includes/header.php';
 <div class="present-main-row present-main-grid" id="presentMainRow">
   <div class="present-current-panel">
     <iframe id="mainFrame" src="present_frame.php?id=<?= urlencode($id) ?>&mode=main&amp;start=<?= (int)$startSlide ?>" title="<?= h(t('present.current_slide')) ?>"></iframe>
-    <div class="present-notes-overlay" id="presentNotesOverlay" hidden>
-      <div class="present-notes-sheet" id="presentNotesSheet">
-        <button
-          type="button"
-          class="present-notes-register"
-          id="presentNotesRegister"
-          aria-controls="notesPanel"
-          aria-expanded="true"
-          title="<?= h(t('present.notes_expand_hint')) ?>"
-        >
-          <span class="present-notes-register-label"><?= h(t('present.notes')) ?></span>
-        </button>
-        <div class="present-notes-body" id="presentNotesBody" title="<?= h(t('present.notes_collapse_hint')) ?>">
-          <div class="present-notes-overlay-inner" id="notesPanel" role="region" aria-label="<?= h(t('present.notes')) ?>"></div>
+    <div class="present-slide-dock" id="presentSlideDock" hidden>
+      <div class="present-slide-dock-sheet" id="presentSlideDockSheet">
+        <div class="present-slide-dock-tabs" role="tablist" aria-label="<?= h(t('present.notes')) ?>">
+          <button
+            type="button"
+            role="tab"
+            class="present-slide-dock-tab"
+            id="presentDockTabNotes"
+            data-dock-tab="notes"
+            aria-controls="presentDockPanelNotes"
+            aria-selected="false"
+            hidden
+          ><?= h(t('present.notes')) ?></button>
+          <button
+            type="button"
+            role="tab"
+            class="present-slide-dock-tab"
+            id="presentDockTabMedia"
+            data-dock-tab="media"
+            aria-controls="presentDockPanelMedia"
+            aria-selected="false"
+            hidden
+            data-user-visible="1"
+          ><?= h(t('present.media_player')) ?></button>
+          <button
+            type="button"
+            class="present-slide-dock-toggle"
+            id="presentDockToggle"
+            aria-expanded="true"
+            title="<?= h(t('present.notes_expand_hint')) ?>"
+          >
+            <span class="present-slide-dock-grip" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="present-slide-dock-panels">
+          <div
+            class="present-slide-dock-panel present-notes-overlay-inner"
+            id="presentDockPanelNotes"
+            role="tabpanel"
+            data-dock-panel="notes"
+            aria-labelledby="presentDockTabNotes"
+            hidden
+          >
+            <div id="notesPanel"></div>
+          </div>
+          <div
+            class="present-slide-dock-panel present-media-overlay-inner"
+            id="presentDockPanelMedia"
+            role="tabpanel"
+            data-dock-panel="media"
+            aria-labelledby="presentDockTabMedia"
+            hidden
+          >
+            <div id="mediaControlList"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -236,20 +277,8 @@ require __DIR__ . '/includes/header.php';
         </div>
       </div>
 
-      <div class="props-accordion-group open" data-acc="media" id="mediaControlAccordion" data-user-visible="1" hidden>
-        <button type="button" class="props-accordion-header">
-          <span class="present-panel-drag-handle" aria-hidden="true" title="<?= h(t('editor.reorder_slide')) ?>">⋮⋮</span>
-          <span class="present-panel-header-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
-          <span class="present-panel-header-title"><?= h(t('present.media_control')) ?></span>
-          <span class="props-accordion-chevron">▾</span>
-        </button>
-        <div class="props-accordion-body">
-          <div class="present-panel-body-inner">
-          <div id="mediaControlList"></div>
-          </div>
-          <div class="present-panel-resize-handle" data-panel-resize="media" role="separator" aria-orientation="horizontal" title="<?= h(t('present.resize_panel')) ?>"></div>
-        </div>
-      </div>
+      <!-- Medien-Player liegt als Tab über der Folie (presentMediaOverlay), nicht mehr in der Seitenleiste. -->
+      <div class="props-accordion-group" data-acc="media" id="mediaControlAccordion" data-user-visible="1" hidden aria-hidden="true"></div>
 
       <div class="props-accordion-group open" data-acc="slides">
         <button type="button" class="props-accordion-header">
@@ -463,6 +492,9 @@ window.SF_PRESENT = {
     notesEmpty: <?= json_encode(t('present.notes_empty')) ?>,
     notesCollapseHint: <?= json_encode(t('present.notes_collapse_hint')) ?>,
     notesExpandHint: <?= json_encode(t('present.notes_expand_hint')) ?>,
+    mediaPlayer: <?= json_encode(t('present.media_player')) ?>,
+    mediaCollapseHint: <?= json_encode(t('present.media_collapse_hint')) ?>,
+    mediaExpandHint: <?= json_encode(t('present.media_expand_hint')) ?>,
     clockStudio: <?= json_encode(t('present.clock_studio')) ?>,
     clockAnalog: <?= json_encode(t('present.clock_analog')) ?>,
     clockDigital: <?= json_encode(t('present.clock_digital')) ?>,

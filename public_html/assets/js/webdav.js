@@ -127,12 +127,12 @@
 
   function renderActions(entry) {
     const kind = mediaKind(entry);
-    const objBtn = '<button type="button" class="button button-sm webdav-use-obj">' + escapeHtml(t('useObject')) + '</button>';
+    const objBtn = '<button type="button" class="button button-sm webdav-use-obj hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('useObject')) + '</button>';
     if (!canUseBackground(kind)) {
       return objBtn;
     }
     return objBtn
-      + '<button type="button" class="button button-ghost button-sm webdav-use-bg">' + escapeHtml(t('useBackground')) + '</button>';
+      + '<button type="button" class="button button-ghost button-sm webdav-use-bg hub-btn hub-btn--ghost hub-btn--sm">' + escapeHtml(t('useBackground')) + '</button>';
   }
 
   function bindActionButtons(scope, entry) {
@@ -363,13 +363,41 @@
         throw new Error(t('errorGeneric'));
       }
       if (!json.ok) throw new Error(json.error || t('errorGeneric'));
-      await api.applyWebdav(mode || 'object-image', json.url, json.kind || 'image');
+      const jobId = json.job_id;
+      if (!jobId) throw new Error(t('errorGeneric'));
+      const done = await pollWebdavJob(jobId);
+      await api.applyWebdav(mode || 'object-image', done.url, done.kind || 'image');
       if (typeof api.refreshMediaLibrary === 'function') {
         api.refreshMediaLibrary();
       }
       closeWebdavModal();
     } catch (e) {
       setStatus(e.message || t('errorGeneric'), true);
+    }
+  }
+
+  async function pollWebdavJob(jobId) {
+    for (;;) {
+      const res = await fetch('webdav.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'job_status',
+          job_id: jobId,
+          csrf_token: api.csrfToken,
+          drive_id: activeDriveId,
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error || t('errorGeneric'));
+      const st = json.job && json.job.status;
+      if (st === 'done') {
+        return json.job.result || {};
+      }
+      if (st === 'failed') {
+        throw new Error((json.job && json.job.error) || t('errorGeneric'));
+      }
+      await new Promise((r) => setTimeout(r, 700));
     }
   }
 

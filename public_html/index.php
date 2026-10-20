@@ -84,7 +84,7 @@ function render_card(array $p, bool $isOwner, string $csrf): void {
         <div class="title"><?= h($p['title']) ?></div>
         <div class="owner"><?= $isOwner ? h(t('dashboard.created_by_you')) : h(t('dashboard.shared_label')) ?> · <?= h(t('dashboard.modified', ['date' => date('d.m.Y H:i', strtotime($p['updated_at']))])) ?></div>
         <div class="actions">
-          <a href="editor.php?id=<?= urlencode($p['id']) ?>" class="button button-sm"><?= $perm === 'view' ? h(t('dashboard.view')) : h(t('dashboard.edit')) ?></a>
+          <a href="editor.php?id=<?= urlencode($p['id']) ?>" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= $perm === 'view' ? h(t('dashboard.view')) : h(t('dashboard.edit')) ?></a>
           <a href="present.php?id=<?= urlencode($p['id']) ?>" class="icon-action-btn" title="<?= h(t('dashboard.present')) ?>">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z"/></svg>
           </a>
@@ -109,7 +109,12 @@ function render_card(array $p, bool $isOwner, string $csrf): void {
               </button>
             </form>
           <?php if ($isOwner): ?>
-            <form method="post" class="inline-form" data-sf-confirm="<?= h(t('dashboard.confirm_delete')) ?>" data-sf-confirm-danger>
+            <form method="post" class="inline-form"
+              data-hub-secure-delete
+              data-hub-secure-delete-title="<?= h(t('dashboard.delete_title')) ?>"
+              data-hub-secure-delete-message="<?= h(t('dashboard.confirm_delete') . "\n\n" . ($p['title'] ?? '')) ?>"
+              data-hub-secure-delete-ok="<?= h(t('dashboard.delete_ok')) ?>"
+              data-hub-secure-delete-busy="<?= h(t('dashboard.delete_busy')) ?>">
               <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= h($p['id']) ?>">
@@ -135,7 +140,7 @@ function render_mobile_item(array $p, bool $isOwner): void {
         <div class="mobile-pres-title"><?= h($p['title']) ?></div>
         <div class="mobile-pres-meta"><?= h(date('d.m.Y H:i', strtotime($p['updated_at']))) ?></div>
       </div>
-      <a href="present_remote.php?id=<?= urlencode($p['id']) ?>" class="button"><?= h(t('mobile.remote_control')) ?></a>
+      <a href="present_remote.php?id=<?= urlencode($p['id']) ?>" class="button hub-btn hub-btn--primary"><?= h(t('mobile.remote_control')) ?></a>
     </div>
     <?php
 }
@@ -171,8 +176,8 @@ require __DIR__ . '/includes/header.php';
   <div class="section-header" style="margin-top:0;">
     <h1 style="font-size:1.6rem; text-transform:none; letter-spacing:0; color:var(--text);"><?= h(t('dashboard.heading')) ?></h1>
     <div style="display:flex; gap:10px;">
-      <a href="import.php" class="button button-ghost"><?= h(t('dashboard.import')) ?></a>
-      <button class="button" onclick="document.getElementById('createModal').classList.add('open')"><?= h(t('dashboard.new_presentation')) ?></button>
+      <a href="import.php" class="button button-ghost hub-btn hub-btn--ghost"><?= h(t('dashboard.import')) ?></a>
+      <button class="button hub-btn hub-btn--primary" onclick="document.getElementById('createModal').classList.add('open')"><?= h(t('dashboard.new_presentation')) ?></button>
     </div>
   </div>
 
@@ -198,7 +203,7 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="dashboard-sections-toolbar">
-    <button type="button" class="button button-ghost button-sm" id="dashboardAddSectionBtn">+ <?= h(t('dashboard.add_section')) ?></button>
+    <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="dashboardAddSectionBtn">+ <?= h(t('dashboard.add_section')) ?></button>
   </div>
 
   <div
@@ -244,9 +249,9 @@ require __DIR__ . '/includes/header.php';
         <?php endif; ?>
         <?php if (!$isSharedInbox): ?>
         <div class="dashboard-section-actions">
-          <button type="button" class="button button-ghost button-sm dashboard-section-rename" title="<?= h(t('dashboard.rename_section')) ?>">✎</button>
+          <button type="button" class="button button-ghost button-sm dashboard-section-rename hub-btn hub-btn--ghost hub-btn--sm" title="<?= h(t('dashboard.rename_section')) ?>">✎</button>
           <?php if (!$isDefault): ?>
-            <button type="button" class="button button-ghost button-sm dashboard-section-delete" title="<?= h(t('dashboard.delete_section')) ?>">🗑</button>
+            <button type="button" class="button button-ghost button-sm dashboard-section-delete hub-btn hub-btn--ghost hub-btn--sm" title="<?= h(t('dashboard.delete_section')) ?>">🗑</button>
           <?php endif; ?>
         </div>
         <?php endif; ?>
@@ -287,8 +292,8 @@ require __DIR__ . '/includes/header.php';
         </div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="button button-ghost" onclick="document.getElementById('createModal').classList.remove('open')"><?= h(t('modal.cancel')) ?></button>
-        <button type="submit" class="button"><?= h(t('modal.create')) ?></button>
+        <button type="button" class="button button-ghost hub-btn hub-btn--ghost" onclick="document.getElementById('createModal').classList.remove('open')"><?= h(t('modal.cancel')) ?></button>
+        <button type="submit" class="button hub-btn hub-btn--primary"><?= h(t('modal.create')) ?></button>
       </div>
     </form>
   </div>

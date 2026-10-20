@@ -34,9 +34,9 @@
           <span class="ribbon-toggle-track" aria-hidden="true"></span>
           <span class="ribbon-toggle-label"><?= h(t('ribbon.present_public_short')) ?></span>
         </label>
-        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="sharePublicLinkBtn" hidden <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.share_link_title')) ?>"><?= h(t('present.share_link')) ?></button>
-        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="copyPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.copy_link')) ?>"><?= h(t('present.copy')) ?></button>
-        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy" id="downloadPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.download_link_title')) ?>"><?= h(t('present.download_link')) ?></button>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy hub-btn hub-btn--ghost hub-btn--sm" id="sharePublicLinkBtn" hidden <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.share_link_title')) ?>"><?= h(t('present.share_link')) ?></button>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy hub-btn hub-btn--ghost hub-btn--sm" id="copyPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.copy_link')) ?>"><?= h(t('present.copy')) ?></button>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy hub-btn hub-btn--ghost hub-btn--sm" id="downloadPublicLinkBtn" <?= (!empty($acl['public']['enabled']) && $publicUrl) ? '' : 'disabled' ?> title="<?= h(t('present.download_link_title')) ?>"><?= h(t('present.download_link')) ?></button>
         <input type="hidden" id="presentPublicLinkInput" value="<?= h($publicUrl) ?>">
       </div>
     </div>
@@ -48,7 +48,7 @@
       <label class="ribbon-present-display-screen-label" for="presentScreenSelect"><?= h(t('ribbon.present_screen_short')) ?></label>
       <select id="presentScreenSelect" class="present-screen-select ribbon-present-screen-select" aria-describedby="presentScreenHint"></select>
       <p class="present-screen-hint ribbon-present-screen-hint" id="presentScreenHint" hidden></p>
-      <button type="button" class="button button-primary present-local-btn" id="presentLocalBtn"><?= h(t('present.local_start')) ?></button>
+      <button type="button" class="button button-primary present-local-btn hub-btn hub-btn--primary" id="presentLocalBtn"><?= h(t('present.local_start')) ?></button>
     </div>
   </div>
   <?php if ($remoteUrl !== ''): ?>
@@ -63,7 +63,7 @@
           <span class="present-control-status-dot" id="presentControlDot" aria-hidden="true"></span>
           <?= h(t('present.control_status')) ?>
         </span>
-        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy present-remote-link-copy" id="copyRemoteLinkBtn" title="<?= h(t('remote.copy_url')) ?>"><?= h(t('remote.copy_url')) ?></button>
+        <button type="button" class="button button-ghost button-sm ribbon-present-display-copy present-remote-link-copy hub-btn hub-btn--ghost hub-btn--sm" id="copyRemoteLinkBtn" title="<?= h(t('remote.copy_url')) ?>"><?= h(t('remote.copy_url')) ?></button>
       </div>
       <button
         type="button"
@@ -93,10 +93,10 @@
       <div class="present-remote-qr-box present-remote-qr-box--dialog">
         <img id="presentRemoteQr" src="<?= h($remoteQrSrc) ?>" width="280" height="280" alt="<?= h(t('remote.qr_section')) ?>" decoding="async">
       </div>
-      <button type="button" class="button button-ghost button-sm" id="copyRemoteLinkPanelBtn"><?= h(t('remote.copy_url')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="copyRemoteLinkPanelBtn"><?= h(t('remote.copy_url')) ?></button>
     </div>
     <div class="sf-dialog-actions modal-actions">
-      <button type="button" class="button" id="presentRemoteQrModalOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="presentRemoteQrModalOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -113,11 +113,11 @@
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('present.timebar_stops_label')) ?></div>
         <div id="presentTimebarStopsList"></div>
-        <button type="button" class="button button-ghost button-sm" id="presentAddTimebarStopBtn"><?= h(t('present.add_timebar_stop')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="presentAddTimebarStopBtn"><?= h(t('present.add_timebar_stop')) ?></button>
       </div>
     </div>
     <div class="sf-dialog-actions modal-actions">
-      <button type="button" class="button" id="presentTimebarSettingsModalOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="presentTimebarSettingsModalOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -147,7 +147,7 @@
       </div>
     </div>
     <div class="sf-dialog-actions modal-actions">
-      <button type="button" class="button" id="presentLaserSettingsModalOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="presentLaserSettingsModalOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -166,7 +166,7 @@
       </div>
     </div>
     <div class="sf-dialog-actions modal-actions">
-      <button type="button" class="button" id="presentClockSettingsModalOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="presentClockSettingsModalOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -204,7 +204,7 @@
       </div>
     </div>
     <div class="sf-dialog-actions modal-actions">
-      <button type="button" class="button" id="presentNotesSettingsModalOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="presentNotesSettingsModalOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>

@@ -239,7 +239,7 @@ require __DIR__ . '/includes/header.php';
         <input type="checkbox" name="registration_enabled" style="width:auto;" <?= !empty($cfg['registration_enabled']) ? 'checked' : '' ?>>
         <?= h(t('admin.open_registration')) ?>
       </label>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
     </form>
 
     <div class="section-header"><h2><?= h(t('admin.logo_heading')) ?></h2></div>
@@ -252,13 +252,13 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="upload_logo">
       <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
-      <button type="submit" class="button button-sm"><?= h(t('profile.upload')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('profile.upload')) ?></button>
     </form>
     <?php if (Config::logoUrl()): ?>
       <form method="post" style="margin-top:8px;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="remove_logo">
-        <button type="submit" class="button button-ghost button-sm"><?= h(t('bg.remove')) ?> Logo</button>
+        <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('bg.remove')) ?> Logo</button>
       </form>
     <?php endif; ?>
 
@@ -312,13 +312,13 @@ require __DIR__ . '/includes/header.php';
           <input type="text" id="smtp_from_name" name="smtp_from_name" value="<?= h($smtp['from_name'] ?? APP_NAME) ?>"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
         </div>
       </div>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.smtp_save_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.smtp_save_btn')) ?></button>
     </form>
 
     <div class="options-subtitle" style="margin-top:20px;"><?= h(t('admin.send_test_mail')) ?></div>
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <input type="email" id="testMailTo" placeholder="empfänger@example.com" style="flex:1; min-width:220px;"<?= $smtpDemoLocked ? ' disabled' : '' ?>>
-      <button type="button" id="testMailBtn" class="button button-ghost button-sm"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.send_test_mail')) ?></button>
+      <button type="button" id="testMailBtn" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"<?= $smtpDemoLocked ? ' disabled' : '' ?>><?= h(t('admin.send_test_mail')) ?></button>
     </div>
     <div id="testMailResult" style="margin-top:10px; font-size:0.85rem;"></div>
     </fieldset>
@@ -350,7 +350,7 @@ require __DIR__ . '/includes/header.php';
           <input type="password" id="lt_api_key" name="lt_api_key" placeholder="<?= !empty($languagetool['api_key']) ? h(t('admin.smtp_password_unchanged')) : h(t('admin.languagetool_optional')) ?>">
         </div>
       </div>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('admin.languagetool_save_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('admin.languagetool_save_btn')) ?></button>
     </form>
 
   </div>
@@ -378,7 +378,7 @@ require __DIR__ . '/includes/header.php';
       <p style="color:var(--text-muted); font-size:0.85rem; margin-top:8px;">
         <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener"><?= h(t('admin.pixabay_docs_link')) ?></a>
       </p>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('admin.pixabay_save_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('admin.pixabay_save_btn')) ?></button>
     </form>
 
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.iconify_heading')) ?></h2></div>
@@ -390,7 +390,7 @@ require __DIR__ . '/includes/header.php';
         <input type="checkbox" name="ic_enabled" style="width:auto;" <?= !empty($iconify['enabled']) ? 'checked' : '' ?>>
         <?= h(t('admin.iconify_enabled')) ?>
       </label>
-      <button type="submit" class="button button-sm"><?= h(t('admin.iconify_save_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('admin.iconify_save_btn')) ?></button>
     </form>
 
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('admin.openclipart_heading')) ?></h2></div>
@@ -402,7 +402,7 @@ require __DIR__ . '/includes/header.php';
         <input type="checkbox" name="oc_enabled" style="width:auto;" <?= !empty($openclipart['enabled']) ? 'checked' : '' ?>>
         <?= h(t('admin.openclipart_enabled')) ?>
       </label>
-      <button type="submit" class="button button-sm"><?= h(t('admin.openclipart_save_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('admin.openclipart_save_btn')) ?></button>
     </form>
 
   </div>
@@ -419,7 +419,7 @@ require __DIR__ . '/includes/header.php';
         <label for="invite_email" style="margin-top:0;"><?= h(t('admin.invite_email_label')) ?></label>
         <input type="email" id="invite_email" name="invite_email" placeholder="max.muster@example.com">
       </div>
-      <button type="submit" class="button button-sm"><?= h(t('admin.create_invite_btn')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('admin.create_invite_btn')) ?></button>
     </form>
 
     <ul class="share-list" style="margin-top:16px;">
@@ -437,7 +437,7 @@ require __DIR__ . '/includes/header.php';
               <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
               <input type="hidden" name="action" value="delete_invite">
               <input type="hidden" name="token" value="<?= h($inv['token']) ?>">
-              <button type="submit" class="button button-ghost button-sm"><?= h(t('common.delete')) ?></button>
+              <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('common.delete')) ?></button>
             </form>
           </div>
           <?php if (!$inv['used']): ?>
@@ -474,7 +474,7 @@ require __DIR__ . '/includes/header.php';
                 <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; color:var(--text-muted); margin:0;">
                   <input type="checkbox" name="also_delete_presentations" style="width:auto;"> <?= h(t('admin.also_delete_presentations')) ?>
                 </label>
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('common.delete')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('common.delete')) ?></button>
               </form>
             <?php endif; ?>
           </div>
@@ -495,7 +495,7 @@ require __DIR__ . '/includes/header.php';
       <?= str_replace('assets/images/pixabay-api-key-help.png', 'assets/images/pixabay-api-key-help.png?v=' . ASSET_VERSION, t('admin.pixabay_help_body')) ?>
     </div>
     <div class="modal-actions">
-      <button type="button" class="button" id="pixabayHelpOk"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="pixabayHelpOk"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>

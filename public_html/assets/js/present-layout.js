@@ -31,6 +31,8 @@
       slideGhostOpacity: 25,
       notesMode: 'carry',
       notesCollapsed: false,
+      mediaCollapsed: false,
+      dockTab: 'notes',
     };
   }
 
@@ -87,6 +89,8 @@
         ? src.notesMode
         : base.notesMode,
       notesCollapsed: src.notesCollapsed != null ? !!src.notesCollapsed : base.notesCollapsed,
+      mediaCollapsed: src.mediaCollapsed != null ? !!src.mediaCollapsed : base.mediaCollapsed,
+      dockTab: (src.dockTab === 'notes' || src.dockTab === 'media') ? src.dockTab : base.dockTab,
     };
   }
 
@@ -501,6 +505,8 @@
         : 'carry';
     }
     if (partial.notesCollapsed != null) layoutState.notesCollapsed = !!partial.notesCollapsed;
+    if (partial.mediaCollapsed != null) layoutState.mediaCollapsed = !!partial.mediaCollapsed;
+    if (partial.dockTab === 'notes' || partial.dockTab === 'media') layoutState.dockTab = partial.dockTab;
     if (P) P.presentLayout = cloneLayout(layoutState);
     saveLayout();
     if (partial.laserPointerColor || partial.laserPointerSize != null || partial.laserPointerTrail != null || partial.laserPointerEnabled != null) broadcastLaserConfig();

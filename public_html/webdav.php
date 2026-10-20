@@ -97,6 +97,16 @@ function webdav_json_ok(array $data = []): void
 }
 
 $driveId = trim((string)($body['drive_id'] ?? $_GET['drive_id'] ?? ''));
+
+if ($action === 'job_status') {
+    $jobId = trim((string)($body['job_id'] ?? $_GET['job'] ?? ''));
+    $job = BackgroundJob::read($jobId);
+    if ($job === null || ($job['type'] ?? '') !== 'webdav_import' || ($job['user_id'] ?? '') !== $me['id']) {
+        webdav_json_fail(t('webdav.error_not_found'), 404);
+    }
+    webdav_json_ok(['job' => BackgroundJob::publicStatus($job)]);
+}
+
 $drive = Auth::getWebdavDriveCredentials($me['id'], $driveId);
 if (!$drive) {
     webdav_json_fail(t('webdav.error_drive_not_found'), 404);
@@ -125,7 +135,7 @@ if ($action === 'browse') {
 }
 
 $id = $_GET['id'] ?? $body['id'] ?? '';
-if (!in_array($action, ['import'], true)) {
+if ($action !== 'import') {
     webdav_json_fail(t('webdav.error_unknown_action'), 400);
 }
 
@@ -151,30 +161,19 @@ if ($path === '') {
     webdav_json_fail(t('webdav.error_invalid_path'), 400);
 }
 
-if ($action === 'import') {
-    @set_time_limit(600);
-}
-
 $declaredSize = max(0, (int)($body['size'] ?? 0));
-$result = WebdavClient::importToPresentation($id, $drive, $path, $declaredSize);
-if (!$result['ok']) {
-    $map = [
-        'invalid_path' => t('webdav.error_invalid_path'),
-        'unsupported_type' => t('webdav.error_type'),
-        'file_too_large' => t('webdav.error_too_large'),
-        'download_failed' => t('webdav.error_download'),
-        'auth_failed' => t('webdav.error_auth_failed'),
-        'not_found' => t('webdav.error_not_found'),
-        'save_failed' => t('webdav.error_save'),
-        'https_required' => t('webdav.error_https_required'),
-        'blocked_host' => t('webdav.error_blocked_host'),
-    ];
-    webdav_json_fail($map[$result['error'] ?? ''] ?? t('webdav.error_generic'), 400);
+try {
+    $job = WebdavImportJob::enqueue(
+        $me['id'],
+        (string)$id,
+        $driveId,
+        $path,
+        $declaredSize
+    );
+    webdav_json_ok([
+        'job_id' => $job['id'],
+        'job' => BackgroundJob::publicStatus($job),
+    ]);
+} catch (Throwable $e) {
+    webdav_json_fail($e->getMessage(), 400);
 }
-
-webdav_json_ok([
-    'url' => $result['url'],
-    'filename' => $result['filename'],
-    'kind' => $result['kind'],
-    'name' => $result['name'] ?? '',
-]);

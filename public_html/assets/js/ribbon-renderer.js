@@ -27,6 +27,8 @@
     group: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     ungroup: '<rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/><path d="M10 6h4M6 10v4M18 10v4M10 18h4"/>',
     spellcheck: '<path d="M4 20h16"/><path d="M6 16l6-10 6 10"/><path d="M8.5 13h7"/><path d="M16 18l2 2 4-4"/>',
+    find_replace: '<circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L21 21"/><path d="M4 21h7"/><path d="M8 18l-2.5 3"/>',
+    notes_to_path: '<path d="M4 6h6"/><path d="M4 12h9"/><path d="M4 18h12"/><path d="M17 9l3 3-3 3"/>',
     slides: {
       strokeWidth: 1.5,
       paths:
@@ -81,6 +83,7 @@
     media_audio: '<path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
     media_video: '<rect x="3" y="6" width="14" height="12" rx="2"/><path d="M17 10l4-2v8l-4-2"/>',
     pixabay: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 14l2.5-3 2 2.5L14 11l3 4"/><circle cx="16" cy="9" r="1.2" fill="currentColor" stroke="none"/>',
+    from_url: '<path d="M10.5 13.5a3.5 3.5 0 0 0 4.95 0l2.3-2.3a3.5 3.5 0 0 0-4.95-4.95l-1.3 1.3"/><path d="M13.5 10.5a3.5 3.5 0 0 0-4.95 0l-2.3 2.3a3.5 3.5 0 0 0 4.95 4.95l1.3-1.3"/>',
     iconify: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
     clipart: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M20 4L8.5 15.5"/><path d="M14.5 6.5L20 12"/><path d="M8.5 15.5L14 21"/>',
     present: {
@@ -810,6 +813,8 @@
       const itemRef = typeof item === 'object' ? item : { id: item };
       const cmd = commandIndex[itemRef.id];
       if (!cmd) return;
+      /* Anpassen gehört in die Tab-Leiste (OF/Hub-Muster), nicht in die Befehlskacheln. */
+      if (cmd.id === 'ribbon_customize') return;
 
       if (cmd.kind === 'row_separator') {
         /* <br> in der Zeile; allein am Anfang startet nur den Zeilenmodus. */
@@ -889,6 +894,18 @@
 
       panelsEl.appendChild(panel);
     });
+
+    const customizeCmd = commandIndex.ribbon_customize || {};
+    const customizeBtn = document.createElement('button');
+    customizeBtn.type = 'button';
+    customizeBtn.id = 'sfRibbonTabCustomize';
+    customizeBtn.className = 'editor-ribbon-tab-customize';
+    customizeBtn.title = customizeCmd.label || ribbonMeta.customizeTitle || 'Ribbon anpassen';
+    customizeBtn.setAttribute('aria-label', customizeCmd.shortLabel || customizeCmd.label || customizeBtn.title);
+    customizeBtn.innerHTML = '<span class="editor-ribbon-tab-customize__icon" aria-hidden="true">' +
+      svgIcon('ribbon_customize') +
+      '</span>';
+    tabsEl.appendChild(customizeBtn);
 
     layoutData = layout;
     if (global.SFRibbon && global.SFRibbon.applyAppearancePrefs) {

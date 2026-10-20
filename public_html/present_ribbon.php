@@ -67,6 +67,15 @@ try {
             present_ribbon_json_ok(['layout' => PresentRibbonLayout::layoutForClient($sanitized, $context)]);
             break;
 
+        case 'save_prefs':
+            $prefsIn = $body['prefs'] ?? null;
+            if (!is_array($prefsIn)) {
+                present_ribbon_json_fail(t('ribbon.error_invalid_layout'));
+            }
+            $prefs = PresentRibbonLayout::patchPrefs($me['id'], $prefsIn);
+            present_ribbon_json_ok(['prefs' => $prefs]);
+            break;
+
         case 'reset':
             PresentRibbonLayout::resetLayout($me['id']);
             $layout = PresentRibbonLayout::getLayout($me['id'], $context);

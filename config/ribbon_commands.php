@@ -22,6 +22,8 @@ function ribbon_command_catalog(): array
         ['id' => 'group', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.group', 'icon' => 'group', 'domId' => 'groupObjBtn', 'shortcut' => 'Ctrl+G', 'visibleWhen' => ['canEdit'], 'disabled' => true],
         ['id' => 'ungroup', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.ungroup', 'icon' => 'ungroup', 'domId' => 'ungroupObjBtn', 'shortcut' => 'Ctrl+Shift+G', 'visibleWhen' => ['canEdit'], 'disabled' => true],
         ['id' => 'spellcheck', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'spell.menu', 'icon' => 'spellcheck', 'domId' => 'spellcheckBtn', 'visibleWhen' => ['canEdit', 'spellcheckEnabled']],
+        ['id' => 'find_replace', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'find.title', 'icon' => 'find_replace', 'domId' => 'findReplaceBtn', 'shortcut' => 'Ctrl+H', 'visibleWhen' => ['canEdit']],
+        ['id' => 'notes_to_path', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'notes.outline_title', 'icon' => 'notes_to_path', 'domId' => 'notesToPathBtn', 'visibleWhen' => ['canEdit']],
 
         ['id' => 'widget:zeichen', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_zeichen', 'templateId' => 'widget-zeichen', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 8, 'rows' => 2]],
         ['id' => 'widget:templates', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_templates', 'templateId' => 'widget-templates', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
@@ -45,6 +47,7 @@ function ribbon_command_catalog(): array
         ['id' => 'media:pixabay', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'pixabay.title', 'icon' => 'pixabay', 'mediaAction' => 'pixabay', 'visibleWhen' => ['canEdit', 'pixabayEnabled']],
         ['id' => 'media:iconify', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'iconify.title', 'icon' => 'iconify', 'mediaAction' => 'iconify', 'visibleWhen' => ['canEdit', 'iconifyEnabled']],
         ['id' => 'media:openclipart', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'openclipart.title', 'icon' => 'clipart', 'mediaAction' => 'openclipart', 'visibleWhen' => ['canEdit', 'openclipartEnabled']],
+        ['id' => 'media:fromurl', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'fromurl.title', 'icon' => 'from_url', 'mediaAction' => 'fromurl', 'visibleWhen' => ['canEdit']],
         ['id' => 'widget:layout_elements', 'kind' => 'widget', 'category' => 'insert', 'labelKey' => 'editor.tab_elements', 'templateId' => 'widget-layout-elements', 'visibleWhen' => ['canEdit', 'layoutSetMode'], 'gridSpan' => ['cols' => 8, 'rows' => 2]],
 
         // --- Folie / Entwurf ---

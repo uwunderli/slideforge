@@ -52,7 +52,7 @@ if ($file['size'] > $maxSize) {
     upload_fail('Datei ist zu gross (max. ' . round($maxSize / 1024 / 1024) . ' MB).');
 }
 
-$allowedImage = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+$allowedImage = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'];
 $allowedVideo = ['video/mp4' => 'mp4', 'video/webm' => 'webm'];
 $allowedAudio = ['audio/mpeg' => 'mp3', 'audio/wav' => 'wav', 'audio/x-wav' => 'wav', 'audio/ogg' => 'ogg', 'audio/mp4' => 'm4a', 'audio/x-m4a' => 'm4a'];
 $allowed = $kind === 'video' ? $allowedVideo : ($kind === 'audio' ? $allowedAudio : $allowedImage);
@@ -63,6 +63,15 @@ if ($finfo === false) {
     upload_fail('Server kann Dateityp nicht prüfen (fileinfo-Extension fehlt). Bitte Administrator kontaktieren.', 500);
 }
 $mime = @finfo_file($finfo, $file['tmp_name']);
+
+/* finfo meldet SVG je nach Inhalt als text/xml, application/xml oder text/plain. */
+if ($kind !== 'video' && $kind !== 'audio' && is_string($mime)
+    && in_array($mime, ['text/xml', 'application/xml', 'text/plain', 'image/svg'], true)) {
+    $head = (string)@file_get_contents($file['tmp_name'], false, null, 0, 512);
+    if (stripos($head, '<svg') !== false) {
+        $mime = 'image/svg+xml';
+    }
+}
 
 if ($mime === false || !isset($allowed[$mime])) {
     upload_fail('Nicht unterstützter Dateityp' . ($mime ? ': ' . h($mime) : '') . '. Erlaubt: ' . implode(', ', $allowed));
@@ -75,6 +84,25 @@ if (!is_dir($assetsDir)) {
     mkdir($assetsDir, 0770, true);
 }
 $destination = $assetsDir . '/' . $filename;
+
+/* SVG kann Skripte enthalten und wird von asset.php als image/svg+xml auf
+   derselben Domain ausgeliefert — vor dem Speichern entschärfen. */
+if ($mime === 'image/svg+xml') {
+    $clean = SvgHelper::sanitize((string)@file_get_contents($file['tmp_name']));
+    if ($clean === null) {
+        upload_fail('Diese SVG-Datei konnte nicht verarbeitet werden.');
+    }
+    if (@file_put_contents($destination, $clean) === false) {
+        upload_fail('Datei konnte nicht gespeichert werden.', 500);
+    }
+    @chmod($destination, 0640);
+    echo json_encode([
+        'ok' => true,
+        'filename' => $filename,
+        'url' => 'asset.php?id=' . urlencode($id) . '&file=' . urlencode($filename),
+    ]);
+    exit;
+}
 
 if (!@move_uploaded_file($file['tmp_name'], $destination)) {
     $err = error_get_last();

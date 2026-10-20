@@ -69,9 +69,10 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
     margin: 0
   });
 
-  // Medien: Ladehinweis, automatische Wiedergabe nach Verzögerung.
-  // Ton gehört auf die Zuschauer-/Beamer-Ansicht (nicht die Presenter-Konsole).
+  // Medien: Ladehinweis. Timed-Start kommt von der Presenter-Konsole (live),
+  // nicht nochmals lokal — sonst doppelte Wiedergabe.
   window.SF_MEDIA_AUDIBLE = true;
+  window.SF_MEDIA_FOLLOW_LIVE = true;
   window.SF_MEDIA_UNLOCK_HINT = <?= json_encode(t('present.media_audio_unlock'), JSON_UNESCAPED_UNICODE) ?>;
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
@@ -143,15 +144,6 @@ window.SF_SLIDE_DISABLED = <?= json_encode($slideDisabled) ?>;
         })
         .catch(function () {});
     }
-
-    // Nach Live-Folienwechsel Timed-Medien erneut scharf schalten.
-    Reveal.on('slidechanged', function () {
-      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
-      if (slide && typeof sfArmMediaTriggers === 'function') {
-        if (!window.__sfViewPlayTimers) window.__sfViewPlayTimers = [];
-        sfArmMediaTriggers(slide, window.__sfViewPlayTimers);
-      }
-    });
 
     pollLive();
     setInterval(pollLive, 400);

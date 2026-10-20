@@ -47,17 +47,39 @@ $manifestUrl = $webPrefix . '/manifest.php';
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
 <link rel="stylesheet" href="assets/css/mobile.css?v=<?= ASSET_VERSION ?>">
-<link rel="stylesheet" href="assets/css/hub-scroll.css?v=<?= ASSET_VERSION ?>">
-<link rel="stylesheet" href="assets/css/hub-float-dialog.css?v=<?= ASSET_VERSION ?>">
+<?php /* Hub-Bausteine: EINE Datei statt sieben mitgefuehrter Kopien (hub/docs/DESIGN.md).
+         Mit Hub-Anbindung kommt sie vom Hub, ohne Anbindung aus der byte-gleichen Kopie
+         unter assets/vendor/hub/css/ - beides loest hub_asset() selbst auf (Hub-Fix
+         880725a9: Rueckfall ueber SLIDEFORGE_ROOT bzw. DOCUMENT_ROOT). Reihenfolge wie
+         bisher: NACH style.css, damit die Hub-Regeln gewinnen. */ ?>
+<?php /* function_exists nur als Schutz gegen eine fehlende Bibliothek: ohne
+         shared/bootstrap.php gaebe ein nackter Aufruf einen Fatal Error auf JEDER
+         Seite statt nur fehlendem Stil. Keine Standort-Logik - die macht hub_asset(). */ ?>
+<link rel="stylesheet" href="<?= h(function_exists('hub_asset') ? hub_asset('css/hub-kit.css') : 'assets/vendor/hub/css/hub-kit.css?v=' . rawurlencode((string)ASSET_VERSION)) ?>">
+<?php /* Eigene Abweichungen, bewusst NACH dem Kit und bewusst keine Hub-Kopien:
+         slideforge-float-dialog.css     Vorgabegroesse der Schwebedialoge
+         slideforge-user-menu-bridge.css Alt-Klassen .user-menu-* unseres Markups */ ?>
+<link rel="stylesheet" href="assets/css/slideforge-float-dialog.css?v=<?= ASSET_VERSION ?>">
 <?php if ($currentUser && class_exists('Launcher')): ?>
 <link rel="stylesheet" href="<?= h(churchforge_shared_asset_url('cf-launcher.css')) ?>?v=<?= ASSET_VERSION ?>">
 <?php endif; ?>
 <?php if ($currentUser): ?>
-<link rel="stylesheet" href="assets/css/hub-user-menu.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/slideforge-user-menu-bridge.css?v=<?= ASSET_VERSION ?>">
 <?php endif; ?>
-<script src="assets/js/cf-theme.js?v=<?= ASSET_VERSION ?>"></script>
+<?php /* Schlichter Hub-Stil (Vorgabe 17.10., _berichte/hub/vorgabe-schlichtes-design-apps):
+         ZULETZT geladen - nach den eigenen Stilen UND nach dem Kit. Sie setzt nur Groesse,
+         Gewicht, Rundung, Rahmen und Luft neu, keine Farben und kein Verhalten. Wer sie
+         davor laedt, sieht klotzig aus; das war der Fehler im Lab.
+         Kommt bewusst vom Hub und wird NICHT mitgefuehrt (eine Quelle, hub/docs/DESIGN.md).
+         Ohne shared/bootstrap.php gibt es die Funktion nicht - dann bleibt die Seite
+         schlicht ungeschminkt statt mit einem Fatal Error stehen. */ ?>
+<?php if (function_exists('hub_asset')): ?>
+<link rel="stylesheet" href="<?= h(hub_asset('shared/cf-fine.css')) ?>">
+<?php endif; ?>
+<script src="<?= h(sf_hub_asset('shared/cf-theme.js', 'assets/js/cf-theme.js')) ?>"></script>
 <script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-page-busy.js')) ?>"></script>
 <script>
 window.SF_DIALOG_I18N = <?= json_encode([
     'ok' => t('common.ok'),
@@ -70,13 +92,18 @@ window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
     'close' => t('dialog.close'),
 ], JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<script src="assets/js/hub-float-dialog.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-float-dialog.js')) ?>"></script>
 <script src="assets/js/sf-float-bridge.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-confirm.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-secure-delete.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('shared/cf-status.js')) ?>"></script>
 <script src="assets/js/ui-dialog.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-hub-boot.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/number-input-wheel.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/pwa.js?v=<?= ASSET_VERSION ?>" defer></script>
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . h($bodyClass) . '"' : '' ?><?= ($currentUser && Mobile::isMobileClient()) ? ' data-sf-mobile-server="1"' : '' ?><?= client_is_touch_tablet() ? ' data-sf-tablet="1"' : '' ?><?= !empty($_GET['hub_theme']) ? ' data-sf-hub-embedded="1"' : '' ?>>
+<div id="cf-status-host" class="cf-status-host" aria-live="polite"></div>
 <?php if (Config::demoMode()): ?>
 <div class="demo-banner" role="status">
   <div><?= h(t('demo.banner')) ?></div>
@@ -116,7 +143,7 @@ window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
   <?php endif; ?>
 </header>
 <?php if (empty($_GET['hub_theme'])): ?>
-<script src="assets/js/hub-user-menu.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-user-menu.js')) ?>"></script>
 <script>window.HubUserMenu && HubUserMenu.bindAll();</script>
 <?php endif; ?>
 <?php else: ?>

@@ -1,6 +1,6 @@
 /**
  * Bindet bestehende SlideForge .modal-backdrop-Dialoge an HubFloatDialog
- * (globale hub-float-dialog Klassen). Confirm-Overlay (.sf-ui-dialog) bleibt unberührt.
+ * (globale hub-float-dialog Klassen). Confirm = HubConfirm (kein SF-Overlay).
  * Upgrade erst beim ersten Öffnen (lazy), kein DOM-Umhängen in einen Host.
  */
 (function (global) {
@@ -24,7 +24,11 @@
     presentTimebarSettingsModal: { width: 520, height: 480 },
     presentLaserSettingsModal: { width: 480, height: 520 },
     presentClockSettingsModal: { width: 480, height: 420 },
-    presentNotesSettingsModal: { width: 440, height: 380 }
+    presentNotesSettingsModal: { width: 440, height: 380 },
+    // Hub-Vorgabe „Formular 2-Spalten / Editor" (DESIGN.md, Standardgrössen).
+    // fitContent aus, sonst misst sich der Dialog nach dem Wiederherstellen neu
+    // am Inhalt und wirkt beim zweiten Öffnen anders als beim ersten.
+    importDialog: { width: 1040, height: 860, fitContent: false }
   };
 
   function upgradeOne(backdrop) {
@@ -47,7 +51,7 @@
       height: hint.height,
       minWidth: 320,
       minHeight: 200,
-      fitContent: true,
+      fitContent: hint.fitContent !== false,
       persist: false,
       geomRev: 1
     });

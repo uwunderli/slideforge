@@ -67,6 +67,37 @@ switch ($action) {
         user_json_ok(['thumb_min' => $thumbMin]);
         break;
 
+    case 'clip_list':
+        user_json_ok(['clipboard' => SlideClipboard::summary($me['id'])]);
+        break;
+
+    case 'clip_remove':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        SlideClipboard::remove($me['id'], is_array($body['ids'] ?? null) ? $body['ids'] : []);
+        user_json_ok(['clipboard' => SlideClipboard::summary($me['id'])]);
+        break;
+
+    case 'clip_clear':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        SlideClipboard::clear($me['id']);
+        user_json_ok(['clipboard' => []]);
+        break;
+
+    case 'set_editor_ui':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        $ui = Auth::setEditorUi($me['id'], is_array($body['ui'] ?? null) ? $body['ui'] : []);
+        user_json_ok(['ui' => $ui]);
+        break;
+
     case 'save_webdav_drive':
         $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {

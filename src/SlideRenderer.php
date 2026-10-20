@@ -383,7 +383,7 @@ class SlideRenderer
         if (trim($line) === '') {
             return false;
         }
-        $rendered = Markdown::render($line);
+        $rendered = Markdown::render($line, false);
         $plain = trim(html_entity_decode(strip_tags($rendered), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
         return $plain !== '';
     }
@@ -432,7 +432,7 @@ class SlideRenderer
                 continue;
             }
             $order = $lineIndices[$i] ?? ((int)($obj['animOrder'] ?? 1) + $i);
-            $rendered = Markdown::render($line);
+            $rendered = Markdown::render($line, false);
             $linesHtml .= '<div class="sf-text-line fragment ' . h($animType) . '" data-fragment-index="' . $order . '"' . self::fragmentAutoSlideAttr($plan, $order) . ' style="' . $baseTextStyle . $durationCss . '">' . $rendered . '</div>';
         }
 
@@ -496,6 +496,11 @@ class SlideRenderer
         // (opacity/transform). Eigene Deckkraft nur setzen, wenn NICHT animiert,
         // sonst würde sie den Fade-Effekt dauerhaft überschreiben.
         $innerStyle = 'width:100%; height:100%; box-sizing:border-box;';
+        /* Eigenes Aussehen (Füllung, Rand) getrennt halten: Bei einem animierten Objekt
+           mit eigener Deckkraft muss es auf die Deckkraft-Ebene, nicht auf das
+           Fragment-Element — sonst malt das Fragment die Farbe voll deckend, und die
+           Deckkraft-Ebene darin bleibt leer. Genau das machte den roten Balken opak. */
+        $selfStyle = '';
         if ($animType === 'none') {
             $innerStyle .= 'opacity:' . $opacity . ';';
         } elseif (!empty($obj['animDuration'])) {
@@ -538,7 +543,7 @@ class SlideRenderer
                 'font-family:%s,sans-serif; font-size:%dpx; font-weight:%s; font-style:%s; text-decoration:%s; text-transform:%s; font-variant:%s; color:%s; text-align:%s; white-space:pre-wrap; line-height:%s; letter-spacing:%s;',
                 h($fontFamily), $fontSize, h($fontWeight), $fontStyleCss, $textDecoration, $textTransform, $fontVariant, h($color), h($align), $lineHeight, h($letterSpacing)
             );
-            $content = Markdown::render($obj['text'] ?? '');
+            $content = Markdown::render($obj['text'] ?? '', false);
             $extraClass = ' sf-text';
         } elseif ($type === 'image') {
             $src = self::assetUrl($obj['src'] ?? '', $publicToken);
@@ -614,15 +619,33 @@ class SlideRenderer
             }
             $stroke = $obj['stroke'] ?? 'transparent';
             $strokeWidth = $obj['strokeWidth'] ?? 0;
-            $innerStyle .= sprintf('background:%s; border:%dpx solid %s;', $fillCss, $strokeWidth, h($stroke));
+            $selfStyle .= sprintf('background:%s; border:%dpx solid %s;', $fillCss, $strokeWidth, h($stroke));
             if ($type === 'ellipse') {
-                $innerStyle .= 'border-radius:50%;';
+                $selfStyle .= 'border-radius:50%;';
             }
+        }
+
+        /* Eigene Deckkraft eines ANIMIERTEN Objekts gehört auf eine eigene Ebene:
+           reveal.js animiert opacity auf dem Fragment-Element, ein eigener Wert
+           dort würde entweder den Effekt überschreiben oder verloren gehen. */
+        if ($animType !== 'none' && (float)$opacity < 1) {
+            $content = '<div class="sf-own-opacity" style="width:100%; height:100%; box-sizing:border-box; opacity:'
+                . $opacity . ';' . $selfStyle . '">' . $content . '</div>';
+        } else {
+            $innerStyle .= $selfStyle;
         }
 
         return '<div style="' . $outerStyle . '"><div class="sf-object' . $extraClass . $fragmentClass . '"' . $fragmentAttr . ' style="' . $innerStyle . '">' . $content . "</div></div>\n";
     }
 
+    /**
+     * WICHTIG: Das <svg> braucht `display:block`. Ohne das ist es ein Inline-Element
+     * und setzt sich auf die Schriftlinie seines Elternteils — es rutscht dann um die
+     * geerbte Zeilenhöhe nach unten, in der Predigt gemessene 29 Punkte bei 2 Punkten
+     * Objekthöhe. Weil die geerbte Schriftgrösse je nach Ansicht verschieden ist,
+     * stimmte die Lage mal und mal nicht — der Rahmen sass immer richtig, nur der
+     * Inhalt darin nicht.
+     */
     private static function renderShapeSvg(array $obj): string
     {
         $shapeType = $obj['shapeType'] ?? 'triangle';
@@ -637,9 +660,20 @@ class SlideRenderer
         if ($isOpen) {
             $lineColor = h(($obj['stroke'] ?? '') !== 'transparent' && !empty($obj['stroke']) ? $obj['stroke'] : '#ffffff');
             $lineWidth = $strokeWidth > 0 ? (float)$strokeWidth : 3;
-            return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">'
-                . '<polyline points="' . $pointsAttr . '" fill="none" stroke="' . $lineColor . '" stroke-width="' . $lineWidth
-                . '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+            /* Offene Formen im ECHTEN Pixelraster des Objekts zeichnen, nicht in einem
+               100x100-viewBox: Bei einer 1720x2-Linie streckt "preserveAspectRatio=none"
+               die Achsen um 17.2 bzw. 0.02, die Strichstärke wird dadurch unbrauchbar.
+               Das bisherige "non-scaling-stroke" heilte das, band die Stärke aber an
+               GERÄTE-Pixel - die Linie blieb beim Herunterskalieren der Folie gleich dick
+               und war in der Vorschau doppelt so breit wie im Editor. Mit echtem viewBox
+               skaliert der Strich wie bei Konva mit der Folie mit. */
+            $vbW = max(1.0, (float)($obj['w'] ?? 100));
+            $vbH = max(1.0, (float)($obj['h'] ?? 100));
+            $pts = self::shapePoints($shapeType, $vbW, $vbH, $obj);
+            $ptsAttr = implode(' ', array_map(fn($p) => round($p[0], 3) . ',' . round($p[1], 3), $pts));
+            return '<svg viewBox="0 0 ' . $vbW . ' ' . $vbH . '" preserveAspectRatio="none" style="width:100%; height:100%; display:block; overflow:visible;">'
+                . '<polyline points="' . $ptsAttr . '" fill="none" stroke="' . $lineColor . '" stroke-width="' . $lineWidth
+                . '" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         }
 
         $defs = '';
@@ -661,7 +695,7 @@ class SlideRenderer
             $fillAttr = h($obj['fill'] ?? '#cccccc');
         }
 
-        return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; overflow:visible;">'
+        return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; display:block; overflow:visible;">'
             . $defs
             . '<polygon points="' . $pointsAttr . '" fill="' . $fillAttr . '"'
             . ($strokeWidth > 0 ? ' stroke="' . h($stroke) . '" stroke-width="' . (float)$strokeWidth . '" vector-effect="non-scaling-stroke"' : '')

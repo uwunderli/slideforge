@@ -81,7 +81,7 @@
     metaEl.textContent = hit.id || '';
 
     actionsEl.innerHTML =
-      '<button type="button" class="button button-sm iconify-lightbox-use-obj">' + escapeHtml(t('useObject')) + '</button>';
+      '<button type="button" class="button button-sm iconify-lightbox-use-obj hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('useObject')) + '</button>';
 
     actionsEl.querySelector('.iconify-lightbox-use-obj')?.addEventListener('click', () => {
       importHit(hit);
@@ -193,7 +193,7 @@
             '<span class="pixabay-card-size">' + escapeHtml(hit.prefix || '') + '</span>' +
           '</div>' +
           '<div class="pixabay-card-actions">' +
-            '<button type="button" class="button button-sm iconify-use-obj">' + escapeHtml(t('useObject')) + '</button>' +
+            '<button type="button" class="button button-sm iconify-use-obj hub-btn hub-btn--primary hub-btn--sm">' + escapeHtml(t('useObject')) + '</button>' +
           '</div>' +
         '</div>'
       );

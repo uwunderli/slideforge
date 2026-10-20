@@ -22,7 +22,7 @@ if (Mobile::isMobileClient()) {
       <h1><?= h(t('mobile.editor_unavailable_title')) ?></h1>
       <p><?= h(t('mobile.editor_unavailable_body')) ?></p>
       <p style="margin-top:1.5rem;">
-        <a href="index.php" class="button"><?= h(t('mobile.back_dashboard')) ?></a>
+        <a href="index.php" class="button hub-btn hub-btn--primary"><?= h(t('mobile.back_dashboard')) ?></a>
       </p>
     </div>
     <?php
@@ -165,6 +165,7 @@ $bootstrap = [
     'logosExtraRoles' => LayoutSet::LOGOS_ZONE_ROLES,
     'logosZonesAccordionOpen' => Auth::logosZonesAccordionOpen($me),
     'editorGridThumbMin' => Auth::editorGridThumbMin($me),
+    'editorUi' => Auth::getEditorUi($me),
     'logosRoles' => LayoutSet::LOGOS_ROLES,
     'logosNotesOrder' => $isLayoutSetMode ? LayoutSet::notesOrder($meta) : [],
     'elementZones' => $isLayoutSetMode ? LayoutSet::elementZones($meta) : [],
@@ -190,6 +191,7 @@ $bootstrap = [
         'saved' => t('editor.saved'),
         'exportPreparing' => t('export.preparing'),
         'exportStarted' => t('export.started'),
+        'exportFailed' => t('export.job_failed'),
         'logosInsertEmpty' => t('elements.logos_insert_empty'),
         'error' => t('template_modal.error'),
         'empty' => t('template_modal.empty'),
@@ -201,6 +203,10 @@ $bootstrap = [
         'objectsTitle' => t('props.objects_title'),
         'settingsTemplates' => t('editor.settings_templates'),
         'mediaTitle' => t('editor.tab_media'),
+        'fromUrlTitle' => t('fromurl.dialog_title'),
+        'fromUrlMessage' => t('fromurl.dialog_message'),
+        'fromUrlPlaceholder' => t('fromurl.placeholder'),
+        'fromUrlFailed' => t('fromurl.error_generic'),
         'textFieldDefault' => t('shape.text_field'),
         'templatePickerHint' => t('editor.template_picker_hint'),
         'layersEmpty' => t('props.layers_empty'),
@@ -439,6 +445,20 @@ $bootstrap = [
         'slideGridTitle' => t('editor.slide_grid_title'),
         'slideGridOpen' => t('editor.slide_grid_open'),
         'slideGridSelected' => t('editor.slide_grid_selected'),
+        'clipEmpty' => t('clip.empty'),
+        'clipCopied' => t('clip.copied'),
+        'clipCut' => t('clip.cut'),
+        'clipPasted' => t('clip.pasted'),
+        'clipSelectNone' => t('clip.select_none'),
+        'clipRemove' => t('clip.remove'),
+        'clipFrom' => t('clip.from'),
+        'findNoMatches' => t('find.no_matches'),
+        'findMatches' => t('find.matches'),
+        'findHits' => t('find.hits'),
+        'findReplaced' => t('find.replaced'),
+        'findConfirmReplace' => t('find.confirm_replace'),
+        'findGoto' => t('find.goto'),
+        'notesOutlineDone' => t('notes.outline_done'),
         'slideGridSelectAll' => t('editor.slide_grid_select_all'),
         'slideGridSelectNone' => t('editor.slide_grid_select_none'),
         'slideGridThumbSize' => t('editor.slide_grid_thumb_size'),
@@ -900,6 +920,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <?php endif; ?>
     <?php if ($canEdit): ?>
     <div class="notes-panel-editor">
+      <div class="notes-resize-handle" id="notesResizeHandle" role="separator" aria-orientation="horizontal" title="<?= h(t('notes.resize_hint')) ?>"></div>
       <div class="notes-panel-header">
         <span><?= h(t('notes.title')) ?></span>
         <span><?= t('notes.hint') ?></span>
@@ -914,8 +935,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <div class="editor-slide-grid-toolbar">
           <div class="editor-slide-grid-toolbar-row">
             <span class="editor-slide-grid-selection" id="slideGridSelectionInfo"></span>
-            <button type="button" class="button button-ghost button-sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
-            <button type="button" class="button button-ghost button-sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
+            <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideGridSelectAllBtn"><?= h(t('editor.slide_grid_select_all')) ?></button>
+            <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideGridSelectNoneBtn"><?= h(t('editor.slide_grid_select_none')) ?></button>
             <span class="editor-slide-grid-toolbar-hint"><?= h(t('editor.slide_grid_ribbon_hint')) ?></span>
           </div>
         </div>
@@ -975,6 +996,10 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <?= $sideTabIcon('media') ?>
           <span class="sr-only"><?= h(t('props.side_tab_media')) ?></span>
         </button>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabClipboard" data-side-tab="clipboard" aria-selected="false" aria-controls="propsSidePanelClipboard" title="<?= h(t('clip.title')) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9z" fill="currentColor" stroke="none"/><path d="M8.5 11.5h7M8.5 15h4.5"/></svg>
+          <span class="sr-only"><?= h(t('clip.title')) ?></span>
+        </button>
         <button type="button" class="props-side-tab props-side-tab-customize" id="ribbonCustomizeBtn" title="<?= h(t('ribbon.customize_title')) ?>" aria-label="<?= h(t('ribbon.customize_short')) ?>">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5h4.5M10.5 4.5h5"/><rect x="3" y="7" width="18" height="11.5" rx="1.5"/><rect x="5.5" y="9.5" width="3.8" height="6.5" rx="0.7"/><rect x="10.8" y="9.5" width="3.8" height="6.5" rx="0.7"/><path d="M15.4 18.2l5.5-5.5 2 2-5.5 5.5-2.55.55.55-2.55z" fill="currentColor" stroke="none"/></svg>
         </button>
@@ -1016,7 +1041,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <footer class="props-side-panel-footer" id="propsFormatFooter">
             <div class="ribbon-group ribbon-props-section ribbon-group-object-delete" id="ribbonObjectDeleteGroup">
               <div class="ribbon-group-content ribbon-props-section-body">
-                <button type="button" class="button button-danger button-sm" id="deleteObjBtn" style="width:100%;" disabled><?= h(t('props.delete_object')) ?></button>
+                <button type="button" class="button button-danger button-sm hub-btn hub-btn--danger hub-btn--sm" id="deleteObjBtn" style="width:100%;" disabled><?= h(t('props.delete_object')) ?></button>
               </div>
             </div>
           </footer>
@@ -1059,8 +1084,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <div class="props-side-panel-body">
             <aside class="spell-panel spell-panel--embedded" id="spellPanel" aria-label="<?= h(t('spell.title')) ?>">
               <div class="spell-panel-toolbar">
-                <button type="button" class="button button-sm" id="spellRunBtn"><?= h(t('spell.run')) ?></button>
-                <button type="button" class="button button-ghost button-sm" id="spellProceedBtn" hidden><?= h(t('spell.proceed_present')) ?></button>
+                <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="spellRunBtn"><?= h(t('spell.run')) ?></button>
+                <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="spellProceedBtn" hidden><?= h(t('spell.proceed_present')) ?></button>
                 <span class="spell-status" id="spellStatus"></span>
               </div>
               <div class="spell-panel-body" id="spellResults"></div>
@@ -1068,6 +1093,23 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           </div>
         </section>
         <?php endif; ?>
+
+        <section class="props-side-panel" id="propsSidePanelClipboard" data-side-panel="clipboard" role="tabpanel" aria-labelledby="propsSideTabClipboard" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('clip.title')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <p class="props-hint"><?= h(t('clip.hint')) ?></p>
+            <div class="slide-clip-actions">
+              <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideClipCopyBtn"><?= h(t('clip.copy')) ?></button>
+              <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="slideClipPasteBtn"><?= h(t('clip.paste')) ?></button>
+            </div>
+            <div id="slideClipList" class="slide-clip-list"></div>
+            <div class="slide-clip-actions">
+              <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideClipClearBtn"><?= h(t('clip.clear')) ?></button>
+            </div>
+          </div>
+        </section>
 
         <section class="props-side-panel" id="propsSidePanelMedia" data-side-panel="media" role="tabpanel" aria-labelledby="propsSideTabMedia" hidden>
           <header class="props-side-panel-head">
@@ -1079,9 +1121,9 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
                 <div class="props-media-body props-section-body">
                   <div class="media-library-header">
                     <div class="media-library-header-actions">
-                      <button type="button" class="button button-ghost button-sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
+                      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
                       <?php if ($canEdit): ?>
-                      <button type="button" class="button button-ghost button-sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
+                      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
                       <?php endif; ?>
                     </div>
                   </div>
@@ -1123,8 +1165,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <div class="object-gradient-preview" id="slideBgGradientPreview" aria-hidden="true"></div>
     </div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" id="slideBgGradientModalClose"><?= h(t('common.close')) ?></button>
-      <button type="button" class="button button-sm" id="slideBgGradientModalApply"><?= h(t('tpl.save')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideBgGradientModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="slideBgGradientModalApply"><?= h(t('tpl.save')) ?></button>
     </div>
   </div>
 </div>
@@ -1135,11 +1177,11 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <p class="sf-dialog-hint modal-dialog-hint slide-bg-media-modal-hint"><?= h(t('ribbon.slide_media_hint')) ?></p>
     <div class="modal-dialog-body">
     <div class="slide-bg-media-modal-preview" id="slideBgMediaModalPreview" hidden></div>
-    <input type="file" id="slideBgMediaModalFile" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp">
+    <input type="file" id="slideBgMediaModalFile" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml">
     <div class="slide-bg-media-modal-actions">
-      <button type="button" class="button" id="slideBgMediaModalBrowse"><?= h(t('ribbon.slide_upload')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="slideBgMediaModalBrowse"><?= h(t('ribbon.slide_upload')) ?></button>
       <?php if ($canEdit && Config::pixabayEnabled()): ?>
-      <button type="button" class="button button-ghost pixabay-open-btn" id="slideBgMediaModalPixabay" data-pixabay-open="background-image"><?= h(t('pixabay.open_from_bg')) ?></button>
+      <button type="button" class="button button-ghost pixabay-open-btn hub-btn hub-btn--ghost" id="slideBgMediaModalPixabay" data-pixabay-open="background-image"><?= h(t('pixabay.open_from_bg')) ?></button>
       <?php endif; ?>
     </div>
     <div class="slide-bg-media-modal-existing" id="slideBgMediaModalExisting" hidden>
@@ -1149,8 +1191,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     </div>
     </div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" id="slideBgMediaModalRemove"><?= h(t('bg.remove')) ?></button>
-      <button type="button" class="button button-ghost button-sm" id="slideBgMediaModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideBgMediaModalRemove"><?= h(t('bg.remove')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="slideBgMediaModalClose"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -1179,7 +1221,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
             </select>
           </div>
         </div>
-        <button type="button" class="button" id="shareAddBtn" style="margin-top:12px;"><?= h(t('share.share_btn')) ?></button>
+        <button type="button" class="button hub-btn hub-btn--primary" id="shareAddBtn" style="margin-top:12px;"><?= h(t('share.share_btn')) ?></button>
         <ul class="share-list" id="shareList"></ul>
       </div>
       <div class="present-config-section">
@@ -1189,16 +1231,16 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <input type="checkbox" id="sharePublicEnabled">
           <span><?= h(t('share.enable_public_link')) ?></span>
         </label>
-        <button type="button" class="button button-sm" id="sharePublicSaveBtn" style="margin-top:10px;"><?= h(t('common.save')) ?></button>
+        <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="sharePublicSaveBtn" style="margin-top:10px;"><?= h(t('common.save')) ?></button>
         <div class="public-link-box" id="sharePublicLinkBox" hidden>
           <input type="text" id="sharePublicUrl" readonly>
-          <button type="button" class="button button-ghost button-sm" id="sharePublicCopyBtn"><?= h(t('present.copy')) ?></button>
+          <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="sharePublicCopyBtn"><?= h(t('present.copy')) ?></button>
         </div>
-        <button type="button" class="button button-ghost button-sm" id="sharePublicResetBtn" style="margin-top:10px;" hidden><?= h(t('share.reset_link')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="sharePublicResetBtn" style="margin-top:10px;" hidden><?= h(t('share.reset_link')) ?></button>
       </div>
     </div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" id="shareModalDone"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="shareModalDone"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -1216,12 +1258,12 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('export.single_file')) ?></div>
         <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.single_file_desc') ?></p>
-        <a class="button button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=html" data-export-download><?= h(t('export.download_html')) ?></a>
+        <a class="button button-sm hub-btn hub-btn--primary hub-btn--sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=html" data-export-download><?= h(t('export.download_html')) ?></a>
       </div>
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('export.zip_heading')) ?></div>
         <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.zip_desc') ?></p>
-        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=zip" data-export-download><?= h(t('export.download_zip')) ?></a>
+        <a class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=zip" data-export-download><?= h(t('export.download_zip')) ?></a>
       </div>
       <div class="present-config-section">
         <div class="alert alert-success" style="margin:0;"><?= t('export.reimport_hint') ?></div>
@@ -1229,25 +1271,84 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('export.pptx_heading')) ?></div>
         <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.pptx_desc') ?></p>
-        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=pptx" data-export-download><?= h(t('export.download_pptx')) ?></a>
+        <a class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=pptx" data-export-download><?= h(t('export.download_pptx')) ?></a>
       </div>
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('export.odp_heading')) ?></div>
         <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.odp_desc') ?></p>
-        <a class="button button-ghost button-sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=odp" data-export-download><?= h(t('export.download_odp')) ?></a>
+        <a class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" href="export.php?id=<?= urlencode($id) ?>&amp;format=odp" data-export-download><?= h(t('export.download_odp')) ?></a>
       </div>
       <div class="present-config-section">
         <div class="present-config-section-title"><?= h(t('export.pdf_heading')) ?></div>
         <p class="props-video-note" style="margin:0 0 10px;"><?= t('export.pdf_desc') ?></p>
-        <a class="button button-ghost button-sm" href="pdf_export.php?id=<?= urlencode($id) ?>" target="_blank" rel="noopener noreferrer"><?= h(t('export.open_pdf_view')) ?></a>
+        <a class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" href="pdf_export.php?id=<?= urlencode($id) ?>" target="_blank" rel="noopener noreferrer"><?= h(t('export.open_pdf_view')) ?></a>
       </div>
     </div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" id="exportModalDone"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="exportModalDone"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
 <?php endif; ?>
+
+<div class="modal-backdrop" id="notesOutlineModal" aria-hidden="true">
+  <div class="modal notes-outline-modal" role="dialog" aria-modal="true" aria-labelledby="notesOutlineTitle">
+    <div class="sf-dialog-header">
+      <h2 id="notesOutlineTitle" class="sf-dialog-title"><?= h(t('notes.outline_title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="notesOutlineClose" aria-label="<?= h(t('common.close')) ?>">&times;</button>
+    </div>
+    <p class="sf-dialog-hint"><?= h(t('notes.outline_hint')) ?></p>
+    <div class="notes-outline-choices">
+      <button type="button" class="notes-outline-choice" data-outline-style="headings">
+        <span class="notes-outline-choice-label"><?= h(t('import.hierarchy_style_headings')) ?></span>
+        <span class="notes-outline-choice-demo"># Hauptpunkt 1<br>## Unterpunkt 7<br>### Unter Unterpunkt 2</span>
+      </button>
+      <button type="button" class="notes-outline-choice" data-outline-style="path">
+        <span class="notes-outline-choice-label"><?= h(t('import.hierarchy_style_path')) ?></span>
+        <span class="notes-outline-choice-demo"><strong>Hauptpunkt 1 &gt; Unterpunkt 7 &gt; Unter Unterpunkt 2</strong></span>
+      </button>
+    </div>
+    <div class="notes-outline-status" id="notesOutlineStatus" role="status"></div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="notesOutlineDone"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="findReplaceModal" aria-hidden="true">
+  <div class="modal find-replace-modal" role="dialog" aria-modal="true" aria-labelledby="findReplaceTitle">
+    <div class="sf-dialog-header">
+      <h2 id="findReplaceTitle" class="sf-dialog-title"><?= h(t('find.title')) ?></h2>
+      <button type="button" class="sf-dialog-close" id="findReplaceClose" aria-label="<?= h(t('common.close')) ?>">×</button>
+    </div>
+    <p class="sf-dialog-hint"><?= h(t('find.hint')) ?></p>
+    <div class="find-replace-fields">
+      <label class="find-replace-field">
+        <span><?= h(t('find.search')) ?></span>
+        <input type="text" id="findSearchInput" class="input" autocomplete="off">
+      </label>
+      <label class="find-replace-field">
+        <span><?= h(t('find.replace')) ?></span>
+        <input type="text" id="findReplaceInput" class="input" autocomplete="off">
+      </label>
+      <label class="find-replace-check">
+        <input type="checkbox" id="findCaseSensitive">
+        <span><?= h(t('find.case_sensitive')) ?></span>
+      </label>
+      <label class="find-replace-check">
+        <input type="checkbox" id="findIncludeNotes" checked>
+        <span><?= h(t('find.include_notes')) ?></span>
+      </label>
+    </div>
+    <div class="find-replace-status" id="findReplaceStatus" role="status"></div>
+    <div class="find-replace-results" id="findReplaceResults"></div>
+    <div class="present-config-panel-footer modal-actions">
+      <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="findDoSearchBtn"><?= h(t('find.do_search')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="findDoReplaceBtn"><?= h(t('find.do_replace')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="findReplaceDone"><?= h(t('common.close')) ?></button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="elementLinksModal">
   <div class="modal modal-element-config">
@@ -1255,8 +1356,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <p class="sf-dialog-hint modal-dialog-hint"><?= h(t('elements.element_links_modal_desc')) ?></p>
     <div id="elementLinksModalBody" class="element-links-modal-body modal-dialog-body"></div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" id="elementLinksModalClose"><?= h(t('common.close')) ?></button>
-      <button type="button" class="button button-sm" id="elementLinksModalSave"><?= h(t('tpl.save')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="elementLinksModalClose"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="elementLinksModalSave"><?= h(t('tpl.save')) ?></button>
     </div>
   </div>
 </div>
@@ -1267,7 +1368,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <p class="sf-dialog-hint modal-dialog-hint"><?= h(t('template_modal.hint')) ?></p>
     <div id="templateList" class="modal-dialog-body" style="max-height:340px; overflow-y:auto;"></div>
     <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm" onclick="document.getElementById('templateModal').classList.remove('open')"><?= h(t('common.close')) ?></button>
+      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" onclick="document.getElementById('templateModal').classList.remove('open')"><?= h(t('common.close')) ?></button>
     </div>
   </div>
 </div>
@@ -1285,55 +1386,78 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <div class="pixabay-search-row">
           <input type="search" id="pixabayQuery" placeholder="<?= h(t('pixabay.search_placeholder')) ?>" autocomplete="off">
           <div class="pixabay-search-actions">
-            <button type="button" class="button button-sm" id="pixabaySearchBtn"><?= h(t('pixabay.search')) ?></button>
-            <button type="button" class="button button-ghost button-sm" id="pixabaySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+            <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="pixabaySearchBtn"><?= h(t('pixabay.search')) ?></button>
+            <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="pixabaySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
           </div>
         </div>
         <p class="media-search-english-hint" id="pixabaySearchEnglishHint" hidden></p>
       </div>
-      <div class="pixabay-filters">
-        <label class="pixabay-filter-item">
-          <span><?= h(t('pixabay.media_label')) ?></span>
-          <select id="pixabayMedia">
-            <option value="image"><?= h(t('pixabay.media_image')) ?></option>
-            <option value="video"><?= h(t('pixabay.media_video')) ?></option>
-          </select>
-        </label>
+      <!-- Die <select> bleiben als Zustandsspeicher: Die Suchlogik in pixabay.js liest
+           weiterhin deren .value. Bedient werden sie über die Schalter darunter. -->
+      <div class="pixabay-state-selects">
+        <select id="pixabayMedia">
+          <option value="image"><?= h(t('pixabay.media_image')) ?></option>
+          <option value="video"><?= h(t('pixabay.media_video')) ?></option>
+        </select>
+        <select id="pixabayImageType">
+          <option value="all"><?= h(t('pixabay.image_type_all')) ?></option>
+          <option value="photo"><?= h(t('pixabay.image_type_photo')) ?></option>
+          <option value="illustration"><?= h(t('pixabay.image_type_illustration')) ?></option>
+        </select>
+        <select id="pixabayOrientation">
+          <option value="all"><?= h(t('pixabay.orientation_all')) ?></option>
+          <option value="horizontal"><?= h(t('pixabay.orientation_horizontal')) ?></option>
+          <option value="vertical"><?= h(t('pixabay.orientation_vertical')) ?></option>
+        </select>
+        <select id="pixabayVideoType">
+          <option value="all"><?= h(t('pixabay.video_type_all')) ?></option>
+          <option value="film"><?= h(t('pixabay.video_type_film')) ?></option>
+          <option value="animation"><?= h(t('pixabay.video_type_animation')) ?></option>
+        </select>
+      </div>
+      <div class="pixabay-filters" id="pixabayFilters">
+        <div class="pixabay-switch-group">
+          <span class="pixabay-switch-label"><?= h(t('pixabay.media_label')) ?></span>
+          <div class="pixabay-switch-row" role="group" aria-label="<?= h(t('pixabay.media_label')) ?>">
+            <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayMedia" data-pxb-value="image" title="<?= h(t('pixabay.media_image')) ?>" aria-label="<?= h(t('pixabay.media_image')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 16l-5.5-5.5L5 21"/></svg></button>
+            <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayMedia" data-pxb-value="video" title="<?= h(t('pixabay.media_video')) ?>" aria-label="<?= h(t('pixabay.media_video')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="M17 10l4-2v8l-4-2"/></svg></button>
+          </div>
+        </div>
         <div id="pixabayImageFilters" class="pixabay-filter-group">
-          <label class="pixabay-filter-item">
-            <span><?= h(t('pixabay.filter_type')) ?></span>
-            <select id="pixabayImageType">
-              <option value="all"><?= h(t('pixabay.image_type_all')) ?></option>
-              <option value="photo"><?= h(t('pixabay.image_type_photo')) ?></option>
-              <option value="illustration"><?= h(t('pixabay.image_type_illustration')) ?></option>
-            </select>
-          </label>
-          <label class="pixabay-filter-item">
-            <span><?= h(t('pixabay.filter_orientation')) ?></span>
-            <select id="pixabayOrientation">
-              <option value="all"><?= h(t('pixabay.orientation_all')) ?></option>
-              <option value="horizontal"><?= h(t('pixabay.orientation_horizontal')) ?></option>
-              <option value="vertical"><?= h(t('pixabay.orientation_vertical')) ?></option>
-            </select>
-          </label>
+          <div class="pixabay-switch-group">
+            <span class="pixabay-switch-label"><?= h(t('pixabay.filter_type')) ?></span>
+            <div class="pixabay-switch-row" role="group" aria-label="<?= h(t('pixabay.filter_type')) ?>">
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayImageType" data-pxb-value="all" title="<?= h(t('pixabay.image_type_all')) ?>" aria-label="<?= h(t('pixabay.image_type_all')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayImageType" data-pxb-value="photo" title="<?= h(t('pixabay.image_type_photo')) ?>" aria-label="<?= h(t('pixabay.image_type_photo')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5l1.2-2h6.6l1.2 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayImageType" data-pxb-value="illustration" title="<?= h(t('pixabay.image_type_illustration')) ?>" aria-label="<?= h(t('pixabay.image_type_illustration')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.5l5 5L9 20H4v-5z"/><path d="M12.5 6.5l5 5"/></svg></button>
+            </div>
+          </div>
+          <div class="pixabay-switch-group">
+            <span class="pixabay-switch-label"><?= h(t('pixabay.filter_orientation')) ?></span>
+            <div class="pixabay-switch-row" role="group" aria-label="<?= h(t('pixabay.filter_orientation')) ?>">
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayOrientation" data-pxb-value="all" title="<?= h(t('pixabay.orientation_all')) ?>" aria-label="<?= h(t('pixabay.orientation_all')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="9" height="10" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayOrientation" data-pxb-value="horizontal" title="<?= h(t('pixabay.orientation_horizontal')) ?>" aria-label="<?= h(t('pixabay.orientation_horizontal')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="10" rx="1.5"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayOrientation" data-pxb-value="vertical" title="<?= h(t('pixabay.orientation_vertical')) ?>" aria-label="<?= h(t('pixabay.orientation_vertical')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="1.5"/></svg></button>
+            </div>
+          </div>
         </div>
         <div id="pixabayVideoFilters" class="pixabay-filter-group" hidden>
-          <label class="pixabay-filter-item">
-            <span><?= h(t('pixabay.filter_type')) ?></span>
-            <select id="pixabayVideoType">
-              <option value="all"><?= h(t('pixabay.video_type_all')) ?></option>
-              <option value="film"><?= h(t('pixabay.video_type_film')) ?></option>
-              <option value="animation"><?= h(t('pixabay.video_type_animation')) ?></option>
-            </select>
-          </label>
+          <div class="pixabay-switch-group">
+            <span class="pixabay-switch-label"><?= h(t('pixabay.filter_type')) ?></span>
+            <div class="pixabay-switch-row" role="group" aria-label="<?= h(t('pixabay.filter_type')) ?>">
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayVideoType" data-pxb-value="all" title="<?= h(t('pixabay.video_type_all')) ?>" aria-label="<?= h(t('pixabay.video_type_all')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayVideoType" data-pxb-value="film" title="<?= h(t('pixabay.video_type_film')) ?>" aria-label="<?= h(t('pixabay.video_type_film')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9.5h18M7.5 5v4.5M12 5v4.5M16.5 5v4.5"/></svg></button>
+              <button type="button" class="format-toggle-btn pixabay-switch" data-pxb-target="pixabayVideoType" data-pxb-value="animation" title="<?= h(t('pixabay.video_type_animation')) ?>" aria-label="<?= h(t('pixabay.video_type_animation')) ?>"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.9 4.1 4.1 1.9-4.1 1.9L12 15.5l-1.9-4.1L6 9.5l4.1-1.9z"/><path d="M18 15.5l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9z"/></svg></button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
     <div class="pixabay-modal-meta">
       <div class="pixabay-status" id="pixabayStatus"></div>
       <div class="pixabay-pager" id="pixabayPager" hidden>
-        <button type="button" class="button button-ghost button-sm" id="pixabayPrev"><?= h(t('pixabay.prev')) ?></button>
-        <button type="button" class="button button-ghost button-sm" id="pixabayNext"><?= h(t('pixabay.next')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="pixabayPrev"><?= h(t('pixabay.prev')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="pixabayNext"><?= h(t('pixabay.next')) ?></button>
       </div>
     </div>
     <div class="pixabay-modal-body">
@@ -1369,8 +1493,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
           <div class="pixabay-search-row">
             <input type="search" id="iconifyQuery" placeholder="<?= h(t('iconify.search_placeholder')) ?>" autocomplete="off">
             <div class="pixabay-search-actions">
-              <button type="button" class="button button-sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
-              <button type="button" class="button button-ghost button-sm" id="iconifySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+              <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="iconifySearchBtn"><?= h(t('iconify.search')) ?></button>
+              <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="iconifySearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
             </div>
           </div>
           <p class="media-search-english-hint" id="iconifySearchEnglishHint" hidden></p>
@@ -1413,8 +1537,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <div class="pixabay-modal-meta">
       <div class="pixabay-status" id="iconifyStatus"></div>
       <div class="pixabay-pager" id="iconifyPager" hidden>
-        <button type="button" class="button button-ghost button-sm" id="iconifyPrev"><?= h(t('iconify.prev')) ?></button>
-        <button type="button" class="button button-ghost button-sm" id="iconifyNext"><?= h(t('iconify.next')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="iconifyPrev"><?= h(t('iconify.prev')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="iconifyNext"><?= h(t('iconify.next')) ?></button>
       </div>
     </div>
     <div class="pixabay-modal-body">
@@ -1449,8 +1573,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
         <div class="pixabay-search-row">
           <input type="search" id="openclipartQuery" placeholder="<?= h(t('openclipart.search_placeholder')) ?>" autocomplete="off">
           <div class="pixabay-search-actions">
-            <button type="button" class="button button-sm" id="openclipartSearchBtn"><?= h(t('openclipart.search')) ?></button>
-            <button type="button" class="button button-ghost button-sm" id="openclipartSearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
+            <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="openclipartSearchBtn"><?= h(t('openclipart.search')) ?></button>
+            <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="openclipartSearchEnglishBtn"><?= h(t('media.search_english')) ?></button>
           </div>
         </div>
         <p class="media-search-english-hint" id="openclipartSearchEnglishHint" hidden></p>
@@ -1459,8 +1583,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <div class="pixabay-modal-meta">
       <div class="pixabay-status" id="openclipartStatus"></div>
       <div class="pixabay-pager" id="openclipartPager" hidden>
-        <button type="button" class="button button-ghost button-sm" id="openclipartPrev"><?= h(t('openclipart.prev')) ?></button>
-        <button type="button" class="button button-ghost button-sm" id="openclipartNext"><?= h(t('openclipart.next')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="openclipartPrev"><?= h(t('openclipart.prev')) ?></button>
+        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="openclipartNext"><?= h(t('openclipart.next')) ?></button>
       </div>
     </div>
     <div class="pixabay-modal-body">

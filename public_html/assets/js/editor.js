@@ -16,6 +16,7 @@
     selectedNode: null,
     selectedNodes: [],
     saveTimer: null,
+    deckBusy: false,
     saving: false,
     previewWindow: null,
     currentBackground: { type: 'color', value: '#111111' },
@@ -24,11 +25,14 @@
     transformSnapStart: null,
     activePropsTab: 'format',
     activeFormatGroup: null,
-    activeSideTab: localStorage.getItem('sf_side_tab') || 'templates',
-    activePosSubtab: localStorage.getItem('sf_pos_subtab') || 'layout',
-    activeFormatSubtab: localStorage.getItem('sf_format_subtab') || 'text',
+    notesHeight: Math.max(60, Math.min(900, parseInt((boot.editorUi && boot.editorUi.notesHeight), 10) || 140)),
+    activeSideTab: (boot.editorUi && boot.editorUi.sideTab) || 'templates',
+    activePosSubtab: (boot.editorUi && boot.editorUi.posSubtab) || 'layout',
+    activeFormatSubtab: (boot.editorUi && boot.editorUi.formatSubtab) || 'text',
     layersPanelOpen: true,
-    objectPanelOpen: true,
+    objectPanelOpen: boot.editorUi && typeof boot.editorUi.objectOpen === 'boolean'
+      ? !!boot.editorUi.objectOpen
+      : true,
     templatesPanelOpen: true,
     mediaPanelOpen: true,
     selectionPanelOpen: true,
@@ -74,6 +78,63 @@
     : ['Open Sans', 'PT Sans', 'Georgia', 'Arial', 'Times New Roman', 'Courier New', 'Verdana'];
 
   const I = SF.i18n;
+  let editorUiSaveTimer = null;
+
+  function persistEditorUi(partial) {
+    if (!partial || typeof partial !== 'object') return;
+    SF.editorUi = Object.assign({}, SF.editorUi || boot.editorUi || {}, partial);
+    clearTimeout(editorUiSaveTimer);
+    editorUiSaveTimer = setTimeout(() => {
+      fetch('user_api.php?action=set_editor_ui', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ui: {
+            sideTab: SF.activeSideTab,
+            posSubtab: SF.activePosSubtab,
+            formatSubtab: SF.activeFormatSubtab,
+            objectOpen: SF.objectPanelOpen !== false,
+            notesHeight: SF.notesHeight,
+          },
+          csrf_token: SF.csrfToken,
+        }),
+      }).catch(() => {});
+    }, 280);
+  }
+
+  function migrateEditorUiFromLocalStorage() {
+    let changed = false;
+    try {
+      const side = localStorage.getItem('sf_side_tab');
+      const pos = localStorage.getItem('sf_pos_subtab');
+      const format = localStorage.getItem('sf_format_subtab');
+      const objectOpen = localStorage.getItem('sf_object_open');
+      if (side) {
+        SF.activeSideTab = side;
+        changed = true;
+      }
+      if (pos) {
+        SF.activePosSubtab = pos === 'layers' ? 'layers' : 'layout';
+        changed = true;
+      }
+      if (format) {
+        SF.activeFormatSubtab = format;
+        changed = true;
+      }
+      if (objectOpen !== null) {
+        SF.objectPanelOpen = objectOpen === '1';
+        changed = true;
+      }
+      if (changed) {
+        persistEditorUi({});
+        localStorage.removeItem('sf_side_tab');
+        localStorage.removeItem('sf_pos_subtab');
+        localStorage.removeItem('sf_format_subtab');
+        localStorage.removeItem('sf_object_open');
+      }
+    } catch (e) { /* ignore */ }
+  }
+  migrateEditorUiFromLocalStorage();
 
   function applySpellcheckAttrs(el) {
     if (!el) return;
@@ -383,7 +444,37 @@
   }
 
   // ---------- API ----------
+  /* Strukturändernde Aktionen: vorher den anstehenden Automatikspeicher
+     abschliessen. saveCurrentSlide adressiert die Folie über ihre POSITION
+     (index). Feuert der 700-ms-Timer erst, nachdem Duplizieren/Löschen/
+     Verschieben die Reihenfolge geändert hat, landet der Inhalt auf der
+     falschen Folie. Zusätzlich eine Sperre, damit zwei Struktureingriffe
+     nicht ineinanderlaufen und beide auf einem veralteten SF.slides rechnen. */
+  const DECK_ACTIONS = [
+    'add_slide', 'duplicate_slide', 'delete_slide', 'reorder_slides',
+    'apply_slide_template', 'apply_layout_from_set', 'import_slide_to_layout_set',
+    'clip_paste_slides', 'find_replace', 'notes_outline_style',
+  ];
+
   async function api(action, data) {
+    if (DECK_ACTIONS.indexOf(action) !== -1) {
+      if (SF.deckBusy) throw new Error('Bitte warten – vorheriger Schritt läuft noch.');
+      SF.deckBusy = true;
+      try {
+        if (SF.saveTimer) {
+          clearTimeout(SF.saveTimer);
+          SF.saveTimer = null;
+          await saveCurrentSlide(true);
+        }
+        return await apiSend(action, data);
+      } finally {
+        SF.deckBusy = false;
+      }
+    }
+    return apiSend(action, data);
+  }
+
+  async function apiSend(action, data) {
     const res = await fetch('api.php?action=' + encodeURIComponent(action) + '&id=' + encodeURIComponent(SF.id), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SF.csrfToken },
@@ -423,6 +514,8 @@
     spellcheck: 'spellcheckBtn',
     add_slide: 'addSlideBtnRibbon',
     apply_transition_selected: 'applyTransitionSelectedBtn',
+    find_replace: 'findReplaceBtn',
+    notes_to_path: 'notesToPathBtn',
   };
 
   function setRibbonCommandsDisabled(commandKey, disabled) {
@@ -503,6 +596,7 @@
         else if (action === 'pixabay') document.getElementById('pixabayOpenBtn')?.click();
         else if (action === 'iconify') document.getElementById('iconifyOpenBtn')?.click();
         else if (action === 'openclipart') document.getElementById('openclipartOpenBtn')?.click();
+        else if (action === 'fromurl') openInsertFromUrl();
         return;
       }
 
@@ -542,6 +636,8 @@
         spellcheckBtn: 'spellcheck',
         applyTransitionSelectedBtn: 'apply_transition_selected',
         applyTransitionAllBtn: 'apply_transition_all',
+        findReplaceBtn: 'find_replace',
+        notesToPathBtn: 'notes_to_path',
       }[cmdEl.id] || '');
 
       switch (cmdKey) {
@@ -606,6 +702,12 @@
           break;
         case 'spellcheck':
           window.SlideForgeSpellcheck?.openPanel?.();
+          break;
+        case 'find_replace':
+          openFindReplace();
+          break;
+        case 'notes_to_path':
+          openNotesOutline();
           break;
         case 'apply_transition_selected':
           applyTransitionSelectedFromRibbon();
@@ -692,15 +794,47 @@
           }
         }
         setSaveStatus(I.exportPreparing || 'Export wird vorbereitet…');
-        const frame = document.createElement('iframe');
-        frame.setAttribute('aria-hidden', 'true');
-        frame.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;';
-        frame.src = url;
-        document.body.appendChild(frame);
-        setTimeout(() => {
-          frame.remove();
-          setSaveStatus(I.exportStarted || 'Download gestartet');
-        }, 2500);
+        if (window.CfStatus) CfStatus.show('info', I.exportPreparing || 'Export wird vorbereitet…');
+        const busyTitle = I.exportPreparing || 'Export wird vorbereitet…';
+        if (window.SFBusy) SFBusy.show(busyTitle);
+        else if (window.HubPageBusy) HubPageBusy.show({ title: busyTitle, soft: true });
+        try {
+          const startRes = await fetch(url + (url.includes('?') ? '&' : '?') + 'async=1', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+          });
+          const startJson = await startRes.json();
+          if (!startJson.ok || !startJson.job_id) {
+            throw new Error(startJson.error || I.exportFailed || 'Export fehlgeschlagen');
+          }
+          const jobId = startJson.job_id;
+          for (;;) {
+            const stRes = await fetch('export.php?action=status&job=' + encodeURIComponent(jobId), {
+              credentials: 'same-origin',
+            });
+            const stJson = await stRes.json();
+            if (!stJson.ok) throw new Error(stJson.error || I.exportFailed || 'Export fehlgeschlagen');
+            const status = stJson.job && stJson.job.status;
+            if (status === 'done') {
+              if (window.SFBusy) SFBusy.hide();
+              else if (window.HubPageBusy) HubPageBusy.hide();
+              window.location.href = 'export.php?action=download&job=' + encodeURIComponent(jobId);
+              setSaveStatus(I.exportStarted || 'Download gestartet');
+              if (window.CfStatus) CfStatus.show('ok', I.exportStarted || 'Download gestartet');
+              return;
+            }
+            if (status === 'failed') {
+              throw new Error((stJson.job && stJson.job.error) || I.exportFailed || 'Export fehlgeschlagen');
+            }
+            await new Promise((r) => setTimeout(r, 700));
+          }
+        } catch (err) {
+          if (window.SFBusy) SFBusy.hide();
+          else if (window.HubPageBusy) HubPageBusy.hide();
+          const msg = err?.message || I.exportFailed || 'Export fehlgeschlagen';
+          setSaveStatus(msg);
+          if (window.CfStatus) CfStatus.show('error', msg);
+        }
       });
     });
   }
@@ -789,7 +923,7 @@
             label.appendChild(tag);
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'button button-ghost button-sm';
+            btn.className = 'button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm';
             btn.textContent = i18n.remove || 'Remove';
             btn.addEventListener('click', () => removeShare(s.user_id));
             li.appendChild(label);
@@ -1113,7 +1247,7 @@
     listEl.innerHTML = layouts.map(l =>
       '<div class="template-pick-row" data-layout-key="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' +
         '<span>' + escapeHtml(l.title || l.layoutKey) + '</span>' +
-        '<button type="button" class="button button-sm" data-apply-layout="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' + SF.i18n.apply + '</button>' +
+        '<button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" data-apply-layout="' + escapeHtml(l.layoutKey) + '" data-layout-slide-id="' + escapeHtml(l.slideId || '') + '">' + SF.i18n.apply + '</button>' +
       '</div>'
     ).join('');
     listEl.querySelectorAll('[data-apply-layout]').forEach(btn => {
@@ -1129,6 +1263,11 @@
     try {
       pushHistory();
       const payload = { index: SF.currentIndex, layout_set_id: setId, layout_key: layoutKey };
+      /* In der Rasteransicht gilt die Mehrfachauswahl: Die Vorlage wird allen
+         gewählten Folien zugewiesen, nicht nur der aktuellen. */
+      if (SF.editorViewMode === 'grid' && gridSelectedIndices.size > 0) {
+        payload.indices = [...gridSelectedIndices];
+      }
       if (layoutSlideId) payload.layout_slide_id = layoutSlideId;
       await api('apply_layout_from_set', payload);
       const res = await apiGet('get_slides');
@@ -1136,6 +1275,7 @@
       loadSlideIntoStage(SF.currentIndex, true);
       pushHistory();
       await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
       closeEditorSettingsMenu();
       if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
@@ -1158,7 +1298,7 @@
         items.map(t =>
           '<div class="template-pick-row" data-template-id="' + t.id + '">' +
             '<span>' + escapeHtml(t.title) + '</span>' +
-            '<button type="button" class="button button-sm" data-apply-template="' + t.id + '">' + SF.i18n.apply + '</button>' +
+            '<button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" data-apply-template="' + t.id + '">' + SF.i18n.apply + '</button>' +
           '</div>'
         ).join('');
     };
@@ -1172,12 +1312,18 @@
     setSaveStatus('Wende Vorlage an…');
     try {
       pushHistory();
-      await api('apply_slide_template', { index: SF.currentIndex, template_id: templateId });
+      const payload = { index: SF.currentIndex, template_id: templateId };
+      /* In der Rasteransicht gilt die Mehrfachauswahl, wie bei applyLayoutFromSet. */
+      if (SF.editorViewMode === 'grid' && gridSelectedIndices.size > 0) {
+        payload.indices = [...gridSelectedIndices];
+      }
+      await api('apply_slide_template', payload);
       const res = await apiGet('get_slides');
       SF.slides = res.slides;
       loadSlideIntoStage(SF.currentIndex, true);
       pushHistory();
       await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
       closeEditorSettingsMenu();
       if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
@@ -1243,6 +1389,7 @@
     initOpenclipartPanel();
     initWebdavPanel();
     initMediaSearchButtons();
+    bindNotesResize();
     initMediaLibraryPanel();
     initSideTabs();
     initMediaSidebarPanel();
@@ -1433,6 +1580,29 @@
     if (bg.type === 'color' || bg.type === 'gradient') return bg.value || '#333333';
     if (bg.type === 'image') return '#222222';
     return '#333333';
+  }
+
+  /**
+   * Präsentation ab einer bestimmten Folie öffnen. Geht bewusst über denselben Weg
+   * wie der Knopf im Menüband, damit die Rechtschreibprüfung vor dem Präsentieren
+   * auch bei der Taste greift.
+   */
+  function presentLinkAvailable() {
+    const link = document.getElementById('presentModeLink')
+      || document.querySelector('a[data-ribbon-command="present_mode"]');
+    /* Kein oder gesperrter Link heisst: hier wird nicht präsentiert (Folien-Set,
+       Master-Folie). Dann bleibt F5 beim Browser und lädt wie gewohnt neu. */
+    return !!link && link.getAttribute('aria-disabled') !== 'true' && !!link.getAttribute('href');
+  }
+
+  async function startPresentation(index) {
+    const i = Math.max(0, Math.min(index | 0, SF.slides.length - 1));
+    const href = 'present.php?id=' + encodeURIComponent(SF.id) + '&slide=' + i;
+    if (SF.spellConfig?.beforePresent && window.SlideForgeSpellcheck?.ensureCleanBeforePresent) {
+      const allow = await window.SlideForgeSpellcheck.ensureCleanBeforePresent(href);
+      if (!allow) return;
+    }
+    window.location.href = href;
   }
 
   function updatePresentLink() {
@@ -1771,6 +1941,8 @@
   }
 
   async function renderSlideFilmstrip() {
+    const ae = document.activeElement;
+    const hatteFilmstreifenFokus = !!(ae && ae.closest && ae.closest('#slideFilmstrip'));
     const container = document.getElementById('slideFilmstrip');
     if (!container) return;
 
@@ -1798,6 +1970,9 @@
         (hasNotes ? ' has-notes' : '') +
         (presentOff ? ' is-present-disabled' : '');
       tab.dataset.id = slide.id;
+      /* Anwählbar, damit die Eingabemarke hier stehen kann: Daran erkennen die
+         Tastenkürzel, dass Strg+C/X/V/D der Folie gelten und nicht dem Objekt. */
+      tab.tabIndex = 0;
       tab.style.setProperty('--fs-color', thumb.color || slideBgColor(slide));
       if (!showSlideLabels) {
         tab.style.height = itemHeight + 'px';
@@ -1875,6 +2050,10 @@
 
     const activeItem = container.querySelector('.filmstrip-item.active');
     if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    /* Stand die Eingabemarke vor dem Neuzeichnen im Filmstreifen, gehört sie auch
+       danach dorthin: Sonst gälte das nächste Strg+C wieder dem Objekt, und ein
+       zweites Ausschneiden hintereinander wäre nicht möglich. */
+    if (hatteFilmstreifenFokus && activeItem) activeItem.focus({ preventScroll: true });
   }
 
   function getFilmstripAfterElement(container, y) {
@@ -1896,31 +2075,50 @@
     await commitSlideOrder(newOrderIds);
   }
 
+  /* GRID_DRAG_HYSTERESE — die gezogene Karte bleibt im Rasterfluss und belegt
+     weiterhin eine Zelle. Nach jedem Einfuegen ruecken die Nachbarn nach, der
+     naechstgelegene Mittelpunkt wechselt, und die naechste Mausbewegung schiebt
+     zurueck: das Raster flackert. Der Filmstreifen hat das nicht, weil er nur
+     Elemente OBERHALB des Cursors betrachtet, also richtungsgebunden entscheidet.
+     Hier dasselbe in zwei Dimensionen: erst Zeile ueber die Zeilenmitte waehlen,
+     dann innerhalb der Zeile nur einfuegen, wenn der Cursor die Kartenmitte
+     wirklich um GRID_DRAG_HYSTERESE ueberschritten hat. */
+  const GRID_DRAG_HYSTERESE = 12;
+
   function getGridAfterElement(container, x, y) {
     const items = [...container.querySelectorAll('.editor-slide-grid-item:not(.dragging)')];
     if (!items.length) return null;
 
-    let nearestIdx = 0;
-    let nearestDist = Infinity;
-    items.forEach((child, i) => {
-      const box = child.getBoundingClientRect();
-      const cx = box.left + box.width / 2;
-      const cy = box.top + box.height / 2;
-      const dist = (x - cx) * (x - cx) + (y - cy) * (y - cy);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestIdx = i;
-      }
-    });
+    const boxes = items.map((el) => ({ el: el, box: el.getBoundingClientRect() }));
 
-    const nearest = items[nearestIdx];
-    const box = nearest.getBoundingClientRect();
-    const cx = box.left + box.width / 2;
-    const cy = box.top + box.height / 2;
-    const sameRow = Math.abs(y - cy) <= box.height / 2;
-    const insertAfter = sameRow ? (x > cx) : (y > cy);
-    if (insertAfter) return items[nearestIdx + 1] || null;
-    return nearest;
+    /* Zeile bestimmen: alle Karten, deren vertikale Ausdehnung den Cursor enthaelt.
+       Liegt der Cursor zwischen zwei Zeilen, gilt die naechstgelegene. */
+    let row = boxes.filter((b) => y >= b.box.top && y <= b.box.bottom);
+    if (!row.length) {
+      let best = null;
+      let bestDy = Infinity;
+      boxes.forEach((b) => {
+        const cy = b.box.top + b.box.height / 2;
+        const dy = Math.abs(y - cy);
+        if (dy < bestDy) { bestDy = dy; best = b; }
+      });
+      if (!best) return null;
+      const topRef = best.box.top;
+      row = boxes.filter((b) => Math.abs(b.box.top - topRef) < 2);
+    }
+
+    /* Innerhalb der Zeile die erste Karte, deren Mitte der Cursor noch nicht
+       ueberschritten hat. Die Hysterese verhindert das Hin- und Herkippen genau
+       an der Mittellinie. */
+    for (let i = 0; i < row.length; i++) {
+      const cx = row[i].box.left + row[i].box.width / 2;
+      if (x < cx - GRID_DRAG_HYSTERESE) return row[i].el;
+    }
+
+    /* Hinter die letzte Karte dieser Zeile: das naechste Element im Gesamtraster. */
+    const lastEl = row[row.length - 1].el;
+    const idx = items.indexOf(lastEl);
+    return items[idx + 1] || null;
   }
 
   function updateGridNumbers(container) {
@@ -1928,6 +2126,49 @@
       const num = item.querySelector('.editor-slide-grid-id');
       if (num) num.textContent = String(i + 1);
       item.dataset.index = String(i);
+    });
+  }
+
+  /* Notizfeld per Ziehen an der Trennlinie hoeher/niedriger machen.
+     Nach oben ziehen vergroessert, die Hoehe steht in --notes-height und
+     wird pro Nutzer serverseitig gespeichert (Regel user-prefs-server). */
+  function applyNotesHeight(px) {
+    const h = Math.max(60, Math.min(900, Math.round(px)));
+    SF.notesHeight = h;
+    const panel = document.querySelector('.notes-panel-editor');
+    if (panel) panel.style.setProperty('--notes-height', h + 'px');
+    return h;
+  }
+
+  function bindNotesResize() {
+    const handle = document.getElementById('notesResizeHandle');
+    const input = document.getElementById('slideNotesInput');
+    if (!handle || !input || handle.dataset.bound) return;
+    handle.dataset.bound = '1';
+    applyNotesHeight(SF.notesHeight);
+
+    handle.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const startY = e.clientY;
+      const startH = input.getBoundingClientRect().height;
+      document.body.classList.add('notes-resizing');
+
+      const onMove = (ev) => applyNotesHeight(startH + (startY - ev.clientY));
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('notes-resizing');
+        persistEditorUi({ notesHeight: SF.notesHeight });
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    /* Doppelklick auf die Linie: zurueck auf die Standardhoehe. */
+    handle.addEventListener('dblclick', () => {
+      applyNotesHeight(140);
+      persistEditorUi({ notesHeight: SF.notesHeight });
     });
   }
 
@@ -2059,6 +2300,21 @@
     const bg = slide.background || { type: 'color', value: '#111111' };
     SF.currentBackground = bg;
     applyBackgroundVisual(bg);
+
+    /* Doppelte Kennungen heilen: Vor einer Korrektur im Renderer übernahmen Kopien
+       eines Vorlagen-Schmucks die Kennung der Vorlage. Zwei Objekte mit derselben
+       Kennung lassen sich in der Ebenenliste nicht auseinanderhalten — ein Klick wählte
+       immer dasselbe. Beim nächsten Speichern ist die Folie dauerhaft in Ordnung. */
+    (function () {
+      const gesehen = new Set();
+      (slide.objects || []).forEach((obj) => {
+        const id = String(obj.id || '');
+        if (id === '' || gesehen.has(id)) {
+          obj.id = 'x' + Math.random().toString(36).slice(2, 9);
+        }
+        gesehen.add(String(obj.id));
+      });
+    })();
 
     (slide.objects || []).forEach((obj) => {
       const node = createNode(obj);
@@ -3075,6 +3331,49 @@
     return node;
   }
 
+  async function openInsertFromUrl() {
+    if (!SF.canEdit) return;
+    const answer = await SFDialog.prompt({
+      title: I.fromUrlTitle || 'Von URL einfügen',
+      message: I.fromUrlMessage || '',
+      placeholder: I.fromUrlPlaceholder || 'https://…',
+    });
+    const url = (answer || '').trim();
+    if (!url) return;
+
+    let data = null;
+    try {
+      const res = await fetch('media_url.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SF.csrfToken },
+        body: JSON.stringify({ id: SF.id, url: url, csrf_token: SF.csrfToken }),
+      });
+      data = await res.json();
+    } catch (_) {
+      await SFDialog.alert(I.fromUrlFailed || 'Das Einfügen ist fehlgeschlagen.');
+      return;
+    }
+    if (!data || !data.ok) {
+      await SFDialog.alert((data && data.error) || I.fromUrlFailed || 'Das Einfügen ist fehlgeschlagen.');
+      return;
+    }
+
+    if (data.kind === 'image') {
+      await insertImageObjectAtCenter(data.url);
+    } else {
+      const size = data.kind === 'audio' ? { w: 280, h: 56 } : { w: 400, h: 240 };
+      const obj = {
+        id: 'o' + Math.random().toString(16).slice(2, 10),
+        type: data.kind,
+        x: Math.round(SF.meta.width / 2) - size.w / 2,
+        y: Math.round(SF.meta.height / 2) - size.h / 2,
+        w: size.w, h: size.h, rotation: 0, opacity: 1, src: data.url,
+      };
+      insertNode(createNode(obj));
+    }
+    SF.refreshMediaLibrary?.();
+  }
+
   function loadImageAsync(node, src, iconColor, preloaded) {
     if (preloaded) {
       node.image(preloaded);
@@ -3156,6 +3455,7 @@
       const node = new Konva.Text(Object.assign({}, common, {
         x: obj.x, y: obj.y, width: obj.w,
         text: obj.text || 'Text',
+        fontVariant: obj.smallCaps ? 'small-caps' : 'normal',
         fontSize: obj.fontSize || 32,
         fontFamily: obj.fontFamily || 'Open Sans',
         fontStyle: styleParts.length ? styleParts.join(' ') : 'normal',
@@ -3254,6 +3554,10 @@
         lineJoin: isOpen ? 'round' : 'miter',
         stroke: isOpen ? ((obj.stroke && obj.stroke !== 'transparent') ? obj.stroke : '#ffffff') : ((obj.stroke && obj.stroke !== 'transparent') ? obj.stroke : undefined),
         strokeWidth: isOpen ? (obj.strokeWidth || 3) : (obj.strokeWidth || 0),
+        /* Trefferfläche mindestens 12 Punkte breit: Eine 2 Punkte dünne Linie liesse
+           sich sonst kaum anklicken — bei 80 % Zoom sind das keine zwei Bildpunkte.
+           Betrifft nur das Anwählen, nicht die Darstellung. */
+        hitStrokeWidth: Math.max(12, (isOpen ? (obj.strokeWidth || 3) : (obj.strokeWidth || 0)) + 8),
       }));
       node.setAttr('objType', 'shape');
       node.setAttr('shapeType', shapeType);
@@ -4259,6 +4563,15 @@
     });
   }
 
+  /* Kapitaelchen im Canvas sichtbar machen — der HTML-Renderer setzt dafuer
+     font-variant:small-caps, Konva kann das ueber fontVariant. Grossschreibung
+     (text-transform) kann Konva nicht; das bleibt ein bekannter Unterschied. */
+  function refreshTextCase(node) {
+    if (!node || typeof node.fontVariant !== "function") return;
+    node.fontVariant(node.getAttr("smallCaps") ? "small-caps" : "normal");
+    if (SF.layer) SF.layer.batchDraw();
+  }
+
   function findNodeById(id) {
     if (!SF.layer || !id) return null;
     return getTopLevelNodes().find((n) => n.id() === id) || null;
@@ -4344,7 +4657,7 @@
     if (!available.includes(next)) next = available[0] || 'templates';
     SF.activeSideTab = next;
     if (!opts || opts.persist !== false) {
-      try { localStorage.setItem('sf_side_tab', next); } catch (e) { /* ignore */ }
+      persistEditorUi({ sideTab: next });
     }
     tabs.forEach((btn) => {
       const on = btn.dataset.sideTab === next;
@@ -4356,6 +4669,10 @@
       panel.classList.toggle('is-active', on);
       panel.hidden = !on;
     });
+    if (next === 'clipboard' && typeof refreshClipboard === 'function') {
+      // Liste erst beim Öffnen holen, nicht bei jedem Seitenaufbau.
+      refreshClipboard();
+    }
     if (next === 'templates') {
       SF.templatesPanelOpen = true;
       renderTemplatesPanel();
@@ -4387,7 +4704,7 @@
     const next = subId === 'layers' ? 'layers' : 'layout';
     SF.activePosSubtab = next;
     if (!opts || opts.persist !== false) {
-      try { localStorage.setItem('sf_pos_subtab', next); } catch (e) { /* ignore */ }
+      persistEditorUi({ posSubtab: next });
     }
     buttons.forEach((btn) => {
       const on = btn.dataset.posSubtab === next;
@@ -4429,7 +4746,7 @@
 
     SF.activeFormatSubtab = next;
     if (!opts || opts.persist !== false) {
-      try { localStorage.setItem('sf_format_subtab', next); } catch (e) { /* ignore */ }
+      persistEditorUi({ formatSubtab: next });
     }
 
     if (tabBar) {
@@ -4535,7 +4852,7 @@
   function bindObjectPanelToggle() {
     document.getElementById('propsObjectToggle')?.addEventListener('click', () => {
       SF.objectPanelOpen = !SF.objectPanelOpen;
-      localStorage.setItem('sf_object_open', SF.objectPanelOpen ? '1' : '0');
+      persistEditorUi({ objectOpen: SF.objectPanelOpen });
       document.getElementById('propsObjectAccordion')?.classList.toggle('open', SF.objectPanelOpen);
       syncLayersPropsLayout();
       requestAnimationFrame(updateTemplatesPickerLayout);
@@ -5095,7 +5412,7 @@
     bindRbToggle('rb_underline', (node) => updateRbTextDecoration(node));
     bindRbToggle('rb_strikethrough', (node) => updateRbTextDecoration(node));
     bindRbToggle('rb_uppercase', (node, state) => { node.setAttr('uppercase', state); scheduleSave(); });
-    bindRbToggle('rb_smallcaps', (node, state) => { node.setAttr('smallCaps', state); scheduleSave(); });
+    bindRbToggle('rb_smallcaps', (node, state) => { node.setAttr('smallCaps', state); refreshTextCase(node); scheduleSave(); });
 
     const bindRbListToggle = (id, mode) => {
       const el = document.getElementById(id);
@@ -5591,7 +5908,7 @@
     const options = [{ value: '', label: I.setPlaceholderNone || '—' }];
     roles.forEach((r) => options.push({ value: r, label: labels[r] || r }));
     let html = fieldSelectKV('p_setRole', I.setPlaceholderRole || 'Set-Platzhalter', options, currentRole || '');
-    html += '<button type="button" class="button button-ghost button-sm" id="refreshSetPlaceholderBtn" style="width:100%; margin-top:8px;"' +
+    html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="refreshSetPlaceholderBtn" style="width:100%; margin-top:8px;"' +
       (currentRole ? '' : ' disabled') + '>' + escapeHtml(I.setPlaceholderRefresh || 'Aktualisieren') + '</button>';
     html += '<div class="props-video-note" style="margin-top:6px;">' + escapeHtml(I.setPlaceholderRefreshHint || '') + '</div>';
     return html;
@@ -5625,8 +5942,8 @@
         html += fieldColor('p_iconColor', I.iconColor, obj.iconColor || defaultIconColor());
         html += miniPaletteHtml('p_iconColor');
       }
-      html += '<button type="button" class="button button-ghost button-sm" id="replaceAssetBtn" style="width:100%;">' + I.replaceImage + '</button>';
-      html += '<button type="button" class="button button-ghost button-sm" id="removeBgBtn" style="width:100%; margin-top:8px;">' + I.removeBackground + '</button>';
+      html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="replaceAssetBtn" style="width:100%;">' + I.replaceImage + '</button>';
+      html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="removeBgBtn" style="width:100%; margin-top:8px;">' + I.removeBackground + '</button>';
       html += '<div class="props-video-note" style="margin-top:8px;">' + I.removeBackgroundHint + '</div>';
       return html;
     }
@@ -5634,7 +5951,7 @@
     if (obj.type === 'video' || obj.type === 'audio') {
       const isAudio = obj.type === 'audio';
       html += '<div class="props-video-note">' + I.mediaPlaceholderHint.replace('{type}', isAudio ? I.mediaAudio : I.mediaVideo) + '</div>';
-      html += '<button type="button" class="button button-ghost button-sm" id="replaceAssetBtn" style="width:100%;">' + (isAudio ? I.replaceAudio : I.replaceVideo) + '</button>';
+      html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="replaceAssetBtn" style="width:100%;">' + (isAudio ? I.replaceAudio : I.replaceVideo) + '</button>';
       html += fieldSelectKV('p_playTrigger', I.playTrigger, PLAY_TRIGGER_OPTIONS, obj.playTrigger || 'manual');
       if ((obj.playTrigger || 'manual') === 'timed') {
         html += fieldNumber('p_playDelay', I.playDelay, obj.playDelay || 0);
@@ -6192,8 +6509,8 @@
 
   function propsTransferRowHtml(copyId, pasteId, copyLabel, pasteLabel, canPaste) {
     return '<div class="props-transfer-row">' +
-      '<button type="button" class="button button-ghost button-sm" id="' + copyId + '">' + escapeHtml(copyLabel) + '</button>' +
-      '<button type="button" class="button button-ghost button-sm" id="' + pasteId + '"' + (canPaste ? '' : ' disabled') + '>' + escapeHtml(pasteLabel) + '</button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + copyId + '">' + escapeHtml(copyLabel) + '</button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + pasteId + '"' + (canPaste ? '' : ' disabled') + '>' + escapeHtml(pasteLabel) + '</button>' +
       '</div>';
   }
 
@@ -7647,10 +7964,10 @@
           ? '<img src="' + escapeHtml(item.url) + '" alt="" class="media-library-thumb">'
           : '<div class="media-library-thumb media-library-thumb--' + item.kind + '">' + escapeHtml(kindLabel(item.kind)) + '</div>';
         const deleteBtn = (SF.canEdit && unused)
-          ? '<button type="button" class="button button-danger button-sm media-library-delete" data-file="' + escapeHtml(item.filename) + '">' + escapeHtml(cfg.delete) + '</button>'
+          ? '<button type="button" class="button button-danger button-sm media-library-delete hub-btn hub-btn--danger hub-btn--sm" data-file="' + escapeHtml(item.filename) + '">' + escapeHtml(cfg.delete) + '</button>'
           : '';
         const bgBtn = (SF.canEdit && (item.kind === 'image' || item.kind === 'video'))
-          ? '<button type="button" class="button button-ghost button-sm media-library-bg-btn">' + escapeHtml(cfg.useBackground || 'Als Hintergrund') + '</button>'
+          ? '<button type="button" class="button button-ghost button-sm media-library-bg-btn hub-btn hub-btn--ghost hub-btn--sm">' + escapeHtml(cfg.useBackground || 'Als Hintergrund') + '</button>'
           : '';
         const insertable = SF.canEdit ? ' is-insertable' : '';
         return '<div class="media-library-item' + (unused ? ' is-unused' : '') + insertable + '" data-url="' + escapeHtml(item.url) + '" data-kind="' + escapeHtml(item.kind) + '"' + (SF.canEdit ? ' role="button" tabindex="0"' : '') + '>' +
@@ -8322,6 +8639,14 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      /* F5 startet die Präsentation ab der ersten Folie, Shift+F5 ab der aktuellen —
+         wie in den gängigen Präsentationsprogrammen. Steht vor der Abfrage auf
+         Steuerungstaste weiter unten, weil F5 ohne Zusatztaste kommt. */
+      if (e.key === 'F5' && !e.ctrlKey && !e.metaKey && !e.altKey && presentLinkAvailable()) {
+        e.preventDefault();
+        startPresentation(e.shiftKey ? SF.currentIndex : 0);
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && SF.selectedNodes.length) {
         e.preventDefault();
         SF.selectedNodes.slice().forEach((node) => {
@@ -8352,6 +8677,16 @@
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
+      /* Im Filmstreifen und im Raster beziehen sich dieselben Tasten auf ganze
+         Folien statt auf das angewählte Objekt. */
+      if (slideShortcutContext() && ['c', 'x', 'v', 'd'].includes(key) && !e.shiftKey) {
+        e.preventDefault();
+        if (key === 'c') copySelectedToClipboard();
+        else if (key === 'x') cutSlidesToClipboard();
+        else if (key === 'v') pasteSlidesShortcut();
+        else duplicateSlidesShortcut();
+        return;
+      }
       if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       else if ((key === 'z' && e.shiftKey) || key === 'y') { e.preventDefault(); redo(); }
       else if (key === 'd' && SF.selectedNode) { e.preventDefault(); duplicateNode(SF.selectedNode); }
@@ -8360,6 +8695,14 @@
       else if (key === 'v' && SF.clipboard) { e.preventDefault(); pasteClipboard(); }
       else if (key === 'g' && e.shiftKey) { e.preventDefault(); ungroupSelected(); }
       else if (key === 'g' && !e.shiftKey) { e.preventDefault(); groupSelectedNodes(); }
+      else if (key === 'h') { e.preventDefault(); openFindReplace(); }
+      /* Strg+P startet die Präsentation ab der aktuellen Folie — wie der Knopf im
+         Menüband. F5 beginnt dagegen vorn. Lässt sich hier nicht präsentieren,
+         bleibt die Taste beim Browser und öffnet wie gewohnt den Druckdialog. */
+      else if (key === 'p' && !e.shiftKey && presentLinkAvailable()) {
+        e.preventDefault();
+        startPresentation(SF.currentIndex);
+      }
     });
   }
 
@@ -8491,7 +8834,8 @@
 
     setSaveStatus('Speichere…');
     try {
-      const payload = { index: SF.currentIndex, background, objects, transition, autoAdvance, notes };
+      /* Id ist massgeblich; index bleibt nur als Rückfall für alte Stände. */
+      const payload = { index: SF.currentIndex, slide_id: (slideMeta && slideMeta.id) || '', background, objects, transition, autoAdvance, notes };
       if (layoutKey !== null) payload.layoutKey = layoutKey;
       if (label !== null) payload.label = label;
       if (layoutSetSlideId !== null) payload.layoutSetSlideId = layoutSetSlideId;
@@ -8527,7 +8871,409 @@
     initRibbonCommandDelegation();
     initShareModal();
     initExportModal();
+    initFindReplace();
+    initNotesOutline();
   }
 
   document.addEventListener('DOMContentLoaded', init);
+
+  /* ---- Folien-Zwischenablage ------------------------------------------------
+     Ganze Folien in eine andere Präsentation übernehmen. Die Ablage liegt
+     benutzerbezogen auf dem Server, damit sie den Wechsel der Präsentation und
+     des Geräts übersteht. Bilder werden erst beim Einfügen in die Zielpräsentation
+     kopiert — siehe SlideClipboard::fetchFor(). */
+  let clipEntries = [];
+
+  async function clipUserApi(action, payload) {
+    const res = await fetch('user_api.php?action=' + encodeURIComponent(action), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SF.csrfToken },
+      body: JSON.stringify(payload || {})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new Error(data.error || 'Fehler');
+    return data;
+  }
+
+  function renderClipList() {
+    const box = document.getElementById('slideClipList');
+    if (!box) return;
+    if (!clipEntries.length) {
+      box.innerHTML = '<p class="slide-clip-empty">' + escapeHtml(I.clipEmpty || '') + '</p>';
+      return;
+    }
+    box.innerHTML = clipEntries.map((e) => {
+      const w = e.width || 1920;
+      const h = e.height || 1080;
+      /* Miniatur wie in der Import-Vorschau: das gerenderte Folien-HTML in einem
+         foreignObject, damit es auf die Kachelgrösse skaliert. */
+      const thumb = e.thumb
+        ? '<span class="slide-clip-thumb">'
+          + '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">'
+          + '<foreignObject width="' + w + '" height="' + h + '">'
+          + '<div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;">' + e.thumb + '</div>'
+          + '</foreignObject></svg></span>'
+        : '';
+      return '<label class="slide-clip-item">'
+        + '<input type="checkbox" value="' + escapeHtml(e.id) + '" checked>'
+        + thumb
+        + '<span class="slide-clip-text">'
+        + '<span class="slide-clip-title">' + escapeHtml(e.title || '') + '</span>'
+        + '<span class="slide-clip-source">' + escapeHtml(I.clipFrom || '') + ' ' + escapeHtml(e.source_title || '') + '</span>'
+        + '</span></label>';
+    }).join('');
+  }
+
+  function clipCheckedIds() {
+    const box = document.getElementById('slideClipList');
+    if (!box) return [];
+    return [...box.querySelectorAll('input[type=checkbox]:checked')].map((c) => c.value);
+  }
+
+  /* Liste nachladen — beim ersten Öffnen des Reiters und nach jedem Kopieren. */
+  async function refreshClipboard() {
+    try {
+      const data = await clipUserApi('clip_list', {});
+      clipEntries = data.clipboard || [];
+      renderClipList();
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  async function copySelectedToClipboard() {
+    /* Im Raster zählt die Mehrfachauswahl, sonst die Folie, an der gerade
+       gearbeitet wird — so heisst „zum Clipboard hinzufügen" in beiden Ansichten
+       dasselbe. */
+    let indices = [...gridSelectedIndices];
+    if (SF.editorViewMode !== 'grid' || !indices.length) {
+      indices = [SF.currentIndex];
+    }
+    if (!indices.length) {
+      if (window.CfStatus) CfStatus.show('info', I.clipSelectNone || '');
+      return;
+    }
+    try {
+      const data = await api('clip_copy_slides', { indices });
+      clipEntries = data.clipboard || [];
+      renderClipList();
+      if (window.CfStatus) {
+        CfStatus.show('ok', (I.clipCopied || '{n}').replace('{n}', String(data.copied || indices.length)));
+      }
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+
+  /* ---- Suchen und Ersetzen -------------------------------------------------
+     Gesucht wird auf dem Server über alle Folien, nicht nur über die geladene:
+     der Editor hält immer nur die aktuelle Folie als Konva-Bühne. Das Ergebnis
+     ist eine Liste von Folien; ein Klick darauf springt hin. */
+
+  let findLastMatches = [];
+
+  function findReplaceModal() {
+    return document.getElementById('findReplaceModal');
+  }
+
+  function openFindReplace() {
+    const modal = findReplaceModal();
+    if (!modal) return;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    const input = document.getElementById('findSearchInput');
+    if (input) { input.focus(); input.select(); }
+  }
+
+  function closeFindReplace() {
+    const modal = findReplaceModal();
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function findReplaceParams() {
+    return {
+      search: (document.getElementById('findSearchInput')?.value || ''),
+      case_sensitive: !!document.getElementById('findCaseSensitive')?.checked,
+      include_notes: !!document.getElementById('findIncludeNotes')?.checked,
+    };
+  }
+
+  function renderFindResults(matches) {
+    findLastMatches = matches || [];
+    const box = document.getElementById('findReplaceResults');
+    const status = document.getElementById('findReplaceStatus');
+    if (!box) return;
+    box.innerHTML = '';
+    if (findLastMatches.length === 0) {
+      if (status) status.textContent = I.findNoMatches || '';
+      return;
+    }
+    if (status) {
+      status.textContent = (I.findMatches || '{n}').replace('{n}', String(findLastMatches.length));
+    }
+    findLastMatches.forEach((m) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'find-replace-hit';
+      row.title = I.findGoto || '';
+      row.innerHTML = '<span class="find-replace-hit-no">' + (m.index + 1) + '</span>'
+        + '<span class="find-replace-hit-text"><span class="find-replace-hit-label"></span>'
+        + '<span class="find-replace-hit-excerpt"></span></span>'
+        + '<span class="find-replace-hit-count">' + (I.findHits || '{n}').replace('{n}', String(m.count)) + '</span>';
+      row.querySelector('.find-replace-hit-label').textContent = m.label || '';
+      row.querySelector('.find-replace-hit-excerpt').textContent = m.excerpt || '';
+      row.addEventListener('click', async () => {
+        await switchToSlide(m.index);
+      });
+      box.appendChild(row);
+    });
+  }
+
+  async function runFind() {
+    const p = findReplaceParams();
+    const status = document.getElementById('findReplaceStatus');
+    if (p.search === '') {
+      if (status) status.textContent = '';
+      renderFindResults([]);
+      return;
+    }
+    try {
+      const data = await api('find_replace', p);
+      renderFindResults(data.matches || []);
+    } catch (e) {
+      if (status) status.textContent = e.message;
+    }
+  }
+
+  async function runReplace() {
+    const p = findReplaceParams();
+    if (p.search === '') return;
+    const ok = await SFDialog.confirm(I.findConfirmReplace || '', { danger: true });
+    if (!ok) return;
+    p.replace = document.getElementById('findReplaceInput')?.value || '';
+    const status = document.getElementById('findReplaceStatus');
+    try {
+      const data = await api('find_replace', p);
+      if (data.slides) {
+        SF.slides = data.slides;
+        loadSlideIntoStage(Math.min(SF.currentIndex, SF.slides.length - 1));
+        await renderSlideFilmstrip();
+        if (SF.editorViewMode === 'grid') renderSlideGrid();
+        reloadPreviewWindow();
+      }
+      renderFindResults([]);
+      const text = (I.findReplaced || '{n}').replace('{n}', String(data.replaced || 0));
+      if (status) status.textContent = text;
+      if (window.CfStatus) CfStatus.show('ok', text);
+    } catch (e) {
+      if (status) status.textContent = e.message;
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  /* Stellt die Gliederung am Anfang der Notizen zwischen den beiden Schreibweisen um —
+     für Präsentationen, die vor dieser Wahlmöglichkeit importiert wurden, und um es sich
+     nachträglich anders zu überlegen. Beide Richtungen, darum ein Dialog statt zweier
+     Knöpfe im Menüband. */
+
+  function notesOutlineModal() {
+    return document.getElementById('notesOutlineModal');
+  }
+
+  function openNotesOutline() {
+    const modal = notesOutlineModal();
+    if (!modal) return;
+    const status = document.getElementById('notesOutlineStatus');
+    if (status) status.textContent = '';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeNotesOutline() {
+    const modal = notesOutlineModal();
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  async function applyNotesOutlineStyle(style) {
+    const status = document.getElementById('notesOutlineStatus');
+    setSaveStatus('Stelle Notizen um…');
+    try {
+      const data = await api('notes_outline_style', { style });
+      SF.slides = data.slides;
+      loadSlideIntoStage(Math.min(SF.currentIndex, SF.slides.length - 1), true);
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      reloadPreviewWindow();
+      setSaveStatus('Gespeichert');
+      const text = (I.notesOutlineDone || '{n}').replace('{n}', String(data.changed || 0));
+      if (status) status.textContent = text;
+      if (window.CfStatus) CfStatus.show('ok', text);
+    } catch (e) {
+      setSaveStatus('Fehler beim Umstellen', true);
+      if (status) status.textContent = e.message;
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  function initNotesOutline() {
+    document.getElementById('notesOutlineClose')?.addEventListener('click', closeNotesOutline);
+    document.getElementById('notesOutlineDone')?.addEventListener('click', closeNotesOutline);
+    notesOutlineModal()?.addEventListener('click', (e) => {
+      if (e.target === notesOutlineModal()) closeNotesOutline();
+    });
+    notesOutlineModal()?.querySelectorAll('[data-outline-style]').forEach((btn) => {
+      btn.addEventListener('click', () => applyNotesOutlineStyle(btn.dataset.outlineStyle));
+    });
+    document.getElementById('notesToPathBtn')?.addEventListener('click', openNotesOutline);
+  }
+
+  function initFindReplace() {
+    document.getElementById('findReplaceClose')?.addEventListener('click', closeFindReplace);
+    document.getElementById('findReplaceDone')?.addEventListener('click', closeFindReplace);
+    document.getElementById('findDoSearchBtn')?.addEventListener('click', runFind);
+    document.getElementById('findDoReplaceBtn')?.addEventListener('click', runReplace);
+    findReplaceModal()?.addEventListener('click', (e) => {
+      if (e.target === findReplaceModal()) closeFindReplace();
+    });
+    document.getElementById('findSearchInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); runFind(); }
+    });
+    document.getElementById('findReplaceBtn')?.addEventListener('click', openFindReplace);
+  }
+
+
+  /* ---- Tastenkürzel im Filmstreifen ---------------------------------------
+     Dieselben Tasten wie auf der Folienfläche, aber auf ganze Folien bezogen:
+     Strg+C/X/V/D. Massgeblich ist, wo die Eingabemarke steht — liegt sie im
+     Filmstreifen (oder ist die Rasteransicht offen), gelten die Folien, sonst
+     weiterhin das angewählte Objekt. Darum haben die Einträge `tabindex`. */
+
+  function slideShortcutContext() {
+    if (SF.editorViewMode === 'grid') return true;
+    const ae = document.activeElement;
+    return !!(ae && ae.closest && ae.closest('#slideFilmstrip'));
+  }
+
+  /** Folien, auf die sich ein Folien-Tastenkürzel bezieht. */
+  function shortcutSlideIndices() {
+    let indices = [...gridSelectedIndices];
+    if (SF.editorViewMode !== 'grid' || !indices.length) {
+      indices = [SF.currentIndex];
+    }
+    return indices.filter((i) => i >= 0 && i < SF.slides.length).sort((a, b) => a - b);
+  }
+
+  async function cutSlidesToClipboard() {
+    const indices = shortcutSlideIndices();
+    if (!indices.length) return;
+    if (indices.length >= SF.slides.length) {
+      await SFDialog.alert('Die letzte verbleibende Folie kann nicht ausgeschnitten werden.');
+      return;
+    }
+    try {
+      setSaveStatus('Speichere…');
+      /* Erst in die Ablage, dann löschen — scheitert das Kopieren, bleibt alles
+         stehen. Gelöscht wird von hinten nach vorn, sonst verschieben sich die
+         Nummern der noch zu löschenden Folien. */
+      const data = await api('clip_copy_slides', { indices });
+      clipEntries = data.clipboard || [];
+      let slides = null;
+      for (const i of [...indices].reverse()) {
+        const res = await api('delete_slide', { index: i });
+        slides = res.slides;
+      }
+      if (slides) SF.slides = slides;
+      if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
+      gridSelectedIndices.clear();
+      gridSelectedIndices.add(SF.currentIndex);
+      gridLastClickedIndex = SF.currentIndex;
+      loadSlideIntoStage(SF.currentIndex);
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      renderClipList();
+      reloadPreviewWindow();
+      setSaveStatus('Gespeichert');
+      if (window.CfStatus) {
+        CfStatus.show('ok', (I.clipCut || '{n}').replace('{n}', String(indices.length)));
+      }
+    } catch (e) {
+      setSaveStatus('Fehler beim Ausschneiden', true);
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  /** Strg+V: die angehakten Einträge, sonst der zuletzt kopierte. */
+  async function pasteSlidesShortcut() {
+    let ids = clipCheckedIds();
+    if (!ids.length && clipEntries.length) {
+      ids = [clipEntries[0].id];
+    }
+    if (!ids.length) {
+      if (window.CfStatus) CfStatus.show('info', I.clipEmpty || '');
+      return;
+    }
+    try {
+      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
+      SF.slides = data.slides;
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      reloadPreviewWindow();
+      if (window.CfStatus) {
+        CfStatus.show('ok', (I.clipPasted || '{n}').replace('{n}', String(ids.length)));
+      }
+      (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  async function duplicateSlidesShortcut() {
+    const indices = shortcutSlideIndices();
+    /* Von hinten nach vorn, damit die eingefügten Kopien die noch offenen
+       Nummern nicht verschieben. */
+    for (const i of [...indices].reverse()) {
+      await duplicateSlide(i);
+    }
+  }
+
+  async function pasteFromClipboard() {
+    const ids = clipCheckedIds();
+    if (!ids.length) {
+      if (window.CfStatus) CfStatus.show('info', I.clipSelectNone || '');
+      return;
+    }
+    try {
+      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
+      SF.slides = data.slides;
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === "grid") renderSlideGrid();
+      reloadPreviewWindow();
+      if (window.CfStatus) {
+        CfStatus.show('ok', (I.clipPasted || '{n}').replace('{n}', String(ids.length)));
+      }
+      (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  }
+
+  document.getElementById('slideClipCopyBtn')?.addEventListener('click', copySelectedToClipboard);
+  document.getElementById('slideClipPasteBtn')?.addEventListener('click', pasteFromClipboard);
+  document.getElementById('slideClipClearBtn')?.addEventListener('click', async () => {
+    try {
+      await clipUserApi('clip_clear', { csrf_token: SF.csrfToken });
+      clipEntries = [];
+      renderClipList();
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+  });
+
 })();
+

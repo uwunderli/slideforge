@@ -1,0 +1,95 @@
+/**
+ * SlideForge-Bruecke: Alt-Klassen des Benutzermenues.
+ * Das Aussehen kommt aus hub-kit.css (Teil hub-user-menu.css). Unser Markup
+ * fuehrt daneben noch die alten Klassennamen .user-menu-dropdown / -name /
+ * -pref / -sep; diese Datei haengt sie an dieselben Regeln. Sie wird NACH dem
+ * Kit geladen und ist bewusst KEINE Hub-Kopie.
+ * Entfaellt, sobald das Markup auf .hub-user-menu__* umgestellt ist
+ * (eigener Auftrag, JS-Welle).
+ */
+
+.hub-user-menu.user-menu {
+  position: relative;
+}
+
+.hub-user-menu .user-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--hub-um-surface);
+  border: 1px solid var(--hub-um-border);
+  border-radius: 10px;
+  box-shadow: var(--hub-um-shadow);
+  padding: 6px;
+  z-index: 120;
+  box-sizing: border-box;
+}
+
+.hub-user-menu .user-menu-dropdown.is-open,
+.hub-user-menu .user-menu-dropdown.open {
+  display: block;
+}
+
+.hub-user-menu .user-menu-name {
+  display: grid;
+  gap: 0.1rem;
+  padding: 8px 10px 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--hub-um-text);
+  border-bottom: 1px solid var(--hub-um-border);
+  margin-bottom: 4px;
+}
+
+.hub-user-menu .user-menu-pref {
+  margin: 0;
+  padding: 4px 6px 6px;
+}
+
+.hub-user-menu .user-menu-pref label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--hub-um-muted);
+  font-weight: 600;
+}
+
+.hub-user-menu .user-menu-pref select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--hub-um-border);
+  background: var(--hub-um-raised);
+  color: var(--hub-um-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.25rem 0.45rem;
+  box-sizing: border-box;
+}
+
+.hub-user-menu .user-menu-dropdown a,
+.hub-user-menu .user-menu-dropdown a:link,
+.hub-user-menu .user-menu-dropdown a:visited {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--hub-um-text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.hub-user-menu .user-menu-dropdown a:hover {
+  background: var(--hub-um-raised);
+  text-decoration: none;
+  color: var(--hub-um-text);
+}
+
+.hub-user-menu .user-menu-sep {
+  height: 1px;
+  background: var(--hub-um-border);
+  margin: 4px 2px;
+}

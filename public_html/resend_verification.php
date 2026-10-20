@@ -45,7 +45,7 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <label for="email"><?= h(t('auth.email')) ?></label>
       <input type="email" id="email" name="email" required value="<?= h($email) ?>">
-      <button type="submit" class="button" style="margin-top:16px;"><?= h(t('auth.resend_btn')) ?></button>
+      <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('auth.resend_btn')) ?></button>
     </form>
 
     <div class="switch"><?= h(t('auth.already_account')) ?> <a href="login.php"><?= h(t('auth.to_login')) ?></a></div>

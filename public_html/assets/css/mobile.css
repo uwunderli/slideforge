@@ -553,6 +553,16 @@ body.present-remote-mode .topbar {
   border-top: 1px solid var(--border);
 }
 
+/* Am Handy bleiben Hauptaktionen gross genug zum Tippen. Zwei Klassen, damit
+   die Regel den Hub-Kanon (eine Klasse, spaeter geladen) ueberstimmt.
+   Auflage aus dem Review zu Paket 2, 17.10.: nicht unter 44px. */
+@media (max-width: 600px) {
+  .hub-btn.hub-btn--primary,
+  .hub-btn.hub-btn--danger {
+    min-height: 44px;
+  }
+}
+
 .present-remote-nav .button {
   min-height: 64px;
   font-size: 1.2rem;

@@ -20,6 +20,23 @@ function json_ok(array $data = []): void {
     exit;
 }
 
+/**
+ * Kurzer Ausschnitt um die erste Fundstelle — damit die Trefferliste zeigt, WO im Text
+ * etwas steht, und nicht nur den Namen der Folie.
+ */
+function sf_match_excerpt(string $text, string $suche, bool $beachteGross, int $rand = 32): string
+{
+    $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    $pos = $beachteGross ? mb_strpos($text, $suche) : mb_stripos($text, $suche);
+    if ($pos === false) {
+        return mb_substr($text, 0, 2 * $rand);
+    }
+    $von = max(0, $pos - $rand);
+    $laenge = mb_strlen($suche) + 2 * $rand;
+    $aus = mb_substr($text, $von, $laenge);
+    return ($von > 0 ? '…' : '') . $aus . ($von + $laenge < mb_strlen($text) ? '…' : '');
+}
+
 function sf_public_view_url(?string $token): ?string
 {
     $token = trim((string)$token);
@@ -84,7 +101,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background', 'add_share', 'remove_share', 'set_public_share', 'regenerate_public_token'];
+$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'apply_transition_slides', 'apply_transition_all', 'notes_outline_to_path', 'notes_outline_style', 'clip_copy_slides', 'clip_paste_slides', 'find_replace', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background', 'add_share', 'remove_share', 'set_public_share', 'regenerate_public_token'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -146,7 +163,8 @@ switch ($action) {
         $layoutKey = array_key_exists('layoutKey', $body) ? (string)$body['layoutKey'] : null;
         $label = array_key_exists('label', $body) ? (string)$body['label'] : null;
         $layoutSetSlideId = array_key_exists('layoutSetSlideId', $body) ? (string)$body['layoutSetSlideId'] : null;
-        $result = Presentation::saveSlide($id, $index, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId);
+        $slideId = isset($body['slide_id']) ? (string)$body['slide_id'] : null;
+        $result = Presentation::saveSlide($id, $index, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId, $slideId);
         json_ok(['slides' => $result['slides']]);
         break;
 
@@ -161,6 +179,220 @@ switch ($action) {
         $afterIndex = isset($body['after_index']) ? (int)$body['after_index'] : null;
         $result = Presentation::addSlide($id, $afterIndex);
         json_ok(['slides' => $result['slides']]);
+        break;
+
+    case 'notes_outline_style':
+    case 'notes_outline_to_path':   // alter Name, damit ein noch geladener Editor weiterläuft
+        /* Stellt die Gliederung am Anfang der Notizen zwischen zwei Schreibweisen um:
+             headings  „# A", „## B", „### C"  (untereinander)
+             path      „**A > B > C**"          (eine Zeile)
+           Angefasst wird nur der zusammenhängende Block am Anfang; alles darunter
+           bleibt Zeichen für Zeichen stehen. Beide Richtungen sind wiederholbar —
+           eine fette Zeile ist keine Überschrift und umgekehrt. */
+        $stil = strtolower(trim((string)($body['style'] ?? 'path')));
+        if (!in_array($stil, ['path', 'headings'], true)) {
+            $stil = 'path';
+        }
+
+        $ausNotizen = static function (string $notizen) use ($stil): ?string {
+            $zeilen = preg_split('/\R/u', $notizen) ?: [];
+            if ($zeilen === []) {
+                return null;
+            }
+            $titel = [];
+            $rest = [];
+            if ($stil === 'path') {
+                $rest = $zeilen;
+                foreach ($zeilen as $k => $zeile) {
+                    if (preg_match('/^\s*#{1,6}\s*(.+?)\s*$/u', $zeile, $m)) {
+                        $titel[] = $m[1];
+                        continue;
+                    }
+                    $rest = array_slice($zeilen, $k);
+                    break;
+                }
+                if (count($titel) === count($zeilen)) {
+                    $rest = [];
+                }
+                if ($titel === []) {
+                    return null;
+                }
+                $kopf = ['**' . implode(' > ', $titel) . '**'];
+            } else {
+                /* Gegenrichtung: Die erste Zeile muss ganz fett sein. Die Teile werden
+                   am „>" getrennt und bekommen wieder je eine Ebene. */
+                if (!preg_match('/^\s*\*\*(.+?)\*\*\s*$/u', $zeilen[0], $m)) {
+                    return null;
+                }
+                $titel = array_values(array_filter(
+                    array_map('trim', explode('>', $m[1])),
+                    fn($t) => $t !== ''
+                ));
+                if ($titel === []) {
+                    return null;
+                }
+                $kopf = [];
+                foreach ($titel as $ebene => $t) {
+                    $kopf[] = str_repeat('#', min(6, $ebene + 1)) . ' ' . $t;
+                }
+                $rest = array_slice($zeilen, 1);
+            }
+            return $rest === []
+                ? implode("\n", $kopf)
+                : implode("\n", $kopf) . "\n" . implode("\n", $rest);
+        };
+
+        $slidesData = Presentation::getSlides($id);
+        $umgestellt = 0;
+        foreach (($slidesData['slides'] ?? []) as $i => $slide) {
+            $notizen = (string)($slide['notes'] ?? '');
+            if ($notizen === '') {
+                continue;
+            }
+            $neu = $ausNotizen($notizen);
+            if ($neu === null || $neu === $notizen) {
+                continue;
+            }
+            Presentation::saveSlide(
+                $id,
+                $i,
+                $slide['background'] ?? ['type' => 'color', 'value' => '#111111'],
+                $slide['objects'] ?? [],
+                $slide['transition'] ?? null,
+                $slide['autoAdvance'] ?? null,
+                $neu,
+                $slide['layoutKey'] ?? null,
+                $slide['label'] ?? null,
+                $slide['layoutSetSlideId'] ?? null,
+                (string)($slide['id'] ?? '')
+            );
+            $umgestellt++;
+        }
+        json_ok([
+            'changed' => $umgestellt,
+            'slides' => Presentation::getSlides($id)['slides'],
+        ]);
+        break;
+
+    case 'find_replace':
+        /* Suchen und Ersetzen über die ganze Präsentation. Ohne `replace` wird nur
+           gesucht und nichts verändert — das ist die Liste, die der Dialog anzeigt. */
+        $suche = (string)($body['search'] ?? '');
+        if ($suche === '') {
+            json_fail('Kein Suchbegriff angegeben.', 400);
+        }
+        $ersatz = array_key_exists('replace', $body) ? (string)$body['replace'] : null;
+        $beachteGross = !empty($body['case_sensitive']);
+        $auchNotizen = !empty($body['include_notes']);
+        $nurIndices = is_array($body['indices'] ?? null)
+            ? array_flip(array_map('intval', $body['indices']))
+            : null;
+
+        $slidesData = Presentation::getSlides($id);
+        $treffer = [];
+        $ersetzt = 0;
+        foreach (($slidesData['slides'] ?? []) as $i => $slide) {
+            if ($nurIndices !== null && !isset($nurIndices[$i])) {
+                continue;
+            }
+            $anzahl = 0;
+            $auszug = '';
+            $neueObjekte = $slide['objects'] ?? [];
+            foreach ($neueObjekte as $k => $obj) {
+                if (($obj['type'] ?? '') !== 'text') {
+                    continue;
+                }
+                $text = (string)($obj['text'] ?? '');
+                $n = $beachteGross ? substr_count($text, $suche) : substr_count(mb_strtolower($text), mb_strtolower($suche));
+                if ($n === 0) {
+                    continue;
+                }
+                $anzahl += $n;
+                if ($auszug === '') {
+                    $auszug = sf_match_excerpt($text, $suche, $beachteGross);
+                }
+                if ($ersatz !== null) {
+                    $neueObjekte[$k]['text'] = $beachteGross
+                        ? str_replace($suche, $ersatz, $text)
+                        : preg_replace('/' . preg_quote($suche, '/') . '/iu', str_replace('$', '\\$', $ersatz), $text);
+                }
+            }
+            $notizen = (string)($slide['notes'] ?? '');
+            $notizenNeu = $notizen;
+            if ($auchNotizen && $notizen !== '') {
+                $n = $beachteGross ? substr_count($notizen, $suche) : substr_count(mb_strtolower($notizen), mb_strtolower($suche));
+                if ($n > 0) {
+                    $anzahl += $n;
+                    if ($auszug === '') {
+                        $auszug = sf_match_excerpt($notizen, $suche, $beachteGross);
+                    }
+                    if ($ersatz !== null) {
+                        $notizenNeu = $beachteGross
+                            ? str_replace($suche, $ersatz, $notizen)
+                            : preg_replace('/' . preg_quote($suche, '/') . '/iu', str_replace('$', '\\$', $ersatz), $notizen);
+                    }
+                }
+            }
+            if ($anzahl === 0) {
+                continue;
+            }
+            $treffer[] = [
+                'index' => $i,
+                'count' => $anzahl,
+                'label' => LayoutSet::slideLabel($slide),
+                'excerpt' => $auszug,
+            ];
+            if ($ersatz !== null) {
+                Presentation::saveSlide(
+                    $id,
+                    $i,
+                    $slide['background'] ?? ['type' => 'color', 'value' => '#111111'],
+                    $neueObjekte,
+                    $slide['transition'] ?? null,
+                    $slide['autoAdvance'] ?? null,
+                    $notizenNeu,
+                    $slide['layoutKey'] ?? null,
+                    $slide['label'] ?? null,
+                    $slide['layoutSetSlideId'] ?? null,
+                    (string)($slide['id'] ?? '')
+                );
+                $ersetzt += $anzahl;
+            }
+        }
+        json_ok([
+            'matches' => $treffer,
+            'replaced' => $ersetzt,
+            'slides' => $ersatz !== null ? Presentation::getSlides($id)['slides'] : null,
+        ]);
+        break;
+
+    case 'clip_copy_slides':
+        $indices = is_array($body['indices'] ?? null) ? $body['indices'] : [];
+        $slidesData = Presentation::getSlides($id);
+        $auswahl = [];
+        foreach ($indices as $i) {
+            $i = (int)$i;
+            if (isset($slidesData['slides'][$i])) {
+                $auswahl[] = $slidesData['slides'][$i];
+            }
+        }
+        if ($auswahl === []) {
+            json_fail('Keine Folien ausgewählt.', 400);
+        }
+        $meta = Presentation::getMeta($id) ?? [];
+        $anzahl = SlideClipboard::add($me['id'], $id, (string)($meta['title'] ?? ''), $auswahl);
+        json_ok(['copied' => $anzahl, 'clipboard' => SlideClipboard::summary($me['id'])]);
+        break;
+
+    case 'clip_paste_slides':
+        $afterIndex = isset($body['after_index']) ? (int)$body['after_index'] : null;
+        $clipIds = is_array($body['clip_ids'] ?? null) ? $body['clip_ids'] : [];
+        $geholt = SlideClipboard::fetchFor($me['id'], $clipIds, $id);
+        if ($geholt['slides'] === []) {
+            json_fail('Die Zwischenablage ist leer.', 400);
+        }
+        $result = Presentation::insertSlides($id, $geholt['slides'], $afterIndex);
+        json_ok(['slides' => $result['slides'], 'warnings' => $geholt['warnings']]);
         break;
 
     case 'duplicate_slide':
@@ -287,35 +519,53 @@ switch ($action) {
         if (!$layoutSlide) {
             json_fail('Layout nicht gefunden.', 404);
         }
-        $slidesData = Presentation::getSlides($id);
-        $current = $slidesData['slides'][$index] ?? null;
-        if (!$current) {
-            json_fail('Folie nicht gefunden.', 404);
+        /* Mehrere Folien auf einmal: Wer im Raster eine Auswahl hat, will die Vorlage
+           allen zuweisen. Ohne Auswahl bleibt es bei der aktuellen Folie. */
+        $indices = is_array($body['indices'] ?? null) ? $body['indices'] : [];
+        $indices = array_values(array_unique(array_map('intval', $indices)));
+        if ($indices === []) {
+            $indices = [$index];
         }
-        $merged = LayoutSet::applyLayoutToSlide($current, $layoutSlide);
+        sort($indices);
+
+        $slidesData = Presentation::getSlides($id);
         $layoutLabel = trim((string)($layoutSlide['label'] ?? ''));
         if ($layoutLabel === '') {
             $layoutLabel = LayoutSet::slideLabel($layoutSlide);
         }
-        if ($layoutLabel !== '') {
-            $merged['label'] = $layoutLabel;
-        }
         $setSlideId = (string)($layoutSlide['id'] ?? $layoutSlideId);
-        if ($setSlideId !== '') {
-            $merged['layoutSetSlideId'] = $setSlideId;
+
+        $result = null;
+        $getroffen = 0;
+        foreach ($indices as $i) {
+            $current = $slidesData['slides'][$i] ?? null;
+            if (!$current) {
+                continue;
+            }
+            $merged = LayoutSet::applyLayoutToSlide($current, $layoutSlide);
+            if ($layoutLabel !== '') {
+                $merged['label'] = $layoutLabel;
+            }
+            if ($setSlideId !== '') {
+                $merged['layoutSetSlideId'] = $setSlideId;
+            }
+            $result = Presentation::saveSlide(
+                $id,
+                $i,
+                $merged['background'],
+                $merged['objects'],
+                $merged['transition'] ?? null,
+                $merged['autoAdvance'] ?? null,
+                $merged['notes'] ?? null,
+                $merged['layoutKey'] ?? $layoutKey,
+                $merged['label'] ?? null,
+                $merged['layoutSetSlideId'] ?? null
+            );
+            $getroffen++;
         }
-        $result = Presentation::saveSlide(
-            $id,
-            $index,
-            $merged['background'],
-            $merged['objects'],
-            $merged['transition'] ?? null,
-            $merged['autoAdvance'] ?? null,
-            $merged['notes'] ?? null,
-            $merged['layoutKey'] ?? $layoutKey,
-            $merged['label'] ?? null,
-            $merged['layoutSetSlideId'] ?? null
-        );
+        if ($getroffen === 0) {
+            json_fail('Folie nicht gefunden.', 404);
+        }
         if (!empty($merged['label']) && empty($result['slides'][$index]['label'])) {
             $result = Presentation::saveSlideLabel($id, $index, (string)$merged['label']);
         }
@@ -414,13 +664,25 @@ switch ($action) {
         if (!$slide) {
             json_fail('Vorlage ist leer oder ungültig.', 404);
         }
-        $result = Presentation::saveSlide(
-            $id, $index,
-            $slide['background'] ?? ['type' => 'color', 'value' => '#111111'],
-            $slide['objects'] ?? [],
-            $slide['transition'] ?? 'slide'
-        );
-        json_ok(['slides' => $result['slides']]);
+        /* Mehrere Folien auf einmal: Die Rasteransicht schickt `indices`. Ohne das
+           Feld bleibt es bei der einen Folie aus `index` — gleiches Vorgehen wie bei
+           apply_layout_from_set. */
+        $indices = is_array($body['indices'] ?? null) ? $body['indices'] : [];
+        $indices = array_values(array_unique(array_map('intval', $indices)));
+        if ($indices === []) {
+            $indices = [$index];
+        }
+        sort($indices);
+        $result = null;
+        foreach ($indices as $i) {
+            $result = Presentation::saveSlide(
+                $id, $i,
+                $slide['background'] ?? ['type' => 'color', 'value' => '#111111'],
+                $slide['objects'] ?? [],
+                $slide['transition'] ?? 'slide'
+            );
+        }
+        json_ok(['slides' => $result['slides'] ?? Presentation::getSlides($id)['slides']]);
         break;
 
     case 'toggle_public_link':

@@ -303,15 +303,23 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
     Reveal.on('fragmenthidden', function () { scheduleGhostVisibilitySync(); notifyParentPosition(); });
   })();
   (function () {
+    // Ton nur auf view/present_audience — Konsole bleibt immer stumm.
+    // Audio hier NIE abspielen (Mute allein hat in der Praxis nicht gereicht).
+    window.SF_MEDIA_AUDIBLE = false;
 <?= Exporter::mediaRuntimeJs(false) ?>
     sfMediaStatusInit();
-    // Steuerung: immer stumm. Timed-Autoplay hier NICHT starten — sonst sieht man
-    // „läuft“, der Ton kommt aber nur auf view/present_audience (Beamer-PC).
+    function forceConsoleMute(el) {
+      if (!el) return;
+      try {
+        el.muted = true;
+        el.volume = 0;
+      } catch (e) { /* ignore */ }
+    }
     function prepMedia() {
       document.querySelectorAll('video, audio').forEach(function (el) {
-        el.muted = true;
+        forceConsoleMute(el);
         el.setAttribute('controls', '');
-        el.volume = 0;
+        try { if (el.tagName === 'AUDIO') el.pause(); } catch (err) { /* ignore */ }
       });
     }
     function notifyParentMedia(action, el) {
@@ -324,21 +332,59 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
         mediaId: mid,
       }, '*');
     }
-    // Lokale Controls in der Konsole → Play/Pause/Stop an die Präsentationsanzeige.
+    // Audio.play() in der Konsole = kein Output; Play geht nur an die Zuschauer-Ansicht.
+    var origMediaPlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      forceConsoleMute(this);
+      if (this.tagName === 'AUDIO') {
+        if (!(this.dataset && this.dataset.sfSyncing === '1')) {
+          notifyParentMedia('play', this);
+        }
+        return Promise.resolve();
+      }
+      var self = this;
+      return origMediaPlay.apply(this, arguments).then(function (v) {
+        forceConsoleMute(self);
+        return v;
+      }, function (err) {
+        forceConsoleMute(self);
+        throw err;
+      });
+    };
     document.addEventListener('play', function (e) {
       var el = e.target;
       if (!el || (el.tagName !== 'AUDIO' && el.tagName !== 'VIDEO')) return;
+      forceConsoleMute(el);
+      if (el.tagName === 'AUDIO') {
+        el.dataset.sfConsoleSilenced = '1';
+        try { el.pause(); } catch (err) { /* ignore */ }
+        requestAnimationFrame(function () {
+          try { delete el.dataset.sfConsoleSilenced; } catch (err2) { /* ignore */ }
+        });
+        return;
+      }
       if (el.dataset && el.dataset.sfSyncing === '1') return;
-      el.muted = true;
-      el.volume = 0;
       notifyParentMedia('play', el);
+    }, true);
+    document.addEventListener('playing', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'AUDIO' && el.tagName !== 'VIDEO')) return;
+      forceConsoleMute(el);
+      if (el.tagName === 'AUDIO') {
+        el.dataset.sfConsoleSilenced = '1';
+        try { el.pause(); } catch (err) { /* ignore */ }
+      }
+    }, true);
+    document.addEventListener('volumechange', function (e) {
+      var el = e.target;
+      if (!el || (el.tagName !== 'AUDIO' && el.tagName !== 'VIDEO')) return;
+      if (el.muted && el.volume === 0) return;
+      forceConsoleMute(el);
     }, true);
     document.addEventListener('pause', function (e) {
       var el = e.target;
       if (!el || (el.tagName !== 'AUDIO' && el.tagName !== 'VIDEO')) return;
-      if (el.dataset && el.dataset.sfSyncing === '1') return;
-      // Natürliches Ende: kein Stop an die Zuschauer — Reset würde Timed-Medien
-      // erneut scharf schalten und ohne Loop wie eine Dauerschleife wirken.
+      if (el.dataset && (el.dataset.sfSyncing === '1' || el.dataset.sfConsoleSilenced === '1')) return;
       if (el.ended || (el.currentTime > 0 && el.currentTime >= (el.duration - 0.05))) {
         return;
       }

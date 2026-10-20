@@ -14,7 +14,15 @@
  */
 class Markdown
 {
-    public static function render(string $raw): string
+    /**
+     * @param bool $blockMargin Aussenabstände von Aufzählungen und Überschriften.
+     *        Für Notizen erwünscht (Luft zwischen den Blöcken), auf einer FOLIE nicht:
+     *        Dort malt der Editor den rohen Text ohne solche Abstände, und jeder
+     *        zusätzliche Rand lässt Editor und Ausgabe auseinanderlaufen. Bei
+     *        „Jede Zeile einzeln animieren" wird jede Zeile für sich gelesen — dann
+     *        summieren sich die Ränder je Zeile auf.
+     */
+    public static function render(string $raw, bool $blockMargin = true): string
     {
         $lines = preg_split('/\r\n|\r|\n/', $raw);
         if (!array_filter($lines, fn($l) => trim($l) !== '')) {
@@ -26,9 +34,10 @@ class Markdown
         $listBuffer = [];
         $prevWasBlock = true; // vor der ersten Zeile kein <br> nötig
 
-        $flushList = function () use (&$listBuffer, &$htmlParts) {
+        $ulMargin = $blockMargin ? '0.2em 0' : '0';
+        $flushList = function () use (&$listBuffer, &$htmlParts, $ulMargin) {
             if ($listBuffer) {
-                $htmlParts[] = '<ul style="margin:0.2em 0; padding-left:1.1em; text-align:left;">' . implode('', $listBuffer) . '</ul>';
+                $htmlParts[] = '<ul style="margin:' . $ulMargin . '; padding-left:1.1em; text-align:left;">' . implode('', $listBuffer) . '</ul>';
                 $listBuffer = [];
             }
         };
@@ -43,15 +52,33 @@ class Markdown
                 $flushList();
                 $level = strlen($m[1]);
                 $size = $sizes[$level] ?? '1em';
-                $htmlParts[] = '<div style="font-size:' . $size . '; font-weight:700; margin:0.3em 0 0.15em;">' . self::inline(h($m[2])) . '</div>';
+                $hMargin = $blockMargin ? '0.3em 0 0.15em' : '0';
+                $htmlParts[] = '<div style="font-size:' . $size . '; font-weight:700; margin:' . $hMargin . ';">' . self::inline(h($m[2])) . '</div>';
                 $prevWasBlock = true;
                 continue;
             }
+            /* Steht die Auszeichnung VOR dem Strich — „[color=#hex]- Text[/color]" —, so
+               ist das trotzdem ein Listeneintrag. Von Hand geschrieben landet der Strich
+               oft innerhalb der Klammer; hier wird er davor geholt, damit die Prüfung
+               unten greift und die Farbe für die ganze Zeile erhalten bleibt. */
+            $line = preg_replace(
+                '/^(\s*)\[(color|mark)=(#[0-9a-fA-F]{6})\]\s*([-*])\s+(.+?)\[\/\2\]\s*$/is',
+                '$1$4 [$2=$3]$5[/$2]',
+                $line
+            ) ?? $line;
             // Listeneintrag: - oder * gefolgt von Leerzeichen (jede Zeile einzeln geprüft,
             // nicht mehr "der GANZE Text ist eine Liste" - so funktionieren auch gemischte
             // Inhalte wie Überschrift + Liste im selben Notizfeld).
             if (preg_match('/^\s*[-*]\s+(.+)$/', $line, $m)) {
-                $listBuffer[] = '<li>' . self::inline(h($m[1])) . '</li>';
+                /* Ist die ganze Zeile eingefärbt, gehört die Farbe an das <li>: Der
+                   Aufzählungspunkt wird vom Listenelement gezeichnet, nicht vom <span>
+                   darin, und bliebe sonst in der Grundfarbe stehen. */
+                $liStyle = '';
+                if (preg_match('/^\[color=(#[0-9a-fA-F]{6})\](.+)\[\/color\]$/is', $m[1], $cm)) {
+                    $liStyle = ' style="color:' . h($cm[1]) . ';"';
+                    $m[1] = $cm[2];
+                }
+                $listBuffer[] = '<li' . $liStyle . '>' . self::inline(h($m[1])) . '</li>';
                 $prevWasBlock = true;
                 continue;
             }

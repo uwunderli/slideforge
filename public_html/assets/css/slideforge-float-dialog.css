@@ -1,0 +1,22 @@
+/**
+ * SlideForge-Abweichung zum Hub-Schwebedialog: nur die Vorgabegroesse.
+ * Alles andere (Titelleiste, Griffzonen, Knoepfe, Zustaende) kommt aus
+ * hub-kit.css, Teil hub-float-dialog.css — diese Datei wird DANACH geladen.
+ *
+ * Grund: Der Hub gibt 420x280 vor, das passt fuer kurze Rueckfragen. Die
+ * SlideForge-Dialoge sind Arbeitsflaechen (Import, Pixabay, Suchen und
+ * Ersetzen, Gliederung) und brauchen die Breite; ohne diese Regel schrumpfen
+ * sie alle auf Hub-Mass.
+ *
+ * Geprueft 2026-10-14: die uebrigen Unterschiede unserer alten Kopie waren
+ * keine Absicht — .hub-float-dialog__title ist im Kit zeichengleich
+ * vorhanden, die Griffzonen des Kits sind die neueren, und .lab-float-dialog
+ * war toter Code.
+ */
+
+.hub-float-dialog {
+  left: 18vw;
+  top: 12vh;
+  width: min(920px, 96vw);
+  height: min(680px, 90vh);
+}

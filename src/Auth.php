@@ -644,6 +644,8 @@ class Auth
             'slideGhostOpacity' => 25,
             'notesMode' => 'carry',
             'notesCollapsed' => false,
+            'mediaCollapsed' => false,
+            'dockTab' => 'notes',
         ];
     }
 
@@ -740,6 +742,12 @@ class Auth
             'notesCollapsed' => array_key_exists('notesCollapsed', $layout)
                 ? (bool)$layout['notesCollapsed']
                 : $defaults['notesCollapsed'],
+            'mediaCollapsed' => array_key_exists('mediaCollapsed', $layout)
+                ? (bool)$layout['mediaCollapsed']
+                : $defaults['mediaCollapsed'],
+            'dockTab' => in_array(($layout['dockTab'] ?? null), ['notes', 'media'], true)
+                ? $layout['dockTab']
+                : $defaults['dockTab'],
         ];
     }
 
@@ -961,6 +969,125 @@ class Auth
             foreach ($users as &$u) {
                 if ($u['id'] === $userId) {
                     $u['editor_grid_thumb_min'] = $normalized;
+                }
+            }
+            return $users;
+        }, []);
+        return $normalized;
+    }
+
+    /** Editor-Seitenleisten (Tabs/Subtabs/Objektpanel), pro Benutzer. */
+    public static function defaultEditorUi(): array
+    {
+        return [
+            'sideTab' => 'templates',
+            'posSubtab' => 'layout',
+            'formatSubtab' => 'text',
+            'objectOpen' => true,
+            'notesHeight' => 140,
+            /* Zuletzt benutzte Einstellungen des Logos-Import-Dialogs. Bewusst nur die
+               dokumentunabhängigen Werte - Abwahl einzelner Folien und eigene Notizen
+               gehören zu einer bestimmten Predigt und werden nicht gemerkt. */
+            'import' => [
+                'sectionId' => '',
+                'layoutSetId' => '',
+                'outline' => 'set',
+                'scripture' => 'set',
+                'bullets' => 'set',
+                'outlineDepth' => 0,
+                'scriptureTranslation' => false,
+                'agendaMain' => false,
+                'hierarchyNotes' => false,
+                'hierarchyStyle' => 'headings',
+                'swissSs' => false,
+                'agendaColor' => '#b7de45',
+            ],
+        ];
+    }
+
+    public static function normalizeEditorUi($ui): array
+    {
+        $defaults = self::defaultEditorUi();
+        if (!is_array($ui)) {
+            return $defaults;
+        }
+        $sideTabs = ['templates', 'format', 'position', 'effects', 'spell', 'media', 'clipboard'];
+        $sideTab = (string)($ui['sideTab'] ?? $defaults['sideTab']);
+        if (!in_array($sideTab, $sideTabs, true)) {
+            $sideTab = $defaults['sideTab'];
+        }
+        $posSubtab = (($ui['posSubtab'] ?? '') === 'layers') ? 'layers' : 'layout';
+        $formatSubtab = (string)($ui['formatSubtab'] ?? $defaults['formatSubtab']);
+        if (!in_array($formatSubtab, ['text', 'templates', 'format'], true)) {
+            $formatSubtab = $defaults['formatSubtab'];
+        }
+        return [
+            'sideTab' => $sideTab,
+            'posSubtab' => $posSubtab,
+            'formatSubtab' => $formatSubtab,
+            'objectOpen' => array_key_exists('objectOpen', $ui)
+                ? (bool)$ui['objectOpen']
+                : $defaults['objectOpen'],
+            /* Höhe des Notizfeldes in Pixeln, per Ziehen an der Trennlinie gesetzt. */
+            'notesHeight' => max(60, min(900, (int)($ui['notesHeight'] ?? $defaults['notesHeight']))),
+            'import' => self::normalizeImportUi($ui['import'] ?? null, $defaults['import']),
+        ];
+    }
+
+    /**
+     * Nur bekannte Werte durchlassen: Das landet in der Benutzerdatei und kommt aus
+     * dem Browser.
+     */
+    private static function normalizeImportUi($ui, array $defaults): array
+    {
+        if (!is_array($ui)) {
+            return $defaults;
+        }
+        $out = $defaults;
+        foreach (['sectionId', 'layoutSetId'] as $k) {
+            $v = (string)($ui[$k] ?? '');
+            if (preg_match('/^[a-zA-Z0-9_-]{0,64}$/', $v)) {
+                $out[$k] = $v;
+            }
+        }
+        foreach (['outline', 'scripture', 'bullets'] as $k) {
+            $v = (string)($ui[$k] ?? '');
+            if (in_array($v, ['set', 'slides', 'notes', 'off'], true)) {
+                $out[$k] = $v;
+            }
+        }
+        $d = (int)($ui['outlineDepth'] ?? 0);
+        $out['outlineDepth'] = ($d >= 1 && $d <= 5) ? $d : 0;
+        $out['scriptureTranslation'] = !empty($ui['scriptureTranslation']);
+        $out['agendaMain'] = !empty($ui['agendaMain']);
+        $out['hierarchyNotes'] = !empty($ui['hierarchyNotes']);
+        $stil = strtolower(trim((string)($ui['hierarchyStyle'] ?? '')));
+        if (in_array($stil, ['headings', 'path'], true)) {
+            $out['hierarchyStyle'] = $stil;
+        }
+        $out['swissSs'] = !empty($ui['swissSs']);
+        $farbe = strtolower(trim((string)($ui['agendaColor'] ?? '')));
+        if (preg_match('/^#[0-9a-f]{6}$/', $farbe)) {
+            $out['agendaColor'] = $farbe;
+        }
+        return $out;
+    }
+
+    public static function getEditorUi(?array $user = null): array
+    {
+        $user = $user ?? self::currentUser();
+        return self::normalizeEditorUi($user['editor_ui'] ?? null);
+    }
+
+    public static function setEditorUi(string $userId, array $ui): array
+    {
+        $user = self::findById($userId);
+        $base = is_array($user['editor_ui'] ?? null) ? $user['editor_ui'] : [];
+        $normalized = self::normalizeEditorUi(array_merge($base, $ui));
+        Storage::update(USERS_FILE, function ($users) use ($userId, $normalized) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['editor_ui'] = $normalized;
                 }
             }
             return $users;

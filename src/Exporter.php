@@ -325,11 +325,24 @@ JS : '';
     }
     function sfPlayMedia(el, fromPending) {
       if (!el || !el.play) return;
-      try { el.muted = false; } catch (e) {}
+      // present_frame setzt SF_MEDIA_AUDIBLE=false → nur stumm (Timecode), kein Raum-Ton.
+      var audible = window.SF_MEDIA_AUDIBLE !== false;
+      try {
+        if (audible) {
+          el.muted = false;
+        } else {
+          el.muted = true;
+          el.volume = 0;
+        }
+      } catch (e) {}
       sfWhenMediaReady(el, function () {
+        if (!audible) {
+          try { el.muted = true; el.volume = 0; } catch (err) {}
+        }
         var p = el.play();
         if (p && p.catch) {
           p.catch(function () {
+            if (!audible) return;
             if (sfPendingMedia.indexOf(el) === -1) sfPendingMedia.push(el);
             sfShowMediaUnlock(true);
           });
@@ -433,9 +446,13 @@ JS;
     sfMediaStatusInit();
     function onSlideReady(slideEl) {
       sfMediaStatusTrackSlide(slideEl);
-{$hydrateLine}      sfArmMediaTriggers(slideEl, playTimers);
+{$hydrateLine}      // Live-Follow (view/present_audience): Start nur via live-Medienbefehl der Konsole —
+      // sonst doppelter Start (Timed-Arm + sendMediaCommand).
+      if (window.SF_MEDIA_FOLLOW_LIVE) return;
+      sfArmMediaTriggers(slideEl, playTimers);
     }
     document.addEventListener('sf-media-all-ready', function () {
+      if (window.SF_MEDIA_FOLLOW_LIVE) return;
       var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
       if (slide) sfArmMediaTriggers(slide, playTimers);
     });

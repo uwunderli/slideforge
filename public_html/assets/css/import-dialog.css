@@ -1,0 +1,439 @@
+/* Zweispaltiger Logos-Import-Dialog: links die Einstellungen, rechts die
+   Folienübersicht. Bewusst eine eigene Datei statt style.css, damit die
+   Auslieferung dieser Erweiterung keine fremden Korrekturen überschreibt.
+   Die Datei wird NACH style.css geladen und gewinnt darum bei gleicher
+   Gewichtung der Wähler. */
+
+/* Die Fenstergrösse bestimmt hub-float-dialog, nicht SlideForge: Der Dialog geht über
+   dessen eigene Maximieren-Schaltfläche gleich maximiert auf. Eigene Werte für Breite
+   und Höhe standen dem Rahmen im Weg und sind darum bewusst entfernt. Hier bleibt nur,
+   was der Inhalt braucht: die Höhenbegrenzung des Rumpfes aufheben, damit er den
+   verfügbaren Bereich wirklich füllt. */
+.import-dialog-backdrop {
+  padding: 0;
+}
+/* Diese beiden Deckel stammen aus SlideForges eigenem style.css (480 px, mit Vorschau
+   960 px). Sie müssen weg, sonst begrenzt die Anwendung das Fenster, dessen Grösse dem
+   Rahmen gehört. Es wird hier also keine Hub-Regel überschrieben, sondern eine eigene. */
+.modal.modal-import-dialog,
+.modal.modal-import-dialog.modal-import-preview {
+  max-width: none;
+  max-height: none;
+}
+
+/* Hub-Vorgabe: Die Breite soll den Formularen zugutekommen, nicht der Lesbarkeit
+   schaden — erklärender Text behält darum seine Zeilenlänge. */
+.import-dialog-hint,
+.modal.modal-import-dialog .sf-dialog-hint,
+.modal.modal-import-dialog .props-video-note {
+  max-width: 80ch;
+}
+/* Der Rumpf scrollt NICHT mehr selbst: Jede Spalte bekommt ihren eigenen
+   Scrollbereich. Das hält die Vorschau rechts von selbst auf gleicher Höhe, ohne
+   `position: sticky` — das hing von fremden Scrollbereichen ab und war darum nicht
+   verlässlich. Wichtig ist `min-height: 0`, sonst wächst ein Rasterfeld über seine
+   Zelle hinaus statt zu scrollen. */
+.modal.modal-import-dialog .import-dialog-body {
+  max-height: none;
+  min-height: 0;
+  padding: 16px 20px;
+  overflow: hidden;
+  overscroll-behavior: auto;
+}
+
+.import-dialog-cols {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.import-dialog-cols > * {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+/* Ohne aufgebaute Vorschau bleibt die rechte Spalte leer - dann eine Spalte. */
+.import-dialog-cols:not(.import-dialog-cols--preview) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.import-dialog-cols:not(.import-dialog-cols--preview) .import-dialog-col-preview {
+  display: none;
+}
+
+.import-dialog-col-settings,
+.import-dialog-col-preview {
+  min-width: 0;
+}
+
+.import-opt-heading {
+  margin: 18px 0 4px;
+  font-size: 1rem;
+}
+
+/* Beschriftung über das Auswahlfeld, nicht daneben: `select` steht global auf
+   width:100%, nebeneinander lief es deshalb aus der Spalte in die Vorschau. */
+.import-opt-row {
+  display: block;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.import-opt-row label {
+  display: block;
+  margin: 0 0 4px;
+}
+
+.import-opt-row select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.import-opt-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.import-opt-check input {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* Dritte Spalte, sobald eine Folie gewählt ist. */
+.import-dialog-cols--detail {
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(300px, 420px);
+}
+
+.import-detail-sticky {
+  position: static;
+}
+
+.import-detail-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.import-detail-subtitle {
+  margin: 14px 0 6px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Die vergrösserte Folie behält das Seitenverhältnis der Präsentation. */
+.import-detail-stage {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #000;
+}
+
+.import-detail-stage.is-off {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.import-detail-off {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Keine eigene Höhenbegrenzung mehr: Die Detailspalte scrollt als Ganzes,
+   zwei ineinanderliegende Scrollbalken wären nur lästig. */
+.import-detail-notes {
+  overflow: visible;
+}
+
+.import-detail-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Ein Notizteil: Haken davor, abgewähltes bleibt lesbar, aber sichtbar abgewählt. */
+.import-note-part {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.import-note-part input {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 3px;
+}
+
+.import-note-part.is-list span::before {
+  content: '– ';
+  opacity: 0.6;
+}
+
+.import-note-part.is-off span {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* Eigene Notiz: füllt den Rest der Spalte, damit der Platz genutzt wird. */
+.import-own-notes {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.4;
+}
+
+/* Kachel: abgewählt und ausgewählt sichtbar machen. */
+.import-preview-grid-item.is-off .import-preview-grid-thumb {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.import-preview-grid-item.is-selected {
+  outline: 2px solid var(--accent, #8a6d3b);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.import-preview-grid-thumb[data-act='select'] {
+  cursor: zoom-in;
+}
+
+.import-tile-toggle,
+.import-tile-notes {
+  margin-left: auto;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  padding: 1px 6px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.import-tile-notes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+.import-tile-notes.is-empty {
+  opacity: 0.35;
+}
+
+.import-tile-toggle:hover,
+.import-tile-notes:hover {
+  opacity: 1;
+}
+
+/* Auf schmalen Geräten untereinander, Einstellungen zuerst. */
+@media (max-width: 900px) {
+  .import-dialog-cols,
+  .import-dialog-cols--preview,
+  .import-dialog-cols--detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Schmale Geräte: alles untereinander in einem einzigen Scrollbereich. */
+  .modal.modal-import-dialog .import-dialog-body {
+    overflow: auto;
+  }
+  .import-dialog-cols {
+    height: auto;
+  }
+  .import-dialog-cols > * {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+/* Abschnittsüberschrift mit Bleistift zum Umbenennen. */
+.import-preview-section-head[data-section-orig] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-section-edit {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 2px 4px;
+  cursor: pointer;
+  opacity: 0.45;
+  line-height: 1;
+}
+
+.import-preview-section-head:hover .import-section-edit,
+.import-section-edit:focus-visible {
+  opacity: 1;
+}
+
+.import-section-input {
+  font: inherit;
+  width: min(100%, 42ch);
+  box-sizing: border-box;
+}
+
+/* Schalter für die Gliederungsübersicht am Abschnitt. */
+.import-section-agenda {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  padding: 2px 5px;
+  cursor: pointer;
+  opacity: 0.45;
+  line-height: 1;
+}
+
+.import-preview-section-head:hover .import-section-agenda {
+  opacity: 0.8;
+}
+
+.import-section-agenda.is-on {
+  opacity: 1;
+  background: var(--accent, #8a6d3b);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Farbwähler: schmal, nicht über die ganze Spalte. */
+.import-opt-color input[type='color'] {
+  width: 64px;
+  height: 30px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+/* Markenfarben als kleine Felder unter dem Farbwähler. */
+.import-brand-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.import-brand-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.import-brand-swatch:hover,
+.import-brand-swatch:focus-visible {
+  outline: 2px solid var(--accent, #8a6d3b);
+  outline-offset: 1px;
+}
+
+/* Notizen in der Vorschau als gesetztes Markdown: Überschriften nach Ebene. */
+.import-note-part.is-head span {
+  font-weight: 600;
+}
+
+.import-note-part.is-head-1 span {
+  font-size: 1.02rem;
+}
+
+.import-note-part.is-head-2 span {
+  font-size: 0.96rem;
+  opacity: 0.9;
+}
+
+.import-note-part.is-head-3 span {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.import-note-part.is-head {
+  margin-top: 10px;
+}
+
+.import-note-part.is-head:first-child {
+  margin-top: 0;
+}
+
+/* Farbwahl als Ausklappfeld, wie bei den Ribbon-Auswahlfeldern. */
+.import-color-field {
+  position: relative;
+}
+
+.import-color-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.import-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  flex: 0 0 auto;
+}
+
+.import-color-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-color-caret {
+  flex: 0 0 auto;
+  opacity: 0.6;
+}
+
+/* Die Auswahl liegt über dem Inhalt, nicht im Fluss — sonst springt die Spalte auf. */
+.import-color-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 6px;
+  background: var(--panel-bg, #efeae3);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.import-color-panel .import-brand-swatches {
+  margin: 0 0 8px;
+}
+
+/* Etwas Luft am unteren Rand jeder Spalte, damit die letzte Zeile nicht bündig
+   am Rand klebt — und als Rückfall, falls die Fusszeile doch im Rumpf bleibt. */
+.import-dialog-cols > * {
+  padding-bottom: 12px;
+}

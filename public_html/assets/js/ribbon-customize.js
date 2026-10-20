@@ -294,25 +294,25 @@
       '</div>' +
       '<div class="ribbon-customize-col ribbon-customize-layout">' +
       '<div class="ribbon-customize-layout-toolbar">' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeTabAdd"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeTabRename"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeTabDelete"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeTabAdd"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeTabRename"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeTabDelete"></button>' +
       '</div>' +
       '<div class="ribbon-customize-tabs hub-scroll" id="ribbonCustomizeTabs"></div>' +
       '<div class="ribbon-customize-group-actions">' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeGroupAdd"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeGroupRename"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeGroupDelete"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeSepAdd"></button>' +
-      '<button type="button" class="button button-ghost button-sm" id="ribbonCustomizeRowSepAdd"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeGroupAdd"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeGroupRename"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeGroupDelete"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeSepAdd"></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="ribbonCustomizeRowSepAdd"></button>' +
       '</div>' +
       '</div>' +
       '</div>' +
       '</div>' +
       '<div class="hub-float-dialog__footer hub-dialog-actions ribbon-customize-actions">' +
-      '<button type="button" class="button button-ghost hub-dialog-actions__start" id="ribbonCustomizeReset"></button>' +
-      '<button type="button" class="button button-ghost" id="ribbonCustomizeCancel"></button>' +
-      '<button type="button" class="button" id="ribbonCustomizeSave"></button>' +
+      '<button type="button" class="button button-ghost hub-dialog-actions__start hub-btn hub-btn--ghost" id="ribbonCustomizeReset"></button>' +
+      '<button type="button" class="button button-ghost hub-btn hub-btn--ghost" id="ribbonCustomizeCancel"></button>' +
+      '<button type="button" class="button hub-btn hub-btn--primary" id="ribbonCustomizeSave"></button>' +
       '</div>' +
       '</div>';
     document.body.appendChild(backdrop);
@@ -411,7 +411,7 @@
   }
 
   function catalogEntries() {
-    return boot.catalog || [];
+    return (boot.catalog || []).filter((c) => c && c.id !== 'ribbon_customize');
   }
 
   function catalogEntry(cmdId) {
@@ -934,9 +934,9 @@
 
   async function promptText(label, defaultValue) {
     if (global.SFDialog?.prompt) {
-      return global.SFDialog.prompt({ label, defaultValue: defaultValue || '' });
+      return global.SFDialog.prompt(label, defaultValue || '');
     }
-    return window.prompt(label, defaultValue || '');
+    return null;
   }
 
   async function addTab() {
@@ -1128,8 +1128,6 @@
     } catch (err) {
       if (global.SFDialog?.alert) {
         await global.SFDialog.alert(err.message || I.errorSave || 'Speichern fehlgeschlagen');
-      } else {
-        window.alert(err.message || I.errorSave || 'Speichern fehlgeschlagen');
       }
     }
   }
@@ -1138,6 +1136,8 @@
     if (global.SFDialog?.confirm) {
       const ok = await global.SFDialog.confirm(I.resetConfirm || 'Standard-Layout wiederherstellen?');
       if (!ok) return;
+    } else {
+      return;
     }
     try {
       const res = await fetch(boot.apiUrl || 'ribbon.php', {

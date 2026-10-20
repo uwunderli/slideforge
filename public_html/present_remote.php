@@ -145,8 +145,8 @@ require __DIR__ . '/includes/header.php';
   </div>
 
   <div class="present-remote-nav" id="remoteNavRow">
-    <button type="button" class="button button-ghost" id="remotePrevBtn" aria-label="<?= h(t('remote.prev')) ?>">← <?= h(t('remote.prev')) ?></button>
-    <button type="button" class="button" id="remoteNextBtn" aria-label="<?= h(t('remote.next')) ?>"><?= h(t('remote.next')) ?> →</button>
+    <button type="button" class="button button-ghost hub-btn hub-btn--ghost" id="remotePrevBtn" aria-label="<?= h(t('remote.prev')) ?>">← <?= h(t('remote.prev')) ?></button>
+    <button type="button" class="button hub-btn hub-btn--primary" id="remoteNextBtn" aria-label="<?= h(t('remote.next')) ?>"><?= h(t('remote.next')) ?> →</button>
   </div>
 </div>
 

@@ -1318,6 +1318,11 @@ class LayoutSet
                 if (($layoutObj['type'] ?? '') === 'text') {
                     continue;
                 }
+                /* Eigene Kennung: Sonst trägt jede Kopie eines Vorlagen-Schmucks dieselbe
+                   wie die Vorlage. Zwei Linien mit gleicher Kennung liessen sich in der
+                   Ebenenliste nicht auseinanderhalten — ein Klick wählte immer dieselbe. */
+                $layoutObj['layoutDecor'] = self::decorKey($layoutObj);
+                $layoutObj['id'] = Storage::generateId(4);
                 $merged[] = $layoutObj;
             }
         }
@@ -1330,8 +1335,28 @@ class LayoutSet
                 $merged[] = $obj;
             }
         }
+        /* Schmuck-Elemente der Vorlage (Linien, Balken - alles ohne Rolle, was kein
+           Text ist) werden oben frisch aus der Vorlage übernommen. Die Fassung, die von
+           einem früheren Anwenden noch auf der Folie liegt, muss darum weg, sonst
+           entsteht bei jedem Anwenden eine weitere Linie. Erkannt wird sie an der
+           Kennzeichnung `layoutDecor` und - für Folien von vor dieser Änderung -
+           zusätzlich an Art, Lage und Grösse. Selbst gezeichnete Elemente tragen keine
+           Kennzeichnung und liegen anderswo; sie bleiben erhalten. */
         foreach ($freeObjects as $obj) {
             if (self::isDuplicateOfMergedText($obj, $merged)) {
+                continue;
+            }
+            if (isset($obj['layoutDecor'])) {
+                continue;
+            }
+            if (($obj['type'] ?? '') !== 'text' && self::matchesMergedDecor($obj, $merged)) {
+                continue;
+            }
+            /* Auch dann entfernen, wenn das Schmuckelement inzwischen verschoben wurde:
+               Wer die Linie in der Vorlage korrigiert, will sie auf der Folie an der
+               neuen Stelle - nicht zusätzlich zur alten. Verglichen werden Art, Grösse
+               und Farbe, nicht die Lage. */
+            if (($obj['type'] ?? '') !== 'text' && self::matchesMergedDecorKind($obj, $merged)) {
                 continue;
             }
             $merged[] = $obj;
@@ -1351,6 +1376,67 @@ class LayoutSet
             'objects' => $merged,
             'presentDisabled' => $currentSlide['presentDisabled'] ?? false,
         ];
+    }
+
+    /** Kennung eines Vorlagen-Schmuckelements aus Art, Lage, Grösse und Farbe. */
+    private static function decorKey(array $obj): string
+    {
+        return substr(sha1(implode('|', [
+            (string)($obj['type'] ?? ''),
+            (string)($obj['shapeType'] ?? ''),
+            (string)($obj['x'] ?? ''),
+            (string)($obj['y'] ?? ''),
+            (string)($obj['w'] ?? ''),
+            (string)($obj['h'] ?? ''),
+            (string)($obj['fill'] ?? ''),
+            (string)($obj['stroke'] ?? ''),
+        ])), 0, 10);
+    }
+
+    /** Wie decorKey, aber ohne Lage — erkennt auch ein verschobenes Schmuckelement. */
+    private static function decorKindKey(array $obj): string
+    {
+        return substr(sha1(implode('|', [
+            (string)($obj['type'] ?? ''),
+            (string)($obj['shapeType'] ?? ''),
+            (string)($obj['w'] ?? ''),
+            (string)($obj['h'] ?? ''),
+            (string)($obj['fill'] ?? ''),
+            (string)($obj['stroke'] ?? ''),
+            (string)($obj['strokeWidth'] ?? ''),
+        ])), 0, 10);
+    }
+
+    /** Liegt schon ein gleichartiges Schmuckelement an derselben Stelle? */
+    private static function matchesMergedDecor(array $obj, array $merged): bool
+    {
+        $key = self::decorKey($obj);
+        foreach ($merged as $m) {
+            if (self::readSetRole($m) !== '') {
+                continue;
+            }
+            if (($m['type'] ?? '') === 'text') {
+                continue;
+            }
+            if (self::decorKey($m) === $key) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function matchesMergedDecorKind(array $obj, array $merged): bool
+    {
+        $key = self::decorKindKey($obj);
+        foreach ($merged as $m) {
+            if (self::readSetRole($m) !== '' || ($m['type'] ?? '') === 'text') {
+                continue;
+            }
+            if (isset($m['layoutDecor']) && self::decorKindKey($m) === $key) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @param list<array> $layoutObjects */
@@ -1992,8 +2078,17 @@ class LayoutSet
                     }
                     $objects[] = self::mergePlaceholderObject($layoutObj, null);
                 } else {
+                    /* Denselben Text nicht zweimal auf dieselbe Folie setzen: Überschriften-
+                       Rollen greifen in contentTextFromRoleMap ersatzweise auf jede andere
+                       Überschrift zurück. In einer Vorlage mit Feldern für Ebene 2 UND 3
+                       (z. B. „Vergleich") stand die Überschrift dadurch doppelt da. */
+                    $normalizedText = self::normalizePlaceholderText($text);
+                    if (in_array($normalizedText, $placedTexts, true)) {
+                        $filledRoles[$role] = true;
+                        continue;
+                    }
                     $objects[] = self::mergePlaceholderObject($layoutObj, ['text' => $text, 'setRole' => $role]);
-                    $placedTexts[] = self::normalizePlaceholderText($text);
+                    $placedTexts[] = $normalizedText;
                 }
                 $filledRoles[$role] = true;
             } else {
@@ -2003,6 +2098,9 @@ class LayoutSet
                 if (($layoutObj['type'] ?? '') === 'text') {
                     continue;
                 }
+                // Auch hier eine eigene Kennung, siehe applyLayoutToSlide().
+                $layoutObj['layoutDecor'] = self::decorKey($layoutObj);
+                $layoutObj['id'] = Storage::generateId(4);
                 $objects[] = $layoutObj;
             }
         }

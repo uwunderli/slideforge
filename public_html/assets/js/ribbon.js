@@ -10,6 +10,8 @@
   const storagePrefix = rootId === 'presentRibbon' ? 'sf_present_ribbon_' : 'sf_ribbon_';
   const storageTab = storagePrefix + 'tab_' + userId;
   const storageCollapsed = storagePrefix + 'collapsed_' + userId;
+  const apiUrl = boot.apiUrl || (rootId === 'presentRibbon' ? 'present_ribbon.php' : 'ribbon.php');
+  let prefsSaveTimer = null;
 
   let tabs = [];
   let panels = [];
@@ -38,7 +40,57 @@
     return normalized;
   }
 
-  function setTab(name) {
+  function persistPrefsToServer(partial) {
+    const layout = global.SFRibbonRenderer?.getLayoutData?.();
+    if (layout?.prefs) {
+      Object.assign(layout.prefs, partial);
+    }
+    if (boot.layout?.prefs) {
+      Object.assign(boot.layout.prefs, partial);
+    }
+    clearTimeout(prefsSaveTimer);
+    prefsSaveTimer = setTimeout(() => {
+      const prefs = normalizePrefs(layout?.prefs || boot.layout?.prefs || partial);
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_prefs',
+          csrf_token: global.SF_BOOTSTRAP?.csrfToken,
+          prefs: {
+            activeTab: prefs.activeTab,
+            collapsed: prefs.collapsed,
+          },
+        }),
+      }).catch(() => {});
+    }, 280);
+  }
+
+  function migrateLocalRibbonPrefs(serverPrefs) {
+    let tab = serverPrefs?.activeTab || 'start';
+    let collapsed = !!serverPrefs?.collapsed;
+    try {
+      const localTab = localStorage.getItem(storageTab);
+      const localCollapsed = localStorage.getItem(storageCollapsed);
+      let migrated = false;
+      if (localTab) {
+        tab = localTab;
+        migrated = true;
+      }
+      if (localCollapsed !== null) {
+        collapsed = localCollapsed === '1';
+        migrated = true;
+      }
+      if (migrated) {
+        persistPrefsToServer({ activeTab: tab, collapsed });
+        localStorage.removeItem(storageTab);
+        localStorage.removeItem(storageCollapsed);
+      }
+    } catch (e) { /* ignore */ }
+    return { activeTab: tab, collapsed };
+  }
+
+  function setTab(name, opts) {
     refreshTabPanels();
     const valid = tabs.some((t) => t.dataset.ribbonTab === name);
     const tabName = valid ? name : tabs[0]?.dataset.ribbonTab || 'start';
@@ -51,12 +103,11 @@
       const active = panel.dataset.ribbonPanel === tabName;
       panel.hidden = !active;
     });
-    try {
-      localStorage.setItem(storageTab, tabName);
-    } catch (e) { /* ignore */ }
-
     const layout = global.SFRibbonRenderer?.getLayoutData?.();
     if (layout?.prefs) layout.prefs.activeTab = tabName;
+    if (!opts || opts.persist !== false) {
+      persistPrefsToServer({ activeTab: tabName });
+    }
   }
 
   function getActiveTab() {
@@ -76,11 +127,9 @@
     ribbon.classList.toggle('is-collapsed', !!collapsed);
     if (!collapsed) setPeek(false);
     if (!persist) return;
-    try {
-      localStorage.setItem(storageCollapsed, collapsed ? '1' : '0');
-    } catch (e) { /* ignore */ }
     const layout = global.SFRibbonRenderer?.getLayoutData?.();
     if (layout?.prefs) layout.prefs.collapsed = !!collapsed;
+    persistPrefsToServer({ collapsed: !!collapsed });
   }
 
   function isCollapsed() {
@@ -240,7 +289,7 @@
       });
       rebindTabs();
       const tab = prefs.activeTab || layout?.prefs?.activeTab;
-      if (tab) setTab(tab);
+      if (tab) setTab(tab, { persist: false });
     },
   };
 
@@ -320,8 +369,12 @@
   });
 
   ribbon.addEventListener('click', (e) => {
-    const btn = e.target.closest?.('#ribbonCustomizeBtn, #presentRibbonCustomizeBtn, [data-ribbon-command="ribbon_customize"]');
-    if (!btn || !ribbon.contains(btn)) return;
+    const btn = e.target.closest?.(
+      '#ribbonCustomizeBtn, #presentRibbonCustomizeBtn, #sfRibbonTabCustomize, [data-ribbon-command="ribbon_customize"]'
+    );
+    if (!btn) return;
+    /* Tab-Leisten-Button liegt in .editor-ribbon-tabs; Kachel kann noch in alten Layouts vorkommen. */
+    if (!ribbon.contains(btn) && btn.id !== 'ribbonCustomizeBtn' && btn.id !== 'presentRibbonCustomizeBtn') return;
     e.preventDefault();
     e.stopPropagation();
     openRibbonCustomize();
@@ -339,17 +392,11 @@
       });
     }
 
-    let savedTab = boot.layout?.prefs?.activeTab || 'start';
-    let savedCollapsed = !!boot.layout?.prefs?.collapsed;
-    try {
-      savedTab = localStorage.getItem(storageTab) || savedTab;
-      savedCollapsed = localStorage.getItem(storageCollapsed) === '1' || savedCollapsed;
-    } catch (e) { /* ignore */ }
-
+    const migrated = migrateLocalRibbonPrefs(boot.layout?.prefs || {});
     rebindTabs();
     applyAppearancePrefs(boot.layout?.prefs || {});
-    setTab(savedTab);
-    setCollapsed(savedCollapsed);
+    setTab(migrated.activeTab, { persist: false });
+    setCollapsed(migrated.collapsed, { persist: false });
   }
 
   if (document.readyState === 'loading') {

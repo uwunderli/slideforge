@@ -70,8 +70,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     touch: false
   });
 
-  // Ton gehört auf diese Beamer-/Zweitbildschirm-Ansicht.
+  // Ton auf dieser Beamer-Ansicht; Timed-Start nur via live-Befehl der Konsole.
   window.SF_MEDIA_AUDIBLE = true;
+  window.SF_MEDIA_FOLLOW_LIVE = true;
   window.SF_MEDIA_UNLOCK_HINT = <?= json_encode(t('present.media_audio_unlock'), JSON_UNESCAPED_UNICODE) ?>;
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
@@ -171,23 +172,11 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
           if (!data.ok || !data.live) return;
           var frag = typeof data.live.frag === 'number' ? data.live.frag : null;
           if (data.live.index !== lastIndex || frag !== lastFrag) {
-            var indexChanged = data.live.index !== lastIndex;
             lastIndex = data.live.index;
             lastFrag = frag;
             if (frag !== null) { Reveal.slide(data.live.index, 0, frag); }
             else { Reveal.slide(data.live.index, 0); }
-            // Nur bei Folienwechsel neu scharf schalten — Fragment-Polls würden
-            // Timed-Audio sonst nach jedem Sync erneut starten (falsche Schleife).
-            // mediaSlideBootJs macht dasselbe auf slidechanged; Guard in sfArmMediaTriggers.
-            if (indexChanged) {
-              try {
-                var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
-                if (slide && typeof sfArmMediaTriggers === 'function') {
-                  if (!window.__sfAudiencePlayTimers) window.__sfAudiencePlayTimers = [];
-                  sfArmMediaTriggers(slide, window.__sfAudiencePlayTimers);
-                }
-              } catch (err) { /* ignore */ }
-            }
+            // Kein lokales sfArmMediaTriggers — sonst Doppelstart mit live-Medienbefehl.
           }
           var media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {

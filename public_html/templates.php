@@ -394,7 +394,7 @@ require __DIR__ . '/includes/header.php';
             <button type="submit" form="deleteColorForm<?= (int)$i ?>" class="icon-btn-danger" title="<?= h(t('tpl.delete_color')) ?>">🗑</button>
           </div>
         <?php endforeach; ?>
-        <button type="submit" class="button button-sm" style="margin-top:10px;"><?= h(t('tpl.save_all')) ?></button>
+        <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:10px;"><?= h(t('tpl.save_all')) ?></button>
       </form>
       <?php foreach ($brandColors as $i => $c): ?>
         <form method="post" id="deleteColorForm<?= (int)$i ?>">
@@ -411,7 +411,7 @@ require __DIR__ . '/includes/header.php';
       <form method="post" style="margin-top:10px; display:inline-block;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="add_color">
-        <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.add_color')) ?></button>
+        <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.add_color')) ?></button>
       </form>
     <?php endif; ?>
 
@@ -437,7 +437,7 @@ require __DIR__ . '/includes/header.php';
         <p style="color:var(--text-muted);"><?= h(t('tpl.fonts_empty')) ?></p>
       <?php endif; ?>
     <?php else: ?>
-      <form method="post" enctype="multipart/form-data" class="font-upload-form">
+      <form method="post" enctype="multipart/form-data" class="font-upload-form" data-hub-page-busy="<?= h(t('tpl.font_upload_busy')) ?>">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="upload_font">
         <input type="hidden" name="tab" value="fonts">
@@ -457,7 +457,7 @@ require __DIR__ . '/includes/header.php';
           <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;"><?= h(t('tpl.font_file_hint')) ?></p>
           <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;"><?= h(t('tpl.font_multi_hint')) ?></p>
         </div>
-        <button type="submit" class="button button-sm" style="margin-top:12px;"><?= h(t('tpl.font_upload')) ?></button>
+        <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:12px;"><?= h(t('tpl.font_upload')) ?></button>
       </form>
 
       <div class="options-subtitle" style="margin-top:28px;"><?= h(t('tpl.fonts_custom_heading')) ?></div>
@@ -539,7 +539,7 @@ require __DIR__ . '/includes/header.php';
         </table>
       </div>
       <?php if ($isAdmin): ?>
-      <button type="submit" class="button button-sm" style="margin-top:14px;"><?= h(t('tpl.save')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('tpl.save')) ?></button>
       <?php endif; ?>
     </form>
 
@@ -631,10 +631,10 @@ require __DIR__ . '/includes/header.php';
         </div>
         <?php if ($isAdmin): ?>
         <div style="display:flex; gap:8px; margin-top:12px;">
-          <button type="submit" class="button button-sm"><?= h(t('tpl.save')) ?></button>
+          <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('tpl.save')) ?></button>
           <?php if (!$isFallbackTpl): ?>
-          <button type="submit" name="action" value="duplicate_text_template" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
-          <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm" data-sf-confirm="<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>" data-sf-confirm-danger><?= h(t('tpl.delete')) ?></button>
+          <button type="submit" name="action" value="duplicate_text_template" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
+          <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" data-sf-confirm="<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>" data-sf-confirm-danger><?= h(t('tpl.delete')) ?></button>
           <?php endif; ?>
         </div>
         <?php endif; ?>
@@ -647,7 +647,7 @@ require __DIR__ . '/includes/header.php';
       <form method="post" style="margin-top:10px;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="add_text_template">
-        <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.add_text')) ?></button>
+        <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.add_text')) ?></button>
       </form>
     <?php endif; ?>
 
@@ -662,16 +662,16 @@ require __DIR__ . '/includes/header.php';
         <label style="margin-top:0;"><?= h(t('tpl.name')) ?></label>
         <input type="text" name="title" placeholder="<?= h(t('tpl.layout_set_name_placeholder')) ?>">
       </div>
-      <button type="submit" class="button button-sm"><?= h(t('tpl.create_layout_set')) ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('tpl.create_layout_set')) ?></button>
     </form>
-    <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">
+    <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;" data-hub-page-busy="<?= h(t('tpl.layout_set_import_busy')) ?>">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="import_layout_set_archive">
       <div style="flex:1; min-width:240px;">
         <label style="margin-top:0;"><?= h(t('tpl.layout_set_import_label')) ?></label>
         <input type="file" name="layout_set_archive" required>
       </div>
-      <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_import_submit')) ?></button>
+      <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.layout_set_import_submit')) ?></button>
     </form>
     <?php if (empty($myLayoutSets) && empty($sharedLayoutSets)): ?>
       <div class="empty-state"><?= h(t('tpl.no_layout_sets')) ?></div>
@@ -682,29 +682,29 @@ require __DIR__ . '/includes/header.php';
           <li>
             <span><?= h($t['title']) ?> <span class="perm-tag <?= !empty($t['template_shared']) ? 'edit' : 'view' ?>"><?= !empty($t['template_shared']) ? h(t('tpl.shared_badge')) : h(t('tpl.private_badge')) ?></span></span>
             <div style="display:flex; gap:8px; align-items:center;">
-              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
-              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_export')) ?></a>
+              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.edit')) ?></a>
+              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.layout_set_export')) ?></a>
               <form method="post" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="toggle_slide_template_shared">
                 <input type="hidden" name="tab" value="slides">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
                 <input type="hidden" name="shared" value="<?= !empty($t['template_shared']) ? '' : '1' ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= !empty($t['template_shared']) ? h(t('tpl.make_private')) : h(t('tpl.share_all')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= !empty($t['template_shared']) ? h(t('tpl.make_private')) : h(t('tpl.share_all')) ?></button>
               </form>
               <form method="post" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="duplicate_layout_set">
                 <input type="hidden" name="tab" value="slides">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
               <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_layout_set_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete_layout_set">
                 <input type="hidden" name="tab" value="slides">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.delete')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.delete')) ?></button>
               </form>
             </div>
           </li>
@@ -718,14 +718,14 @@ require __DIR__ . '/includes/header.php';
           <li>
             <span><?= h($t['title']) ?></span>
             <div style="display:flex; gap:8px; align-items:center;">
-              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
-              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.layout_set_export')) ?></a>
+              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.edit')) ?></a>
+              <a href="templates.php?tab=slides&action=export_layout_set&id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.layout_set_export')) ?></a>
               <form method="post" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="duplicate_layout_set">
                 <input type="hidden" name="tab" value="slides">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
             </div>
           </li>
@@ -742,7 +742,7 @@ require __DIR__ . '/includes/header.php';
         <label style="margin-top:0;"><?= h(t('tpl.name')) ?></label>
         <input type="text" name="title" placeholder="<?= h(t('tpl.slide_name_placeholder')) ?>">
       </div>
-      <button type="submit" class="button button-sm"><?= t('tpl.create_and_edit') ?></button>
+      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= t('tpl.create_and_edit') ?></button>
     </form>
 
     <div class="section-header"><h2><?= h(t('tpl.my_slides_heading')) ?></h2></div>
@@ -754,29 +754,29 @@ require __DIR__ . '/includes/header.php';
           <li draggable="true" data-tpl-id="<?= h($t['id']) ?>">
             <span><span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span> <?= h($t['title']) ?> <span class="perm-tag <?= !empty($t['template_shared']) ? 'edit' : 'view' ?>"><?= !empty($t['template_shared']) ? h(t('tpl.shared_badge')) : h(t('tpl.private_badge')) ?></span></span>
             <div style="display:flex; gap:8px; align-items:center;">
-              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
+              <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.edit')) ?></a>
               <form method="post" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="toggle_slide_template_shared">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
                 <input type="hidden" name="shared" value="<?= !empty($t['template_shared']) ? '' : '1' ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= !empty($t['template_shared']) ? h(t('tpl.make_private')) : h(t('tpl.share_all')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= !empty($t['template_shared']) ? h(t('tpl.make_private')) : h(t('tpl.share_all')) ?></button>
               </form>
               <form method="post" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="duplicate_slide_template">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
               <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="delete_slide_template">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.delete')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.delete')) ?></button>
               </form>
               <?php if (!empty($myLayoutSets) || !empty($sharedLayoutSets)): ?>
               <details class="template-import-to-set" style="display:inline-block;">
-                <summary class="button button-ghost button-sm" style="cursor:pointer; list-style:none;"><?= h(t('tpl.to_layout_set')) ?></summary>
+                <summary class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" style="cursor:pointer; list-style:none;"><?= h(t('tpl.to_layout_set')) ?></summary>
                 <form method="post" style="position:absolute; z-index:5; margin-top:6px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; min-width:260px;">
                   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                   <input type="hidden" name="action" value="import_template_to_layout_set">
@@ -796,7 +796,7 @@ require __DIR__ . '/includes/header.php';
                     <input type="checkbox" name="delete_source" style="width:auto;">
                     <?= h(t('tpl.move_delete_source')) ?>
                   </label>
-                  <button type="submit" class="button button-sm" style="width:100%;"><?= h(t('tpl.import_to_set_submit')) ?></button>
+                  <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('tpl.import_to_set_submit')) ?></button>
                 </form>
               </details>
               <?php endif; ?>
@@ -819,15 +819,15 @@ require __DIR__ . '/includes/header.php';
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="duplicate_slide_template">
                 <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.duplicate')) ?></button>
+                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
               </form>
               <?php if ($isAdmin): ?>
-                <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm"><?= h(t('tpl.edit')) ?></a>
+                <a href="editor.php?id=<?= urlencode($t['id']) ?>" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.edit')) ?></a>
                 <form method="post" class="inline-form" data-sf-confirm="<?= h(t('tpl.delete_slide_confirm', ['name' => $t['title']])) ?>" data-sf-confirm-danger>
                   <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                   <input type="hidden" name="action" value="delete_slide_template">
                   <input type="hidden" name="id" value="<?= h($t['id']) ?>">
-                  <button type="submit" class="button button-ghost button-sm"><?= h(t('tpl.delete')) ?></button>
+                  <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.delete')) ?></button>
                 </form>
               <?php endif; ?>
             </div>

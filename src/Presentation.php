@@ -345,10 +345,17 @@ class Presentation
     }
 
     /** Ersetzt eine einzelne Folie (Hintergrund + Objekte) an gegebenem Index. */
-    public static function saveSlide(string $id, int $index, array $background, array $objects, ?string $transition = null, $autoAdvance = null, ?string $notes = null, ?string $layoutKey = null, ?string $label = null, ?string $layoutSetSlideId = null): array
+    /**
+     * $slideId (Folien-Id) ist massgeblich. Nur wenn sie fehlt, gilt $index —
+     * Rückfall für Browser mit altem, zwischengespeichertem JavaScript.
+     * Passt die Id zu keiner Folie, wird NICHTS geschrieben: lieber ein
+     * verlorener Speichervorgang als ein Schreiben auf die falsche Folie.
+     */
+    public static function saveSlide(string $id, int $index, array $background, array $objects, ?string $transition = null, $autoAdvance = null, ?string $notes = null, ?string $layoutKey = null, ?string $label = null, ?string $layoutSetSlideId = null, ?string $slideId = null): array
     {
-        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId) {
-            if (!isset($data['slides'][$index])) {
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($index, $slideId, $background, $objects, $transition, $autoAdvance, $notes, $layoutKey, $label, $layoutSetSlideId) {
+            $index = self::resolveSlideIndex($data, $slideId, $index);
+            if ($index === null || !isset($data['slides'][$index])) {
                 return $data;
             }
             $data['slides'][$index]['background'] = $background;
@@ -387,6 +394,21 @@ class Presentation
         }, ['slides' => []]);
         self::updateMeta($id, []);
         return $result;
+    }
+
+    /** Index der Folie mit dieser Id; null wenn die Id gesetzt ist, aber nicht vorkommt. */
+    private static function resolveSlideIndex(array $data, ?string $slideId, int $fallbackIndex): ?int
+    {
+        $slideId = trim((string)$slideId);
+        if ($slideId === '') {
+            return $fallbackIndex;
+        }
+        foreach ($data['slides'] as $i => $s) {
+            if ((string)($s['id'] ?? '') === $slideId) {
+                return (int)$i;
+            }
+        }
+        return null;
     }
 
     public static function saveSlideLabel(string $id, int $index, string $label): array
@@ -1658,6 +1680,42 @@ class Presentation
                 $slides[] = $newSlide;
             } else {
                 array_splice($slides, $afterIndex + 1, 0, [$newSlide]);
+            }
+            $data['slides'] = $slides;
+            return $data;
+        }, ['slides' => []]);
+        self::updateMeta($id, []);
+        if ($isLayoutSet) {
+            LayoutSet::syncLayoutMap($id);
+        }
+        return $data;
+    }
+
+    /**
+     * Fügt fertige Folien ein — für die Zwischenablage. Gleiches Vorgehen wie
+     * addSlide, nur mit mehreren und mit mitgebrachtem Inhalt.
+     *
+     * @param list<array> $newSlides
+     */
+    public static function insertSlides(string $id, array $newSlides, ?int $afterIndex = null): array
+    {
+        if ($newSlides === []) {
+            return Storage::read(self::dir($id) . '/slides.json', ['slides' => []]);
+        }
+        $isLayoutSet = LayoutSet::isLayoutSet($id);
+        $data = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($afterIndex, $newSlides, $id, $isLayoutSet) {
+            $slides = $data['slides'] ?? [];
+            foreach ($newSlides as $i => $slide) {
+                // Jede Folie braucht eine eigene Kennung, sonst zeigen zwei Folien dieselbe.
+                $slide['id'] = Storage::generateId(4);
+                if ($isLayoutSet) {
+                    $slide['layoutKey'] = LayoutSet::assignLayoutKeyForSlide($id, $slide);
+                }
+                if ($afterIndex === null || $afterIndex >= count($slides) - 1) {
+                    $slides[] = $slide;
+                } else {
+                    array_splice($slides, $afterIndex + 1 + $i, 0, [$slide]);
+                }
             }
             $data['slides'] = $slides;
             return $data;

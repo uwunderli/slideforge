@@ -84,7 +84,7 @@ require __DIR__ . '/includes/header.php';
         <label for="password2"><?= h(t('auth.password_repeat')) ?></label>
         <input type="password" id="password2" name="password2" required minlength="6">
 
-        <button type="submit" class="button"><?= h(t('auth.register_btn')) ?></button>
+        <button type="submit" class="button hub-btn hub-btn--primary"><?= h(t('auth.register_btn')) ?></button>
       </form>
       <?php else: ?>
       <p class="subtitle"><a href="resend_verification.php"><?= h(t('auth.resend_verification')) ?></a></p>
