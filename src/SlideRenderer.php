@@ -683,8 +683,13 @@ class SlideRenderer
         $innen = max(0.0, (float)($obj['cellPadding'] ?? 10));
         $zeilenhoehe = (float)($obj['lineHeight'] ?? 1.25);
         $kopfzeile = !empty($obj['headerRow']);
-        $kopfFarbe = (string)($obj['headerFill'] ?? 'transparent');
-        $streifen = (string)($obj['stripeFill'] ?? 'transparent');
+        $kopfSchrift = (string)($obj['headerColor'] ?? '');
+        $kopfFuellung = $kopfzeile
+            ? self::tabellenFuellung((string)($obj['headerFill'] ?? 'transparent'), $obj['headerFillOpacity'] ?? 1)
+            : null;
+        $streifenFuellung = !empty($obj['stripeRows'])
+            ? self::tabellenFuellung((string)($obj['stripeFill'] ?? 'transparent'), $obj['stripeOpacity'] ?? 0.15)
+            : null;
 
         $breiten = [];
         $rohBreiten = is_array($obj['colWidths'] ?? null) ? array_values($obj['colWidths']) : [];
@@ -727,21 +732,52 @@ class SlideRenderer
             $zeile = is_array($zeile) ? array_values($zeile) : [];
             $istKopf = $kopfzeile && $nr === 0;
             $zeilenStil = '';
-            if ($istKopf && $kopfFarbe !== '' && $kopfFarbe !== 'transparent') {
-                $zeilenStil = ' style="background:' . h($kopfFarbe) . ';"';
-            } elseif (!$istKopf && $streifen !== '' && $streifen !== 'transparent'
+            if ($istKopf && $kopfFuellung !== null) {
+                $zeilenStil = ' style="background:' . h($kopfFuellung) . ';"';
+            } elseif (!$istKopf && $streifenFuellung !== null
                 && ($nr - ($kopfzeile ? 1 : 0)) % 2 === 1) {
-                $zeilenStil = ' style="background:' . h($streifen) . ';"';
+                $zeilenStil = ' style="background:' . h($streifenFuellung) . ';"';
             }
             $html .= '<tr' . $zeilenStil . '>';
             for ($s = 0; $s < $spalten; $s++) {
                 $text = (string)($zeile[$s] ?? '');
-                $stil = $zellStil . ($istKopf ? ' font-weight:bold;' : '');
+                $stil = $zellStil;
+                if ($istKopf) {
+                    $stil .= ' font-weight:bold;';
+                    if ($kopfSchrift !== '' && $kopfSchrift !== 'transparent') {
+                        $stil .= ' color:' . h($kopfSchrift) . ';';
+                    }
+                }
                 $html .= '<td style="' . $stil . '">' . Markdown::render($text, false) . '</td>';
             }
             $html .= '</tr>';
         }
         return $html . '</table>';
+    }
+
+    /**
+     * Füllfarbe einer Tabellenzeile aus Farbe und Füllstärke — dieselbe Rechnung wie
+     * `tableFuellung()` im Editor, damit die Folie aussieht wie die Zeichenfläche.
+     * `null` heisst: keine Fläche.
+     */
+    private static function tabellenFuellung(string $hex, $anteil): ?string
+    {
+        $farbe = trim($hex);
+        if ($farbe === '' || $farbe === 'transparent') {
+            return null;
+        }
+        $a = max(0.0, min(1.0, (float)($anteil ?? 1)));
+        if ($a <= 0.0) {
+            return null;
+        }
+        if ($a >= 1.0) {
+            return $farbe;
+        }
+        if (preg_match('/^#?([0-9a-f]{6})$/i', $farbe, $m) !== 1) {
+            return $farbe;
+        }
+        $z = hexdec($m[1]);
+        return sprintf('rgba(%d,%d,%d,%s)', ($z >> 16) & 255, ($z >> 8) & 255, $z & 255, rtrim(rtrim(number_format($a, 3, '.', ''), '0'), '.'));
     }
 
     private static function renderShapeSvg(array $obj): string

@@ -3442,8 +3442,25 @@
   const TABLE_DEFAULTS = {
     fontFamily: 'Open Sans', fontSize: 44, color: '#ffffff', align: 'left',
     borderColor: '#ffffff', borderWidth: 2, cellPadding: 10, lineHeight: 1.25,
-    headerRow: true, headerFill: 'transparent', stripeFill: 'transparent',
+    headerRow: true, headerColor: '', headerFill: 'transparent', headerFillOpacity: 1,
+    stripeRows: false, stripeFill: 'transparent', stripeOpacity: 0.15,
   };
+
+  /**
+   * Füllfarbe einer Zeile aus Farbe und Füllstärke. Gibt `null` zurück, wenn nichts
+   * zu füllen ist — eine Konva-Form ohne `fill` zeichnet keine Fläche.
+   */
+  function tableFuellung(hex, anteil) {
+    const farbe = String(hex || '');
+    if (!farbe || farbe === 'transparent') return null;
+    const a = Math.max(0, Math.min(1, Number(anteil ?? 1)));
+    if (!(a > 0)) return null;
+    if (a >= 1) return farbe;
+    const m = /^#?([0-9a-f]{6})$/i.exec(farbe);
+    if (!m) return farbe;
+    const z = parseInt(m[1], 16);
+    return 'rgba(' + ((z >> 16) & 255) + ',' + ((z >> 8) & 255) + ',' + (z & 255) + ',' + a.toFixed(3) + ')';
+  }
 
   function normalizeTableRows(rows) {
     if (!Array.isArray(rows) || rows.length === 0) return [['', ''], ['', '']];
@@ -3490,8 +3507,13 @@
     const borderColor = tableAttr(group, 'borderColor');
     const borderWidth = Math.max(0, Number(tableAttr(group, 'borderWidth')) || 0);
     const headerRow = !!tableAttr(group, 'headerRow');
-    const headerFill = tableAttr(group, 'headerFill');
-    const stripeFill = tableAttr(group, 'stripeFill');
+    const headerColor = tableAttr(group, 'headerColor') || color;
+    const kopfFuellung = headerRow
+      ? tableFuellung(tableAttr(group, 'headerFill'), tableAttr(group, 'headerFillOpacity'))
+      : null;
+    const streifenFuellung = tableAttr(group, 'stripeRows')
+      ? tableFuellung(tableAttr(group, 'stripeFill'), tableAttr(group, 'stripeOpacity'))
+      : null;
 
     group.destroyChildren();
 
@@ -3509,7 +3531,7 @@
           fontFamily: fontFamily,
           fontStyle: (headerRow && r === 0) ? 'bold' : 'normal',
           lineHeight: lineHeight,
-          fill: color,
+          fill: (headerRow && r === 0) ? headerColor : color,
           align: align,
           listening: false,
         });
@@ -3522,13 +3544,14 @@
     let y = 0;
     rows.forEach((row, r) => {
       let x = 0;
+      /* Kopfzeile zuerst; sonst jede zweite Zeile unterhalb der Kopfzeile. */
       const fuellung = (headerRow && r === 0)
-        ? headerFill
-        : ((!headerRow || r > 0) && stripeFill && ((r - (headerRow ? 1 : 0)) % 2 === 1) ? stripeFill : 'transparent');
+        ? kopfFuellung
+        : ((streifenFuellung && (r - (headerRow ? 1 : 0)) % 2 === 1) ? streifenFuellung : null);
       row.forEach((cell, c) => {
         group.add(new Konva.Rect({
           x: x, y: y, width: colW[c], height: rowH[r],
-          fill: (fuellung && fuellung !== 'transparent') ? fuellung : undefined,
+          fill: fuellung || undefined,
           stroke: (borderWidth > 0 && borderColor && borderColor !== 'transparent') ? borderColor : undefined,
           strokeWidth: borderWidth,
           listening: false,
@@ -3566,6 +3589,60 @@
     });
     group.add(treffer);
     treffer.moveToBottom();
+
+    /* Spaltenbreite ziehen: über jeder Trennlinie liegt ein schmaler Griff. Gezogen
+       wird nur er; die Tabelle selbst wird erst beim Loslassen neu gezeichnet, denn
+       `destroyChildren()` würde den Griff mitten im Ziehen zerstören. */
+    let grenze = 0;
+    for (let i = 0; i < cols - 1; i++) {
+      grenze += colW[i];
+      const griff = new Konva.Rect({
+        name: 'sf-table-col',
+        x: grenze - 5,
+        y: 0,
+        width: 10,
+        height: gesamtH,
+        fill: 'rgba(0,0,0,0.001)',
+        draggable: true,
+        dragBoundFunc: function (pos) {
+          /* Nur waagrecht: die Höhe bleibt, wo sie beim Anfassen war. */
+          const y = this.getAttr('zieheY');
+          return { x: pos.x, y: (y === undefined || y === null) ? pos.y : y };
+        },
+      });
+      griff.setAttr('colIndex', i);
+      const zeigen = (farbe, zeiger) => {
+        griff.fill(farbe);
+        const buehne = SF.stage && SF.stage.container();
+        if (buehne) buehne.style.cursor = zeiger;
+        refreshCanvas();
+      };
+      griff.on('mouseenter', () => zeigen('rgba(255,255,255,0.28)', 'col-resize'));
+      griff.on('mouseleave', () => { if (!griff.isDragging()) zeigen('rgba(0,0,0,0.001)', ''); });
+      griff.on('dragstart', () => {
+        griff.setAttr('zieheY', griff.absolutePosition().y);
+        zeigen('rgba(255,255,255,0.55)', 'col-resize');
+      });
+      griff.on('dragend', () => {
+        const breiten = tableColPixels(group, cols);
+        const nr = griff.getAttr('colIndex');
+        const links = breiten.slice(0, nr).reduce((a, b) => a + b, 0);
+        const rechts = links + breiten[nr] + breiten[nr + 1];
+        const mindestens = 24;
+        const neu = Math.min(Math.max(griff.x() + 5, links + mindestens), rechts - mindestens);
+        breiten[nr] = neu - links;
+        breiten[nr + 1] = rechts - neu;
+        /* Pixel taugen als Anteile: `tableColPixels()` rechnet sie über ihre Summe
+           ohnehin wieder auf die Tabellenbreite um. */
+        group.setAttr('tableColWidths', breiten);
+        const buehne = SF.stage && SF.stage.container();
+        if (buehne) buehne.style.cursor = '';
+        drawTable(group);
+        refreshCanvas();
+        scheduleSave();
+      });
+      group.add(griff);
+    }
     return gesamtH;
   }
 
@@ -3714,8 +3791,7 @@
       group.setAttr('tableColWidths', Array.isArray(obj.colWidths) ? obj.colWidths.slice() : null);
       group.setAttr('tableW', obj.w || 800);
       group.setAttr('tableH', obj.h || 300);
-      ['fontFamily', 'fontSize', 'color', 'align', 'borderColor', 'borderWidth',
-        'cellPadding', 'lineHeight', 'headerRow', 'headerFill', 'stripeFill'].forEach((k) => {
+      Object.keys(TABLE_DEFAULTS).forEach((k) => {
         if (obj[k] !== undefined) group.setAttr(k, obj[k]);
       });
       drawTable(group);
@@ -6239,6 +6315,11 @@
     if (obj.type === 'table') {
       const zeilen = obj.rows.length;
       const spalten = obj.rows[0] ? obj.rows[0].length : 0;
+      const prozent = (v) => Math.round(Math.max(0, Math.min(1, Number(v ?? 1))) * 100);
+      /* Ein Farbfeld kann kein «durchsichtig» anzeigen: dann steht die erste
+         Markenfarbe drin, und die Füllstärke entscheidet, ob man sie sieht. */
+      const farbwert = (v) => (!v || v === 'transparent') ? defaultIconColor() : v;
+
       html += '<div class="props-video-note">' + escapeHtml((I.tableSizeHint || '{r} × {c}').replace('{r}', String(zeilen)).replace('{c}', String(spalten))) + '</div>';
       html += '<div style="display:flex; gap:6px; margin-top:8px;">'
         + tableBtn('tblRowAdd', I.tableRowAdd || '+ Zeile')
@@ -6248,14 +6329,36 @@
         + tableBtn('tblColAdd', I.tableColAdd || '+ Spalte')
         + tableBtn('tblColDel', I.tableColDel || '− Spalte')
         + '</div>';
-      html += '<label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="p_tblHeader" style="width:auto;" '
-        + (obj.headerRow ? 'checked' : '') + '> ' + escapeHtml(I.tableHeaderRow || 'Kopfzeile') + '</label>';
-      html += fieldNumber('p_tblFontSize', I.tableFontSize || 'Schriftgrösse', obj.fontSize || 44);
-      html += fieldColor('p_tblColor', I.tableTextColor || 'Textfarbe', obj.color || '#ffffff');
-      html += fieldColor('p_tblBorderColor', I.tableBorderColor || 'Rahmen', obj.borderColor || '#ffffff');
-      html += fieldNumber('p_tblBorderWidth', I.tableBorderWidth || 'Rahmenstärke', obj.borderWidth === undefined ? 2 : obj.borderWidth);
-      html += '<div class="props-video-note" style="margin-top:8px;">' + escapeHtml(I.tableEditHint || 'Doppelklick in eine Zelle zum Schreiben, Tab zur nächsten.') + '</div>';
-      return html;
+
+      html += tableHead(I.tableSectionText || 'Text');
+      html += fieldNumber('p_tblFontSize', escapeHtml(I.tableFontSize || 'Schriftgrösse'), obj.fontSize || 44);
+      html += tableColorField('p_tblColor', I.tableTextColor || 'Textfarbe', obj.color || '#ffffff');
+
+      html += tableHead(I.tableSectionHeader || 'Kopfzeile');
+      html += tableCheck('p_tblHeader', I.tableHeaderRow || 'Kopfzeile hervorheben', obj.headerRow);
+      if (obj.headerRow) {
+        html += tableColorField('p_tblHeaderColor', I.tableHeaderColor || 'Schriftfarbe', obj.headerColor || obj.color || '#ffffff');
+        html += tableColorField('p_tblHeaderFill', I.tableHeaderFill || 'Hintergrund', farbwert(obj.headerFill));
+        html += fieldRange('p_tblHeaderFillOpacity', escapeHtml(I.tableFillStrength || 'Füllstärke'),
+          (!obj.headerFill || obj.headerFill === 'transparent') ? 0 : prozent(obj.headerFillOpacity));
+      }
+
+      html += tableHead(I.tableSectionStripes || 'Zeilen abwechselnd');
+      html += tableCheck('p_tblStripe', I.tableStripeRows || 'Zeilen abwechselnd färben', obj.stripeRows);
+      if (obj.stripeRows) {
+        html += tableColorField('p_tblStripeFill', I.tableStripeColor || 'Farbe', farbwert(obj.stripeFill));
+        html += fieldRange('p_tblStripeOpacity', escapeHtml(I.tableFillStrength || 'Füllstärke'), prozent(obj.stripeOpacity));
+      }
+
+      html += tableHead(I.tableSectionBorder || 'Rahmen');
+      html += tableColorField('p_tblBorderColor', I.tableBorderColor || 'Rahmenfarbe', obj.borderColor || '#ffffff');
+      html += fieldNumber('p_tblBorderWidth', escapeHtml(I.tableBorderWidth || 'Rahmenstärke'), obj.borderWidth === undefined ? 2 : obj.borderWidth);
+
+      html += '<div class="props-video-note" style="margin-top:10px;">' + escapeHtml(I.tableEditHint || 'Doppelklick in eine Zelle zum Schreiben, Tab springt zur nächsten.')
+        + ' ' + escapeHtml(I.tableColDragHint || 'Die Linie zwischen zwei Spalten ziehen ändert die Spaltenbreite.') + '</div>';
+      /* Eine eigene Hülle: in der schmalen Seitenleiste stünden Beschriftungen sonst
+         mittig und die Felder halb so breit wie der Platz. */
+      return '<div class="props-table-fields">' + html + '</div>';
     }
 
     if (obj.type === 'video' || obj.type === 'audio') {
@@ -6652,6 +6755,19 @@
   }
   function fieldColor(id, label, value) {
     return '<div><label for="' + id + '">' + label + '</label><input type="color" id="' + id + '" value="' + value + '"></div>';
+  }
+  /** Häkchen-Zeile in den Tabellen-Eigenschaften. */
+  function tableCheck(id, label, checked) {
+    return '<label class="props-check-row"><input type="checkbox" id="' + id + '" style="width:auto;"'
+      + (checked ? ' checked' : '') + '> ' + escapeHtml(label) + '</label>';
+  }
+  /** Zwischenüberschrift in den Tabellen-Eigenschaften. */
+  function tableHead(label) {
+    return '<div class="options-subtitle">' + escapeHtml(label) + '</div>';
+  }
+  /** Farbfeld mit den Markenfarben darunter. */
+  function tableColorField(id, label, value) {
+    return fieldColor(id, escapeHtml(label), value) + miniPaletteHtml(id);
   }
   /** Kleiner Knopf für die Tabellen-Eigenschaften (Zeile/Spalte mehr oder weniger). */
   function tableBtn(id, label) {
@@ -7136,17 +7252,68 @@
         node.setAttr('tableRows', rows);
         tabelleNeu();
       });
+      /* Beim Schieben eines Reglers steht der Wert in der Beschriftung — die wird
+         hier nachgeführt, statt die ganze Leiste neu zu zeichnen (das schlösse ein
+         offenes Farbfenster). */
+      function reglerBeschriftung(id, text, wert) {
+        const l = document.querySelector('label[for="' + id + '"]');
+        if (l) l.textContent = text + ' (' + wert + '%)';
+      }
+      function tabelleZeichnen() {
+        drawTable(node); refreshCanvas(); scheduleSave();
+      }
       on('p_tblHeader', 'change', (e) => {
         node.setAttr('headerRow', !!e.target.checked);
         tabelleNeu();
       });
+      on('p_tblStripe', 'change', (e) => {
+        const an = !!e.target.checked;
+        node.setAttr('stripeRows', an);
+        if (an) {
+          /* Eingeschaltet soll man sofort etwas sehen. */
+          const farbe = node.getAttr('stripeFill');
+          if (!farbe || farbe === 'transparent') node.setAttr('stripeFill', defaultIconColor());
+          if (!(Number(node.getAttr('stripeOpacity')) > 0)) node.setAttr('stripeOpacity', 0.15);
+        }
+        tabelleNeu();
+      });
       on('p_tblFontSize', 'input', (e) => {
         node.setAttr('fontSize', Math.max(6, parseInt(e.target.value, 10) || 44));
-        drawTable(node); refreshCanvas(); scheduleSave();
+        tabelleZeichnen();
       });
       on('p_tblColor', 'input', (e) => {
         node.setAttr('color', e.target.value);
-        drawTable(node); refreshCanvas(); scheduleSave();
+        tabelleZeichnen();
+      });
+      on('p_tblHeaderColor', 'input', (e) => {
+        node.setAttr('headerColor', e.target.value);
+        tabelleZeichnen();
+      });
+      on('p_tblHeaderFill', 'input', (e) => {
+        node.setAttr('headerFill', e.target.value);
+        if (!(Number(node.getAttr('headerFillOpacity')) > 0)) node.setAttr('headerFillOpacity', 1);
+        const regler = document.getElementById('p_tblHeaderFillOpacity');
+        if (regler) {
+          regler.value = String(Math.round(Math.max(0, Math.min(1, Number(node.getAttr('headerFillOpacity') ?? 1))) * 100));
+          reglerBeschriftung('p_tblHeaderFillOpacity', I.tableFillStrength || 'Füllstärke', regler.value);
+        }
+        tabelleZeichnen();
+      });
+      on('p_tblHeaderFillOpacity', 'input', (e) => {
+        const wert = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+        node.setAttr('headerFillOpacity', wert / 100);
+        reglerBeschriftung('p_tblHeaderFillOpacity', I.tableFillStrength || 'Füllstärke', wert);
+        tabelleZeichnen();
+      });
+      on('p_tblStripeFill', 'input', (e) => {
+        node.setAttr('stripeFill', e.target.value);
+        tabelleZeichnen();
+      });
+      on('p_tblStripeOpacity', 'input', (e) => {
+        const wert = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+        node.setAttr('stripeOpacity', wert / 100);
+        reglerBeschriftung('p_tblStripeOpacity', I.tableFillStrength || 'Füllstärke', wert);
+        tabelleZeichnen();
       });
       on('p_tblBorderColor', 'input', (e) => {
         node.setAttr('borderColor', e.target.value);

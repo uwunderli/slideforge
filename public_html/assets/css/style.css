@@ -8342,6 +8342,54 @@ body.notes-resizing {
   color: var(--text-muted);
   margin: 12px 0 6px;
 }
+
+/* Tabellen-Eigenschaften (Urs, 24.10.2026: «das ist noch nicht schön»): eine
+   Spalte, Beschriftung links, Felder über die ganze Breite. In der schmalen
+   Seitenleiste stehen sie sonst mittig und sind halb so breit wie der Platz. */
+.props-table-fields {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.props-table-fields > div {
+  width: 100%;
+}
+.props-table-fields label {
+  display: block;
+  text-align: left;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0 0 3px;
+}
+.props-table-fields input[type=number],
+.props-table-fields input[type=color],
+.props-table-fields input[type=range] {
+  width: 100%;
+}
+.props-table-fields input[type=color] {
+  height: 30px;
+  padding: 2px;
+}
+.props-table-fields .options-subtitle {
+  margin: 14px 0 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+.props-table-fields .props-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 8px;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.props-table-fields .props-check-row input {
+  width: auto;
+  margin: 0;
+}
+.props-table-fields .brand-palette.mini {
+  margin: 6px 0 10px;
+}
 .brand-palette {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

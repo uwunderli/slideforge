@@ -128,3 +128,66 @@ Sicherung `/data/slideforge/.sicherung/tabelle-trefferflaeche-20261024/`.
 hat nie etwas gemessen — `node --check` prüft nur die Syntax, nicht ob eine Konva-Methode existiert.
 In dieser Umgebung gibt es keinen Browser, also bleibt dieser Teil **ungeprüft, bis ein Mensch
 klickt**. Das gehört so in die Lieferung geschrieben, statt «geprüft» zu melden.
+
+## Nachtrag 2: Farben, Kopfzeile, Streifen, Spaltenbreite (Urs, 24.10. abends)
+
+Urs, mit einem Bild der Eigenschaftsleiste: «das ist noch nicht schön. Dann mach bei den Farben
+noch ein Auswahlfeld mit den Marken Farben. Dann muss man noch die Kopfzeile besser formatieren
+können. Schriftfarbe und hintergrund. Dann die Tabellen gebündelt (abwechselnde Farben pro Zeile)
+und deren Farbe und Füllstärke.» · «dann muss man die Spaltenbreite noch mit dnd verschieben
+können.»
+
+### Die Eigenschaftsleiste
+
+Vier Abschnitte statt einer Liste: **Text** (Schriftgrösse, Textfarbe) · **Kopfzeile**
+(hervorheben, Schriftfarbe, Hintergrund, Füllstärke) · **Zeilen abwechselnd** (Häkchen, Farbe,
+Füllstärke) · **Rahmen** (Farbe, Stärke). **Unter jedem Farbfeld stehen die Markenfarben**
+(`miniPaletteHtml`, dieselbe Reihe wie bei Symbolfarbe und Textmarker).
+
+Dazu eine eigene Hülle `props-table-fields` mit ein paar Zeilen Stilblatt: Beschriftung links,
+Felder über die ganze Breite. In der schmalen Seitenleiste standen sie vorher mittig und halb so
+breit wie der Platz — das war das «nicht schön».
+
+Die Farbfelder für **Hintergrund** und **Streifen** zeigen die erste Markenfarbe, wenn noch nichts
+gesetzt ist; ob man sie sieht, entscheidet die **Füllstärke**. 0 % heisst: keine Fläche. So braucht
+es kein zweites Häkchen für «kein Hintergrund», und ein Farbfeld muss nie «durchsichtig» anzeigen,
+was es gar nicht kann.
+
+### Spaltenbreite ziehen
+
+Über jeder Trennlinie liegt ein 10 px schmaler Griff (`sf-table-col`). Beim Überfahren wird er hell
+und der Zeiger wird zu `col-resize`; gezogen wird **nur der Griff**, die Tabelle wird erst beim
+Loslassen neu gezeichnet — `destroyChildren()` würde den Griff sonst mitten im Ziehen zerstören.
+Beim Loslassen wandert die Linie innerhalb der beiden Nachbarspalten, jede behält mindestens
+24 px, und die neuen Breiten werden als Anteile abgelegt (Pixel taugen dafür: `tableColPixels()`
+rechnet sie über ihre Summe ohnehin wieder auf die Tabellenbreite um).
+
+### Gespeichert wird
+
+`headerColor`, `headerFill`, `headerFillOpacity`, `stripeRows`, `stripeFill`, `stripeOpacity` —
+alle in `TABLE_DEFAULTS`, und `createNode()` übernimmt jetzt **alle** Vorgabe-Schlüssel statt einer
+von Hand gepflegten Liste (die wäre beim nächsten neuen Feld wieder auseinandergelaufen).
+`src/SlideRenderer.php` rechnet dieselbe Füllfarbe (`tabellenFuellung()` ↔ `tableFuellung()`),
+damit die Folie aussieht wie die Zeichenfläche.
+
+### Gemessen
+
+| Fall (Renderweg) | Ergebnis |
+|---|---|
+| wie bisher, nur fett | keine Zeile gefüllt |
+| Kopfschrift + Hintergrund halb | `rgba(135,180,43,0.5)`, Kopfzelle `color:#1b1b1b` |
+| Hintergrund voll | `#87b42b` |
+| Streifen 15 % | dritte Zeile `rgba(58,108,141,0.15)` |
+| **Streifen aus trotz Farbe** | keine Fläche (Gegenprobe) |
+| **Füllstärke 0** | keine Fläche (Gegenprobe) |
+
+Dazu 18 Fälle gegen die echten JS-Funktionen aus `editor.js` (Füllfarbe, Spaltenbreiten, Rechnen
+beim Loslassen): Anteile 1:2:1 → 300/600/300, gespeicherte Pixel ergeben dieselben Breiten,
+Anschlag links und rechts hält 24 px, die Summe bleibt die Tabellenbreite.
+
+`ASSET_VERSION` 683 → **684**. Zehn Dateien ausgeliefert, Sicherung
+`/data/slideforge/.sicherung/tabelle-farben-spalten-20261024/`.
+
+**Ungeprüft (Muster 7):** wie die Leiste aussieht, ob sich die Trennlinie gut greifen lässt, ob der
+Zeiger wechselt. Das Ziehen ist auf eine **ungedrehte** Tabelle ausgelegt; bei gedrehter Tabelle
+kann die Linie springen.
