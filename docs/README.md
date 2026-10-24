@@ -11,6 +11,7 @@
 | [LOGOS_IMPORTER.md](LOGOS_IMPORTER.md) | Briefing: Logos Importer neu — **pausiert** (AENDERUNGEN B #7) |
 | [UI.md](UI.md) | **UI/Design:** nur Hub `docs/DESIGN.md` + Lab — keine Modul-Kopie |
 | [RIBBON_MENU.md](RIBBON_MENU.md) | Editor- + Present-Ribbon (Anpassen beider) |
+| [EDITOR_OBJEKTE.md](EDITOR_OBJEKTE.md) | Objekte auf der Zeichenfläche: Konva-Regeln (Form ≠ Gruppe), Trefferflächen, neuer Objekttyp |
 | [DASHBOARD_PERSONALIZE.md](DASHBOARD_PERSONALIZE.md) | Dashboard Phase 1 ✔️ · Phase 2 geplant (B #14b) |
 | [BACKLOG.md](BACKLOG.md) | Ideen ohne Release-Zuordnung |
 | `AGENT_TASK_YYYY-MM-DD.md` | Tagesauftrag Agent/Owner (danach Archiv) |
