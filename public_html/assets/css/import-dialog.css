@@ -210,16 +210,20 @@
 }
 
 /* Bibelstellen zusammenlegen (Urs, 24.10.2026): grün = könnte mit der nächsten
-   zusammen, violett = ist zusammengelegt. Der Rahmen sitzt am Bild, damit er neben
-   der Auswahl-Umrandung bestehen kann und sie nicht verdeckt. */
-.import-preview-grid-item.is-mergeable .import-preview-grid-thumb {
-  box-shadow: 0 0 0 2px #4caf50;
-  border-radius: 4px;
+   zusammen, violett = ist zusammengelegt. Der Rahmen geht um die **ganze** Kachel
+   («besser ersichtlich», Urs) und ist 3 px stark: 2 px Rahmen (box-sizing ist
+   border-box, darum verrutscht nichts) und 1 px Schlagschatten darum. Die Auswahl
+   benutzt `outline` mit 2 px Abstand und bleibt daneben sichtbar. */
+.import-preview-grid-item.is-mergeable {
+  border-color: #4caf50;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px #4caf50;
 }
 
-.import-preview-grid-item.is-merged .import-preview-grid-thumb {
-  box-shadow: 0 0 0 2px #9c6ade;
-  border-radius: 4px;
+.import-preview-grid-item.is-merged {
+  border-color: #9c6ade;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px #9c6ade;
 }
 
 .import-tile-merge {

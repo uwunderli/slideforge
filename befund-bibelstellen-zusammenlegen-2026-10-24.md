@@ -105,3 +105,34 @@ Vorschau wirken. Das ist Urs' Blick.
 > **Rückbau-Satz:** Die zehn Dateien aus `/data/slideforge/.sicherung/bibel-zusammenlegen-20261024/`
 > zurückkopieren. Schon angelegte Präsentationen bleiben, wie sie sind — die Entscheidung
 > wirkt nur beim Import, nicht in gespeicherten Folien.
+
+## Nachbesserung am gleichen Tag (Urs)
+
+Urs, nachdem er es gesehen hat: «mach den Ramen um die ganze Folie, besser ersichtlich. Dann mach
+zwischen den Bibelversen eine Zeile abstand…»
+
+- **Rahmen:** sitzt jetzt um die **ganze Kachel** statt nur ums Vorschaubild und ist 3 px stark —
+  2 px `border` plus 1 px Schatten. `box-sizing` ist `border-box`, darum verrutscht die Kachel
+  nicht; die Auswahl zeichnet eine `outline` mit 2 px Abstand und bleibt daneben sichtbar.
+- **Abstand:** zwischen den beiden Stellen steht eine sichtbare Leerzeile. Das ist **gemessen**
+  entstanden, nicht geraten: `Markdown::render()` verschluckt eine leere Zeile ebenso wie eine
+  Zeile mit Leerzeichen, und `&nbsp;` wird als Text ausgegeben. Nur ein echtes geschütztes
+  Leerzeichen (U+00A0) bleibt stehen. So sieht die zusammengelegte Folie aus (5 Zeilen, eine leer):
+
+```
+**2. Chronik 33,11–13**
+Darum liess der Herr über sie kommen …
+ 
+**2. Chronik 33,15–17**
+Er entfernte die fremden Götter …
+```
+
+Die fünf Fälle von vorher noch einmal gemessen: unverändert 28 / 27 / 27 / 28 Folien, grün und
+violett an der richtigen Stelle. `ASSET_VERSION` 681 → **682**. Ausgeliefert
+(`src/LogosSermonImporter.php`, `public_html/assets/css/import-dialog.css`, `config.php`),
+Sicherung `/data/slideforge/.sicherung/bibel-rahmen-abstand-20261024/`, Takt-Probe grün
+(`sw.php` meldet `slideforge-682`).
+
+**Behelf, offen:** Die Abstandszeile ist ein geschütztes Leerzeichen. Sauberer wäre ein Abstand im
+Stilblatt der Folie — das kann die Folien-Darstellung heute nicht, und dafür bräuchte es einen
+eigenen Auftrag.

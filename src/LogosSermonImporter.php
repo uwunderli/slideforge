@@ -989,7 +989,12 @@ class LogosSermonImporter
                 if ($teile === []) {
                     return;
                 }
-                $zusammen = implode("\n\n", $teile);
+                /* Eine **sichtbare** Leerzeile zwischen den beiden Stellen (Urs,
+                   24.10.: «mach zwischen den Bibelversen eine Zeile abstand»).
+                   Eine leere Zeile allein genügt nicht: `Markdown::render()`
+                   verschluckt sie, auch eine Zeile mit Leerzeichen. Ein geschütztes
+                   Leerzeichen (U+00A0) bleibt stehen und ergibt die Zeile Abstand. */
+                $zusammen = implode("\n\u{00A0}\n", $teile);
                 $openSlideWithRoles(
                     $layoutKey,
                     [($hasRefRole ? 'scripture_verse' : 'scripture_block') => $zusammen]
