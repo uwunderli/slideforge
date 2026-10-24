@@ -244,6 +244,10 @@ require __DIR__ . '/includes/header.php';
           </select>
         </div>
         <label class="import-opt-check">
+          <input type="checkbox" id="import_opt_scriptureMerge" data-import-opt="scriptureMerge"<?= !empty($importUi['scriptureMerge']) ? ' checked' : '' ?>>
+          <span><?= h(t('import.scripture_merge')) ?></span>
+        </label>
+        <label class="import-opt-check">
           <input type="checkbox" id="import_opt_hierarchyNotes" data-import-opt="hierarchyNotes"<?= !empty($importUi['hierarchyNotes']) ? ' checked' : '' ?>>
           <span><?= h(t('import.hierarchy_notes')) ?></span>
         </label>
@@ -425,6 +429,8 @@ require __DIR__ . '/includes/header.php';
     tileOff: <?= json_encode(t('import.tile_off')) ?>,
     tileOn: <?= json_encode(t('import.tile_on')) ?>,
     tileNotes: <?= json_encode(t('import.tile_notes')) ?>,
+    tileMerge: <?= json_encode(t('import.tile_merge')) ?>,
+    tileSplit: <?= json_encode(t('import.tile_split')) ?>,
     detailHeading: <?= json_encode(t('import.detail_heading')) ?>,
     detailNotesNone: <?= json_encode(t('import.detail_notes_none')) ?>,
     detailHint: <?= json_encode(t('import.detail_hint')) ?>,
@@ -444,6 +450,9 @@ require __DIR__ . '/includes/header.php';
   var sectionTitles = {};
   // Abschnitte mit Gliederungsübersicht, nach ursprünglichem Titel.
   var agendaSections = {};
+  /* Von Hand zusammengelegte bzw. wieder getrennte Bibelstellen (Urs, 24.10.). */
+  var mergeScripture = {};
+  var splitScripture = {};
   var selectedKey = '';
   var lastPlan = null;
 
@@ -553,8 +562,14 @@ require __DIR__ . '/includes/header.php';
     var off = !!skipSlides[key];
     var notes = slide.notes || [];
     var active = activeNoteCount(slide);
+    /* Bibelstellen: gruener Rahmen = passt mit der naechsten zusammen,
+       violetter Rahmen = ist zusammengelegt (Urs, 24.10.). */
+    var mk = slide.mergeKey || '';
+    var istZusammen = !!slide.merged || (mk && !!mergeScripture[mk]);
+    var kannZusammen = !istZusammen && !!slide.canMergeNext;
     var cls = 'import-preview-grid-item'
       + (off ? ' is-off' : '')
+      + (istZusammen ? ' is-merged' : (kannZusammen ? ' is-mergeable' : ''))
       + (key && key === selectedKey ? ' is-selected' : '');
     return '<div class="' + cls + '" data-slide-key="' + esc(key) + '" data-slide-num="' + num + '">'
       + '<div class="import-preview-grid-thumb" data-act="select">' + slideThumbSvg(slide, w, h) + '</div>'
@@ -566,6 +581,14 @@ require __DIR__ . '/includes/header.php';
             + '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">'
             + '<path fill="currentColor" d="M3 2h8l2 2v10H3V2zm1.5 3.5h7V7h-7V5.5zm0 3h7V10h-7V8.5zm0 3h4.5V13H4.5v-1.5z"/>'
             + '</svg><span>' + active + '</span></button>'
+          : '')
+      + ((istZusammen || kannZusammen) && mk
+          ? '<button type="button" class="import-tile-merge" data-act="merge" data-merge-key="' + esc(mk) + '"'
+            + ' title="' + esc(istZusammen ? i18n.tileSplit : i18n.tileMerge) + '">'
+            + (istZusammen
+                ? '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 3h12v3H2V3zm0 7h12v3H2v-3z"/><path fill="currentColor" d="M7.25 6.5h1.5v3h-1.5z" opacity=".45"/></svg>'
+                : '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 3h12v4H2V3z"/><path fill="currentColor" d="M2 9h12v4H2V9z" opacity=".45"/><path fill="currentColor" d="M7.25 7h1.5v2h-1.5z"/></svg>')
+            + '</button>'
           : '')
       + '<button type="button" class="import-tile-toggle" data-act="toggle"'
       + ' title="' + esc(off ? i18n.tileOn : i18n.tileOff) + '">' + (off ? '+' : '×') + '</button>'
@@ -769,6 +792,18 @@ require __DIR__ . '/includes/header.php';
       var act = ev.target.closest('[data-act]');
       var key = item.getAttribute('data-slide-key');
       if (!key) return;
+      if (act && act.getAttribute('data-act') === 'merge') {
+        var mk = act.getAttribute('data-merge-key') || '';
+        if (mk) {
+          /* Zusammenfassen und Trennen sind zwei Listen: die eine waehlt von
+             Hand aus, die andere hebt die Automatik fuer genau diese Stelle auf. */
+          if (mergeScripture[mk]) { delete mergeScripture[mk]; splitScripture[mk] = true; }
+          else if (splitScripture[mk]) { delete splitScripture[mk]; }
+          else { mergeScripture[mk] = true; delete splitScripture[mk]; }
+          schedulePreviewRefresh();
+        }
+        return;
+      }
       if (act && act.getAttribute('data-act') === 'toggle') {
         skipSlides[key] = !skipSlides[key];
         redrawTiles();
@@ -850,6 +885,8 @@ require __DIR__ . '/includes/header.php';
     setHiddenOpt('ownNotes', JSON.stringify(ownNotes));
     setHiddenOpt('sectionTitles', JSON.stringify(sectionTitles));
     setHiddenOpt('agendaSections', JSON.stringify(keyList(agendaSections)));
+    setHiddenOpt('mergeScripture', JSON.stringify(keyList(mergeScripture)));
+    setHiddenOpt('splitScripture', JSON.stringify(keyList(splitScripture)));
   }
 
   function setHiddenOpt(key, value) {

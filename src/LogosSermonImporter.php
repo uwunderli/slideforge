@@ -64,6 +64,8 @@ class LogosSermonImporter
         $height = max(100, (int)($setMeta['height'] ?? DEFAULT_SLIDE_HEIGHT));
         $built = self::buildSlidesFromLayoutSet($blocks, $layoutSetId, self::normalizeOptions($options));
         $opt = self::normalizeOptions($options);
+        /* Vor `applyHierarchyNotes` ablesen — die räumt das interne Feld weg. */
+        $mergeInfo = self::scriptureMergeInfo($built['slides'], $layoutSetId, $setMeta);
         $built['slides'] = self::applyHierarchyNotes($built['slides'], (bool)$opt['hierarchyNotes'], (string)$opt['hierarchyStyle']);
         $built['slides'] = self::annotateNextScripture($built['slides']);
         $sections = $built['sections'] ?? [];
@@ -72,13 +74,23 @@ class LogosSermonImporter
             $sections
         ));
 
+        $vorschau = self::summarizeSlidesForPreview($built['slides']);
+        foreach ($mergeInfo as $i => $info) {
+            if (isset($vorschau[$i])) {
+                /* Bewusst ueberschreibend zusammenfuehren: `+=` wuerde vorhandene
+                   Schluessel stehen lassen. Der Folienschluessel (`key`) und der
+                   Zusammenlege-Schluessel (`mergeKey`) sind verschiedene Dinge. */
+                $vorschau[$i] = array_merge($vorschau[$i], $info);
+            }
+        }
+
         return [
             'title' => $title,
             'slide_count' => count($built['slides']),
             'width' => $width,
             'height' => $height,
             'preamble_slide_count' => max(0, count($built['slides']) - $sectionSlideCount),
-            'slides' => self::summarizeSlidesForPreview($built['slides']),
+            'slides' => $vorschau,
             'sections' => $sections,
             'warnings' => $built['warnings'] ?? [],
             'footer_text' => $built['footer_text'] ?? '',
@@ -261,6 +273,51 @@ class LogosSermonImporter
     /** @param list<array> $slides
      * @return list<array{layoutKey: string, label: string, preview: string, thumbHtml: string}>
      */
+    /**
+     * Was die Vorschau über das Zusammenlegen von Bibelstellen wissen muss.
+     *
+     * Je Folie: die Kennung der Stelle, ob sie bereits zusammengelegt ist (violetter
+     * Rahmen, Knopf «Trennen») und ob sie mit der nächsten zusammenpasst (grüner
+     * Rahmen, Knopf «Zusammenfassen»).
+     *
+     * Eine Stelle, die selbst schon auf mehrere Folien aufgeteilt werden musste, kommt
+     * nicht in Frage: ihre Folgefolien tragen keine Kennung, der Nachbar passt also nie.
+     *
+     * @param list<array<string,mixed>> $slides
+     * @return array<int, array{mergeKey:string, merged:bool, canMergeNext:bool}>
+     */
+    private static function scriptureMergeInfo(array $slides, string $setId, array $setMeta): array
+    {
+        $kap = LayoutSet::roleTextCapacity($setId, 'scripture_verse', $setMeta)
+            ?? LayoutSet::roleTextCapacity($setId, 'scripture_block', $setMeta);
+        $out = [];
+        $anzahl = count($slides);
+        for ($i = 0; $i < $anzahl; $i++) {
+            $eigen = $slides[$i]['_scripture'] ?? null;
+            if (!is_array($eigen) || ($eigen['key'] ?? '') === '') {
+                continue;
+            }
+            $merged = !empty($eigen['merged']);
+            $passt = false;
+            if (!$merged && $kap !== null && isset($slides[$i + 1]['_scripture'])) {
+                $naechste = $slides[$i + 1]['_scripture'];
+                if (is_array($naechste) && empty($naechste['merged'])) {
+                    $zeilen = self::geschaetzteZeilen([
+                        (string)($eigen['ref'] ?? ''), (string)($eigen['verse'] ?? ''),
+                        (string)($naechste['ref'] ?? ''), (string)($naechste['verse'] ?? ''),
+                    ], (int)$kap['charsPerLine']);
+                    $passt = $zeilen <= (int)$kap['lines'];
+                }
+            }
+            $out[$i] = [
+                'mergeKey' => (string)$eigen['key'],
+                'merged' => $merged,
+                'canMergeNext' => $passt,
+            ];
+        }
+        return $out;
+    }
+
     private static function summarizeSlidesForPreview(array $slides): array
     {
         $out = [];
@@ -315,6 +372,8 @@ class LogosSermonImporter
         foreach ($slides as $i => $slide) {
             $pfad = is_array($slide['_path'] ?? null) ? $slide['_path'] : [];
             unset($slide['_path']);
+            // Auch die Kennung der Bibelstelle ist nur für die Vorschau da.
+            unset($slide['_scripture']);
             if ($an && $pfad !== []) {
                 $teile = [];
                 foreach (array_values($pfad) as $ebene => $titel) {
@@ -824,13 +883,67 @@ class LogosSermonImporter
             ];
         };
 
+        $autoMerge = !empty($options['scriptureMerge']);
+        $mergeListe = is_array($options['mergeScripture'] ?? null) ? $options['mergeScripture'] : [];
+        $splitListe = is_array($options['splitScripture'] ?? null) ? $options['splitScripture'] : [];
+
+        /** Stabile Kennung einer Bibelstelle — unabhängig davon, wie sie später auf
+         *  Folien verteilt wird. Darüber merkt sich der Dialog die von Hand gewählten
+         *  Zusammenlegungen. */
+        $scriptureKey = static fn(string $ref, string $verse): string
+            => substr(sha1(trim($ref) . "\x1f" . trim($verse)), 0, 16);
+
+        /** Passen zwei Stellen zusammen auf eine Folie? Gemessen am Platz des Feldes. */
+        $scripturePasst = function (array $a, array $b) use ($setId, $setMeta): bool {
+            $kap = LayoutSet::roleTextCapacity($setId, 'scripture_verse', $setMeta)
+                ?? LayoutSet::roleTextCapacity($setId, 'scripture_block', $setMeta);
+            if ($kap === null) {
+                return false;   // ohne Mass wird nicht geraten
+            }
+            $zeilen = self::geschaetzteZeilen(
+                [$a['refText'], $a['verseText'], $b['refText'], $b['verseText']],
+                (int)$kap['charsPerLine']
+            );
+            return $zeilen <= (int)$kap['lines'];
+        };
+
+        /**
+         * Kommt die nächste Bibelstelle mit auf diese Folie? Von Hand gewählt gilt
+         * immer; sonst nur, wenn die Automatik an ist **und** der gemessene Platz
+         * reicht. Eine von Hand getrennte Stelle bleibt getrennt.
+         *
+         * @param list<array<string,mixed>> $bloecke
+         * @return array<string,mixed>|null
+         */
+        $scriptureZweit = function (array $bloecke, int $nachher, array $run) use (
+            $scriptureKey, $scripturePasst, $parseScriptureRun, $autoMerge, $mergeListe, $splitListe
+        ): ?array {
+            if ($nachher >= count($bloecke) || ($bloecke[$nachher]['type'] ?? '') !== 'scripture_block') {
+                return null;
+            }
+            $key = $scriptureKey($run['refText'], $run['verseText']);
+            if (in_array($key, $splitListe, true)) {
+                return null;
+            }
+            $zweit = $parseScriptureRun($bloecke, $nachher);
+            if (trim((string)$zweit['refText']) === '' && trim((string)$zweit['verseText']) === '') {
+                return null;
+            }
+            if (in_array($key, $mergeListe, true)) {
+                return $zweit;
+            }
+            return ($autoMerge && $scripturePasst($run, $zweit)) ? $zweit : null;
+        };
+
         $emitScripture = function (
             string $refText,
             string $verseText,
             ?string $headingRole = null,
-            ?string $headingText = null
+            ?string $headingText = null,
+            ?array $zweite = null
         ) use (
-            $setId, $setMeta, $zoneFor, $settings, $openSlideWithRoles, $addFooter, $addNote, &$current
+            $setId, $setMeta, $zoneFor, $settings, $openSlideWithRoles, $addFooter, $addNote,
+            &$current, $scriptureKey
         ) {
             $zone = $zoneFor('scripture_block');
             $combined = trim(implode("\n\n", array_filter([$refText, $verseText])));
@@ -854,6 +967,43 @@ class LogosSermonImporter
                 ? (string)($layout['layoutKey'] ?? 'scripture_block')
                 : LayoutSet::resolveLayoutKeyForRole($setId, 'scripture_block', $setMeta);
             $hasRefRole = $layout && LayoutSet::layoutHasRole($layout, 'scripture_ref');
+
+            /* **Zwei Stellen auf einer Folie.** Dann gibt es keine getrennte Zeile für
+               die Stellenangabe mehr — bei zwei Stellen wäre nicht zu erkennen, welche
+               zu welchem Text gehört. Beide stehen darum fett über ihrem Vers im selben
+               Feld, und es wird nicht noch einmal aufgeteilt: dass es zusammen passt,
+               ist vorher gemessen worden (von Hand gewählt: die Person hat es so
+               gewollt, auch wenn es knapp wird). */
+            if ($zweite !== null) {
+                $teile = [];
+                foreach ([[$refText, $verseText], [(string)$zweite['refText'], (string)$zweite['verseText']]] as $paar) {
+                    [$ref, $vers] = $paar;
+                    $block = trim(implode("\n", array_filter([
+                        $ref !== '' ? '**' . $ref . '**' : '',
+                        $vers,
+                    ])));
+                    if ($block !== '') {
+                        $teile[] = $block;
+                    }
+                }
+                if ($teile === []) {
+                    return;
+                }
+                $zusammen = implode("\n\n", $teile);
+                $openSlideWithRoles(
+                    $layoutKey,
+                    [($hasRefRole ? 'scripture_verse' : 'scripture_block') => $zusammen]
+                );
+                if (is_array($current)) {
+                    $current['_scripture'] = [
+                        'key' => $scriptureKey($refText, $verseText),
+                        'ref' => $refText,
+                        'verse' => $verseText,
+                        'merged' => true,
+                    ];
+                }
+                return;
+            }
 
             /* Lange Bibeltexte auf mehrere Folien verteilen. Ohne das stand der ganze
                Vers auf einer Folie - in Urs' Predigt bis zu 856 Zeichen, unlesbar. Die
@@ -937,6 +1087,17 @@ class LogosSermonImporter
             if ($content !== []) {
                 $openSlideWithRoles($layoutKey, $content);
                 $partNote(1);
+                /* Kennung der Stelle an der Folie lassen: die Vorschau bietet darüber
+                   das Zusammenlegen an. `applyHierarchyNotes` räumt das Feld weg,
+                   bevor etwas gespeichert wird. */
+                if (is_array($current)) {
+                    $current['_scripture'] = [
+                        'key' => $scriptureKey($refText, $verseText),
+                        'ref' => $refText,
+                        'verse' => $verseText,
+                        'merged' => false,
+                    ];
+                }
             }
             // Folgeabschnitte des Verses: je eine weitere Folie, ohne Überschrift.
             foreach (array_slice($verseChunks, 1) as $idx => $chunk) {
@@ -1035,7 +1196,8 @@ class LogosSermonImporter
         $processSection = function (array $section, bool $h1BereitsGezeigt = false) use (
             $settings, $zoneFor, $routeBlock, $openSlide, $openSlideWithRoles,
             $parseScriptureRun, $emitScripture, $setId, $setMeta, &$slides, $flushSlide,
-            &$agendaOn, &$agendaColor, &$path, $emitOutlineSummary, $summaryVon, $options
+            &$agendaOn, &$agendaColor, &$path, $emitOutlineSummary, $summaryVon, $options,
+            $scriptureZweit
         ) {
             $h1 = trim((string)($section['h1'] ?? ''));
             $path = $h1 !== '' ? [$h1] : [];
@@ -1137,8 +1299,10 @@ class LogosSermonImporter
 
                 if ($type === 'scripture_block') {
                     $run = $parseScriptureRun($blocks, $i);
-                    $emitScripture($run['refText'], $run['verseText']);
-                    $i += max(1, $run['consumed']);
+                    $nachher = $i + max(1, $run['consumed']);
+                    $zweit = $scriptureZweit($blocks, $nachher, $run);
+                    $emitScripture($run['refText'], $run['verseText'], null, null, $zweit);
+                    $i = $zweit === null ? $nachher : $nachher + max(1, (int)$zweit['consumed']);
                     continue;
                 }
 
@@ -1346,8 +1510,10 @@ class LogosSermonImporter
             $block = $preamble[$pi];
             if ($block['type'] === 'scripture_block') {
                 $run = $parseScriptureRun($preamble, $pi);
-                $emitScripture($run['refText'], $run['verseText']);
-                $pi += max(1, $run['consumed']);
+                $nachher = $pi + max(1, $run['consumed']);
+                $zweit = $scriptureZweit($preamble, $nachher, $run);
+                $emitScripture($run['refText'], $run['verseText'], null, null, $zweit);
+                $pi = $zweit === null ? $nachher : $nachher + max(1, (int)$zweit['consumed']);
                 continue;
             }
             $routeBlock($block, false);
@@ -1452,6 +1618,37 @@ class LogosSermonImporter
             return ['normal' => $listText];
         }
         return ['list_item' => $listText];
+    }
+
+    /**
+     * Wie viele Zeilen brauchen diese Absätze in einem Feld mit `$proZeile` Zeichen?
+     *
+     * Grobe, aber ehrliche Schätzung: je Absatz die Zeichen durch die Zeichen je Zeile,
+     * aufgerundet, plus eine Leerzeile zwischen zwei Absätzen. Dieselbe Rechnung
+     * benutzen die zusammengefasste Gliederung und die zusammengelegten Bibelstellen —
+     * damit beide dasselbe «passt» meinen.
+     *
+     * @param list<string> $absaetze
+     */
+    private static function geschaetzteZeilen(array $absaetze, int $proZeile): int
+    {
+        $proZeile = max(10, $proZeile);
+        $zeilen = 0;
+        $erster = true;
+        foreach ($absaetze as $absatz) {
+            $absatz = trim((string)$absatz);
+            if ($absatz === '') {
+                continue;
+            }
+            if (!$erster) {
+                $zeilen++; // Leerzeile dazwischen
+            }
+            $erster = false;
+            foreach (explode("\n", $absatz) as $zeile) {
+                $zeilen += max(1, (int)ceil(mb_strlen($zeile) / $proZeile));
+            }
+        }
+        return $zeilen;
     }
 
     /** @param list<string> $items */
@@ -1727,6 +1924,16 @@ class LogosSermonImporter
            Zutun aussieht wie bisher. Urs, 24.10.2026: «Können wir das nicht hier
            angeben? ‹zusammenfassen ab Gliederungspunkt› und dann die Ebene». */
         'outlineSummary' => 0,
+        /* Zwei aufeinanderfolgende Bibelstellen auf einer Folie. Urs, 24.10.2026:
+           «Wir machen das noch so, dass man zwei bibelvers Folien zusammen fassen
+           kann» — und auf die Frage automatisch oder von Hand: «Automatisch und von
+           Hand…». `scriptureMerge` ist die Automatik (nur wo der gemessene Platz
+           reicht), `mergeScripture` sind die von Hand gewählten Stellen. */
+        'scriptureMerge' => false,
+        'mergeScripture' => [],
+        /* Von Hand wieder getrennt — hebt die Automatik für genau diese Stelle auf
+           («Trennen» an der violett umrandeten Folie). */
+        'splitScripture' => [],
     ];
 
     /** Die drei Inhalte des Dialogs auf die Logos-Rollen abgebildet. */
@@ -1807,6 +2014,22 @@ class LogosSermonImporter
         }
         if (array_key_exists('hierarchyNotes', $raw)) {
             $out['hierarchyNotes'] = filter_var($raw['hierarchyNotes'], FILTER_VALIDATE_BOOL);
+        }
+        if (array_key_exists('scriptureMerge', $raw)) {
+            $out['scriptureMerge'] = filter_var($raw['scriptureMerge'], FILTER_VALIDATE_BOOL);
+        }
+        foreach (['mergeScripture', 'splitScripture'] as $listenKey) {
+            $liste = $raw[$listenKey] ?? [];
+            if (is_string($liste)) {
+                $decoded = json_decode($liste, true);
+                $liste = is_array($decoded) ? $decoded : ($liste === '' ? [] : explode(',', $liste));
+            }
+            $out[$listenKey] = is_array($liste)
+                ? array_values(array_filter(array_map(
+                    fn($v) => preg_replace('/[^a-f0-9]/', '', strtolower((string)$v)),
+                    $liste
+                ), fn($v) => $v !== ''))
+                : [];
         }
         if (array_key_exists('outlineSummary', $raw)) {
             $ab = (int)$raw['outlineSummary'];

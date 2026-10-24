@@ -209,6 +209,42 @@
   border-radius: 6px;
 }
 
+/* Bibelstellen zusammenlegen (Urs, 24.10.2026): grün = könnte mit der nächsten
+   zusammen, violett = ist zusammengelegt. Der Rahmen sitzt am Bild, damit er neben
+   der Auswahl-Umrandung bestehen kann und sie nicht verdeckt. */
+.import-preview-grid-item.is-mergeable .import-preview-grid-thumb {
+  box-shadow: 0 0 0 2px #4caf50;
+  border-radius: 4px;
+}
+
+.import-preview-grid-item.is-merged .import-preview-grid-thumb {
+  box-shadow: 0 0 0 2px #9c6ade;
+  border-radius: 4px;
+}
+
+.import-tile-merge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: #4caf50;
+  padding: 1px 5px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.import-preview-grid-item.is-merged .import-tile-merge {
+  color: #9c6ade;
+}
+
+.import-tile-merge:hover {
+  opacity: 1;
+}
+
 .import-preview-grid-thumb[data-act='select'] {
   cursor: zoom-in;
 }
