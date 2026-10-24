@@ -703,6 +703,10 @@ return [
     'props.effects_clear_none' => 'No object on this slide has an effect.',
     'props.effects_clear_confirm' => 'Remove the effects of {n} objects on this slide?',
     'props.effects_clear_done' => 'Effects removed: {n}',
+    'props.effects_list_drag' => 'Drag to change the order',
+    'props.effects_list_hint' => 'Drag to change the order. Objects with the same number appear together.',
+    'props.effects_row_delete' => 'Remove this effect',
+    'props.type_table' => 'Table',
     'props.anim_per_line_hint' => 'Each line (separated by a line break) gets its own click step, numbered consecutively starting from the order number set above. "Auto-start after" then applies to the transition between lines.',
 
     'props.delete_object' => 'Delete object',

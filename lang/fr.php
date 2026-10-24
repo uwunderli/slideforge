@@ -677,6 +677,10 @@ return [
     'props.effects_clear_none' => 'Aucun objet de cette diapositive n\'a d\'effet.',
     'props.effects_clear_confirm' => 'Supprimer les effets de {n} objets de cette diapositive ?',
     'props.effects_clear_done' => 'Effets supprimés : {n}',
+    'props.effects_list_drag' => 'Glisser pour changer l\'ordre',
+    'props.effects_list_hint' => 'Glisser pour changer l\'ordre. Les objets avec le même numéro apparaissent ensemble.',
+    'props.effects_row_delete' => 'Supprimer cet effet',
+    'props.type_table' => 'Tableau',
     'props.anim_per_line_hint' => 'Chaque ligne (séparée par un saut de ligne) obtient sa propre étape de clic, numérotée consécutivement à partir du numéro d\'ordre défini ci-dessus. « Démarrer automatiquement après » s\'applique alors à la transition entre les lignes.',
 
     'props.delete_object' => "Supprimer l'objet",

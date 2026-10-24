@@ -752,6 +752,10 @@ return [
     'props.effects_clear_none' => 'Kein Objekt dieser Folie hat einen Effekt.',
     'props.effects_clear_confirm' => 'Die Effekte von {n} Objekten dieser Folie löschen?',
     'props.effects_clear_done' => 'Effekte gelöscht: {n}',
+    'props.effects_list_drag' => 'Ziehen ändert die Reihenfolge',
+    'props.effects_list_hint' => 'Ziehen ändert die Reihenfolge. Objekte mit derselben Nummer erscheinen gleichzeitig.',
+    'props.effects_row_delete' => 'Diesen Effekt löschen',
+    'props.type_table' => 'Tabelle',
     'props.anim_per_line_hint' => 'Jede Zeile (getrennt durch Zeilenumbruch) bekommt einen eigenen Klick-Schritt, fortlaufend ab der oben eingestellten Reihenfolge-Nummer. „Automatisch starten nach" gilt dann für den Übergang zwischen den Zeilen.',
 
     'props.delete_object' => 'Objekt löschen',

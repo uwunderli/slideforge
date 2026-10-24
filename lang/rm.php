@@ -669,6 +669,10 @@ return [
     'props.effects_clear_none' => 'Nagin object da questa slide ha in effect.',
     'props.effects_clear_confirm' => 'Stizzar ils effects da {n} objects da questa slide?',
     'props.effects_clear_done' => 'Effects stizzads: {n}',
+    'props.effects_list_drag' => 'Trair per midar la successiun',
+    'props.effects_list_hint' => 'Trair mida la successiun. Objects cun il medem numer apparean insame.',
+    'props.effects_row_delete' => 'Stizzar quest effect',
+    'props.type_table' => 'Tabella',
     'props.anim_per_line_hint' => 'Mintga lingia (separada cun in saut da lingia) retschaiva ses agen pass da clic, numerà consecutivamain a partir dal numer d\'urden definì sura. «Cumenzament automatic suenter» vala lura per la transiziun tranter las lingias.',
 
     'props.delete_object' => 'Stizzar object',

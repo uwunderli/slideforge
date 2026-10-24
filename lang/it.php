@@ -669,6 +669,10 @@ return [
     'props.effects_clear_none' => 'Nessun oggetto di questa diapositiva ha un effetto.',
     'props.effects_clear_confirm' => 'Eliminare gli effetti di {n} oggetti di questa diapositiva?',
     'props.effects_clear_done' => 'Effetti eliminati: {n}',
+    'props.effects_list_drag' => 'Trascina per cambiare l\'ordine',
+    'props.effects_list_hint' => 'Trascina per cambiare l\'ordine. Gli oggetti con lo stesso numero compaiono insieme.',
+    'props.effects_row_delete' => 'Elimina questo effetto',
+    'props.type_table' => 'Tabella',
     'props.anim_per_line_hint' => 'Ogni riga (separata da un\'a capo) ha il proprio passo al clic, numerato consecutivamente a partire dall\'ordine impostato sopra. «Avvio automatico dopo» vale per la transizione tra le righe.',
 
     'props.delete_object' => 'Elimina oggetto',

@@ -4951,6 +4951,7 @@
       image: I.typeImage,
       video: I.typeVideo,
       audio: I.typeAudio,
+      table: I.typeTable,
     }[obj.type] || obj.type);
   }
 
@@ -6631,26 +6632,113 @@
     return animierbareKnoten().filter((n) => (n.getAttr('animType') || 'none') !== 'none');
   }
 
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
+
+  /** Die Effekte der Folie in der Reihenfolge, in der sie erscheinen. */
+  function effekteDerFolie() {
+    const alle = animierbareKnoten();
+    return alle
+      .map((n, i) => ({ node: n, nr: Math.max(1, parseInt(n.getAttr('animOrder'), 10) || 1), tiefe: i }))
+      .filter((e) => (e.node.getAttr('animType') || 'none') !== 'none')
+      /* Gleiche Nummer = gleichzeitig; dann entscheidet die Lage im Stapel. */
+      .sort((a, b) => (a.nr - b.nr) || (a.tiefe - b.tiefe));
+  }
+
+  function animationLabel(typ) {
+    const eintrag = ANIMATIONS.find((a) => a.value === typ);
+    return (eintrag && eintrag.label) || typ || '';
+  }
+
+  function findeAnimKnoten(id) {
+    return animierbareKnoten().find((n) => n.id() === id) || null;
+  }
+
+  function effektWeg(node) {
+    ['animType', 'animOrder', 'animDuration', 'animAutoAdvance', 'animPerLine'].forEach((k) => node.setAttr(k, undefined));
+    updateAnimationBadge(node);
+  }
+
   /**
    * Was im Effekte-Bereich steht, wenn **nichts** ausgewählt ist (Urs, 24.10.2026):
-   * ein Schalter, der die Effekte aller Objekte dieser Folie wegnimmt. Der
+   * die Liste aller Effekte der Folie — jeder einzeln löschbar, die Reihenfolge
+   * mit Ziehen änderbar — und darunter der Schalter, der alle wegnimmt. Der
    * Folien-Übergang gehört nicht dazu, der sitzt im Menüband.
    */
   function buildSlideEffectsHtml() {
-    const anzahl = knotenMitEffekt().length;
-    const hinweis = anzahl
-      ? (I.effectsClearHint || '{n} Objekte dieser Folie haben einen Effekt.').replace('{n}', String(anzahl))
-      : (I.effectsClearNone || 'Kein Objekt dieser Folie hat einen Effekt.');
-    const body = '<div class="props-video-note">' + escapeHtml(hinweis) + '</div>'
-      + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="clearSlideEffectsBtn"'
-      + ' style="width:100%; margin-top:8px;"' + (anzahl ? '' : ' disabled') + '>'
-      + escapeHtml(I.effectsClear || 'Alle Effekte dieser Folie löschen') + '</button>';
+    const eintraege = effekteDerFolie();
+    const anzahl = eintraege.length;
+    let body = '';
+
+    if (!anzahl) {
+      body += '<div class="props-video-note">' + escapeHtml(I.effectsClearNone || 'Kein Objekt dieser Folie hat einen Effekt.') + '</div>';
+    } else {
+      body += '<ul class="props-effects-list">';
+      eintraege.forEach((e) => {
+        body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '">'
+          + '<span class="props-layer-drag-handle" draggable="true" title="'
+          + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
+          + '<span class="props-effect-order">' + e.nr + '</span>'
+          + '<span class="props-effect-text">'
+          + '<span class="props-effect-name">' + escapeHtml(layerItemLabel(e.node)) + '</span>'
+          + '<span class="props-effect-anim">' + escapeHtml(animationLabel(e.node.getAttr('animType'))) + '</span>'
+          + '</span>'
+          + '<button type="button" class="props-effect-del" data-effect-id="' + escapeHtml(e.node.id()) + '" title="'
+          + escapeHtml(I.effectsRowDelete || 'Diesen Effekt löschen') + '" aria-label="'
+          + escapeHtml(I.effectsRowDelete || 'Diesen Effekt löschen') + '">' + ICON_TRASH + '</button>'
+          + '</li>';
+      });
+      body += '</ul>';
+      body += '<div class="props-video-note">' + escapeHtml(I.effectsListHint
+        || 'Ziehen ändert die Reihenfolge. Objekte mit derselben Nummer erscheinen gleichzeitig.') + '</div>';
+      body += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="clearSlideEffectsBtn"'
+        + ' style="width:100%; margin-top:8px;">'
+        + escapeHtml(I.effectsClear || 'Alle Effekte dieser Folie löschen') + '</button>';
+    }
+
     return '<div class="ribbon-props-sections">'
       + ribbonPropsSection(I.tabEffect || I.sideTabEffects || 'Effekte', body)
       + '</div>';
   }
 
+  /**
+   * Neue Nummern aus der Reihenfolge in der Liste. Zwei Objekte, die vorher
+   * dieselbe Nummer hatten und nebeneinander geblieben sind, behalten eine
+   * gemeinsame Nummer — sonst ginge «gleichzeitig» bei jedem Ziehen verloren.
+   * Das gezogene Objekt bekommt immer eine eigene Nummer.
+   */
+  function effektNummernAusListe(listEl, gezogeneId) {
+    const zeilen = [...listEl.querySelectorAll('li[data-effect-id]')].map((li) => ({
+      id: li.dataset.effectId,
+      alt: parseInt(li.dataset.animOrder, 10) || 1,
+    }));
+    let nr = 0;
+    return zeilen.map((z, i) => {
+      const vorige = i > 0 ? zeilen[i - 1] : null;
+      const zusammen = vorige !== null && z.alt === vorige.alt
+        && z.id !== gezogeneId && vorige.id !== gezogeneId;
+      if (!zusammen) nr++;
+      return { id: z.id, nr: nr };
+    });
+  }
+
   function wireSlideEffectsPanel() {
+    const panel = document.getElementById('propsEffectsPanel');
+    if (!panel) return;
+
+    panel.querySelectorAll('.props-effect-del').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const node = findeAnimKnoten(btn.dataset.effectId);
+        if (!node) return;
+        effektWeg(node);
+        refreshCanvas();
+        scheduleSave();
+        refreshPropsPanel();
+      });
+    });
+
+    bindEffectsListDrag(panel.querySelector('.props-effects-list'));
+
     const btn = document.getElementById('clearSlideEffectsBtn');
     if (!btn) return;
     btn.addEventListener('click', async () => {
@@ -6660,14 +6748,70 @@
         (I.effectsClearConfirm || 'Alle Effekte dieser Folie löschen?').replace('{n}', String(treffer.length)),
         { danger: true }
       ))) return;
-      treffer.forEach((n) => {
-        ['animType', 'animOrder', 'animDuration', 'animAutoAdvance', 'animPerLine'].forEach((k) => n.setAttr(k, undefined));
-        updateAnimationBadge(n);
-      });
+      treffer.forEach(effektWeg);
       refreshCanvas();
       scheduleSave();
       setSaveStatus((I.effectsClearDone || 'Effekte gelöscht: {n}').replace('{n}', String(treffer.length)));
       refreshPropsPanel();
+    });
+  }
+
+  /** Ziehen in der Effekt-Liste — dasselbe Vorgehen wie in der Ebenen-Liste. */
+  function bindEffectsListDrag(listEl) {
+    if (!listEl || listEl.dataset.dragBound) return;
+    listEl.dataset.dragBound = '1';
+    let dragLi = null;
+
+    listEl.addEventListener('dragstart', (e) => {
+      if (!e.target.closest('.props-layer-drag-handle')) {
+        e.preventDefault();
+        return;
+      }
+      dragLi = e.target.closest('li[data-effect-id]');
+      if (!dragLi) return;
+      dragLi.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragLi.dataset.effectId || '');
+      }
+    });
+
+    listEl.addEventListener('dragover', (e) => {
+      if (!dragLi) return;
+      e.preventDefault();
+      const li = e.target.closest('li[data-effect-id]');
+      if (li && li !== dragLi) {
+        const zeilen = [...listEl.querySelectorAll('li[data-effect-id]')];
+        const von = zeilen.indexOf(dragLi);
+        const nach = zeilen.indexOf(li);
+        if (von < 0 || nach < 0) return;
+        if (von < nach) li.after(dragLi);
+        else li.before(dragLi);
+      } else if (!li) {
+        listEl.appendChild(dragLi);
+      }
+    });
+
+    listEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!dragLi) return;
+      const gezogen = dragLi.dataset.effectId;
+      effektNummernAusListe(listEl, gezogen).forEach((z) => {
+        const node = findeAnimKnoten(z.id);
+        if (!node) return;
+        node.setAttr('animOrder', z.nr);
+        updateAnimationBadge(node);
+      });
+      dragLi.classList.remove('dragging');
+      dragLi = null;
+      refreshCanvas();
+      scheduleSave();
+      refreshPropsPanel();
+    });
+
+    listEl.addEventListener('dragend', () => {
+      if (dragLi) dragLi.classList.remove('dragging');
+      dragLi = null;
     });
   }
 

@@ -8390,6 +8390,91 @@ body.notes-resizing {
 .props-table-fields .brand-palette.mini {
   margin: 6px 0 10px;
 }
+
+/* Liste der Effekte einer Folie (Urs, 24.10.2026): Nummer, Objekt, Animation,
+   Papierkorb — Aufbau wie die Ebenen-Liste, damit sich beides gleich anfühlt. */
+.props-effects-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.props-effects-list > li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--surface-raised);
+  font-size: 0.8rem;
+}
+.props-effects-list > li:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+.props-effects-list > li.dragging {
+  opacity: 0.55;
+}
+.props-effect-order {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.props-effect-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.props-effect-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.props-effect-anim {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.props-effect-del {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.props-effect-del:hover {
+  color: var(--danger, #c0392b);
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+.props-effect-del svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
 .brand-palette {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
