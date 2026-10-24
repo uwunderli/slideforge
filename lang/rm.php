@@ -664,6 +664,11 @@ return [
     'props.anim_autostart' => 'Cumenzament automatic suenter',
     'props.anim_hint' => 'Vala en previsualisaziun &amp; la preschataziun finida &ndash; betg sin la canvassa da l\'editur. Objects cun il medem numer apparean insame. A 0 appare quest object mo suenter in clic/barra da spazi; cun ina valur &gt; 0 appare el da s\'el uschebain che il pass precedent (object precedent u la slide) è visibel durant tant.',
     'props.anim_per_line' => 'Animar mintga lingia separadamein',
+    'props.effects_clear' => 'Stizzar tut ils effects da questa slide',
+    'props.effects_clear_hint' => '{n} objects da questa slide han in effect. La transiziun resta.',
+    'props.effects_clear_none' => 'Nagin object da questa slide ha in effect.',
+    'props.effects_clear_confirm' => 'Stizzar ils effects da {n} objects da questa slide?',
+    'props.effects_clear_done' => 'Effects stizzads: {n}',
     'props.anim_per_line_hint' => 'Mintga lingia (separada cun in saut da lingia) retschaiva ses agen pass da clic, numerà consecutivamain a partir dal numer d\'urden definì sura. «Cumenzament automatic suenter» vala lura per la transiziun tranter las lingias.',
 
     'props.delete_object' => 'Stizzar object',

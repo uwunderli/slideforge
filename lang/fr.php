@@ -672,6 +672,11 @@ return [
     'props.anim_autostart' => 'Démarrer automatiquement après',
     'props.anim_hint' => "S'applique dans l'aperçu et le diaporama final &ndash; pas dans le canevas de l'éditeur. Les objets avec le même numéro apparaissent ensemble. À 0, cet objet n'apparaît qu'après un clic/la barre d'espace ; à une valeur &gt; 0, il apparaît de lui-même une fois que l'étape précédente (objet précédent ou la diapositive) a été visible aussi longtemps.",
     'props.anim_per_line' => 'Animer chaque ligne séparément',
+    'props.effects_clear' => 'Supprimer tous les effets de cette diapositive',
+    'props.effects_clear_hint' => '{n} objets de cette diapositive ont un effet. La transition reste.',
+    'props.effects_clear_none' => 'Aucun objet de cette diapositive n\'a d\'effet.',
+    'props.effects_clear_confirm' => 'Supprimer les effets de {n} objets de cette diapositive ?',
+    'props.effects_clear_done' => 'Effets supprimés : {n}',
     'props.anim_per_line_hint' => 'Chaque ligne (séparée par un saut de ligne) obtient sa propre étape de clic, numérotée consécutivement à partir du numéro d\'ordre défini ci-dessus. « Démarrer automatiquement après » s\'applique alors à la transition entre les lignes.',
 
     'props.delete_object' => "Supprimer l'objet",

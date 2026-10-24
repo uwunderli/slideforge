@@ -747,6 +747,11 @@ return [
     'props.anim_autostart' => 'Automatisch starten nach',
     'props.anim_hint' => 'Wirkt in Vorschau &amp; fertigem Foliensatz &ndash; nicht im Editor-Canvas. Objekte mit gleicher Nummer erscheinen gleichzeitig. Bei 0 erscheint dieses Objekt erst nach Klick/Leertaste; bei einem Wert &gt; 0 erscheint es von selbst, sobald der vorherige Schritt (oder die Folie beim ersten Objekt) so lange sichtbar war.',
     'props.anim_per_line' => 'Jede Zeile einzeln animieren',
+    'props.effects_clear' => 'Alle Effekte dieser Folie löschen',
+    'props.effects_clear_hint' => '{n} Objekte dieser Folie haben einen Effekt. Der Folien-Übergang bleibt.',
+    'props.effects_clear_none' => 'Kein Objekt dieser Folie hat einen Effekt.',
+    'props.effects_clear_confirm' => 'Die Effekte von {n} Objekten dieser Folie löschen?',
+    'props.effects_clear_done' => 'Effekte gelöscht: {n}',
     'props.anim_per_line_hint' => 'Jede Zeile (getrennt durch Zeilenumbruch) bekommt einen eigenen Klick-Schritt, fortlaufend ab der oben eingestellten Reihenfolge-Nummer. „Automatisch starten nach" gilt dann für den Übergang zwischen den Zeilen.',
 
     'props.delete_object' => 'Objekt löschen',

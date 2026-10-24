@@ -664,6 +664,11 @@ return [
     'props.anim_autostart' => 'Avvio automatico dopo',
     'props.anim_hint' => 'Vale in anteprima &amp; nella presentazione finale &ndash; non nel canvas dell\'editor. Oggetti con lo stesso numero compaiono insieme. A 0 l\'oggetto appare solo dopo un clic/barra spaziatrice; con valore &gt; 0 appare da solo dopo che il passo precedente (oggetto precedente o diapositiva) è stato visibile per quel tempo.',
     'props.anim_per_line' => 'Anima ogni riga separatamente',
+    'props.effects_clear' => 'Elimina tutti gli effetti di questa diapositiva',
+    'props.effects_clear_hint' => '{n} oggetti di questa diapositiva hanno un effetto. La transizione resta.',
+    'props.effects_clear_none' => 'Nessun oggetto di questa diapositiva ha un effetto.',
+    'props.effects_clear_confirm' => 'Eliminare gli effetti di {n} oggetti di questa diapositiva?',
+    'props.effects_clear_done' => 'Effetti eliminati: {n}',
     'props.anim_per_line_hint' => 'Ogni riga (separata da un\'a capo) ha il proprio passo al clic, numerato consecutivamente a partire dall\'ordine impostato sopra. «Avvio automatico dopo» vale per la transizione tra le righe.',
 
     'props.delete_object' => 'Elimina oggetto',

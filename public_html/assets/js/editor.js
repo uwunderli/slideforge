@@ -6617,11 +6617,70 @@
     refreshPropsPanel();
   }
 
+  /** Alle Objekte der Folie, auch die in Gruppen — ein Effekt kann überall hängen. */
+  function animierbareKnoten() {
+    const liste = [];
+    getTopLevelNodes().forEach((n) => {
+      liste.push(n);
+      if (isObjectGroup(n)) getGroupContentChildren(n).forEach((k) => liste.push(k));
+    });
+    return liste;
+  }
+
+  function knotenMitEffekt() {
+    return animierbareKnoten().filter((n) => (n.getAttr('animType') || 'none') !== 'none');
+  }
+
+  /**
+   * Was im Effekte-Bereich steht, wenn **nichts** ausgewählt ist (Urs, 24.10.2026):
+   * ein Schalter, der die Effekte aller Objekte dieser Folie wegnimmt. Der
+   * Folien-Übergang gehört nicht dazu, der sitzt im Menüband.
+   */
+  function buildSlideEffectsHtml() {
+    const anzahl = knotenMitEffekt().length;
+    const hinweis = anzahl
+      ? (I.effectsClearHint || '{n} Objekte dieser Folie haben einen Effekt.').replace('{n}', String(anzahl))
+      : (I.effectsClearNone || 'Kein Objekt dieser Folie hat einen Effekt.');
+    const body = '<div class="props-video-note">' + escapeHtml(hinweis) + '</div>'
+      + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="clearSlideEffectsBtn"'
+      + ' style="width:100%; margin-top:8px;"' + (anzahl ? '' : ' disabled') + '>'
+      + escapeHtml(I.effectsClear || 'Alle Effekte dieser Folie löschen') + '</button>';
+    return '<div class="ribbon-props-sections">'
+      + ribbonPropsSection(I.tabEffect || I.sideTabEffects || 'Effekte', body)
+      + '</div>';
+  }
+
+  function wireSlideEffectsPanel() {
+    const btn = document.getElementById('clearSlideEffectsBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const treffer = knotenMitEffekt();
+      if (!treffer.length) return;
+      if (!(await SFDialog.confirm(
+        (I.effectsClearConfirm || 'Alle Effekte dieser Folie löschen?').replace('{n}', String(treffer.length)),
+        { danger: true }
+      ))) return;
+      treffer.forEach((n) => {
+        ['animType', 'animOrder', 'animDuration', 'animAutoAdvance', 'animPerLine'].forEach((k) => n.setAttr(k, undefined));
+        updateAnimationBadge(n);
+      });
+      refreshCanvas();
+      scheduleSave();
+      setSaveStatus((I.effectsClearDone || 'Effekte gelöscht: {n}').replace('{n}', String(treffer.length)));
+      refreshPropsPanel();
+    });
+  }
+
   function renderEffectsPanel(node, obj, isText) {
     const panel = document.getElementById('propsEffectsPanel');
     if (!panel) return;
     if (!node || SF.selectedNodes.length !== 1 || isObjectGroup(node)) {
-      panel.innerHTML = propsPanelEmptyHtml();
+      if (SF.selectedNodes.length === 0 && SF.canEdit) {
+        panel.innerHTML = buildSlideEffectsHtml();
+        wireSlideEffectsPanel();
+      } else {
+        panel.innerHTML = propsPanelEmptyHtml();
+      }
       return;
     }
     panel.innerHTML = '<div class="ribbon-props-sections">' +

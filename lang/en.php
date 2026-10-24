@@ -698,6 +698,11 @@ return [
     'props.anim_autostart' => 'Auto-start after',
     'props.anim_hint' => 'Applies in preview &amp; the finished deck &ndash; not on the editor canvas. Objects with the same number appear together. At 0 this object only appears after a click/spacebar; at a value &gt; 0 it appears on its own once the previous step (previous object or the slide) has been visible that long.',
     'props.anim_per_line' => 'Animate each line separately',
+    'props.effects_clear' => 'Remove all effects on this slide',
+    'props.effects_clear_hint' => '{n} objects on this slide have an effect. The slide transition stays.',
+    'props.effects_clear_none' => 'No object on this slide has an effect.',
+    'props.effects_clear_confirm' => 'Remove the effects of {n} objects on this slide?',
+    'props.effects_clear_done' => 'Effects removed: {n}',
     'props.anim_per_line_hint' => 'Each line (separated by a line break) gets its own click step, numbered consecutively starting from the order number set above. "Auto-start after" then applies to the transition between lines.',
 
     'props.delete_object' => 'Delete object',
