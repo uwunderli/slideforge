@@ -1030,12 +1030,12 @@ class LogosSermonImporter
             $abliefern();
         };
 
-        $summaryOn = !empty($options['outlineSummary']);
+        $summaryVon = (int)($options['outlineSummary'] ?? 0);
 
         $processSection = function (array $section, bool $h1BereitsGezeigt = false) use (
             $settings, $zoneFor, $routeBlock, $openSlide, $openSlideWithRoles,
             $parseScriptureRun, $emitScripture, $setId, $setMeta, &$slides, $flushSlide,
-            &$agendaOn, &$agendaColor, &$path, $emitOutlineSummary, $summaryOn, $zoneOverrides
+            &$agendaOn, &$agendaColor, &$path, $emitOutlineSummary, $summaryVon, $options
         ) {
             $h1 = trim((string)($section['h1'] ?? ''));
             $path = $h1 !== '' ? [$h1] : [];
@@ -1214,19 +1214,23 @@ class LogosSermonImporter
                    je Punkt eine Folie zu machen. Steht für diese Ebene die
                    Gliederungsübersicht an, hat sie Vorrang — ihr Zweig kommt im
                    Ablauf vor diesem. */
-                /* Der Schalter sagt «zusammengefasst **auf Folien**» — er bringt die
-                   Rollen also selbst auf Folien. Sonst müsste Urs zusätzlich zwei
-                   Auswahlfelder umstellen, und in seinem Set «Schlicht - Logos»
-                   stehen genau die beiden nicht auf Folien (heading4 `unused`,
-                   Stichpunkte `custom`): der Schalter hätte sichtbar nichts getan.
-                   Hat er im Dialog aber ausdrücklich «in die Notizen» oder «aus»
-                   gewählt, gilt das — eine Wahl von Hand übersteuert der Schalter
-                   nicht. */
-                $fuerFolien = function (string $rolle) use ($zoneOverrides): bool {
-                    return !array_key_exists($rolle, $zoneOverrides)
-                        || $zoneOverrides[$rolle] === 'slides';
+                /* «Zusammenfassen ab Ebene N» bringt die beiden Rollen selbst auf
+                   Folien — sonst müsste Urs zusätzlich zwei Auswahlfelder umstellen,
+                   und in seinem Set «Schlicht - Logos» stehen genau die beiden nicht
+                   auf Folien (heading4 `unused`, Stichpunkte `custom`): die Angabe
+                   hätte sichtbar nichts getan.
+                   **Auch die Gliederungstiefe hält das nicht auf:** sie regelt, wie
+                   tief Überschriften eine *eigene* Folie bekommen — hier bekommt
+                   keine eine eigene, sie werden zusammengefasst. Wer «ab Ebene 4»
+                   wählt, meint Ebene 4.
+                   Hat er dagegen bei «Gliederung» oder «Aufzählungspunkte»
+                   ausdrücklich «in die Notizen» oder «aus» gewählt, gilt seine Wahl. */
+                $fuerFolien = function (string $rolle) use ($options): bool {
+                    $wahl = (string)($options[$rolle === 'list_item' ? 'bullets' : 'outline'] ?? 'set');
+                    return $wahl === 'set' || $wahl === 'slides';
                 };
-                if ($summaryOn && preg_match('/^heading([2-5])$/', $type, $sm)
+                if ($summaryVon >= 2 && preg_match('/^heading([2-5])$/', $type, $sm)
+                    && (int)$sm[1] >= $summaryVon
                     && trim((string)$block['text']) !== ''
                     && $fuerFolien($type) && $fuerFolien('list_item')) {
                     $gruppen = [];
@@ -1459,16 +1463,16 @@ class LogosSermonImporter
             if ($item === '') {
                 continue;
             }
-            $ohneZeichen = preg_replace('/^[•›\-*]\s*/u', '', $item) ?? $item;
-            /* Die Nummer einer Aufzählung nur dann wegnehmen, wenn **kein**
-               Listenzeichen davor stand. Sonst verliert «• 2. Chr 33,3: …» seine
-               Stellenangabe und wird zu «Chr 33,3: …» — bei Logos-Predigten der
-               Normalfall, weil die Bücher 1./2. Chronik, 2. Mose usw. so heissen.
-               Ein Logos-Export setzt das Zeichen immer; eine wirklich numerierte
-               Liste kommt ohne. */
-            $item = $ohneZeichen === $item
-                ? (preg_replace('/^\d+\.\s*/u', '', $item) ?? $item)
-                : $ohneZeichen;
+            /* Nur das Listenzeichen weg — **die führende Nummer bleibt stehen.**
+               Sie wegzunehmen war für numerierte Listen gedacht, zerlegte aber bei
+               Logos-Predigten die Stellenangabe: «• 2. Chr 33,3: …» wurde zu
+               «Chr 33,3: …». Die Bücher heissen nun einmal 1./2. Chronik, 2. Mose.
+               Eine Nummer zu viel in einer numerierten Liste ist Kosmetik, eine
+               fehlende Buchnummer ist ein Fehler.
+               Am Listenzeichen zu erkennen, was gemeint ist, reicht nicht: in die
+               Notizen kommt der Punkt über `listItemKeyword()`, und das Zeichen ist
+               dort schon weg. */
+            $item = preg_replace('/^[•›\-*]\s*/u', '', $item) ?? $item;
             $lines[] = '- ' . $item;
         }
         return implode("\n", $lines);
@@ -1717,10 +1721,12 @@ class LogosSermonImporter
         // Gliederungspfad als Markdown-Überschriften in die Notizen.
         'hierarchyNotes' => false,
         'hierarchyStyle' => 'headings',
-        /* Gliederung zusammengefasst: mehrere Unterpunkte samt ihren Stichpunkten
-           auf eine Folie, gefüllt nach dem Platz im Inhaltsfeld. Vorgabe aus, damit
-           ein Import ohne Zutun aussieht wie bisher. Urs, 24.10.2026. */
-        'outlineSummary' => false,
+        /* Ab welcher Gliederungsebene zusammengefasst wird: 0 = aus, sonst 2..5.
+           Mehrere Unterpunkte samt ihren Stichpunkten kommen dann auf eine Folie,
+           gefüllt nach dem Platz im Inhaltsfeld. Vorgabe aus, damit ein Import ohne
+           Zutun aussieht wie bisher. Urs, 24.10.2026: «Können wir das nicht hier
+           angeben? ‹zusammenfassen ab Gliederungspunkt› und dann die Ebene». */
+        'outlineSummary' => 0,
     ];
 
     /** Die drei Inhalte des Dialogs auf die Logos-Rollen abgebildet. */
@@ -1803,7 +1809,9 @@ class LogosSermonImporter
             $out['hierarchyNotes'] = filter_var($raw['hierarchyNotes'], FILTER_VALIDATE_BOOL);
         }
         if (array_key_exists('outlineSummary', $raw)) {
-            $out['outlineSummary'] = filter_var($raw['outlineSummary'], FILTER_VALIDATE_BOOL);
+            $ab = (int)$raw['outlineSummary'];
+            // Ebene 1 ist der Abschnitt selbst — darunter gibt es nichts zusammenzufassen.
+            $out['outlineSummary'] = ($ab >= 2 && $ab <= 5) ? $ab : 0;
         }
         if (array_key_exists('hierarchyStyle', $raw)) {
             $stil = strtolower(trim((string)$raw['hierarchyStyle']));

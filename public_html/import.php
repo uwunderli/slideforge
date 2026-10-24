@@ -233,10 +233,16 @@ require __DIR__ . '/includes/header.php';
           <input type="checkbox" id="import_opt_agendaMain" data-import-opt="agendaMain"<?= !empty($importUi['agendaMain']) ? ' checked' : '' ?>>
           <span><?= h(t('import.agenda_main')) ?></span>
         </label>
-        <label class="import-opt-check">
-          <input type="checkbox" id="import_opt_outlineSummary" data-import-opt="outlineSummary"<?= !empty($importUi['outlineSummary']) ? ' checked' : '' ?>>
-          <span><?= h(t('import.outline_summary')) ?></span>
-        </label>
+        <div class="import-opt-row">
+          <label for="import_opt_outlineSummary"><?= h(t('import.outline_summary')) ?></label>
+          <?php $abEbene = (int)($importUi['outlineSummary'] ?? 0); ?>
+          <select id="import_opt_outlineSummary" data-import-opt="outlineSummary">
+            <option value="0"<?= $abEbene === 0 ? ' selected' : '' ?>><?= h(t('import.outline_summary_off')) ?></option>
+            <?php for ($lvl = 2; $lvl <= 5; $lvl++): ?>
+            <option value="<?= $lvl ?>"<?= $abEbene === $lvl ? ' selected' : '' ?>><?= h(str_replace('{n}', (string)$lvl, t('import.outline_summary_level'))) ?></option>
+            <?php endfor; ?>
+          </select>
+        </div>
         <label class="import-opt-check">
           <input type="checkbox" id="import_opt_hierarchyNotes" data-import-opt="hierarchyNotes"<?= !empty($importUi['hierarchyNotes']) ? ' checked' : '' ?>>
           <span><?= h(t('import.hierarchy_notes')) ?></span>
