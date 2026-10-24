@@ -861,6 +861,7 @@ return [
     'import.agenda_toggle' => 'Survista en questa secziun',
     'import.agenda_color' => 'Colur dad accent da la survista',
     'import.agenda_main' => 'Survista dals puncts principals',
+    'import.outline_summary' => 'Structura resumada sin folias',
     'import.hierarchy_notes' => 'Structura en las notizias',
     'import.hierarchy_style' => 'Preschentaziun',
     'import.hierarchy_style_headings' => 'In sut l\'auter (#, ##, ###)',

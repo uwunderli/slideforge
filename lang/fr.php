@@ -869,6 +869,7 @@ return [
     'import.agenda_toggle' => 'Sommaire dans cette section',
     'import.agenda_color' => 'Couleur d\'accent du sommaire',
     'import.agenda_main' => 'Vue d\'ensemble des points principaux',
+    'import.outline_summary' => 'Plan résumé sur des diapositives',
     'import.hierarchy_notes' => 'Plan dans les notes',
     'import.hierarchy_style' => 'Présentation',
     'import.hierarchy_style_headings' => 'Les uns sous les autres (#, ##, ###)',

@@ -1644,6 +1644,73 @@ class LayoutSet
         return $best;
     }
 
+    /**
+     * Wie viel Text in das Platzhalter-Feld einer Rolle passt — geschaetzt aus
+     * Feldgroesse und Schriftgrad. `docs/LOGOS_IMPORTER.md` sieht genau das vor
+     * («Schwelle aus Platzhalter-Groesse + Textvorlage schaetzen»).
+     *
+     * **Die Hoehe des Platzhalters taugt nicht als Mass:** in den Sets ist das
+     * Inhaltsfeld nur eine Zeile hoch (65 · 1.2 = 78 bei `h=78`) und waechst beim
+     * Fuellen nach unten. Gerechnet wird darum von seiner Oberkante bis zum
+     * naechsten Objekt darunter, sonst bis zum unteren Rand — und als unterer Rand
+     * gilt derselbe Abstand, den das Feld links laesst.
+     *
+     * @return array{lines:int, charsPerLine:int, chars:int}|null null = keine Vorlage fuer die Rolle
+     */
+    public static function roleTextCapacity(string $setId, string $role, ?array $setMeta = null): ?array
+    {
+        $setMeta ??= Presentation::getMeta($setId) ?? [];
+        $role = self::canonicalLogosRole($role);
+        $layout = self::findLayoutSlideForRole($setId, $role, $setMeta);
+        if ($layout === null) {
+            return null;
+        }
+        $objekte = is_array($layout['objects'] ?? null) ? array_values($layout['objects']) : [];
+        $feldNr = null;
+        foreach ($objekte as $nr => $obj) {
+            if (self::canonicalLogosRole((string)($obj['setRole'] ?? $obj['logosRole'] ?? '')) === $role) {
+                $feldNr = $nr;
+                break;
+            }
+        }
+        if ($feldNr === null) {
+            return null;
+        }
+        $feld = $objekte[$feldNr];
+        $schrift = (float)($feld['fontSize'] ?? 0);
+        $breite = (float)($feld['w'] ?? 0);
+        if ($schrift <= 0.0 || $breite <= 0.0) {
+            return null;
+        }
+        $zeilenfaktor = (float)($feld['lineHeight'] ?? 1.2);
+        if ($zeilenfaktor <= 0.0) {
+            $zeilenfaktor = 1.2;
+        }
+        $zeilenhoehe = $schrift * $zeilenfaktor;
+
+        $oben = (float)($feld['y'] ?? 0);
+        $rand = (float)($feld['x'] ?? 0);
+        $hoehe = (float)($setMeta['height'] ?? DEFAULT_SLIDE_HEIGHT);
+        $unten = max($oben + (float)($feld['h'] ?? $zeilenhoehe), $hoehe - $rand);
+        foreach ($objekte as $nr => $obj) {
+            if ($nr === $feldNr) {
+                continue;
+            }
+            $y = (float)($obj['y'] ?? 0);
+            if ($y > $oben) {
+                $unten = min($unten, $y);
+            }
+        }
+
+        /* Mittlere Zeichenbreite der verwendeten Schriften (Open Sans, Source Sans
+           Pro): etwa die halbe Schriftgroesse. Knapp gerechnet — eine Folie zu viel
+           ist harmlos, eine ueberlaufende nicht. */
+        $zeilen = max(1, (int)floor(($unten - $oben) / $zeilenhoehe));
+        $proZeile = max(10, (int)floor($breite / ($schrift * 0.52)));
+
+        return ['lines' => $zeilen, 'charsPerLine' => $proZeile, 'chars' => $zeilen * $proZeile];
+    }
+
     /** @param list<string> $roles */
     private static function scoreLayoutForRoles(array $layoutSlide, array $roles): int
     {

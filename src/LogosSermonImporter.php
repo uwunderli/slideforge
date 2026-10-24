@@ -948,10 +948,94 @@ class LogosSermonImporter
             }
         };
 
+        /**
+         * Gliederung zusammengefasst: mehrere Unterpunkte **samt ihren Stichpunkten**
+         * auf eine Folie, gefüllt nach dem Platz im Inhaltsfeld des Folien-Sets.
+         *
+         * Urs, 24.10.2026: «Die möchte ich nun gerne auf einigen Folien
+         * zusammenfassen» · «Titel mit ihren Stichpunkten» · «Immer so viel wie Platz
+         * da ist…» · «Die Überschrift ist dann immer die darüber liegende Folie».
+         *
+         * Zwei Dinge, die dabei nicht verhandelbar sind:
+         * - **Ein Block wird nie getrennt.** Passt er nicht mehr, kommt er ganz auf
+         *   die nächste Folie — ein Titel ohne seine Stichpunkte wäre wertlos.
+         * - **Ohne Mass wird nicht geraten.** Kennt das Set keine Feldgrösse für die
+         *   Rolle, bleibt es bei einem Punkt je Folie, also beim bisherigen Verhalten.
+         *
+         * Gemessen wird in **Zeilen**, nicht in Zeichen: Titel und Stichpunkte fangen
+         * je eine neue Zeile an, da zählt die Zeichenzahl allein zu wenig. Die
+         * Zeichenbreite geht als Umbruchschätzung ein (`roleTextCapacity`).
+         *
+         * @param list<array{titel:string, items:list<string>}> $gruppen
+         */
+        $emitOutlineSummary = function (
+            array $gruppen,
+            string $titel,
+            string $titelRolle,
+            string $unterRolle
+        ) use ($setId, $setMeta, $openSlideWithRoles): void {
+            $kapazitaet = LayoutSet::roleTextCapacity($setId, $unterRolle, $setMeta);
+            $zeilenFrei = max(1, (int)($kapazitaet['lines'] ?? 1));
+            $proZeile = max(10, (int)($kapazitaet['charsPerLine'] ?? 10));
+
+            $textVon = function (array $g): string {
+                $teile = ['**' . trim((string)$g['titel']) . '**'];
+                $liste = self::formatListItemsMarkdown($g['items']);
+                if ($liste !== '') {
+                    $teile[] = $liste;
+                }
+                return implode("\n", $teile);
+            };
+            $zeilenVon = function (array $g) use ($proZeile): int {
+                $n = 1; // die Titelzeile
+                foreach ($g['items'] as $item) {
+                    $laenge = mb_strlen('- ' . trim((string)$item));
+                    $n += max(1, (int)ceil($laenge / $proZeile));
+                }
+                return $n;
+            };
+
+            $stapel = [];
+            $belegt = 0;
+            $abliefern = function () use (
+                &$stapel, &$belegt, $titel, $titelRolle, $unterRolle, $openSlideWithRoles, $textVon
+            ): void {
+                if ($stapel === []) {
+                    return;
+                }
+                /* Der Inhalt muss die ERSTE Rolle sein — dieselbe Falle wie bei der
+                   Gliederungsübersicht: findet `bestLayoutForContent` für
+                   «Überschrift + Inhalt» keine Vorlage, richtet sich die Notlösung
+                   nach der ersten Rolle, und dann läge alles auf der reinen
+                   Überschriften-Vorlage übereinander. */
+                $inhalt = [$unterRolle => implode("\n\n", array_map($textVon, $stapel))];
+                if ($titel !== '' && $titelRolle !== '') {
+                    $inhalt[$titelRolle] = $titel;
+                }
+                $openSlideWithRoles($unterRolle, $inhalt);
+                $stapel = [];
+                $belegt = 0;
+            };
+
+            foreach ($gruppen as $g) {
+                // Leerzeile zwischen zwei Blöcken, damit sie auseinander zu halten sind.
+                $braucht = $zeilenVon($g) + ($stapel === [] ? 0 : 1);
+                if ($stapel !== [] && $belegt + $braucht > $zeilenFrei) {
+                    $abliefern();
+                    $braucht = $zeilenVon($g);
+                }
+                $stapel[] = $g;
+                $belegt += $braucht;
+            }
+            $abliefern();
+        };
+
+        $summaryOn = !empty($options['outlineSummary']);
+
         $processSection = function (array $section, bool $h1BereitsGezeigt = false) use (
             $settings, $zoneFor, $routeBlock, $openSlide, $openSlideWithRoles,
             $parseScriptureRun, $emitScripture, $setId, $setMeta, &$slides, $flushSlide,
-            &$agendaOn, &$agendaColor, &$path
+            &$agendaOn, &$agendaColor, &$path, $emitOutlineSummary, $summaryOn, $zoneOverrides
         ) {
             $h1 = trim((string)($section['h1'] ?? ''));
             $path = $h1 !== '' ? [$h1] : [];
@@ -1123,6 +1207,78 @@ class LogosSermonImporter
                     $content['normal'] = $merged;
                     $openSlideWithRoles('normal', $content);
                     continue;
+                }
+
+                /* Zusammengefasste Gliederung: ein Lauf gleichrangiger Unterpunkte
+                   mit ihren Stichpunkten wird nach Platz auf Folien verteilt, statt
+                   je Punkt eine Folie zu machen. Steht für diese Ebene die
+                   Gliederungsübersicht an, hat sie Vorrang — ihr Zweig kommt im
+                   Ablauf vor diesem. */
+                /* Der Schalter sagt «zusammengefasst **auf Folien**» — er bringt die
+                   Rollen also selbst auf Folien. Sonst müsste Urs zusätzlich zwei
+                   Auswahlfelder umstellen, und in seinem Set «Schlicht - Logos»
+                   stehen genau die beiden nicht auf Folien (heading4 `unused`,
+                   Stichpunkte `custom`): der Schalter hätte sichtbar nichts getan.
+                   Hat er im Dialog aber ausdrücklich «in die Notizen» oder «aus»
+                   gewählt, gilt das — eine Wahl von Hand übersteuert der Schalter
+                   nicht. */
+                $fuerFolien = function (string $rolle) use ($zoneOverrides): bool {
+                    return !array_key_exists($rolle, $zoneOverrides)
+                        || $zoneOverrides[$rolle] === 'slides';
+                };
+                if ($summaryOn && preg_match('/^heading([2-5])$/', $type, $sm)
+                    && trim((string)$block['text']) !== ''
+                    && $fuerFolien($type) && $fuerFolien('list_item')) {
+                    $gruppen = [];
+                    $j = $i;
+                    while ($j < $n && ($blocks[$j]['type'] ?? '') === $type
+                        && trim((string)$blocks[$j]['text']) !== '') {
+                        $gTitel = trim((string)$blocks[$j]['text']);
+                        $j++;
+                        $gItems = [];
+                        while ($j < $n && ($blocks[$j]['type'] ?? '') === 'list_item') {
+                            $gItems[] = (string)$blocks[$j]['text'];
+                            $j++;
+                        }
+                        $gruppen[] = ['titel' => $gTitel, 'items' => $gItems];
+                    }
+                    /* Unter zwei Punkten gibt es nichts zusammenzufassen — dieselbe
+                       Schwelle wie bei der Übersicht. */
+                    if (count($gruppen) >= 2) {
+                        $ebene = (int)$sm[1];
+                        $elternTitel = '';
+                        $elternTyp = '';
+                        for ($k = $i - 1; $k >= 0; $k--) {
+                            $kTyp = (string)($blocks[$k]['type'] ?? '');
+                            if (preg_match('/^heading([1-5])$/', $kTyp, $km)
+                                && (int)$km[1] < $ebene
+                                && trim((string)$blocks[$k]['text']) !== '') {
+                                $elternTitel = trim((string)$blocks[$k]['text']);
+                                $elternTyp = $kTyp;
+                                break;
+                            }
+                        }
+                        if ($elternTitel === '' && $h1 !== '') {
+                            $elternTitel = $h1;
+                            $elternTyp = 'heading1';
+                        }
+                        /* Eine wartende H1-Titelfolie zuerst abliefern, sonst stünde
+                           sie hinter der Zusammenfassung. */
+                        if ($pendingH1 !== '') {
+                            $openSlide('heading1', 'heading1', $pendingH1);
+                            $pendingH1 = '';
+                        }
+                        /* Die Folien gehören zur Ebene des Oberpunkts, nicht zum
+                           zuerst gesehenen Unterpunkt — den hat die Pfadpflege oben
+                           schon angehängt. */
+                        array_pop($path);
+                        $unterRolle = (string)array_key_first(
+                            self::listBodyRoleForHeading($setId, $setMeta, $elternTyp !== '' ? $elternTyp : $type, 'x')
+                        );
+                        $emitOutlineSummary($gruppen, $elternTitel, $elternTyp, $unterRolle);
+                        $i = $j;
+                        continue;
+                    }
                 }
 
                 if (str_starts_with($type, 'heading') && $type !== 'heading1' && $zoneFor($type) === 'slides') {
@@ -1303,8 +1459,16 @@ class LogosSermonImporter
             if ($item === '') {
                 continue;
             }
-            $item = preg_replace('/^[•›\-*]\s*/u', '', $item) ?? $item;
-            $item = preg_replace('/^\d+\.\s*/u', '', $item) ?? $item;
+            $ohneZeichen = preg_replace('/^[•›\-*]\s*/u', '', $item) ?? $item;
+            /* Die Nummer einer Aufzählung nur dann wegnehmen, wenn **kein**
+               Listenzeichen davor stand. Sonst verliert «• 2. Chr 33,3: …» seine
+               Stellenangabe und wird zu «Chr 33,3: …» — bei Logos-Predigten der
+               Normalfall, weil die Bücher 1./2. Chronik, 2. Mose usw. so heissen.
+               Ein Logos-Export setzt das Zeichen immer; eine wirklich numerierte
+               Liste kommt ohne. */
+            $item = $ohneZeichen === $item
+                ? (preg_replace('/^\d+\.\s*/u', '', $item) ?? $item)
+                : $ohneZeichen;
             $lines[] = '- ' . $item;
         }
         return implode("\n", $lines);
@@ -1553,6 +1717,10 @@ class LogosSermonImporter
         // Gliederungspfad als Markdown-Überschriften in die Notizen.
         'hierarchyNotes' => false,
         'hierarchyStyle' => 'headings',
+        /* Gliederung zusammengefasst: mehrere Unterpunkte samt ihren Stichpunkten
+           auf eine Folie, gefüllt nach dem Platz im Inhaltsfeld. Vorgabe aus, damit
+           ein Import ohne Zutun aussieht wie bisher. Urs, 24.10.2026. */
+        'outlineSummary' => false,
     ];
 
     /** Die drei Inhalte des Dialogs auf die Logos-Rollen abgebildet. */
@@ -1633,6 +1801,9 @@ class LogosSermonImporter
         }
         if (array_key_exists('hierarchyNotes', $raw)) {
             $out['hierarchyNotes'] = filter_var($raw['hierarchyNotes'], FILTER_VALIDATE_BOOL);
+        }
+        if (array_key_exists('outlineSummary', $raw)) {
+            $out['outlineSummary'] = filter_var($raw['outlineSummary'], FILTER_VALIDATE_BOOL);
         }
         if (array_key_exists('hierarchyStyle', $raw)) {
             $stil = strtolower(trim((string)$raw['hierarchyStyle']));

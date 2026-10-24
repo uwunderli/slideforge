@@ -907,6 +907,7 @@ return [
     'import.agenda_toggle' => 'Outline overview in this section',
     'import.agenda_color' => 'Outline accent colour',
     'import.agenda_main' => 'Overview of the main points',
+    'import.outline_summary' => 'Outline summarised onto slides',
     'import.hierarchy_notes' => 'Outline into the notes',
     'import.hierarchy_style' => 'Style',
     'import.hierarchy_style_headings' => 'Stacked (#, ##, ###)',

@@ -861,6 +861,7 @@ return [
     'import.agenda_toggle' => 'Indice in questa sezione',
     'import.agenda_color' => 'Colore d\'accento dell\'indice',
     'import.agenda_main' => 'Panoramica dei punti principali',
+    'import.outline_summary' => 'Struttura riassunta sulle diapositive',
     'import.hierarchy_notes' => 'Struttura nelle note',
     'import.hierarchy_style' => 'Presentazione',
     'import.hierarchy_style_headings' => 'Uno sotto l\'altro (#, ##, ###)',

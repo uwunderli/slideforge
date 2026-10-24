@@ -983,6 +983,7 @@ return [
     'import.agenda_toggle' => 'Gliederungsübersicht in diesem Abschnitt',
     'import.agenda_color' => 'Akzentfarbe der Gliederung',
     'import.agenda_main' => 'Übersicht der Hauptpunkte',
+    'import.outline_summary' => 'Gliederung zusammengefasst auf Folien',
     'import.hierarchy_notes' => 'Gliederung in die Notizen',
     'import.hierarchy_style' => 'Schreibweise',
     'import.hierarchy_style_headings' => 'Untereinander (#, ##, ###)',

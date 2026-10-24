@@ -997,6 +997,7 @@ class Auth
                 'outlineDepth' => 0,
                 'scriptureTranslation' => false,
                 'agendaMain' => false,
+                'outlineSummary' => false,
                 'hierarchyNotes' => false,
                 'hierarchyStyle' => 'headings',
                 'swissSs' => false,
@@ -1060,6 +1061,7 @@ class Auth
         $out['outlineDepth'] = ($d >= 1 && $d <= 5) ? $d : 0;
         $out['scriptureTranslation'] = !empty($ui['scriptureTranslation']);
         $out['agendaMain'] = !empty($ui['agendaMain']);
+        $out['outlineSummary'] = !empty($ui['outlineSummary']);
         $out['hierarchyNotes'] = !empty($ui['hierarchyNotes']);
         $stil = strtolower(trim((string)($ui['hierarchyStyle'] ?? '')));
         if (in_array($stil, ['headings', 'path'], true)) {

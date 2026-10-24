@@ -234,6 +234,10 @@ require __DIR__ . '/includes/header.php';
           <span><?= h(t('import.agenda_main')) ?></span>
         </label>
         <label class="import-opt-check">
+          <input type="checkbox" id="import_opt_outlineSummary" data-import-opt="outlineSummary"<?= !empty($importUi['outlineSummary']) ? ' checked' : '' ?>>
+          <span><?= h(t('import.outline_summary')) ?></span>
+        </label>
+        <label class="import-opt-check">
           <input type="checkbox" id="import_opt_hierarchyNotes" data-import-opt="hierarchyNotes"<?= !empty($importUi['hierarchyNotes']) ? ' checked' : '' ?>>
           <span><?= h(t('import.hierarchy_notes')) ?></span>
         </label>
