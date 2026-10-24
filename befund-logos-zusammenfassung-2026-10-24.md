@@ -1,7 +1,7 @@
 # Gliederung zusammengefasst auf Folien (Logos-Import)
 
 **Datum:** 24.10.2026 · **Einordnung: nicht sicherheitsrelevant** (Oberfläche und Aufbereitung;
-keine Rechte, kein Löschen, kein Versand) · **Stand: gebaut und gemessen, nicht ausgeliefert.**
+keine Rechte, kein Löschen, kein Versand) · **Stand: gebaut, gemessen, ausgeliefert (24.10.).**
 
 **Auftrag:** Urs über `Entwickler (2)`, 24.10. Sein Wortlaut: «Die möchte ich nun gerne auf
 einigen Folien zusammenfassen» · Form: «Titel mit ihren Stichpunkten» · Menge: «Immer so viel
@@ -183,9 +183,29 @@ Die vier «−»-Zeilen sind: die `use`-Zeile der Abschnitts-Funktion (zwei Name
 zwei Zeilen der Listenformatierung; in `LayoutSet`/`Auth` je die Ankerzeile. **Sonst rein
 additiv.**
 
+### Lieferprotokoll (24.10.2026, erledigt)
+
+Freigabe `Entwickler (2)`: «Dann liefere aus — es ist Oberfläche und Import, nicht
+sicherheitsrelevant, also ohne Gegenprüfung; der Schalter steht ja auf «aus».»
+
+1. `php -l` über alle neun Dateien sauber.
+2. **Vorher auf Prod geprüft** — alle neun Prüfwerte wie in der Tabelle oben erwartet.
+3. **Sicherung:** `/data/slideforge/.sicherung/logos-zusammenfassung-20261024/`
+   (`src/`, `lang/`, `public_html/`), gegen die laufenden Dateien geprüft.
+4. Übertragen mit `scp -p`, neun Dateien.
+5. **Nachher auf Prod:** Prüfwerte = Arbeitsbaum, Besitzer und Rechte unverändert
+   (`99:100`, `644`); die neuen Stellen sind da (`outlineSummary` 4×/2×/1×,
+   `roleTextCapacity` 1×, `import.outline_summary` je Sprache 1×).
+6. **Takt-Probe**, jede Abfrage mit Cache-Buster: `login.php` **302** in einem Sprung nach
+   `hub.bkbiel.ch/login.php`, `import.php` **302** (läuft, verlangt Anmeldung),
+   `register.php` **200**, 3347 Bytes, **0** Meldungszeilen, `sw.php` `slideforge-679`.
+   **Keine Versionsanhebung**, weil keine statische Datei geändert wurde.
+7. `docs/` wird nicht ausgeliefert (nicht in der Positivliste) — Befund und Prüf-Protokoll
+   bleiben im Repo.
+
 > **Rückbau-Satz:** Die fünf Dateien aus der Sicherung zurücklegen (Prüfwerte der
 > Live-Spalte oben). Es wandern keine Daten mit, und ohne das Häkchen verhält sich der Import
 > wie vorher — die Option ist von sich aus aus.
 
-**Nicht ausgeliefert**, wie beauftragt. Prüfskripte der Messung liegen im Arbeitsbereich dieser
+**Ausgeliefert am 24.10.2026** nach Freigabe (siehe Lieferprotokoll). Prüfskripte der Messung liegen im Arbeitsbereich dieser
 Sitzung, nicht im Repo.
