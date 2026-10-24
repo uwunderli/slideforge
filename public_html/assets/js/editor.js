@@ -2339,6 +2339,11 @@
     syncPreviewSlideIndex();
     updateEditorContextTitle();
     renderLayersPanel();
+    /* Die rechte Leiste gehört zur neuen Folie: `deselect()` ganz oben hat sie
+       gezeichnet, als die alten Objekte schon weg und die neuen noch nicht da
+       waren — die Effekt-Liste blieb darum leer, bis man auf die Folie klickte
+       (Urs, 24.10.2026). */
+    refreshPropsPanel();
     syncTemplatePickerSelection();
   }
 
