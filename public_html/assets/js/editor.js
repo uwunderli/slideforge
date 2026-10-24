@@ -3434,6 +3434,132 @@
     }
   }
 
+  /* ---------- Tabelle ----------
+     Eine Tabelle ist eine Konva-Gruppe: je Zelle ein Rahmen-Rechteck und ein Text.
+     Die Zeilenhöhe richtet sich nach dem Inhalt (gemessen, nicht geraten) — so steht
+     die Tabelle auf der Folie gleich wie im Editor, denn der Renderer lässt die
+     Zeilen ebenfalls vom Inhalt wachsen. */
+  const TABLE_DEFAULTS = {
+    fontFamily: 'Open Sans', fontSize: 44, color: '#ffffff', align: 'left',
+    borderColor: '#ffffff', borderWidth: 2, cellPadding: 10, lineHeight: 1.25,
+    headerRow: true, headerFill: 'transparent', stripeFill: 'transparent',
+  };
+
+  function normalizeTableRows(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return [['', ''], ['', '']];
+    const cols = rows.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 0), 0) || 1;
+    return rows.map((r) => {
+      const row = Array.isArray(r) ? r.slice(0, cols) : [];
+      while (row.length < cols) row.push('');
+      return row.map((c) => (c === null || c === undefined ? '' : String(c)));
+    });
+  }
+
+  function tableAttr(group, key) {
+    const v = group.getAttr(key);
+    return (v === undefined || v === null) ? TABLE_DEFAULTS[key] : v;
+  }
+
+  /** Spaltenbreiten in Pixeln aus den Anteilen. */
+  function tableColPixels(group, cols) {
+    const totalW = Math.max(40, group.getAttr('tableW') || 800);
+    let parts = group.getAttr('tableColWidths');
+    if (!Array.isArray(parts) || parts.length !== cols) {
+      parts = new Array(cols).fill(1);
+    }
+    const sauber = parts.map((p) => Math.max(0, Number(p) || 0));
+    const sum = sauber.reduce((a, b) => a + b, 0);
+    /* Sind alle Anteile null (oder Unsinn), werden die Spalten gleich breit —
+       sonst käme eine Tabelle mit Breite null heraus, also eine unsichtbare. */
+    if (sum <= 0) return new Array(cols).fill(totalW / cols);
+    return sauber.map((p) => (p / sum) * totalW);
+  }
+
+  /** Zeichnet die Gruppe neu und gibt die Gesamthöhe zurück. */
+  function drawTable(group) {
+    const rows = normalizeTableRows(group.getAttr('tableRows'));
+    group.setAttr('tableRows', rows);
+    const cols = rows[0].length;
+    const colW = tableColPixels(group, cols);
+    const pad = Math.max(0, Number(tableAttr(group, 'cellPadding')) || 0);
+    const fontSize = Math.max(6, Number(tableAttr(group, 'fontSize')) || 32);
+    const fontFamily = tableAttr(group, 'fontFamily');
+    const color = tableAttr(group, 'color');
+    const align = tableAttr(group, 'align');
+    const lineHeight = Number(tableAttr(group, 'lineHeight')) || 1.25;
+    const borderColor = tableAttr(group, 'borderColor');
+    const borderWidth = Math.max(0, Number(tableAttr(group, 'borderWidth')) || 0);
+    const headerRow = !!tableAttr(group, 'headerRow');
+    const headerFill = tableAttr(group, 'headerFill');
+    const stripeFill = tableAttr(group, 'stripeFill');
+
+    group.destroyChildren();
+
+    /* Erst messen, dann zeichnen: die Höhe einer Zeile ist die höchste Zelle darin.
+       Der Markdown-Auszeichnungen wegen wird roh gemessen — ein `**` mehr oder
+       weniger verschiebt die Höhe nicht nennenswert. */
+    const texts = [];
+    const rowH = rows.map((row, r) => {
+      let hoch = fontSize * lineHeight;
+      row.forEach((cell, c) => {
+        const t = new Konva.Text({
+          text: String(cell || ''),
+          width: Math.max(10, colW[c] - 2 * pad),
+          fontSize: fontSize,
+          fontFamily: fontFamily,
+          fontStyle: (headerRow && r === 0) ? 'bold' : 'normal',
+          lineHeight: lineHeight,
+          fill: color,
+          align: align,
+          listening: false,
+        });
+        texts.push({ node: t, r: r, c: c });
+        hoch = Math.max(hoch, t.height());
+      });
+      return Math.round(hoch + 2 * pad);
+    });
+
+    let y = 0;
+    rows.forEach((row, r) => {
+      let x = 0;
+      const fuellung = (headerRow && r === 0)
+        ? headerFill
+        : ((!headerRow || r > 0) && stripeFill && ((r - (headerRow ? 1 : 0)) % 2 === 1) ? stripeFill : 'transparent');
+      row.forEach((cell, c) => {
+        group.add(new Konva.Rect({
+          x: x, y: y, width: colW[c], height: rowH[r],
+          fill: (fuellung && fuellung !== 'transparent') ? fuellung : undefined,
+          stroke: (borderWidth > 0 && borderColor && borderColor !== 'transparent') ? borderColor : undefined,
+          strokeWidth: borderWidth,
+          listening: false,
+        }));
+        x += colW[c];
+      });
+      y += rowH[r];
+    });
+    texts.forEach((eintrag) => {
+      let x = 0;
+      for (let i = 0; i < eintrag.c; i++) x += colW[i];
+      let oben = 0;
+      for (let i = 0; i < eintrag.r; i++) oben += rowH[i];
+      eintrag.node.x(x + pad);
+      eintrag.node.y(oben + pad);
+      group.add(eintrag.node);
+    });
+
+    const gesamtH = rowH.reduce((a, b) => a + b, 0);
+    group.setAttr('tableH', gesamtH);
+    group.setAttr('tableRowH', rowH);
+    /* Trefferfläche, damit die ganze Tabelle anklickbar ist und nicht nur die Linien. */
+    group.hitFunc(function (ctx) {
+      ctx.beginPath();
+      ctx.rect(0, 0, Math.max(40, group.getAttr('tableW') || 800), Math.max(20, gesamtH));
+      ctx.closePath();
+      ctx.fillStrokeShape(this);
+    });
+    return gesamtH;
+  }
+
   function createNode(obj) {
     const common = {
       id: obj.id,
@@ -3570,6 +3696,22 @@
       if (!isOpen) setShapeFill(node, obj);
       return node;
     }
+    if (obj.type === 'table') {
+      const group = new Konva.Group(Object.assign({}, common, {
+        x: obj.x || 0, y: obj.y || 0,
+      }));
+      group.setAttr('objType', 'table');
+      group.setAttr('tableRows', normalizeTableRows(obj.rows));
+      group.setAttr('tableColWidths', Array.isArray(obj.colWidths) ? obj.colWidths.slice() : null);
+      group.setAttr('tableW', obj.w || 800);
+      group.setAttr('tableH', obj.h || 300);
+      ['fontFamily', 'fontSize', 'color', 'align', 'borderColor', 'borderWidth',
+        'cellPadding', 'lineHeight', 'headerRow', 'headerFill', 'stripeFill'].forEach((k) => {
+        if (obj[k] !== undefined) group.setAttr(k, obj[k]);
+      });
+      drawTable(group);
+      return group;
+    }
     if (obj.type === 'group') {
       const group = new Konva.Group(Object.assign({}, common, {
         x: obj.x || 0, y: obj.y || 0,
@@ -3647,6 +3789,24 @@
       const setRole = node.getAttr('setRole') || node.getAttr('logosRole');
       if (setRole) textObj.setRole = setRole;
       return textObj;
+    }
+    if (type === 'table') {
+      const rows = normalizeTableRows(node.getAttr('tableRows'));
+      const breite = Math.round((node.getAttr('tableW') || 800) * (node.scaleX() || 1));
+      const hoehe = Math.round((node.getAttr('tableH') || 200) * (node.scaleY() || 1));
+      const tabelle = Object.assign(base, {
+        x: Math.round(node.x()), y: Math.round(node.y()),
+        w: breite, h: hoehe,
+        rows: rows,
+      });
+      const spalten = node.getAttr('tableColWidths');
+      if (Array.isArray(spalten) && spalten.length === rows[0].length) {
+        tabelle.colWidths = spalten.slice();
+      }
+      Object.keys(TABLE_DEFAULTS).forEach((k) => {
+        tabelle[k] = tableAttr(node, k);
+      });
+      return tabelle;
     }
     if (type === 'ellipse') {
       const rx = node.radiusX() * node.scaleX(), ry = node.radiusY() * node.scaleY();
@@ -3752,6 +3912,13 @@
     } else if (type === 'text') {
       node.width(Math.max(20, node.width() * node.scaleX()));
       node.scaleX(1); node.scaleY(1);
+    } else if (type === 'table') {
+      /* Nur die Breite wird eingebacken, die Höhe ergibt sich aus dem Inhalt —
+         sonst sähe die Tabelle nach dem Neuladen anders aus als beim Ziehen, weil
+         der Renderer die Zeilen ebenfalls vom Inhalt wachsen lässt. */
+      node.setAttr('tableW', Math.max(60, (node.getAttr('tableW') || 800) * node.scaleX()));
+      node.scaleX(1); node.scaleY(1);
+      drawTable(node);
     } else if (type === 'shape') {
       const newW = Math.max(10, (node.getAttr('baseW') || 100) * node.scaleX());
       const newH = Math.max(10, (node.getAttr('baseH') || 100) * node.scaleY());
@@ -4308,6 +4475,117 @@
     if (node.getAttr('objType') === 'text') {
       node.on('dblclick dbltap', () => editTextInline(node));
     }
+    if (node.getAttr('objType') === 'table') {
+      node.on('dblclick dbltap', () => editTableCell(node));
+    }
+  }
+
+  /**
+   * Zelle einer Tabelle beschriften: Doppelklick öffnet ein Eingabefeld genau über
+   * der getroffenen Zelle — dasselbe Vorgehen wie beim Textobjekt, nur dass der Text
+   * in die Zelle zurückgeschrieben wird. Tab springt zur nächsten Zelle.
+   */
+  function editTableCell(group, zeile, spalte) {
+    selectNode(group);
+    const rows = normalizeTableRows(group.getAttr('tableRows'));
+    const cols = rows[0].length;
+    const colW = tableColPixels(group, cols);
+    const rowH = group.getAttr('tableRowH') || [];
+    if (!rowH.length) return;
+
+    let r = zeile, c = spalte;
+    if (r === undefined || c === undefined) {
+      const p = group.getRelativePointerPosition();
+      if (!p) return;
+      let x = 0;
+      c = 0;
+      for (let i = 0; i < cols; i++) {
+        if (p.x < x + colW[i] || i === cols - 1) { c = i; break; }
+        x += colW[i];
+      }
+      let y = 0;
+      r = 0;
+      for (let i = 0; i < rows.length; i++) {
+        if (p.y < y + rowH[i] || i === rows.length - 1) { r = i; break; }
+        y += rowH[i];
+      }
+    }
+    if (r < 0 || c < 0 || r >= rows.length || c >= cols) return;
+
+    const pad = Math.max(0, Number(tableAttr(group, 'cellPadding')) || 0);
+    const fontSize = Math.max(6, Number(tableAttr(group, 'fontSize')) || 32);
+    const scale = SF.stage.scaleX();
+    const stageBox = SF.stage.container().getBoundingClientRect();
+    const basis = group.absolutePosition();
+    let offX = 0;
+    for (let i = 0; i < c; i++) offX += colW[i];
+    let offY = 0;
+    for (let i = 0; i < r; i++) offY += rowH[i];
+
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.value = rows[r][c] || '';
+    applySpellcheckAttrs(textarea);
+    Object.assign(textarea.style, {
+      position: 'fixed',
+      top: (stageBox.top + basis.y + offY * scale) + 'px',
+      left: (stageBox.left + basis.x + offX * scale) + 'px',
+      width: (colW[c] * scale) + 'px',
+      height: (rowH[r] * scale) + 'px',
+      fontSize: (fontSize * scale) + 'px',
+      fontFamily: tableAttr(group, 'fontFamily') + ', sans-serif',
+      fontWeight: (tableAttr(group, 'headerRow') && r === 0) ? 'bold' : 'normal',
+      color: tableAttr(group, 'color'),
+      textAlign: tableAttr(group, 'align'),
+      lineHeight: String(tableAttr(group, 'lineHeight')),
+      border: '1px dashed #87b42b',
+      padding: (pad * scale) + 'px',
+      margin: '0',
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      background: 'rgba(0,0,0,0.75)',
+      outline: 'none',
+      resize: 'none',
+      zIndex: 1000,
+      whiteSpace: 'pre-wrap',
+    });
+    if (SF.transformer) SF.transformer.hide();
+    refreshCanvas();
+    textarea.focus();
+    textarea.select();
+
+    let fertig = false;
+    function schliessen(speichern, weiterZu) {
+      if (fertig) return;
+      fertig = true;
+      if (speichern) {
+        const neu = normalizeTableRows(group.getAttr('tableRows'));
+        neu[r][c] = textarea.value;
+        group.setAttr('tableRows', neu);
+        drawTable(group);
+      }
+      if (SF.transformer) SF.transformer.show();
+      document.body.removeChild(textarea);
+      document.removeEventListener('mousedown', aussenKlick);
+      refreshCanvas();
+      if (speichern) { scheduleSave(); refreshPropsPanel(); }
+      if (weiterZu) setTimeout(() => editTableCell(group, weiterZu.r, weiterZu.c), 0);
+    }
+    function aussenKlick(e) {
+      if (e.target !== textarea) schliessen(true);
+    }
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); schliessen(false); return; }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        let nr = r, nc = c + (e.shiftKey ? -1 : 1);
+        if (nc >= cols) { nc = 0; nr = Math.min(rows.length - 1, r + 1); }
+        if (nc < 0) { nc = cols - 1; nr = Math.max(0, r - 1); }
+        schliessen(true, { r: nr, c: nc });
+      }
+    });
+    textarea.addEventListener('blur', () => schliessen(true));
+    setTimeout(() => document.addEventListener('mousedown', aussenKlick), 0);
   }
 
   function editTextInline(node) {
@@ -4384,6 +4662,7 @@
   // ---------- Selection & properties panel ----------
   const LAYER_ICON_SVG = {
     text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
+    table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 10h16"/><path d="M4 14.5h16"/><path d="M9.5 10v9"/><path d="M15 10v9"/></svg>',
     rect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg>',
     ellipse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>',
     shape: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 15H4z"/></svg>',
@@ -5948,6 +6227,28 @@
       return html;
     }
 
+    if (obj.type === 'table') {
+      const zeilen = obj.rows.length;
+      const spalten = obj.rows[0] ? obj.rows[0].length : 0;
+      html += '<div class="props-video-note">' + escapeHtml((I.tableSizeHint || '{r} × {c}').replace('{r}', String(zeilen)).replace('{c}', String(spalten))) + '</div>';
+      html += '<div style="display:flex; gap:6px; margin-top:8px;">'
+        + tableBtn('tblRowAdd', I.tableRowAdd || '+ Zeile')
+        + tableBtn('tblRowDel', I.tableRowDel || '− Zeile')
+        + '</div>';
+      html += '<div style="display:flex; gap:6px; margin-top:6px;">'
+        + tableBtn('tblColAdd', I.tableColAdd || '+ Spalte')
+        + tableBtn('tblColDel', I.tableColDel || '− Spalte')
+        + '</div>';
+      html += '<label style="display:flex; align-items:center; gap:8px; margin-top:10px;"><input type="checkbox" id="p_tblHeader" style="width:auto;" '
+        + (obj.headerRow ? 'checked' : '') + '> ' + escapeHtml(I.tableHeaderRow || 'Kopfzeile') + '</label>';
+      html += fieldNumber('p_tblFontSize', I.tableFontSize || 'Schriftgrösse', obj.fontSize || 44);
+      html += fieldColor('p_tblColor', I.tableTextColor || 'Textfarbe', obj.color || '#ffffff');
+      html += fieldColor('p_tblBorderColor', I.tableBorderColor || 'Rahmen', obj.borderColor || '#ffffff');
+      html += fieldNumber('p_tblBorderWidth', I.tableBorderWidth || 'Rahmenstärke', obj.borderWidth === undefined ? 2 : obj.borderWidth);
+      html += '<div class="props-video-note" style="margin-top:8px;">' + escapeHtml(I.tableEditHint || 'Doppelklick in eine Zelle zum Schreiben, Tab zur nächsten.') + '</div>';
+      return html;
+    }
+
     if (obj.type === 'video' || obj.type === 'audio') {
       const isAudio = obj.type === 'audio';
       html += '<div class="props-video-note">' + I.mediaPlaceholderHint.replace('{type}', isAudio ? I.mediaAudio : I.mediaVideo) + '</div>';
@@ -6342,6 +6643,11 @@
   }
   function fieldColor(id, label, value) {
     return '<div><label for="' + id + '">' + label + '</label><input type="color" id="' + id + '" value="' + value + '"></div>';
+  }
+  /** Kleiner Knopf für die Tabellen-Eigenschaften (Zeile/Spalte mehr oder weniger). */
+  function tableBtn(id, label) {
+    return '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="'
+      + id + '" style="flex:1;">' + escapeHtml(label) + '</button>';
   }
   function fieldRange(id, label, value) {
     return '<div><label for="' + id + '">' + label + ' (' + value + '%)</label><input type="range" id="' + id + '" min="0" max="100" value="' + value + '"></div>';
@@ -6774,6 +7080,66 @@
       bindIconPicker('p_arrowStyle', 'arrowStyle');
       bindIconPicker('p_bracketStyle', 'bracketStyle');
       bindIconPicker('p_bubbleStyle', 'bubbleStyle');
+    } else if (type === 'table') {
+      function tabelleNeu() {
+        drawTable(node);
+        refreshCanvas();
+        scheduleSave();
+        refreshPropsPanel();
+      }
+      function rowsJetzt() {
+        return normalizeTableRows(node.getAttr('tableRows'));
+      }
+      on('tblRowAdd', 'click', () => {
+        const rows = rowsJetzt();
+        rows.push(new Array(rows[0].length).fill(''));
+        node.setAttr('tableRows', rows);
+        tabelleNeu();
+      });
+      on('tblRowDel', 'click', () => {
+        const rows = rowsJetzt();
+        // Eine Zeile muss bleiben, sonst verschwindet die Tabelle lautlos.
+        if (rows.length <= 1) return;
+        rows.pop();
+        node.setAttr('tableRows', rows);
+        tabelleNeu();
+      });
+      on('tblColAdd', 'click', () => {
+        const rows = rowsJetzt().map((r) => r.concat(['']));
+        const breiten = node.getAttr('tableColWidths');
+        if (Array.isArray(breiten)) node.setAttr('tableColWidths', breiten.concat([1]));
+        node.setAttr('tableRows', rows);
+        tabelleNeu();
+      });
+      on('tblColDel', 'click', () => {
+        const alt = rowsJetzt();
+        if (!alt[0] || alt[0].length <= 1) return;
+        const rows = alt.map((r) => r.slice(0, -1));
+        const breiten = node.getAttr('tableColWidths');
+        if (Array.isArray(breiten)) node.setAttr('tableColWidths', breiten.slice(0, -1));
+        node.setAttr('tableRows', rows);
+        tabelleNeu();
+      });
+      on('p_tblHeader', 'change', (e) => {
+        node.setAttr('headerRow', !!e.target.checked);
+        tabelleNeu();
+      });
+      on('p_tblFontSize', 'input', (e) => {
+        node.setAttr('fontSize', Math.max(6, parseInt(e.target.value, 10) || 44));
+        drawTable(node); refreshCanvas(); scheduleSave();
+      });
+      on('p_tblColor', 'input', (e) => {
+        node.setAttr('color', e.target.value);
+        drawTable(node); refreshCanvas(); scheduleSave();
+      });
+      on('p_tblBorderColor', 'input', (e) => {
+        node.setAttr('borderColor', e.target.value);
+        drawTable(node); refreshCanvas(); scheduleSave();
+      });
+      on('p_tblBorderWidth', 'input', (e) => {
+        node.setAttr('borderWidth', Math.max(0, parseInt(e.target.value, 10) || 0));
+        drawTable(node); refreshCanvas(); scheduleSave();
+      });
     } else if (type === 'image') {
       const replaceBtn = document.getElementById('replaceAssetBtn');
       if (replaceBtn) replaceBtn.addEventListener('click', () => {
@@ -6976,6 +7342,15 @@
     } else if (type === 'markdown-text') {
       const label = I.textFieldDefault || 'Textfeld';
       obj = { id, type: 'text', x: centerX, y: centerY, w: 599, h: 70, text: label, fontFamily: 'Open Sans', fontSize: 65, fontWeight: 'normal', color: '#ffffff', align: 'left', rotation: 0, opacity: 1 };
+    } else if (type === 'table') {
+      /* Drei Spalten, Kopfzeile und zwei Zeilen — eine Tabelle, die man sofort
+         sieht und füllt, statt einer leeren Fläche. Breite wie ein Textfeld. */
+      const kopf = I.tableHeaderCell || 'Überschrift';
+      obj = Object.assign({
+        id, type: 'table', x: centerX - 200, y: centerY, w: 1000, h: 200, rotation: 0, opacity: 1,
+        rows: [[kopf, kopf, kopf], ['', '', ''], ['', '', '']],
+        colWidths: [1, 1, 1],
+      }, TABLE_DEFAULTS);
     } else if (type === 'ellipse') {
       obj = { id, type: 'ellipse', x: centerX, y: centerY, w: 200, h: 200, fillType: 'solid', fill: '#3a6c8d', stroke: 'transparent', strokeWidth: 0, rotation: 0, opacity: 1 };
     } else if (type === 'rect') {

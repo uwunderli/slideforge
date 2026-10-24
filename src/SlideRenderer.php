@@ -605,6 +605,8 @@ class SlideRenderer
             }
         } elseif ($type === 'shape') {
             $content = self::renderShapeSvg($obj);
+        } elseif ($type === 'table') {
+            $content = self::renderTable($obj, (float)$w, (float)$h);
         } else {
             $fillType = $obj['fillType'] ?? 'solid';
             if ($fillType === 'gradient') {
@@ -646,6 +648,102 @@ class SlideRenderer
      * stimmte die Lage mal und mal nicht — der Rahmen sass immer richtig, nur der
      * Inhalt darin nicht.
      */
+    /**
+     * Tabellen-Objekt als echte `<table>`.
+     *
+     * Eine echte Tabelle statt gezeichneter Linien, damit Zeilenhöhen sich nach dem
+     * Inhalt richten und lange Zellen umbrechen, statt über den Rand zu laufen. Die
+     * Zelltexte gehen durch `Markdown::render()` wie jeder andere Text — also mit
+     * demselben Schutz gegen Fremd-Markup (dort wird zuerst escaped) und denselben
+     * Auszeichnungen (`**fett**`, `[color=…]`).
+     *
+     * Spaltenbreiten sind Anteile (`colWidths`); fehlen sie, werden alle Spalten
+     * gleich breit.
+     */
+    private static function renderTable(array $obj, float $w, float $h): string
+    {
+        $rows = is_array($obj['rows'] ?? null) ? array_values($obj['rows']) : [];
+        if ($rows === []) {
+            return '';
+        }
+        $spalten = 0;
+        foreach ($rows as $zeile) {
+            $spalten = max($spalten, is_array($zeile) ? count($zeile) : 0);
+        }
+        if ($spalten === 0) {
+            return '';
+        }
+
+        $schrift = (float)($obj['fontSize'] ?? 32);
+        $familie = (string)($obj['fontFamily'] ?? 'Open Sans');
+        $farbe = (string)($obj['color'] ?? '#ffffff');
+        $ausrichtung = (string)($obj['align'] ?? 'left');
+        $rahmen = (string)($obj['borderColor'] ?? '#ffffff');
+        $rahmenBreite = max(0.0, (float)($obj['borderWidth'] ?? 2));
+        $innen = max(0.0, (float)($obj['cellPadding'] ?? 10));
+        $zeilenhoehe = (float)($obj['lineHeight'] ?? 1.25);
+        $kopfzeile = !empty($obj['headerRow']);
+        $kopfFarbe = (string)($obj['headerFill'] ?? 'transparent');
+        $streifen = (string)($obj['stripeFill'] ?? 'transparent');
+
+        $breiten = [];
+        $rohBreiten = is_array($obj['colWidths'] ?? null) ? array_values($obj['colWidths']) : [];
+        $summe = 0.0;
+        for ($s = 0; $s < $spalten; $s++) {
+            $wert = isset($rohBreiten[$s]) ? max(0.0, (float)$rohBreiten[$s]) : 0.0;
+            $breiten[$s] = $wert;
+            $summe += $wert;
+        }
+        if ($summe <= 0.0) {
+            $breiten = array_fill(0, $spalten, 1.0);
+            $summe = (float)$spalten;
+        }
+
+        /* Höhe **nicht** auf 100% zwingen: die Zeilen richten sich nach dem Inhalt,
+           genau wie der Editor sie auf dem Canvas misst. Sonst stünde die Tabelle auf
+           der Folie anders als im Editor. */
+        $tabStil = sprintf(
+            'width:100%%; border-collapse:collapse; table-layout:fixed;'
+            . ' font-family:%s,sans-serif; font-size:%dpx; color:%s; text-align:%s; line-height:%s;',
+            h($familie),
+            (int)round($schrift),
+            h($farbe),
+            h($ausrichtung),
+            h(rtrim(rtrim(number_format($zeilenhoehe, 2, '.', ''), '0'), '.') ?: '1.25')
+        );
+        $zellStil = sprintf(
+            'padding:%dpx; vertical-align:top; word-wrap:break-word; overflow-wrap:break-word;',
+            (int)round($innen)
+        );
+        if ($rahmenBreite > 0 && $rahmen !== '' && $rahmen !== 'transparent') {
+            $zellStil .= sprintf('border:%dpx solid %s;', (int)round($rahmenBreite), h($rahmen));
+        }
+
+        $html = '<table style="' . $tabStil . '">';
+        foreach ($breiten as $breite) {
+            $html .= sprintf('<col style="width:%s%%;">', h((string)round($breite / $summe * 100, 4)));
+        }
+        foreach ($rows as $nr => $zeile) {
+            $zeile = is_array($zeile) ? array_values($zeile) : [];
+            $istKopf = $kopfzeile && $nr === 0;
+            $zeilenStil = '';
+            if ($istKopf && $kopfFarbe !== '' && $kopfFarbe !== 'transparent') {
+                $zeilenStil = ' style="background:' . h($kopfFarbe) . ';"';
+            } elseif (!$istKopf && $streifen !== '' && $streifen !== 'transparent'
+                && ($nr - ($kopfzeile ? 1 : 0)) % 2 === 1) {
+                $zeilenStil = ' style="background:' . h($streifen) . ';"';
+            }
+            $html .= '<tr' . $zeilenStil . '>';
+            for ($s = 0; $s < $spalten; $s++) {
+                $text = (string)($zeile[$s] ?? '');
+                $stil = $zellStil . ($istKopf ? ' font-weight:bold;' : '');
+                $html .= '<td style="' . $stil . '">' . Markdown::render($text, false) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+        return $html . '</table>';
+    }
+
     private static function renderShapeSvg(array $obj): string
     {
         $shapeType = $obj['shapeType'] ?? 'triangle';

@@ -33,6 +33,7 @@ function ribbon_command_catalog(): array
         // --- Einfügen ---
         ['id' => 'add_slide', 'kind' => 'trigger', 'category' => 'insert', 'labelKey' => 'editor.new_slide', 'icon' => 'add_slide', 'domId' => 'addSlideBtnRibbon', 'triggerId' => 'addSlideBtn', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'tool:markdown-text', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.text_field', 'icon' => 'text_field', 'tool' => 'markdown-text', 'visibleWhen' => ['canEdit']],
+        ['id' => 'tool:table', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.table', 'icon' => 'table', 'tool' => 'table', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:line', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.line', 'icon' => 'line', 'tool' => 'line', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:rect', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.rect', 'icon' => 'rect', 'tool' => 'rect', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:triangle', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.triangle', 'icon' => 'triangle', 'tool' => 'triangle', 'visibleWhen' => ['canEdit']],
