@@ -3550,13 +3550,22 @@
     const gesamtH = rowH.reduce((a, b) => a + b, 0);
     group.setAttr('tableH', gesamtH);
     group.setAttr('tableRowH', rowH);
-    /* Trefferfläche, damit die ganze Tabelle anklickbar ist und nicht nur die Linien. */
-    group.hitFunc(function (ctx) {
-      ctx.beginPath();
-      ctx.rect(0, 0, Math.max(40, group.getAttr('tableW') || 800), Math.max(20, gesamtH));
-      ctx.closePath();
-      ctx.fillStrokeShape(this);
+    /* Trefferfläche, damit die ganze Tabelle anklickbar ist und nicht nur die Linien:
+       ein fast durchsichtiges Rechteck zuunterst, dasselbe Mittel wie bei den
+       Objektgruppen (`sf-group-hit`). Eine Gruppe kennt kein `hitFunc` — das ist
+       Sache einer Form, und der Aufruf warf einen Fehler, bevor die Tabelle
+       überhaupt auf die Folie kam (Urs, 24.10.). */
+    const treffer = new Konva.Rect({
+      name: 'sf-table-hit',
+      x: 0,
+      y: 0,
+      width: Math.max(40, group.getAttr('tableW') || 800),
+      height: Math.max(20, gesamtH),
+      fill: 'rgba(0,0,0,0.001)',
+      listening: true,
     });
+    group.add(treffer);
+    treffer.moveToBottom();
     return gesamtH;
   }
 
@@ -6799,6 +6808,10 @@
     else if (type === 'shape') {
       node.points(buildShapePoints(node.getAttr('shapeType'), w, node.getAttr('baseH'), nodeShapeCfg(node)));
       node.setAttr('baseW', w);
+    } else if (type === 'table') {
+      /* Die Tabelle rechnet mit `tableW`, nicht mit der Breite der Gruppe. */
+      node.setAttr('tableW', Math.max(60, w));
+      drawTable(node);
     } else { node.width(w); }
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }
@@ -6809,6 +6822,9 @@
     else if (type === 'shape') {
       node.points(buildShapePoints(node.getAttr('shapeType'), node.getAttr('baseW'), h, nodeShapeCfg(node)));
       node.setAttr('baseH', h);
+    } else if (type === 'table') {
+      /* Nichts: die Höhe einer Tabelle wächst mit ihrem Inhalt — von Hand gesetzt
+         wäre der Wert beim nächsten Zeichnen wieder weg. */
     } else { node.height(h); }
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }

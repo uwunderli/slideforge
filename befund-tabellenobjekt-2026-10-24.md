@@ -92,3 +92,39 @@ Klick. Geht etwas schief, ist der Rückbau ein Zurückkopieren von zwölf Dateie
 > zurückkopieren (Prüfwerte dort). Folien, in denen schon eine Tabelle steckt, zeigen danach
 > an ihrer Stelle nichts mehr — das Objekt bleibt in der Datei, nur der Renderer kennt es
 > nicht mehr. Darum vor einem Rückbau fragen, ob schon eine Tabelle im Einsatz ist.
+
+## Nachtrag: der Knopf tat nichts (Urs, 24.10. abends)
+
+Urs: «Und wie füge ich eine Tabelle nun ein?» … «Ich habe das Icon, aber da geschieht nichts wenn
+ich darauf klicke» — und dann die entscheidende Zeile aus der Browser-Konsole:
+
+```
+editor.js?v=682:3554 Uncaught TypeError: group.hitFunc is not a function
+    at drawTable (editor.js?v=682:3554:11)
+    at createNode (editor.js?v=682:3712:7)
+    at addShape (editor.js?v=682:7367:16)
+```
+
+**Ursache:** `drawTable()` gab der Konva-Gruppe eine Trefferfläche über `group.hitFunc(...)`.
+`hitFunc` gehört aber zu `Konva.Shape`, nicht zu `Konva.Group` — eine Gruppe zeichnet nichts
+Eigenes, ihre Treffer kommen von den Kindern. Der Aufruf warf, **bevor** die Tabelle auf die Folie
+kam: kein Objekt, keine Meldung, scheinbar «nichts passiert».
+
+**Korrektur:** dieselbe Trefferfläche, die die Objektgruppen schon benutzen — ein fast
+durchsichtiges Rechteck (`fill: rgba(0,0,0,0.001)`) namens `sf-table-hit` zuunterst in der Gruppe.
+Nötig ist es, weil alle Zellen und Texte `listening: false` haben; ohne dieses Rechteck wäre die
+Tabelle überhaupt nicht anklickbar.
+
+**Gleich mitgenommen,** weil es der nächste Griff gewesen wäre: das Feld «Breite» wirkte nicht
+(`applyWidth` setzte `node.width()`, die Tabelle rechnet aber mit `tableW`). Jetzt setzt es `tableW`
+und zeichnet neu. «Höhe» tut bei einer Tabelle **absichtlich nichts**: die Zeilen wachsen mit dem
+Inhalt, ein Wert von Hand wäre beim nächsten Zeichnen wieder weg.
+
+`ASSET_VERSION` 682 → **683**, ausgeliefert (`public_html/assets/js/editor.js`, `config.php`),
+Sicherung `/data/slideforge/.sicherung/tabelle-trefferflaeche-20261024/`.
+
+**Was daran zu lernen ist:** Alle Prüfungen zum Tabellen-Objekt liefen am 24.10. **server-seitig**
+(`php -l`, Export über `SlideRenderer`, Folienzahlen). Der Editor-Teil läuft im Browser, und dort
+hat nie etwas gemessen — `node --check` prüft nur die Syntax, nicht ob eine Konva-Methode existiert.
+In dieser Umgebung gibt es keinen Browser, also bleibt dieser Teil **ungeprüft, bis ein Mensch
+klickt**. Das gehört so in die Lieferung geschrieben, statt «geprüft» zu melden.
