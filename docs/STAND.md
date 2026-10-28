@@ -6,6 +6,8 @@
 - **Pfade:** `src/AgendaImporter.php`, `src/PresentationInsert.php`, `src/XlsxImporter.php`, `public_html/agenda.php`, Texte `lang/de.php`.
 - **Pfade:** `src/AgendaImporter.php`, `public_html/agenda.php`, Texte `lang/de.php` (`agenda.*`), Link in `import.php`.
 
+- **Gebaut, nicht geliefert (5.11.):** Zweig `helferlein/kennung-slide` = VERSION 2.1.24 (Kennung `ct:`/`u:` in HubDock). Tag-Vorschlag `v2.1.24`.
+
 ## Live-Stand
 - Prod `slides.bkbiel.ch` (bkb-srv10, `/data/slideforge`): Agenda-Import mit Layout-Wahl und Vorschau ausgeliefert 04.11. (`1675929`). Sicherung `.sicherung/agenda2-20261104-155115`.
 

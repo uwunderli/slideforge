@@ -81,12 +81,13 @@ class HubDock
     }
 
     /**
-     * Dieselbe Kennung, die der Hub bildet (`UserPrefs::userKey()`): Personen-Nummer, sonst
-     * `u:<Benutzername>`. Die Zweitkonto-Auflösung macht der Hub.
+     * Dieselbe Kennung, die der Hub bildet (`UserPrefs::userKey()`): `ct:<Personen-Nummer>`,
+     * sonst `u:<Benutzername>` (Schema `HubPersonKey`, Urs 28.10.2026). Die Zahl bleibt im Cookie
+     * und in der Benutzerliste; umgewandelt wird hier. Die Zweitkonto-Auflösung macht der Hub.
      */
     public static function userKey(): string
     {
-        if (!class_exists('SharedAuth')) {
+        if (!class_exists('SharedAuth') || !class_exists('HubPersonKey')) {
             return '';
         }
         $user = SharedAuth::read();
@@ -96,11 +97,13 @@ class HubDock
         foreach (['sub', 'ct_person_id', 'person_id'] as $feld) {
             $raw = trim((string)($user[$feld] ?? ''));
             if ($raw !== '' && ctype_digit($raw) && (int)$raw > 0) {
-                return $raw;
+                $key = HubPersonKey::fromCt((int)$raw);
+                if ($key !== '') {
+                    return $key;
+                }
             }
         }
-        $name = trim((string)($user['username'] ?? ''));
-        return $name !== '' ? 'u:' . $name : '';
+        return HubPersonKey::fromLocal((string)($user['username'] ?? ''));
     }
 
     /** @return array<string,mixed>|null */
