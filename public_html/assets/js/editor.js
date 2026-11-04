@@ -9980,7 +9980,7 @@
   function insertPresentationFile() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.pptx,.odp,.chs,.zip,.html,.htm,.cfs';
+    input.accept = '.pptx,.odp,.xlsx,.chs,.zip,.html,.htm,.cfs';
     input.addEventListener('change', async () => {
       const file = input.files && input.files[0];
       if (!file) return;

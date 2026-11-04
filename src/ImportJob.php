@@ -203,6 +203,19 @@ class ImportJob
                 return self::okResult($newId, $warnings);
             }
 
+            if (str_ends_with($origName, '.xlsx')) {
+                $newId = Presentation::create($userId, trim((string)pathinfo($origName, PATHINFO_FILENAME)) . t('import.title_suffix'), DEFAULT_SLIDE_WIDTH, DEFAULT_SLIDE_HEIGHT);
+                try {
+                    $result = XlsxImporter::import($filePath, $newId);
+                } catch (Throwable $e) {
+                    Presentation::delete($newId);
+                    throw new RuntimeException(t('import.xlsx_failed', ['error' => $e->getMessage()]));
+                }
+                Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $result['slides'] ?: [Presentation::defaultSlide()]]);
+                self::assignSection($userId, $newId, $sectionId);
+                return self::okResult($newId, $result['warnings']);
+            }
+
             if (str_ends_with($origName, '.odp')) {
                 $newId = Presentation::create($userId, trim((string)pathinfo($origName, PATHINFO_FILENAME)) . t('import.title_suffix'), DEFAULT_SLIDE_WIDTH, DEFAULT_SLIDE_HEIGHT);
                 try {

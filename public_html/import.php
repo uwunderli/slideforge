@@ -172,6 +172,7 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.chs_hint') ?></div>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.pptx_hint') ?></div>
+    <div class="props-video-note" style="margin-top:6px;"><?= h(t('import.xlsx_hint')) ?></div>
     <div class="props-video-note" style="margin-top:6px;"><?= t('import.odp_hint') ?></div>
     <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('import.submit')) ?></button>
     <div class="props-video-note" style="margin-top:14px;"><a href="agenda.php"><?= h(t("agenda.heading")) ?></a></div>

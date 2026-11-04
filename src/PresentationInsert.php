@@ -2,12 +2,12 @@
 
 /**
  * Folien aus einer Datei in eine bestehende Präsentation einfügen:
- * PowerPoint (.pptx), OpenDocument (.odp), Folien-Set (.chs) und eigene Präsentationen (.html, .zip, .cfs).
+ * PowerPoint (.pptx), OpenDocument (.odp), Excel (.xlsx), Folien-Set (.chs) und eigene Präsentationen (.html, .zip, .cfs).
  * Bilder und Medien kommen in den Ordner der Zielpräsentation.
  */
 class PresentationInsert
 {
-    public const EXTENSIONS = ['pptx', 'odp', 'chs', 'zip', 'html', 'htm', 'cfs'];
+    public const EXTENSIONS = ['pptx', 'odp', 'xlsx', 'chs', 'zip', 'html', 'htm', 'cfs'];
 
     /** @return array{slides:list<array>,warnings:list<string>} */
     public static function slidesFromFile(string $targetId, string $path, string $origName): array
@@ -25,6 +25,15 @@ class PresentationInsert
                 throw new RuntimeException(t($ext === 'pptx' ? 'import.pptx_failed' : 'import.odp_failed', ['error' => $e->getMessage()]));
             }
             return ['slides' => $res['slides'] ?? [], 'warnings' => array_values($res['warnings'] ?? [])];
+        }
+        if ($ext === 'xlsx') {
+            $meta = Presentation::getMeta($targetId) ?? [];
+            try {
+                $res = XlsxImporter::import($path, $targetId, max(100, (int)($meta['width'] ?? DEFAULT_SLIDE_WIDTH)), max(100, (int)($meta['height'] ?? DEFAULT_SLIDE_HEIGHT)));
+            } catch (Throwable $e) {
+                throw new RuntimeException(t('import.xlsx_failed', ['error' => $e->getMessage()]));
+            }
+            return ['slides' => $res['slides'], 'warnings' => $res['warnings']];
         }
         // Eigene Präsentation (.html, .zip, .cfs): ZIP oder einzelne HTML-Datei mit Quelldaten
         $head = (string)@file_get_contents($path, false, null, 0, 4);
