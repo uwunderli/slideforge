@@ -137,6 +137,17 @@ require __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </select>
         <label for="opt_color"><?= h(t('agenda.color_label')) ?></label>
+        <?php $brandColors = Config::brandColors(); ?>
+        <?php if ($brandColors): ?>
+        <div class="import-brand-swatches" id="agendaSwatches" style="margin-bottom:8px;">
+          <?php foreach ($brandColors as $bc): ?>
+            <?php $hex = (string)($bc['hex'] ?? ''); if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) { continue; } ?>
+            <button type="button" class="import-brand-swatch" data-hex="<?= h($hex) ?>"
+                    style="background:<?= h($hex) ?>;" title="<?= h((string)($bc['name'] ?? $hex)) ?>"
+                    aria-label="<?= h((string)($bc['name'] ?? $hex)) ?>"></button>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <input type="color" id="opt_color" name="opt[color]" value="<?= h($opt['color']) ?>" data-auto>
 
         <label for="opt_heading"><?= h(t('agenda.heading_label')) ?></label>
@@ -196,6 +207,13 @@ require __DIR__ . '/includes/header.php';
       var f = document.getElementById('agendaForm');
       document.getElementById('agendaStep').value = 'preview';
       f.submit();
+    });
+  });
+  document.querySelectorAll('#agendaSwatches .import-brand-swatch').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var c = document.getElementById('opt_color');
+      c.value = b.getAttribute('data-hex');
+      c.dispatchEvent(new Event('change'));
     });
   });
   </script>
