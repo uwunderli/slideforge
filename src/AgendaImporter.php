@@ -1,0 +1,361 @@
+<?php
+
+/**
+ * Traktandenliste -> Präsentation.
+ *
+ * Eingabe: Word (.docx), Markdown (.md) oder PDF. Alles wird zuerst zu einer
+ * **Gliederung als Markdown-Text** gemacht (`extractOutline`), die der Benutzer in
+ * der Vorschau von Hand korrigieren kann; erst diese Gliederung wird zu Folien
+ * (`import`). Es gibt also genau einen Parser (`parseOutline`).
+ *
+ * Gliederung:
+ *   # Titel
+ *   ## Untertitel (z. B. Datum)        -- optional
+ *   - Traktandum
+ *     - Unterpunkt                      -- eingerückt
+ *
+ * Folien: Titelfolie, dann je Traktandum die Übersichtsfolie mit dem aktuellen
+ * Punkt hervorgehoben (Farbe, fett oder beides), optional eine Inhaltsfolie mit
+ * den Unterpunkten. Die Layouts kommen aus dem gewählten Folien-Set.
+ */
+class AgendaImporter
+{
+    public const DEFAULT_COLOR = '#f2a900';
+
+    /** @return array{highlight:string,color:string,heading:string,subSlides:bool,insertAfter:int} */
+    public static function normalizeOptions(array $raw): array
+    {
+        $hl = (string)($raw['highlight'] ?? 'both');
+        if (!in_array($hl, ['color', 'bold', 'both'], true)) {
+            $hl = 'both';
+        }
+        $color = (string)($raw['color'] ?? self::DEFAULT_COLOR);
+        if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            $color = self::DEFAULT_COLOR;
+        }
+        $heading = trim((string)($raw['heading'] ?? ''));
+        return [
+            'highlight' => $hl,
+            'color' => $color,
+            'heading' => $heading !== '' ? $heading : 'Traktanden',
+            'subSlides' => !isset($raw['subSlides']) || (string)$raw['subSlides'] !== '0',
+            // 1-basierte Nummer des Traktandums, hinter dem die Zusatzfolien (Finanzen) eingefügt werden; 0 = ans Ende
+            'insertAfter' => max(0, (int)($raw['insertAfter'] ?? 0)),
+        ];
+    }
+
+    /** Dateiendung -> Gliederungstext. */
+    public static function extractOutline(string $path, string $origName): string
+    {
+        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        $lines = match ($ext) {
+            'docx' => self::linesFromDocx($path),
+            'pdf' => self::linesFromPdf($path),
+            'md', 'markdown', 'txt' => self::linesFromText((string)file_get_contents($path)),
+            default => throw new RuntimeException(t('agenda.unsupported_type')),
+        };
+        return self::linesToOutline($lines);
+    }
+
+    public static function isAgendaFile(string $origName): bool
+    {
+        return in_array(strtolower(pathinfo($origName, PATHINFO_EXTENSION)), ['docx', 'md', 'markdown', 'pdf'], true);
+    }
+
+    /** @return list<array{level:int,text:string}> */
+    private static function linesFromDocx(string $path): array
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            throw new RuntimeException(t('agenda.read_failed'));
+        }
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        if ($xml === false) {
+            throw new RuntimeException(t('agenda.read_failed'));
+        }
+        $out = [];
+        preg_match_all('#<w:p[ >].*?</w:p>#s', $xml, $paras);
+        foreach ($paras[0] as $p) {
+            preg_match_all('#<w:t[^>]*>([^<]*)</w:t>#', $p, $t);
+            $text = trim(html_entity_decode(implode('', $t[1]), ENT_QUOTES | ENT_XML1, 'UTF-8'));
+            if ($text === '') {
+                continue;
+            }
+            $level = 0;
+            if (preg_match('#<w:numPr>.*?<w:ilvl w:val="(\d)"#s', $p, $m)) {
+                $level = (int)$m[1];
+            } elseif (preg_match('#<w:ind [^>]*w:left="(\d+)"#', $p, $m)) {
+                $level = (int)floor(((int)$m[1]) / 720);
+            }
+            $out[] = ['level' => $level, 'text' => $text];
+        }
+        return $out;
+    }
+
+    /** @return list<array{level:int,text:string}> */
+    private static function linesFromPdf(string $path): array
+    {
+        $bin = trim((string)@shell_exec('command -v pdftotext 2>/dev/null'));
+        if ($bin === '') {
+            throw new RuntimeException(t('agenda.pdf_no_tool'));
+        }
+        $raw = (string)shell_exec(escapeshellarg($bin) . ' -layout -enc UTF-8 ' . escapeshellarg($path) . ' - 2>/dev/null');
+        return self::linesFromText($raw);
+    }
+
+    /** Text/Markdown: Einrückung (2 Leerzeichen oder Tab) = eine Ebene. @return list<array{level:int,text:string}> */
+    private static function linesFromText(string $raw): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/u', $raw) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $isHeading = (bool)preg_match('/^\s*#{1,6}\s/', $line);
+            preg_match('/^[ \t]*/', $line, $ws);
+            $indent = strlen(str_replace("\t", '    ', $ws[0]));
+            $out[] = [
+                'level' => $isHeading ? 0 : intdiv($indent, 2),
+                'text' => trim($line),
+                'heading' => $isHeading,
+            ];
+        }
+        return $out;
+    }
+
+    /** Aus den Zeilen den Gliederungstext bauen: erste Zeile Titel, Datumszeile Untertitel, Rest Punkte. */
+    private static function linesToOutline(array $lines): string
+    {
+        $clean = [];
+        foreach ($lines as $l) {
+            $text = self::cleanItem((string)$l['text']);
+            if ($text !== '') {
+                $clean[] = ['level' => (int)$l['level'], 'text' => $text, 'heading' => !empty($l['heading'])];
+            }
+        }
+        if ($clean === []) {
+            throw new RuntimeException(t('agenda.empty'));
+        }
+        $outline = [];
+        $title = array_shift($clean);
+        $outline[] = '# ' . $title['text'];
+        if ($clean !== [] && self::looksLikeDate($clean[0]['text'])) {
+            $sub = array_shift($clean);
+            $outline[] = '## ' . $sub['text'];
+        }
+        $base = $clean === [] ? 0 : min(array_column($clean, 'level'));
+        foreach ($clean as $l) {
+            $lvl = max(0, $l['level'] - $base);
+            $outline[] = str_repeat('  ', min($lvl, 1)) . '- ' . $l['text'];
+        }
+        return implode("\n", $outline) . "\n";
+    }
+
+    /** Aufzählungs- und Nummernzeichen vorn weg, Überschriftzeichen weg. */
+    private static function cleanItem(string $text): string
+    {
+        $text = trim($text);
+        $text = preg_replace('/^#{1,6}\s+/u', '', $text) ?? $text;
+        $text = preg_replace('/^(?:[-*•›▪●○–]|\d{1,2}[.)])\s+/u', '', $text) ?? $text;
+        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    }
+
+    private static function looksLikeDate(string $text): bool
+    {
+        return (bool)preg_match('/\d{1,2}\.\s*(?:\d{1,2}\.|[A-Za-zäöü]{3,})\s*\d{2,4}|\b20\d{2}\b.*\d{1,2}[.:]\d{2}\s*Uhr|\d{1,2}[.:]\d{2}\s*Uhr|^(?:Mo|Di|Mi|Do|Fr|Sa|So)[a-z]*,/iu', $text);
+    }
+
+    /** @return array{title:string,subtitle:string,items:list<array{title:string,sub:list<string>}>} */
+    public static function parseOutline(string $outline): array
+    {
+        $title = '';
+        $subtitle = '';
+        $items = [];
+        foreach (preg_split('/\R/u', $outline) ?: [] as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            if (preg_match('/^#\s+(.+)$/u', $line, $m) && $title === '') {
+                $title = trim($m[1]);
+                continue;
+            }
+            if (preg_match('/^##\s+(.+)$/u', $line, $m) && $subtitle === '') {
+                $subtitle = trim($m[1]);
+                continue;
+            }
+            $indented = (bool)preg_match('/^(?:\t|\s{2,})\S/u', $line);
+            $text = self::cleanItem($line);
+            if ($text === '') {
+                continue;
+            }
+            if ($indented && $items !== []) {
+                $items[count($items) - 1]['sub'][] = $text;
+            } else {
+                $items[] = ['title' => $text, 'sub' => []];
+            }
+        }
+        if ($title === '' && $items !== []) {
+            $title = 'Traktanden';
+        }
+        return ['title' => $title, 'subtitle' => $subtitle, 'items' => $items];
+    }
+
+    /**
+     * Folienplan für die Vorschau (legt nichts an).
+     * @return array{title:string,slide_count:int,slides:list<array{kind:string,label:string}>,warnings:list<string>}
+     */
+    public static function planImport(string $outline, string $layoutSetId, array $options = []): array
+    {
+        $built = self::build($outline, $layoutSetId, $options);
+        $slides = [];
+        foreach ($built['plan'] as $p) {
+            $slides[] = $p;
+        }
+        return [
+            'title' => $built['title'],
+            'slide_count' => count($built['slides']),
+            'slides' => $slides,
+            'warnings' => $built['warnings'],
+        ];
+    }
+
+    /**
+     * @return array{slides:list<array>,title:string,width:int,height:int,warnings:list<string>,layout_set_id:string,insert_index:int}
+     */
+    public static function import(string $outline, string $layoutSetId, array $options = []): array
+    {
+        $b = self::build($outline, $layoutSetId, $options);
+        return [
+            'slides' => $b['slides'],
+            'title' => $b['title'],
+            'width' => $b['width'],
+            'height' => $b['height'],
+            'warnings' => $b['warnings'],
+            'layout_set_id' => $layoutSetId,
+            'insert_index' => $b['insert_index'],
+        ];
+    }
+
+    private static function build(string $outline, string $layoutSetId, array $options): array
+    {
+        if (!LayoutSet::isLayoutSet($layoutSetId)) {
+            throw new RuntimeException(t('import.layout_set_required'));
+        }
+        $opt = self::normalizeOptions($options);
+        $data = self::parseOutline($outline);
+        if ($data['items'] === []) {
+            throw new RuntimeException(t('agenda.empty'));
+        }
+        $setMeta = Presentation::getMeta($layoutSetId) ?? [];
+        $warnings = [];
+        $slides = [];
+        $plan = [];
+        $add = function (array $content, string $kind, string $label) use ($layoutSetId, $setMeta, &$slides, &$plan, &$warnings) {
+            $layout = LayoutSet::bestLayoutForContent($layoutSetId, $content, $setMeta);
+            if ($layout === null) {
+                $warnings[] = t('agenda.no_layout', ['label' => $label]);
+                $layout = ['objects' => []];
+            }
+            $slides[] = LayoutSet::fillSlideFromLayout($layout, $content, '', $setMeta);
+            $plan[] = ['kind' => $kind, 'label' => $label];
+        };
+
+        $titleContent = ['document_title' => $data['title']];
+        if ($data['subtitle'] !== '') {
+            $titleContent['subtitle'] = $data['subtitle'];
+        }
+        $add($titleContent, 'title', $data['title']);
+
+        $n = count($data['items']);
+        $insertAfter = $opt['insertAfter'] > 0 ? min($opt['insertAfter'], $n) : 0;
+        $insertIndex = 0;
+        foreach ($data['items'] as $i => $item) {
+            $add(
+                ['heading1' => $opt['heading'], 'normal' => self::agendaText($data['items'], $i, $opt)],
+                'agenda',
+                ($i + 1) . '. ' . $item['title']
+            );
+            if ($opt['subSlides'] && $item['sub'] !== []) {
+                $add(
+                    ['heading1' => $item['title'], 'normal' => LogosSermonImporter::formatListItemsMarkdown($item['sub'])],
+                    'detail',
+                    $item['title']
+                );
+            }
+            if ($insertAfter === $i + 1) {
+                $insertIndex = count($slides);
+            }
+        }
+        if ($insertAfter === 0) {
+            $insertIndex = count($slides);
+        }
+        return [
+            'title' => $data['title'],
+            'slides' => $slides,
+            'plan' => $plan,
+            'warnings' => $warnings,
+            'width' => max(100, (int)($setMeta['width'] ?? DEFAULT_SLIDE_WIDTH)),
+            'height' => max(100, (int)($setMeta['height'] ?? DEFAULT_SLIDE_HEIGHT)),
+            'insert_index' => $insertIndex,
+        ];
+    }
+
+    /**
+     * Legt die Präsentation an. Eine Finanz-/Zusatz-PPTX wird hinter dem gewählten
+     * Traktandum eingefügt (ihre Folien bleiben unverändert, meist Bilder).
+     *
+     * @return array{presentation_id:string,redirect:string,warnings:list<string>}
+     */
+    public static function createPresentation(
+        string $userId,
+        string $outline,
+        string $layoutSetId,
+        array $options,
+        string $sectionId = '',
+        ?string $extraPptxPath = null
+    ): array {
+        $result = self::import($outline, $layoutSetId, $options);
+        $warnings = $result['warnings'];
+        $newId = Presentation::create($userId, trim($result['title']) ?: t('import.default_title'), $result['width'], $result['height']);
+        Presentation::updateMeta($newId, ['layout_set_id' => $layoutSetId]);
+        $slides = $result['slides'];
+        if ($extraPptxPath !== null && is_file($extraPptxPath)) {
+            try {
+                $extra = PptxImporter::import($extraPptxPath, $newId);
+            } catch (Throwable $e) {
+                Presentation::delete($newId);
+                throw new RuntimeException(t('import.pptx_failed', ['error' => $e->getMessage()]));
+            }
+            $warnings = array_merge($warnings, $extra['warnings'] ?? []);
+            array_splice($slides, (int)$result['insert_index'], 0, $extra['slides'] ?? []);
+        }
+        Storage::write(Presentation::dir($newId) . '/slides.json', ['slides' => $slides ?: [Presentation::defaultSlide()]]);
+        ImportJob::assignSection($userId, $newId, $sectionId);
+        return [
+            'presentation_id' => $newId,
+            'redirect' => 'editor.php?id=' . urlencode($newId),
+            'warnings' => array_values($warnings),
+        ];
+    }
+
+
+    /** Alle Traktanden als Text, das aktuelle hervorgehoben (Markdown-Auszeichnung des Editors). */
+    private static function agendaText(array $items, int $current, array $opt): string
+    {
+        $lines = [];
+        foreach ($items as $i => $item) {
+            $t = str_replace(['*', '['], ['', '('], $item['title']);
+            if ($i === $current) {
+                if (in_array($opt['highlight'], ['color', 'both'], true)) {
+                    $t = '[color=' . $opt['color'] . ']' . $t . '[/color]';
+                }
+                if (in_array($opt['highlight'], ['bold', 'both'], true)) {
+                    $t = '**' . $t . '**';
+                }
+            }
+            $lines[] = $t;
+        }
+        return implode("\n", $lines);
+    }
+}
