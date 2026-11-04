@@ -1,12 +1,12 @@
 # STAND SlideForge (FolienSchmiede)
 
-- **Erledigt:** Traktandenlisten-Import gebaut (04.11.), committet, nicht ausgeliefert.
+- **Erledigt:** Traktandenlisten-Import gebaut (04.11.), ausgeliefert.
 - **Offen:** Folienbau mit dem Set «Schlicht - Mitgliederversammlung» und Finanz-PPTX-Einfügung an Urs' Set prüfen (Urs legt das Set an); PDF-Parser mit echter Datei; Auslieferung nach Urs' Go.
 - **Nächster Schritt:** Urs probiert `agenda.php` aus, danach Anpassungen und Auslieferung.
 - **Pfade:** `src/AgendaImporter.php`, `public_html/agenda.php`, Texte `lang/de.php` (`agenda.*`), Link in `import.php`.
 
 ## Live-Stand
-- Prod `slides.bkbiel.ch` (bkb-srv10, `/data/slideforge`): Stand nicht gemessen. Letzter Commit vor dem Import: `91d117c` (25.10.).
+- Prod `slides.bkbiel.ch` (bkb-srv10, `/data/slideforge`): Agenda-Import ausgeliefert 04.11. (`e9670b8`, ASSET_VERSION 687). Sicherung `.sicherung/agenda-20261104-154142`.
 
 ## Liefer-Weg
 Von Hand, siehe `docs/PRUEFUNGEN.md` («So wird in der FolienSchmiede ausgeliefert»). Kein release.sh.
