@@ -73,6 +73,26 @@ $layoutChoices = $layoutSetId !== '' && LayoutSet::isLayoutSet($layoutSetId) ? A
 $pageTitle = t('agenda.heading');
 require __DIR__ . '/includes/header.php';
 ?>
+<?php
+/** Farbfeld mit Markenfarben als Farbfeldern; Auswahl löst die Vorschau neu aus. */
+$brandColors = Config::brandColors();
+$colorPicker = function (string $id, string $name, string $value, string $swatchesId) use ($brandColors): string {
+    $html = '';
+    if ($brandColors) {
+        $html .= '<div class="import-brand-swatches" id="' . h($swatchesId) . '" data-target="' . h($id) . '" style="margin-bottom:8px;">';
+        foreach ($brandColors as $bc) {
+            $hex = (string)($bc['hex'] ?? '');
+            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) {
+                continue;
+            }
+            $nm = h((string)($bc['name'] ?? $hex));
+            $html .= '<button type="button" class="import-brand-swatch" data-hex="' . h($hex) . '" style="background:' . h($hex) . ';" title="' . $nm . '" aria-label="' . $nm . '"></button>';
+        }
+        $html .= '</div>';
+    }
+    return $html . '<input type="color" id="' . h($id) . '" name="' . h($name) . '" value="' . h($value) . '" data-auto>';
+};
+?>
 <link rel="stylesheet" href="assets/css/import-dialog.css?v=<?= ASSET_VERSION ?>">
 <div class="container" style="max-width: <?= $outline === '' ? '680px' : '1500px' ?>;">
   <a href="import.php" class="back-link">&larr; <?= h(t('import.heading')) ?></a>
@@ -137,18 +157,17 @@ require __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </select>
         <label for="opt_color"><?= h(t('agenda.color_label')) ?></label>
-        <?php $brandColors = Config::brandColors(); ?>
-        <?php if ($brandColors): ?>
-        <div class="import-brand-swatches" id="agendaSwatches" style="margin-bottom:8px;">
-          <?php foreach ($brandColors as $bc): ?>
-            <?php $hex = (string)($bc['hex'] ?? ''); if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) { continue; } ?>
-            <button type="button" class="import-brand-swatch" data-hex="<?= h($hex) ?>"
-                    style="background:<?= h($hex) ?>;" title="<?= h((string)($bc['name'] ?? $hex)) ?>"
-                    aria-label="<?= h((string)($bc['name'] ?? $hex)) ?>"></button>
-          <?php endforeach; ?>
-        </div>
+        <?= $colorPicker('opt_color', 'opt[color]', $opt['color'], 'agendaSwatches') ?>
+
+        <label>
+          <input type="hidden" name="opt[doneOn]" value="0">
+          <input type="checkbox" name="opt[doneOn]" value="1"<?= $opt['doneOn'] ? ' checked' : '' ?> data-auto>
+          <?= h(t('agenda.done_on')) ?>
+        </label>
+        <?php if ($opt['doneOn']): ?>
+        <label for="opt_done_color"><?= h(t('agenda.done_color_label')) ?></label>
+        <?= $colorPicker('opt_done_color', 'opt[doneColor]', $opt['doneColor'], 'doneSwatches') ?>
         <?php endif; ?>
-        <input type="color" id="opt_color" name="opt[color]" value="<?= h($opt['color']) ?>" data-auto>
 
         <label for="opt_heading"><?= h(t('agenda.heading_label')) ?></label>
         <input type="text" id="opt_heading" name="opt[heading]" value="<?= h($opt['heading']) ?>">
@@ -209,9 +228,9 @@ require __DIR__ . '/includes/header.php';
       f.submit();
     });
   });
-  document.querySelectorAll('#agendaSwatches .import-brand-swatch').forEach(function (b) {
+  document.querySelectorAll('.import-brand-swatches .import-brand-swatch').forEach(function (b) {
     b.addEventListener('click', function () {
-      var c = document.getElementById('opt_color');
+      var c = document.getElementById(b.parentNode.getAttribute('data-target'));
       c.value = b.getAttribute('data-hex');
       c.dispatchEvent(new Event('change'));
     });

@@ -1805,4 +1805,6 @@ return [
     'agenda.layout_auto' => 'Automatisch',
     'agenda.preview_heading' => 'Vorschau',
     'agenda.cancel' => 'Abbrechen',
+    'agenda.done_on' => 'Abgehandelte Traktanden ausgrauen',
+    'agenda.done_color_label' => 'Farbe der abgehandelten Traktanden',
 ];

@@ -21,8 +21,9 @@
 class AgendaImporter
 {
     public const DEFAULT_COLOR = '#f2a900';
+    public const DEFAULT_DONE_COLOR = '#9e9e9e';
 
-    /** @return array{highlight:string,color:string,heading:string,subSlides:bool,insertAfter:int,agendaLayout:string,detailLayout:string} */
+    /** @return array{highlight:string,color:string,heading:string,subSlides:bool,doneOn:bool,doneColor:string,insertAfter:int,agendaLayout:string,detailLayout:string} */
     public static function normalizeOptions(array $raw): array
     {
         $hl = (string)($raw['highlight'] ?? 'both');
@@ -41,6 +42,8 @@ class AgendaImporter
             'subSlides' => !isset($raw['subSlides']) || (string)$raw['subSlides'] !== '0',
             // 1-basierte Nummer des Traktandums, hinter dem die Zusatzfolien (Finanzen) eingefügt werden; 0 = ans Ende
             'insertAfter' => max(0, (int)($raw['insertAfter'] ?? 0)),
+            'doneOn' => !isset($raw['doneOn']) || (string)$raw['doneOn'] !== '0',
+            'doneColor' => preg_match('/^#[0-9a-fA-F]{6}$/', (string)($raw['doneColor'] ?? '')) ? (string)$raw['doneColor'] : self::DEFAULT_DONE_COLOR,
             'agendaLayout' => preg_replace('/[^A-Za-z0-9_-]/', '', (string)($raw['agendaLayout'] ?? '')),
             'detailLayout' => preg_replace('/[^A-Za-z0-9_-]/', '', (string)($raw['detailLayout'] ?? '')),
         ];
@@ -470,6 +473,9 @@ class AgendaImporter
         $lines = [];
         foreach ($items as $i => $item) {
             $t = str_replace(['*', '['], ['', '('], $item['title']);
+            if ($i < $current && $opt['doneOn']) {
+                $t = '[color=' . $opt['doneColor'] . ']' . $t . '[/color]';
+            }
             if ($i === $current) {
                 if (in_array($opt['highlight'], ['color', 'both'], true)) {
                     $t = '[color=' . $opt['color'] . ']' . $t . '[/color]';
