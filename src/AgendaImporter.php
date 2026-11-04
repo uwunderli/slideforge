@@ -71,8 +71,8 @@ class AgendaImporter
 
     /**
      * Word mit Formatierung lesen: Traktandum = fetter Absatz in der grössten fetten Schrift,
-     * Aufzählungspunkte darunter = Unterpunkte, alles Übrige (Verantwortliche, Zahlen,
-     * Notizen) = Kommentar zum Traktandum. Fehlt die Grössen-Unterscheidung, gilt jeder
+     * alles Übrige (Aufzählungspunkte, Verantwortliche, Zahlen,
+     * Notizen) = Kommentar zum Traktandum, nicht auf der Folie. Fehlt die Grössen-Unterscheidung, gilt jeder
      * Absatz als Traktandum (einfache Liste).
      */
     private static function outlineFromDocx(string $path): string
@@ -118,6 +118,10 @@ class AgendaImporter
                     }
                 }
             }
+            if ($list) {
+                // Aufzählungspunkt bleibt ein Stück, auch bei wechselnder Formatierung
+                $segs = [['text' => implode(' ', array_column($segs, 'text')), 'bold' => false, 'sz' => 0]];
+            }
             foreach ($segs as $s) {
                 $text = trim(preg_replace('/\s+/u', ' ', $s['text']) ?? '');
                 if ($text !== '') {
@@ -152,7 +156,7 @@ class AgendaImporter
                 $out[] = '- ' . self::cleanItem($p['text']);
                 $haveItem = true;
             } elseif ($p['list'] && $haveItem) {
-                $out[] = '  - ' . self::cleanItem($p['text']);
+                $out[] = '  > • ' . self::cleanItem($p['text']);
             } elseif ($haveItem) {
                 $out[] = '  > ' . $p['text'];
             }
