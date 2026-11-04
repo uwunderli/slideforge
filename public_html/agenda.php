@@ -52,7 +52,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirect($res['redirect']);
                 exit;
             }
-            $plan = AgendaImporter::planImport($outline, $layoutSetId, $opt);
         }
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -63,11 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $parsed = $outline !== '' ? AgendaImporter::parseOutline($outline) : null;
+if ($outline !== '' && $layoutSetId !== '' && LayoutSet::isLayoutSet($layoutSetId)) {
+    try {
+        $plan = AgendaImporter::planImport($outline, $layoutSetId, $opt);
+    } catch (Throwable $e) {
+        $error = $error !== '' ? $error : $e->getMessage();
+    }
+}
+$layoutChoices = $layoutSetId !== '' && LayoutSet::isLayoutSet($layoutSetId) ? AgendaImporter::layoutChoices($layoutSetId) : [];
 $pageTitle = t('agenda.heading');
 require __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="assets/css/import-dialog.css?v=<?= ASSET_VERSION ?>">
-<div class="container" style="max-width: 680px;">
+<div class="container" style="max-width: <?= $outline === '' ? '680px' : '1500px' ?>;">
   <a href="import.php" class="back-link">&larr; <?= h(t('import.heading')) ?></a>
   <h1 style="margin-top:14px;"><?= h(t('agenda.heading')) ?></h1>
   <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('agenda.intro')) ?></p>
@@ -88,60 +95,110 @@ require __DIR__ . '/includes/header.php';
     <button type="submit" class="button hub-btn hub-btn--primary" style="margin-top:16px;"><?= h(t('agenda.read')) ?></button>
   </form>
 <?php else: ?>
-  <form method="post" enctype="multipart/form-data" style="margin-top:20px;">
+  <style>
+    .agenda-cols { display:grid; grid-template-columns: 360px 1fr; gap:28px; align-items:start; margin-top:20px; }
+    .agenda-cols label { display:block; margin-top:14px; }
+    .agenda-cols textarea, .agenda-cols select, .agenda-cols input[type=text] { width:100%; }
+    .agenda-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:14px; margin-top:10px; }
+    .agenda-tile .import-preview-grid-thumb { aspect-ratio: <?= (int)($plan['width'] ?? 1920) ?> / <?= (int)($plan['height'] ?? 1080) ?>; background:#000; border-radius:6px; overflow:hidden; }
+    .agenda-tile .import-preview-grid-meta { display:flex; justify-content:space-between; gap:8px; padding:4px 2px; font-size:0.85rem; }
+    .agenda-actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+    @media (max-width: 900px) { .agenda-cols { grid-template-columns: 1fr; } }
+  </style>
+  <form method="post" enctype="multipart/form-data" id="agendaForm">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-    <label for="outline"><?= h(t('agenda.outline_label')) ?></label>
-    <textarea id="outline" name="outline" rows="14" style="width:100%; font-family:monospace;"><?= h($outline) ?></textarea>
-    <div class="props-video-note" style="margin-top:6px;"><?= h(t('agenda.outline_hint')) ?></div>
+    <input type="hidden" name="step" id="agendaStep" value="preview">
+    <div class="agenda-cols">
+      <div>
+        <label for="outline" style="margin-top:0;"><?= h(t('agenda.outline_label')) ?></label>
+        <textarea id="outline" name="outline" rows="12" style="font-family:monospace;"><?= h($outline) ?></textarea>
+        <div class="props-video-note" style="margin-top:6px;"><?= h(t('agenda.outline_hint')) ?></div>
 
-    <label for="layout_set_id" style="margin-top:14px;"><?= h(t('import.layout_set_label')) ?></label>
-    <select id="layout_set_id" name="layout_set_id">
-      <?php foreach ($layoutSets as $set): ?>
-        <option value="<?= h($set['id']) ?>"<?= $set['id'] === $layoutSetId ? ' selected' : '' ?>><?= h($set['title'] ?? $set['id']) ?></option>
-      <?php endforeach; ?>
-    </select>
+        <label for="layout_set_id"><?= h(t('import.layout_set_label')) ?></label>
+        <select id="layout_set_id" name="layout_set_id" data-auto>
+          <?php foreach ($layoutSets as $set): ?>
+            <option value="<?= h($set['id']) ?>"<?= $set['id'] === $layoutSetId ? ' selected' : '' ?>><?= h($set['title'] ?? $set['id']) ?></option>
+          <?php endforeach; ?>
+        </select>
 
-    <label for="opt_highlight" style="margin-top:14px;"><?= h(t('agenda.highlight_label')) ?></label>
-    <select id="opt_highlight" name="opt[highlight]">
-      <?php foreach (['both' => 'agenda.hl_both', 'color' => 'agenda.hl_color', 'bold' => 'agenda.hl_bold'] as $v => $k): ?>
-        <option value="<?= h($v) ?>"<?= $opt['highlight'] === $v ? ' selected' : '' ?>><?= h(t($k)) ?></option>
-      <?php endforeach; ?>
-    </select>
-    <label for="opt_color" style="margin-top:14px;"><?= h(t('agenda.color_label')) ?></label>
-    <input type="color" id="opt_color" name="opt[color]" value="<?= h($opt['color']) ?>">
+        <label for="opt_agenda_layout"><?= h(t('agenda.agenda_layout_label')) ?></label>
+        <select id="opt_agenda_layout" name="opt[agendaLayout]" data-auto>
+          <option value=""><?= h(t('agenda.layout_auto')) ?></option>
+          <?php foreach ($layoutChoices as $c): ?>
+            <option value="<?= h($c['id']) ?>"<?= $opt['agendaLayout'] === $c['id'] ? ' selected' : '' ?>><?= h($c['label']) ?> (<?= (int)$c['bodies'] ?>)</option>
+          <?php endforeach; ?>
+        </select>
+        <div class="props-video-note" style="margin-top:6px;"><?= h(t('agenda.agenda_layout_hint')) ?></div>
 
-    <label for="opt_heading" style="margin-top:14px;"><?= h(t('agenda.heading_label')) ?></label>
-    <input type="text" id="opt_heading" name="opt[heading]" value="<?= h($opt['heading']) ?>">
+        <label for="opt_highlight"><?= h(t('agenda.highlight_label')) ?></label>
+        <select id="opt_highlight" name="opt[highlight]" data-auto>
+          <?php foreach (['both' => 'agenda.hl_both', 'color' => 'agenda.hl_color', 'bold' => 'agenda.hl_bold'] as $v => $k): ?>
+            <option value="<?= h($v) ?>"<?= $opt['highlight'] === $v ? ' selected' : '' ?>><?= h(t($k)) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <label for="opt_color"><?= h(t('agenda.color_label')) ?></label>
+        <input type="color" id="opt_color" name="opt[color]" value="<?= h($opt['color']) ?>" data-auto>
 
-    <label style="margin-top:14px; display:block;">
-      <input type="hidden" name="opt[subSlides]" value="0">
-      <input type="checkbox" name="opt[subSlides]" value="1"<?= $opt['subSlides'] ? ' checked' : '' ?>>
-      <?= h(t('agenda.sub_slides')) ?>
-    </label>
+        <label for="opt_heading"><?= h(t('agenda.heading_label')) ?></label>
+        <input type="text" id="opt_heading" name="opt[heading]" value="<?= h($opt['heading']) ?>">
 
-    <label for="extra_pptx" style="margin-top:14px;"><?= h(t('agenda.extra_label')) ?></label>
-    <input type="file" id="extra_pptx" name="extra_pptx" accept=".pptx">
-    <label for="opt_insert" style="margin-top:10px;"><?= h(t('agenda.insert_label')) ?></label>
-    <select id="opt_insert" name="opt[insertAfter]">
-      <option value="0"><?= h(t('agenda.insert_end')) ?></option>
-      <?php foreach ($parsed['items'] as $i => $item): ?>
-        <option value="<?= $i + 1 ?>"<?= $opt['insertAfter'] === $i + 1 ? ' selected' : '' ?>><?= ($i + 1) . '. ' . h($item['title']) ?></option>
-      <?php endforeach; ?>
-    </select>
+        <label>
+          <input type="hidden" name="opt[subSlides]" value="0">
+          <input type="checkbox" name="opt[subSlides]" value="1"<?= $opt['subSlides'] ? ' checked' : '' ?> data-auto>
+          <?= h(t('agenda.sub_slides')) ?>
+        </label>
+        <label for="opt_detail_layout"><?= h(t('agenda.detail_layout_label')) ?></label>
+        <select id="opt_detail_layout" name="opt[detailLayout]" data-auto>
+          <option value=""><?= h(t('agenda.layout_auto')) ?></option>
+          <?php foreach ($layoutChoices as $c): ?>
+            <option value="<?= h($c['id']) ?>"<?= $opt['detailLayout'] === $c['id'] ? ' selected' : '' ?>><?= h($c['label']) ?> (<?= (int)$c['bodies'] ?>)</option>
+          <?php endforeach; ?>
+        </select>
 
-    <?php if ($plan): ?>
-    <h3 style="margin-top:20px;"><?= h(t('agenda.plan_heading', ['n' => $plan['slide_count']])) ?></h3>
-    <ol style="margin:6px 0 0 18px;">
-      <?php foreach ($plan['slides'] as $p): ?><li><?= h($p['label']) ?> <span style="color:var(--text-muted);">(<?= h(t('agenda.kind_' . $p['kind'])) ?>)</span></li><?php endforeach; ?>
-    </ol>
-    <?php foreach ($plan['warnings'] as $w): ?><div class="alert alert-error" style="margin-top:8px;"><?= h($w) ?></div><?php endforeach; ?>
-    <?php endif; ?>
+        <label for="extra_pptx"><?= h(t('agenda.extra_label')) ?></label>
+        <input type="file" id="extra_pptx" name="extra_pptx" accept=".pptx">
+        <label for="opt_insert"><?= h(t('agenda.insert_label')) ?></label>
+        <select id="opt_insert" name="opt[insertAfter]">
+          <option value="0"><?= h(t('agenda.insert_end')) ?></option>
+          <?php foreach ($parsed['items'] as $i => $item): ?>
+            <option value="<?= $i + 1 ?>"<?= $opt['insertAfter'] === $i + 1 ? ' selected' : '' ?>><?= ($i + 1) . '. ' . h($item['title']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
 
-    <div style="margin-top:20px; display:flex; gap:10px;">
-      <button type="submit" name="step" value="preview" class="button hub-btn"><?= h(t('agenda.preview')) ?></button>
-      <button type="submit" name="step" value="create" class="button hub-btn hub-btn--primary"><?= h(t('agenda.create')) ?></button>
+      <div>
+        <h2 style="margin:0;"><?= h(t('agenda.preview_heading')) ?></h2>
+        <?php if ($plan): ?>
+        <div class="props-video-note" style="margin-top:6px;"><?= h($plan['title']) ?> — <?= h(t('agenda.plan_heading', ['n' => $plan['slide_count']])) ?></div>
+        <?php foreach ($plan['warnings'] as $w): ?><div class="alert alert-error" style="margin-top:8px;"><?= h($w) ?></div><?php endforeach; ?>
+        <div class="agenda-grid">
+          <?php $pw = (int)$plan['width']; $ph = (int)$plan['height']; foreach ($plan['slides'] as $n => $p): ?>
+          <div class="import-preview-grid-item agenda-tile">
+            <div class="import-preview-grid-thumb">
+              <svg viewBox="0 0 <?= $pw ?> <?= $ph ?>" preserveAspectRatio="xMidYMid slice" width="100%" height="100%"><foreignObject width="<?= $pw ?>" height="<?= $ph ?>"><div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;"><?= $p['thumbHtml'] ?></div></foreignObject></svg>
+            </div>
+            <div class="import-preview-grid-meta"><span class="import-preview-grid-num"><?= $n + 1 ?></span><span><?= h($p['label']) ?></span></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+    <div class="agenda-actions">
+      <a href="agenda.php" class="button hub-btn"><?= h(t('agenda.cancel')) ?></a>
+      <button type="submit" class="button hub-btn" onclick="document.getElementById('agendaStep').value='preview'"><?= h(t('agenda.preview')) ?></button>
+      <button type="submit" class="button hub-btn hub-btn--primary" onclick="document.getElementById('agendaStep').value='create'"><?= h(t('agenda.create')) ?></button>
     </div>
   </form>
+  <script>
+  document.querySelectorAll('#agendaForm [data-auto]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var f = document.getElementById('agendaForm');
+      document.getElementById('agendaStep').value = 'preview';
+      f.submit();
+    });
+  });
+  </script>
 <?php endif; ?>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

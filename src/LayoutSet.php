@@ -1379,7 +1379,7 @@ class LayoutSet
     }
 
     /** Kennung eines Vorlagen-Schmuckelements aus Art, Lage, Grösse und Farbe. */
-    private static function decorKey(array $obj): string
+    public static function decorKey(array $obj): string
     {
         return substr(sha1(implode('|', [
             (string)($obj['type'] ?? ''),

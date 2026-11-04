@@ -1799,4 +1799,10 @@ return [
     'agenda.kind_detail' => 'Unterpunkte',
     'agenda.preview' => 'Vorschau',
     'agenda.create' => 'Präsentation erstellen',
+    'agenda.agenda_layout_label' => 'Folie für die Traktandenliste',
+    'agenda.agenda_layout_hint' => 'Mit mehreren Listenfeldern (z. B. zwei Listenpunkte) werden die Traktanden auf die Spalten verteilt. In Klammern: Anzahl Felder.',
+    'agenda.detail_layout_label' => 'Folie für Unterpunkte',
+    'agenda.layout_auto' => 'Automatisch',
+    'agenda.preview_heading' => 'Vorschau',
+    'agenda.cancel' => 'Abbrechen',
 ];

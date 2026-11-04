@@ -22,7 +22,7 @@ class AgendaImporter
 {
     public const DEFAULT_COLOR = '#f2a900';
 
-    /** @return array{highlight:string,color:string,heading:string,subSlides:bool,insertAfter:int} */
+    /** @return array{highlight:string,color:string,heading:string,subSlides:bool,insertAfter:int,agendaLayout:string,detailLayout:string} */
     public static function normalizeOptions(array $raw): array
     {
         $hl = (string)($raw['highlight'] ?? 'both');
@@ -41,6 +41,8 @@ class AgendaImporter
             'subSlides' => !isset($raw['subSlides']) || (string)$raw['subSlides'] !== '0',
             // 1-basierte Nummer des Traktandums, hinter dem die Zusatzfolien (Finanzen) eingefügt werden; 0 = ans Ende
             'insertAfter' => max(0, (int)($raw['insertAfter'] ?? 0)),
+            'agendaLayout' => preg_replace('/[^A-Za-z0-9_-]/', '', (string)($raw['agendaLayout'] ?? '')),
+            'detailLayout' => preg_replace('/[^A-Za-z0-9_-]/', '', (string)($raw['detailLayout'] ?? '')),
         ];
     }
 
@@ -215,6 +217,8 @@ class AgendaImporter
         return [
             'title' => $built['title'],
             'slide_count' => count($built['slides']),
+            'width' => $built['width'],
+            'height' => $built['height'],
             'slides' => $slides,
             'warnings' => $built['warnings'],
         ];
@@ -237,6 +241,120 @@ class AgendaImporter
         ];
     }
 
+    /**
+     * Layouts des Sets zur Auswahl: id (Folien-ID), Beschriftung, Anzahl Inhaltsfelder
+     * (Listenpunkt/Text) und ob es eine Überschrift hat.
+     * @return list<array{id:string,label:string,bodies:int,heading:bool}>
+     */
+    public static function layoutChoices(string $setId): array
+    {
+        $out = [];
+        foreach (LayoutSet::layoutsInOrder($setId) as $slide) {
+            $prep = $slide; // roh: prepareLayoutSlide() würde gleiche Rollen (zwei Spalten) zu einem Feld zusammenlegen
+            [$heading, $bodies] = self::splitObjects($prep);
+            if ($bodies === []) {
+                continue;
+            }
+            $out[] = [
+                'id' => (string)($slide['id'] ?? ''),
+                'label' => LayoutSet::slideLabel($slide),
+                'bodies' => count($bodies),
+                'heading' => $heading !== null,
+            ];
+        }
+        return $out;
+    }
+
+    /** @return array{0:?array,1:list<array>} erstes Überschriftsfeld, Inhaltsfelder von links nach rechts */
+    private static function splitObjects(array $layout): array
+    {
+        $heading = null;
+        $bodies = [];
+        foreach ($layout['objects'] ?? [] as $idx => $obj) {
+            if (($obj['type'] ?? '') !== 'text') {
+                continue;
+            }
+            $obj['_i'] = $idx;
+            $role = LayoutSet::canonicalLogosRole((string)($obj["setRole"] ?? ""));
+            if (str_starts_with($role, 'heading')) {
+                if ($heading === null || (int)($obj['y'] ?? 0) < (int)($heading['y'] ?? 0)) {
+                    $heading = $obj;
+                }
+            } elseif (in_array($role, ['list_item', 'normal'], true)) {
+                $bodies[] = $obj;
+            }
+        }
+        usort($bodies, fn($a, $b) => ((int)($a['x'] ?? 0) <=> (int)($b['x'] ?? 0)) ?: ((int)($a['y'] ?? 0) <=> (int)($b['y'] ?? 0)));
+        return [$heading, $bodies];
+    }
+
+    /** Layout wählen: gewünschte ID, sonst das erste mit passender Anzahl Inhaltsfelder. */
+    private static function pickLayout(string $setId, string $wantedId, int $bodies): ?array
+    {
+        $fallback = null;
+        foreach (LayoutSet::layoutsInOrder($setId) as $slide) {
+            $prep = $slide; // roh: prepareLayoutSlide() würde gleiche Rollen (zwei Spalten) zu einem Feld zusammenlegen
+            [$heading, $b] = self::splitObjects($prep);
+            if ($wantedId !== '' && (string)($slide['id'] ?? '') === $wantedId && $b !== []) {
+                return $prep;
+            }
+            if ($wantedId === '' && $heading !== null) {
+                $hasListItem = false;
+                foreach ($b as $o) {
+                    $hasListItem = $hasListItem || ($o['setRole'] ?? '') === 'list_item';
+                }
+                if (count($b) === $bodies && $hasListItem) {
+                    return $prep;
+                }
+                if ($fallback === null && $b !== []) {
+                    $fallback = $prep;
+                }
+            }
+        }
+        return $wantedId === '' ? $fallback : null;
+    }
+
+    /** Folie aus Layout: Überschrift ins Überschriftsfeld, Zeilen gleichmässig auf die Inhaltsfelder. */
+    private static function fillColumns(array $layout, string $heading, array $lines, ?array $setMeta): array
+    {
+        [$hObj, $bodies] = self::splitObjects($layout);
+        $cols = $bodies === [] ? 1 : count($bodies);
+        $per = max(1, (int)ceil(count($lines) / $cols));
+        $chunks = array_chunk($lines, $per);
+        $objects = [];
+        foreach ($layout['objects'] ?? [] as $idx => $obj) {
+            if (($obj['type'] ?? '') !== 'text') {
+                $obj['layoutDecor'] = LayoutSet::decorKey($obj);
+                $obj['id'] = Storage::generateId(4);
+                $objects[] = $obj;
+                continue;
+            }
+            if ($hObj !== null && $idx === $hObj['_i'] && $heading !== '') {
+                $objects[] = LayoutSet::mergePlaceholderObject($obj, ['text' => $heading, 'setRole' => (string)($obj['setRole'] ?? 'heading2')]);
+                continue;
+            }
+            foreach ($bodies as $k => $b) {
+                if ($idx === $b['_i'] && !empty($chunks[$k])) {
+                    $role = (string)($obj['setRole'] ?? 'normal');
+                    $text = $role === 'list_item'
+                        ? implode("\n", array_map(fn($l) => '- ' . $l, $chunks[$k]))
+                        : implode("\n", $chunks[$k]);
+                    $objects[] = LayoutSet::mergePlaceholderObject($obj, ['text' => $text, 'setRole' => $role]);
+                }
+            }
+        }
+        return [
+            'id' => Storage::generateId(4),
+            'background' => $layout['background'] ?? ['type' => 'color', 'value' => '#111111'],
+            'transition' => 'slide',
+            'autoAdvance' => 0,
+            'notes' => '',
+            'layoutKey' => (string)($layout['layoutKey'] ?? ''),
+            'label' => $layout['label'] ?? null,
+            'objects' => $objects,
+        ];
+    }
+
     private static function build(string $outline, string $layoutSetId, array $options): array
     {
         if (!LayoutSet::isLayoutSet($layoutSetId)) {
@@ -251,37 +369,43 @@ class AgendaImporter
         $warnings = [];
         $slides = [];
         $plan = [];
-        $add = function (array $content, string $kind, string $label) use ($layoutSetId, $setMeta, &$slides, &$plan, &$warnings) {
-            $layout = LayoutSet::bestLayoutForContent($layoutSetId, $content, $setMeta);
-            if ($layout === null) {
-                $warnings[] = t('agenda.no_layout', ['label' => $label]);
-                $layout = ['objects' => []];
-            }
-            $slides[] = LayoutSet::fillSlideFromLayout($layout, $content, '', $setMeta);
-            $plan[] = ['kind' => $kind, 'label' => $label];
+        $record = function (array $slide, string $kind, string $label) use (&$slides, &$plan) {
+            $slides[] = $slide;
+            $plan[] = ['kind' => $kind, 'label' => $label, 'thumbHtml' => SlideRenderer::renderSlideThumbnailHtml($slide, null)];
         };
 
         $titleContent = ['document_title' => $data['title']];
         if ($data['subtitle'] !== '') {
             $titleContent['subtitle'] = $data['subtitle'];
         }
-        $add($titleContent, 'title', $data['title']);
+        $titleLayout = LayoutSet::bestLayoutForContent($layoutSetId, $titleContent, $setMeta);
+        if ($titleLayout === null) {
+            $warnings[] = t('agenda.no_layout', ['label' => $data['title']]);
+            $titleLayout = ['objects' => []];
+        }
+        $record(LayoutSet::fillSlideFromLayout($titleLayout, $titleContent, '', $setMeta), 'title', $data['title']);
+
+        $agendaLayout = self::pickLayout($layoutSetId, $opt['agendaLayout'], 2);
+        $detailLayout = self::pickLayout($layoutSetId, $opt['detailLayout'], 1);
+        if ($agendaLayout === null) {
+            throw new RuntimeException(t('agenda.no_layout', ['label' => $opt['heading']]));
+        }
 
         $n = count($data['items']);
         $insertAfter = $opt['insertAfter'] > 0 ? min($opt['insertAfter'], $n) : 0;
         $insertIndex = 0;
         foreach ($data['items'] as $i => $item) {
-            $add(
-                ['heading1' => $opt['heading'], 'normal' => self::agendaText($data['items'], $i, $opt)],
+            $record(
+                self::fillColumns($agendaLayout, $opt['heading'], self::agendaLines($data['items'], $i, $opt), $setMeta),
                 'agenda',
                 ($i + 1) . '. ' . $item['title']
             );
             if ($opt['subSlides'] && $item['sub'] !== []) {
-                $add(
-                    ['heading1' => $item['title'], 'normal' => LogosSermonImporter::formatListItemsMarkdown($item['sub'])],
-                    'detail',
-                    $item['title']
-                );
+                if ($detailLayout === null) {
+                    $warnings[] = t('agenda.no_layout', ['label' => $item['title']]);
+                } else {
+                    $record(self::fillColumns($detailLayout, $item['title'], $item['sub'], $setMeta), 'detail', $item['title']);
+                }
             }
             if ($insertAfter === $i + 1) {
                 $insertIndex = count($slides);
@@ -340,8 +464,8 @@ class AgendaImporter
     }
 
 
-    /** Alle Traktanden als Text, das aktuelle hervorgehoben (Markdown-Auszeichnung des Editors). */
-    private static function agendaText(array $items, int $current, array $opt): string
+    /** Alle Traktanden als Zeilen, das aktuelle hervorgehoben (Markdown-Auszeichnung des Editors). @return list<string> */
+    private static function agendaLines(array $items, int $current, array $opt): array
     {
         $lines = [];
         foreach ($items as $i => $item) {
@@ -356,6 +480,6 @@ class AgendaImporter
             }
             $lines[] = $t;
         }
-        return implode("\n", $lines);
+        return $lines;
     }
 }
