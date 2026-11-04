@@ -48,6 +48,7 @@ function ribbon_command_catalog(): array
         ['id' => 'media:pixabay', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'pixabay.title', 'icon' => 'pixabay', 'mediaAction' => 'pixabay', 'visibleWhen' => ['canEdit', 'pixabayEnabled']],
         ['id' => 'media:iconify', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'iconify.title', 'icon' => 'iconify', 'mediaAction' => 'iconify', 'visibleWhen' => ['canEdit', 'iconifyEnabled']],
         ['id' => 'media:openclipart', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'openclipart.title', 'icon' => 'clipart', 'mediaAction' => 'openclipart', 'visibleWhen' => ['canEdit', 'openclipartEnabled']],
+        ['id' => 'media:insert_presentation', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'insertpres.title', 'icon' => 'insert_presentation', 'mediaAction' => 'insert_presentation', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'media:fromurl', 'kind' => 'media', 'category' => 'insert', 'labelKey' => 'fromurl.title', 'icon' => 'from_url', 'mediaAction' => 'fromurl', 'visibleWhen' => ['canEdit']],
         ['id' => 'widget:layout_elements', 'kind' => 'widget', 'category' => 'insert', 'labelKey' => 'editor.tab_elements', 'templateId' => 'widget-layout-elements', 'visibleWhen' => ['canEdit', 'layoutSetMode'], 'gridSpan' => ['cols' => 8, 'rows' => 2]],
 

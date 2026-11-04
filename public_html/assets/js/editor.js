@@ -597,6 +597,7 @@
         else if (action === 'iconify') document.getElementById('iconifyOpenBtn')?.click();
         else if (action === 'openclipart') document.getElementById('openclipartOpenBtn')?.click();
         else if (action === 'fromurl') openInsertFromUrl();
+        else if (action === 'insert_presentation') insertPresentationFile();
         return;
       }
 
@@ -9975,6 +9976,50 @@
   }
 
   /** Strg+V: die angehakten Einträge, sonst der zuletzt kopierte. */
+  /** Ribbon «Präsentation einfügen»: .pptx/.odp/.chs/.zip ab der gewählten Folie einfügen. */
+  function insertPresentationFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pptx,.odp,.chs,.zip';
+    input.addEventListener('change', async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (SF.deckBusy) {
+        if (window.CfStatus) CfStatus.show('info', 'Bitte warten – vorheriger Schritt läuft noch.');
+        return;
+      }
+      SF.deckBusy = true;
+      try {
+        if (SF.saveTimer) {
+          clearTimeout(SF.saveTimer);
+          SF.saveTimer = null;
+          await saveCurrentSlide(true);
+        }
+        if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('api.php?action=insert_presentation_file&id=' + encodeURIComponent(SF.id) + '&after_index=' + encodeURIComponent(SF.currentIndex), {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': SF.csrfToken },
+          body: fd,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+        SF.slides = data.slides;
+        await renderSlideFilmstrip();
+        if (SF.editorViewMode === 'grid') renderSlideGrid();
+        reloadPreviewWindow();
+        if (window.CfStatus) CfStatus.show('ok', (I.insertPresDone || '{n}').replace('{n}', String(data.inserted || 0)));
+        (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
+      } catch (e) {
+        if (window.CfStatus) CfStatus.show('error', e.message);
+      } finally {
+        SF.deckBusy = false;
+      }
+    });
+    input.click();
+  }
+
   async function pasteSlidesShortcut() {
     let ids = clipCheckedIds();
     if (!ids.length && clipEntries.length) {

@@ -70,6 +70,7 @@
         '<path d="M14.5 12h3.5" opacity="0.35" stroke-width="2.5"/>',
     },
     add_slide: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/>',
+    insert_presentation: '<rect x="3" y="5" width="14" height="11" rx="1.5"/><path d="M7 19h10"/><path d="M19 8v6"/><path d="M16 11h6"/>',
     text_field: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 12h8"/><path d="M8 15h5"/>',
     line: '<path d="M5 19L19 5"/>',
     table: '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 10h16"/><path d="M4 14.5h16"/><path d="M9.5 10v9"/><path d="M15 10v9"/>',

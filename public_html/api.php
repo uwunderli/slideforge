@@ -101,7 +101,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'apply_transition_slides', 'apply_transition_all', 'notes_outline_to_path', 'notes_outline_style', 'clip_copy_slides', 'clip_paste_slides', 'find_replace', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background', 'add_share', 'remove_share', 'set_public_share', 'regenerate_public_token'];
+$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'apply_transition_slides', 'apply_transition_all', 'notes_outline_to_path', 'notes_outline_style', 'clip_copy_slides', 'clip_paste_slides', 'insert_presentation_file', 'find_replace', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'toggle_public_link', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background', 'add_share', 'remove_share', 'set_public_share', 'regenerate_public_token'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -393,6 +393,25 @@ switch ($action) {
         }
         $result = Presentation::insertSlides($id, $geholt['slides'], $afterIndex);
         json_ok(['slides' => $result['slides'], 'warnings' => $geholt['warnings']]);
+        break;
+
+    case 'insert_presentation_file':
+        // Multipart-Upload (kein JSON-Body): Datei in `file`, Einfügeposition in `after_index`
+        $f = $_FILES['file'] ?? null;
+        if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            json_fail(t('import.no_file'), 400);
+        }
+        $afterIndex = isset($_GET['after_index']) ? (int)$_GET['after_index'] : null;
+        try {
+            $geholt = PresentationInsert::slidesFromFile($id, (string)$f['tmp_name'], (string)$f['name']);
+        } catch (Throwable $e) {
+            json_fail($e->getMessage(), 400);
+        }
+        if ($geholt['slides'] === []) {
+            json_fail(t('insertpres.empty'), 400);
+        }
+        $result = Presentation::insertSlides($id, $geholt['slides'], $afterIndex);
+        json_ok(['slides' => $result['slides'], 'inserted' => count($geholt['slides']), 'warnings' => $geholt['warnings']]);
         break;
 
     case 'duplicate_slide':
