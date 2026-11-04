@@ -9976,11 +9976,11 @@
   }
 
   /** Strg+V: die angehakten Einträge, sonst der zuletzt kopierte. */
-  /** Ribbon «Präsentation einfügen»: .pptx/.odp/.chs/.zip ab der gewählten Folie einfügen. */
+  /** Ribbon «Präsentation einfügen»: .pptx/.odp/.chs/.zip/.html/.cfs ab der gewählten Folie einfügen. */
   function insertPresentationFile() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.pptx,.odp,.chs,.zip';
+    input.accept = '.pptx,.odp,.chs,.zip,.html,.htm,.cfs';
     input.addEventListener('change', async () => {
       const file = input.files && input.files[0];
       if (!file) return;

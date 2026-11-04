@@ -2,12 +2,12 @@
 
 /**
  * Folien aus einer Datei in eine bestehende Präsentation einfügen:
- * PowerPoint (.pptx), OpenDocument (.odp), Folien-Set (.chs) und SlideForge-Export (.zip).
+ * PowerPoint (.pptx), OpenDocument (.odp), Folien-Set (.chs) und eigene Präsentationen (.html, .zip, .cfs).
  * Bilder und Medien kommen in den Ordner der Zielpräsentation.
  */
 class PresentationInsert
 {
-    public const EXTENSIONS = ['pptx', 'odp', 'chs', 'zip'];
+    public const EXTENSIONS = ['pptx', 'odp', 'chs', 'zip', 'html', 'htm', 'cfs'];
 
     /** @return array{slides:list<array>,warnings:list<string>} */
     public static function slidesFromFile(string $targetId, string $path, string $origName): array
@@ -26,7 +26,26 @@ class PresentationInsert
             }
             return ['slides' => $res['slides'] ?? [], 'warnings' => array_values($res['warnings'] ?? [])];
         }
-        return self::fromArchive($targetId, $path, $ext);
+        // Eigene Präsentation (.html, .zip, .cfs): ZIP oder einzelne HTML-Datei mit Quelldaten
+        $head = (string)@file_get_contents($path, false, null, 0, 4);
+        if ($ext === 'chs' || str_starts_with($head, 'PK')) {
+            return self::fromArchive($targetId, $path, $ext === 'chs' ? 'chs' : 'zip');
+        }
+        return self::fromHtml($targetId, (string)file_get_contents($path));
+    }
+
+    /** Einzelne HTML-Datei aus dem SlideForge-Export (Bilder liegen als data:-URI darin). */
+    private static function fromHtml(string $targetId, string $html): array
+    {
+        if (!preg_match('/<script type="application\/json" id="slideforge-source-data">(.*?)<\/script>/s', $html, $m)) {
+            throw new RuntimeException(t('import.no_source_data'));
+        }
+        $data = json_decode($m[1], true);
+        if (!is_array($data) || !isset($data['slides'])) {
+            throw new RuntimeException(t('import.corrupt_data'));
+        }
+        $slidesData = Exporter::importAssets(['slides' => $data['slides']], $targetId, null);
+        return ['slides' => array_values($slidesData['slides'] ?? []), 'warnings' => []];
     }
 
     /** .chs und SlideForge-.zip: Folien lesen, Bilder in die Zielpräsentation kopieren. */

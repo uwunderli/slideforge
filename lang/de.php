@@ -1808,7 +1808,7 @@ return [
     'agenda.done_on' => 'Abgehandelte Traktanden ausgrauen',
     'agenda.done_color_label' => 'Farbe der abgehandelten Traktanden',
     'insertpres.title' => 'Präsentation einfügen',
-    'insertpres.unsupported' => 'Nicht unterstützter Dateityp. Erlaubt sind PowerPoint (.pptx), OpenDocument (.odp), Folien-Set (.chs) und SlideForge-Export (.zip).',
+    'insertpres.unsupported' => 'Nicht unterstützter Dateityp. Erlaubt sind PowerPoint (.pptx), OpenDocument (.odp), Folien-Set (.chs) und eigene Präsentationen (.html, .zip, .cfs).',
     'insertpres.empty' => 'In der Datei wurden keine Folien gefunden.',
     'insertpres.busy' => 'Folien werden eingefügt …',
     'insertpres.done' => '{n} Folien eingefügt.',
