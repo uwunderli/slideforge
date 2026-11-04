@@ -461,7 +461,7 @@ class AgendaImporter
         $plan = [];
         $record = function (array $slide, string $kind, string $label) use (&$slides, &$plan) {
             $slides[] = $slide;
-            $plan[] = ['kind' => $kind, 'label' => $label, 'thumbHtml' => SlideRenderer::renderSlideThumbnailHtml($slide, null)];
+            $plan[] = ['kind' => $kind, 'label' => $label, 'notes' => (string)($slide['notes'] ?? ''), 'thumbHtml' => SlideRenderer::renderSlideThumbnailHtml($slide, null)];
         };
 
         $titleContent = ['document_title' => $data['title']];

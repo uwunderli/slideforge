@@ -123,7 +123,12 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
     .agenda-tile .import-preview-grid-thumb { aspect-ratio: <?= (int)($plan['width'] ?? 1920) ?> / <?= (int)($plan['height'] ?? 1080) ?>; background:#000; border-radius:6px; overflow:hidden; }
     .agenda-tile .import-preview-grid-meta { display:flex; justify-content:space-between; gap:8px; padding:4px 2px; font-size:0.85rem; }
     .agenda-actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
-    @media (max-width: 900px) { .agenda-cols { grid-template-columns: 1fr; } }
+    .agenda-cols.has-detail { grid-template-columns: 360px 1fr 520px; }
+    .agenda-tile .import-preview-grid-thumb { cursor:pointer; }
+    .agenda-tile.is-selected .import-preview-grid-thumb { outline:3px solid var(--accent, #b7de45); outline-offset:1px; }
+    .agenda-detail-notes { white-space:pre-wrap; font-size:0.9rem; }
+    @media (max-width: 1300px) { .agenda-cols.has-detail { grid-template-columns: 360px 1fr; } .agenda-detail { grid-column: 1 / -1; } }
+    @media (max-width: 900px) { .agenda-cols, .agenda-cols.has-detail { grid-template-columns: 1fr; } }
   </style>
   <form method="post" enctype="multipart/form-data" id="agendaForm">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -203,7 +208,7 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
         <?php foreach ($plan['warnings'] as $w): ?><div class="alert alert-error" style="margin-top:8px;"><?= h($w) ?></div><?php endforeach; ?>
         <div class="agenda-grid">
           <?php $pw = (int)$plan['width']; $ph = (int)$plan['height']; foreach ($plan['slides'] as $n => $p): ?>
-          <div class="import-preview-grid-item agenda-tile">
+          <div class="import-preview-grid-item agenda-tile" data-num="<?= $n + 1 ?>" data-label="<?= h($p['label']) ?>" data-notes="<?= h($p['notes']) ?>">
             <div class="import-preview-grid-thumb">
               <svg viewBox="0 0 <?= $pw ?> <?= $ph ?>" preserveAspectRatio="xMidYMid slice" width="100%" height="100%"><foreignObject width="<?= $pw ?>" height="<?= $ph ?>"><div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;"><?= $p['thumbHtml'] ?></div></foreignObject></svg>
             </div>
@@ -212,6 +217,14 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
+      </div>
+      <div class="agenda-detail" id="agendaDetail" hidden>
+        <div class="import-detail-sticky">
+          <h3 id="agendaDetailTitle" class="import-detail-title"></h3>
+          <div class="import-detail-stage" id="agendaDetailStage"></div>
+          <h4 class="import-detail-subtitle"><?= h(t('import.detail_notes')) ?></h4>
+          <div id="agendaDetailNotes" class="import-detail-notes agenda-detail-notes"></div>
+        </div>
       </div>
     </div>
     <div class="agenda-actions">
@@ -235,6 +248,26 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
       c.dispatchEvent(new Event('change'));
     });
   });
+  (function () {
+    var cols = document.querySelector('.agenda-cols');
+    var detail = document.getElementById('agendaDetail');
+    var stage = document.getElementById('agendaDetailStage');
+    var title = document.getElementById('agendaDetailTitle');
+    var notes = document.getElementById('agendaDetailNotes');
+    var none = <?= json_encode(t('import.detail_notes_none')) ?>;
+    document.querySelectorAll('.agenda-tile').forEach(function (tile) {
+      tile.addEventListener('click', function () {
+        document.querySelectorAll('.agenda-tile.is-selected').forEach(function (x) { x.classList.remove('is-selected'); });
+        tile.classList.add('is-selected');
+        title.textContent = tile.getAttribute('data-num') + '. ' + tile.getAttribute('data-label');
+        stage.innerHTML = tile.querySelector('.import-preview-grid-thumb').innerHTML;
+        var n = tile.getAttribute('data-notes');
+        notes.textContent = n ? n : none;
+        detail.hidden = false;
+        cols.classList.add('has-detail');
+      });
+    });
+  })();
   </script>
 <?php endif; ?>
 </div>
