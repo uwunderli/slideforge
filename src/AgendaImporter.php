@@ -53,8 +53,10 @@ class AgendaImporter
     public static function extractOutline(string $path, string $origName): string
     {
         $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+        if ($ext === 'docx') {
+            return self::outlineFromDocx($path);
+        }
         $lines = match ($ext) {
-            'docx' => self::linesFromDocx($path),
             'pdf' => self::linesFromPdf($path),
             'md', 'markdown', 'txt' => self::linesFromText((string)file_get_contents($path)),
             default => throw new RuntimeException(t('agenda.unsupported_type')),
@@ -67,8 +69,13 @@ class AgendaImporter
         return in_array(strtolower(pathinfo($origName, PATHINFO_EXTENSION)), ['docx', 'md', 'markdown', 'pdf'], true);
     }
 
-    /** @return list<array{level:int,text:string}> */
-    private static function linesFromDocx(string $path): array
+    /**
+     * Word mit Formatierung lesen: Traktandum = fetter Absatz in der grössten fetten Schrift,
+     * Aufzählungspunkte darunter = Unterpunkte, alles Übrige (Verantwortliche, Zahlen,
+     * Notizen) = Kommentar zum Traktandum. Fehlt die Grössen-Unterscheidung, gilt jeder
+     * Absatz als Traktandum (einfache Liste).
+     */
+    private static function outlineFromDocx(string $path): string
     {
         $zip = new ZipArchive();
         if ($zip->open($path) !== true) {
@@ -79,23 +86,78 @@ class AgendaImporter
         if ($xml === false) {
             throw new RuntimeException(t('agenda.read_failed'));
         }
-        $out = [];
-        preg_match_all('#<w:p[ >].*?</w:p>#s', $xml, $paras);
-        foreach ($paras[0] as $p) {
-            preg_match_all('#<w:t[^>]*>([^<]*)</w:t>#', $p, $t);
-            $text = trim(html_entity_decode(implode('', $t[1]), ENT_QUOTES | ENT_XML1, 'UTF-8'));
-            if ($text === '') {
-                continue;
+        $paras = [];
+        preg_match_all('#<w:p[ >].*?</w:p>#s', $xml, $pm);
+        foreach ($pm[0] as $p) {
+            $list = (bool)preg_match('#<w:numPr>.*?<w:numId w:val="([1-9]\d*)"#s', $p);
+            $defSz = preg_match('#<w:pPr>.*?<w:rPr>(.*?)</w:rPr>#s', $p, $dm) && preg_match('#<w:sz w:val="(\d+)"#', $dm[1], $z) ? (int)$z[1] : 0;
+            $segs = [['text' => '', 'bold' => null, 'sz' => 0]];
+            preg_match_all('#<w:r[ >].*?</w:r>#s', $p, $rm);
+            foreach ($rm[0] as $r) {
+                $rpr = preg_match('#<w:rPr>(.*?)</w:rPr>#s', $r, $x) ? $x[1] : '';
+                $bold = (bool)preg_match('#<w:b/>|<w:b w:val="(?:1|true)"#', $rpr);
+                $sz = preg_match('#<w:sz w:val="(\d+)"#', $rpr, $z) ? (int)$z[1] : $defSz;
+                // Reihenfolge der Bausteine im Lauf beibehalten: Text, Tabulator, Umbruch
+                preg_match_all('#<w:t[^>]*>([^<]*)</w:t>|<w:tab/>|<w:br/>#', $r, $tm, PREG_SET_ORDER);
+                foreach ($tm as $tok) {
+                    $last = count($segs) - 1;
+                    if ($tok[0] === '<w:br/>') {
+                        $segs[] = ['text' => '', 'bold' => null, 'sz' => 0];
+                    } else {
+                        $txt = $tok[0] === '<w:tab/>' ? ' ' : html_entity_decode($tok[1], ENT_QUOTES | ENT_XML1, 'UTF-8');
+                        // Wechselt Fett/Grösse mitten im Absatz, beginnt ein neuer Abschnitt (Traktandum + Kommentar im selben Absatz)
+                        if (trim($txt) !== '' && $segs[$last]['bold'] !== null && ($segs[$last]['bold'] !== $bold || $segs[$last]['sz'] !== $sz)) {
+                            $segs[] = ['text' => '', 'bold' => null, 'sz' => 0];
+                            $last++;
+                        }
+                        $segs[$last]['text'] .= $txt;
+                        if (trim($txt) !== '' && $segs[$last]['bold'] === null) {
+                            $segs[$last]['bold'] = $bold;
+                            $segs[$last]['sz'] = $sz;
+                        }
+                    }
+                }
             }
-            $level = 0;
-            if (preg_match('#<w:numPr>.*?<w:ilvl w:val="(\d)"#s', $p, $m)) {
-                $level = (int)$m[1];
-            } elseif (preg_match('#<w:ind [^>]*w:left="(\d+)"#', $p, $m)) {
-                $level = (int)floor(((int)$m[1]) / 720);
+            foreach ($segs as $s) {
+                $text = trim(preg_replace('/\s+/u', ' ', $s['text']) ?? '');
+                if ($text !== '') {
+                    $paras[] = ['text' => $text, 'bold' => (bool)$s['bold'], 'sz' => (int)$s['sz'], 'list' => $list];
+                }
             }
-            $out[] = ['level' => $level, 'text' => $text];
         }
-        return $out;
+        if ($paras === []) {
+            throw new RuntimeException(t('agenda.empty'));
+        }
+        $title = array_shift($paras);
+        $subtitle = '';
+        if ($paras !== [] && self::looksLikeDate($paras[0]['text'])) {
+            $subtitle = array_shift($paras)['text'];
+        }
+        $boldSizes = [];
+        foreach ($paras as $p) {
+            if ($p['bold'] && !$p['list'] && $p['sz'] > 0) {
+                $boldSizes[] = $p['sz'];
+            }
+        }
+        $maxSz = $boldSizes === [] ? 0 : max($boldSizes);
+        $structured = $maxSz > 0 && count(array_unique($boldSizes)) > 0 && count(array_filter($paras, fn($p) => !$p['list'] && !($p['bold'] && $p['sz'] === $maxSz))) > 0;
+        $out = ['# ' . self::cleanItem($title['text'])];
+        if ($subtitle !== '') {
+            $out[] = '## ' . $subtitle;
+        }
+        $haveItem = false;
+        foreach ($paras as $p) {
+            $isItem = $structured ? ($p['bold'] && !$p['list'] && $p['sz'] === $maxSz) : !$p['list'];
+            if ($isItem) {
+                $out[] = '- ' . self::cleanItem($p['text']);
+                $haveItem = true;
+            } elseif ($p['list'] && $haveItem) {
+                $out[] = '  - ' . self::cleanItem($p['text']);
+            } elseif ($haveItem) {
+                $out[] = '  > ' . $p['text'];
+            }
+        }
+        return implode("\n", $out) . "\n";
     }
 
     /** @return list<array{level:int,text:string}> */
@@ -117,6 +179,10 @@ class AgendaImporter
             if (trim($line) === '') {
                 continue;
             }
+            if (preg_match('/^\s*>\s?(.*)$/u', $line, $nm)) {
+                $out[] = ['level' => 1, 'text' => trim($nm[1]), 'note' => true];
+                continue;
+            }
             $isHeading = (bool)preg_match('/^\s*#{1,6}\s/', $line);
             preg_match('/^[ \t]*/', $line, $ws);
             $indent = strlen(str_replace("\t", '    ', $ws[0]));
@@ -134,9 +200,9 @@ class AgendaImporter
     {
         $clean = [];
         foreach ($lines as $l) {
-            $text = self::cleanItem((string)$l['text']);
+            $text = !empty($l['note']) ? trim((string)$l['text']) : self::cleanItem((string)$l['text']);
             if ($text !== '') {
-                $clean[] = ['level' => (int)$l['level'], 'text' => $text, 'heading' => !empty($l['heading'])];
+                $clean[] = ['level' => (int)$l['level'], 'text' => $text, 'heading' => !empty($l['heading']), 'note' => !empty($l['note'])];
             }
         }
         if ($clean === []) {
@@ -149,8 +215,12 @@ class AgendaImporter
             $sub = array_shift($clean);
             $outline[] = '## ' . $sub['text'];
         }
-        $base = $clean === [] ? 0 : min(array_column($clean, 'level'));
+        $base = $clean === [] ? 0 : min(array_column(array_filter($clean, fn($c) => !$c['note']) ?: $clean, 'level'));
         foreach ($clean as $l) {
+            if ($l['note']) {
+                $outline[] = '  > ' . $l['text'];
+                continue;
+            }
             $lvl = max(0, $l['level'] - $base);
             $outline[] = str_repeat('  ', min($lvl, 1)) . '- ' . $l['text'];
         }
@@ -171,7 +241,7 @@ class AgendaImporter
         return (bool)preg_match('/\d{1,2}\.\s*(?:\d{1,2}\.|[A-Za-zäöü]{3,})\s*\d{2,4}|\b20\d{2}\b.*\d{1,2}[.:]\d{2}\s*Uhr|\d{1,2}[.:]\d{2}\s*Uhr|^(?:Mo|Di|Mi|Do|Fr|Sa|So)[a-z]*,/iu', $text);
     }
 
-    /** @return array{title:string,subtitle:string,items:list<array{title:string,sub:list<string>}>} */
+    /** @return array{title:string,subtitle:string,items:list<array{title:string,sub:list<string>,notes:list<string>}>} */
     public static function parseOutline(string $outline): array
     {
         $title = '';
@@ -189,6 +259,12 @@ class AgendaImporter
                 $subtitle = trim($m[1]);
                 continue;
             }
+            if (preg_match('/^\s*>\s?(.*)$/u', $line, $nm)) {
+                if ($items !== [] && trim($nm[1]) !== '') {
+                    $items[count($items) - 1]['notes'][] = trim($nm[1]);
+                }
+                continue;
+            }
             $indented = (bool)preg_match('/^(?:\t|\s{2,})\S/u', $line);
             $text = self::cleanItem($line);
             if ($text === '') {
@@ -197,7 +273,7 @@ class AgendaImporter
             if ($indented && $items !== []) {
                 $items[count($items) - 1]['sub'][] = $text;
             } else {
-                $items[] = ['title' => $text, 'sub' => []];
+                $items[] = ['title' => $text, 'sub' => [], 'notes' => []];
             }
         }
         if ($title === '' && $items !== []) {
@@ -317,6 +393,13 @@ class AgendaImporter
         return $wantedId === '' ? $fallback : null;
     }
 
+    /** Kommentar des Traktandums in die Notizen der Folie. */
+    private static function withNotes(array $slide, string $notes): array
+    {
+        $slide['notes'] = $notes;
+        return $slide;
+    }
+
     /** Folie aus Layout: Überschrift ins Überschriftsfeld, Zeilen gleichmässig auf die Inhaltsfelder. */
     private static function fillColumns(array $layout, string $heading, array $lines, ?array $setMeta): array
     {
@@ -398,8 +481,9 @@ class AgendaImporter
         $insertAfter = $opt['insertAfter'] > 0 ? min($opt['insertAfter'], $n) : 0;
         $insertIndex = 0;
         foreach ($data['items'] as $i => $item) {
+            $notes = implode("\n", $item['notes']);
             $record(
-                self::fillColumns($agendaLayout, $opt['heading'], self::agendaLines($data['items'], $i, $opt), $setMeta),
+                self::withNotes(self::fillColumns($agendaLayout, $opt['heading'], self::agendaLines($data['items'], $i, $opt), $setMeta), $notes),
                 'agenda',
                 ($i + 1) . '. ' . $item['title']
             );
@@ -407,7 +491,7 @@ class AgendaImporter
                 if ($detailLayout === null) {
                     $warnings[] = t('agenda.no_layout', ['label' => $item['title']]);
                 } else {
-                    $record(self::fillColumns($detailLayout, $item['title'], $item['sub'], $setMeta), 'detail', $item['title']);
+                    $record(self::withNotes(self::fillColumns($detailLayout, $item['title'], $item['sub'], $setMeta), $notes), 'detail', $item['title']);
                 }
             }
             if ($insertAfter === $i + 1) {

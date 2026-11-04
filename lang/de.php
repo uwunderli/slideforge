@@ -1781,7 +1781,7 @@ return [
     'agenda.empty' => 'In der Datei wurden keine Traktanden gefunden.',
     'agenda.no_layout' => 'Kein passendes Layout im Folien-Set für «{label}».',
     'agenda.outline_label' => 'Gliederung (zum Korrigieren)',
-    'agenda.outline_hint' => '# Titel · ## Untertitel · «- » Traktandum · zwei Leerzeichen eingerückt = Unterpunkt.',
+    'agenda.outline_hint' => '# Titel · ## Untertitel · «- » Traktandum · zwei Leerzeichen eingerückt = Unterpunkt · «> » Kommentar (kommt in die Notizen der Folien).',
     'agenda.highlight_label' => 'Aktuellen Punkt hervorheben',
     'agenda.hl_both' => 'Farbig und fett',
     'agenda.hl_color' => 'Nur farbig',
