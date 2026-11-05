@@ -22,3 +22,6 @@ Von Hand, siehe `docs/PRUEFUNGEN.md` («So wird in der FolienSchmiede ausgeliefe
 
 ## Wo mehr steht
 `docs/PRUEFUNGEN.md`, `_berichte/slideforge/uebergabe-2026-10-20.md`.
+
+## Installer (5.11., Helferlein)
+- VERSION 2.1.23 (Zweig `helferlein/install-gruppe1-slide`), Tag `v2.1.23` durch den Gitwart. Katalog hat kein `install`; Prod ist ein eigener Docker-Host (`slides.bkbiel.ch`, `/data/slideforge`), nicht der Hub-webroot: ohne Entscheid (Umzug unter `hubPath` oder Installer-Ziel je App) kein Installer.

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.23] - 2026-11-05
+
+### Changed
+
+- Stand der Auslieferung 04.11. (ASSET_VERSION 690: Agenda-Import, Präsentation einfügen, Excel-Import); VERSION für den Hub-Installer nachgezogen
+
+
 ## [2.1.22] - 2026-08-09
 
 ### Changed
