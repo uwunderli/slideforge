@@ -1,8 +1,9 @@
 # STAND SlideForge (FolienSchmiede)
 
-- **Erledigt:** Traktandenlisten-Import gebaut (04.11.), ausgeliefert.
-- **Offen:** Folienbau mit dem Set «Schlicht - Mitgliederversammlung» und Finanz-PPTX-Einfügung an Urs' Set prüfen (Urs legt das Set an); PDF-Parser mit echter Datei; Auslieferung nach Urs' Go.
-- **Nächster Schritt:** Urs probiert `agenda.php` aus, danach Anpassungen und Auslieferung.
+- **Erledigt (alles auf Prod, 04.11., ASSET_VERSION 690):** Traktandenlisten-Import (`agenda.php`), Ribbon «Präsentation einfügen» (pptx/odp/xlsx/chs/zip/html/cfs), Excel-Import (nur erstes Blatt). Letzter Commit `7276df7` auf main (lokal, Gitwart gemeldet 05.11.).
+- **Offen:** Urs schaut Agenda-Seite und Excel-Import an, Korrekturen kommen von ihm. Excel: Pfeilspitzen/Strichelung bei Linien nicht unterstützt, Text in Ellipsen nur grob mittig. PDF-Parser mit echter Datei ungeprüft.
+- **Nächster Schritt:** Rückmeldung von Urs abwarten.
+- **Pfade:** `src/AgendaImporter.php`, `src/PresentationInsert.php`, `src/XlsxImporter.php`, `public_html/agenda.php`, Texte `lang/de.php`.
 - **Pfade:** `src/AgendaImporter.php`, `public_html/agenda.php`, Texte `lang/de.php` (`agenda.*`), Link in `import.php`.
 
 ## Live-Stand
