@@ -1,6 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
-- **14.11. live (ASSET_VERSION 691, VERSION 2.1.26; Prod noch ohne 2.1.24/25):** Editor/Präsentation ohne Kopfleiste, Vollbild-Knopf/Taste F. Sicherung `.sicherung/vollbild-20261114-192802`. Fernsteuerung Tablet/Presenter war schon da, ungeprüft mit allen drei Geräten.
+- **14.11. live (VERSION 2.1.33, ASSET_VERSION 698):** Editor/Präsentation ohne Kopfleiste; Vollbild (Ribbon-Icon, F, F5; im Hub-Rahmen braucht es Hub ≥ 2.6.16); Presenter/Pfeiltasten auch aus dem Beamer-Fenster und an der Tablet-Fernsteuerung. Urs: «jetzt gehts»; Stick am Tablet ungeprüft.
 - **Erledigt (alles auf Prod, 04.11., ASSET_VERSION 690):** Traktandenlisten-Import (`agenda.php`), Ribbon «Präsentation einfügen» (pptx/odp/xlsx/chs/zip/html/cfs), Excel-Import (nur erstes Blatt). Letzter Commit `7276df7` auf main (lokal, Gitwart gemeldet 05.11.).
 - **Offen:** Urs schaut Agenda-Seite und Excel-Import an, Korrekturen kommen von ihm. Excel: Pfeilspitzen/Strichelung bei Linien nicht unterstützt, Text in Ellipsen nur grob mittig. PDF-Parser mit echter Datei ungeprüft.
 - **Nächster Schritt:** Rückmeldung von Urs abwarten.
