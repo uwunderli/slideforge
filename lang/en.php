@@ -535,6 +535,7 @@ return [
     'present.screen_multi_hint' => 'Multiple displays detected.',
     'present.local_start' => 'Present',
     'present.local_reopen' => 'Focus window',
+    'present.fullscreen_toggle' => 'Fullscreen (F)',
     'present.fullscreen_start' => 'Enter fullscreen',
     'present.fullscreen_hint' => 'Click once to present in fullscreen on the selected display.',
     'present.clock_studio' => 'Studio clock',

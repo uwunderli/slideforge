@@ -816,11 +816,17 @@ if ($isLayoutSetMode && $editorCurrentSlide) {
     $headerPresentationContext = 'edit';
 }
 $pageTitle = 'Editor · ' . $headerPresentationTitle;
+$hideTopbar = true;
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="editor-topbar editor-topbar-slim">
   <div class="editor-topbar-left">
     <a href="<?= $isTemplateMode ? 'templates.php?tab=slides' : 'index.php' ?>" class="back-link">&larr; <?= $isTemplateMode ? h(t('nav.templates')) : h(t('editor.dashboard')) ?></a>
+    <span class="topbar-context editor-topbar-context">
+      <span class="topbar-context-sep" aria-hidden="true">|</span>
+      <?php if (!empty($headerPresentationContext)): ?><span class="topbar-context-label"><?= h(t('header.context_edit')) ?></span><?php endif; ?>
+      <span class="topbar-context-title" title="<?= h($headerPresentationTitle) ?>"><?= h($headerPresentationTitle) ?></span>
+    </span>
   </div>
   <div class="editor-topbar-right">
     <?php if ($isTemplateMode): ?>

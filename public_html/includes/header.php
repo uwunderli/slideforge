@@ -114,7 +114,9 @@ window.HUB_FLOAT_DIALOG_I18N = <?= json_encode([
 </div>
 <script src="assets/js/demo.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
-<?php if ($currentUser): ?>
+<?php if ($currentUser && !empty($hideTopbar)): ?>
+<?php /* Editor: keine Kopfleiste, mehr Platz fuer die Arbeitsflaeche (Tablet) */ ?>
+<?php elseif ($currentUser): ?>
 <header class="topbar">
   <div class="topbar-main">
   <a href="index.php" class="brand">

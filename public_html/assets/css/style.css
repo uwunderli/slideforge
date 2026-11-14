@@ -12044,3 +12044,4 @@ html[data-theme="light"] .editor-ribbon .effect-icon-btn.active {
   justify-content: center;
 }
 #pixabayModal .pixabay-switch svg { display: block; }
+.editor-topbar-context { flex: 1 1 auto; }

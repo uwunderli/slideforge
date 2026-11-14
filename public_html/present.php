@@ -101,6 +101,7 @@ $presentRibbonCommands = PresentRibbonLayout::commandDefsForClient($presentRibbo
 $presentRibbonCatalog = PresentRibbonLayout::catalogForClient($presentRibbonContext);
 
 $bodyClass = 'present-mode';
+$hideTopbar = true;
 require __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DSEG7+Classic:wght@700&display=swap">
@@ -111,6 +112,7 @@ require __DIR__ . '/includes/header.php';
     <?php if ($canBroadcast && $remoteUrl): ?>
     <input type="hidden" id="presentRemoteLinkInput" value="<?= h($remoteUrl) ?>">
     <?php endif; ?>
+    <button type="button" id="presentFullscreenBtn" class="button-ghost present-fullscreen-btn" aria-pressed="false" title="<?= h(t('present.fullscreen_toggle')) ?>"><?= h(t('present.fullscreen_toggle')) ?></button>
     <span id="presentStatus" class="save-status present-topbar-status"><?= $canBroadcast ? h(t('present.live')) : h(t('present.view_only')) ?></span>
   </div>
   <div class="present-topbar-splitter present-layout-splitter" data-split="main-side" aria-hidden="true"></div>
@@ -518,6 +520,7 @@ window.SF_PRESENT = {
 <script src="assets/js/present-config.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-layout.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/present-fullscreen.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-user-settings.js?v=<?= ASSET_VERSION ?>"></script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
