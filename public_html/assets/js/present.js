@@ -1992,6 +1992,14 @@
     enablePresentAutoAdvance();
   });
 
+  /* Beamer-Fenster (present_audience.php) hat den Tastaturfokus: Tasten kommen von dort. */
+  window.addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'sf_present_key') return;
+    if (e.origin !== window.location.origin || !mainReveal) return;
+    if (e.data.dir === 'next') presentUserNavigate(() => mainReveal.next());
+    else if (e.data.dir === 'prev') presentUserNavigate(() => mainReveal.prev());
+  });
+
   window.addEventListener('message', (e) => {
     if (!e.data || e.data.type !== 'sf-laser-live') return;
     if (!P.canBroadcast) return;

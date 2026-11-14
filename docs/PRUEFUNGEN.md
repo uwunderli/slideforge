@@ -52,6 +52,7 @@ Neueste zuoberst. Eine Zeile je Stand: Commit · was geändert wurde · was gepr
 
 | Stand | Änderung | Geprüft | Offen |
 |---|---|---|---|
+| 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.31; Beamer-Fenster leitet Tasten per postMessage an die Konsole (ASSET_VERSION 696) | php -l, node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok (gleicher Ursprung geprüft) | Ursache aus Urs-Screenshot: Konsole zeigte present_audience.php; mit echtem Presenter ungeprüft |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.30; Nav-Tasten sofort gebunden (ASSET_VERSION 695) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Ursache vermutet (Bindung hing an Reveal-Boot), nicht belegt; Presenter sendet laut Urs nur Pfeil links/rechts |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.29; Nav-Tasten im Capture, Fokus beim Start (ASSET_VERSION 694) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Presenter weiter ungeprüft, Ursache nicht belegt |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.28; Presenter-Tasten trotz Knopf-Fokus, Pfeil auf/ab (ASSET_VERSION 693) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | mit echtem Presenter ungeprüft; Ursache vermutet (Fokus auf Knopf), nicht belegt |

@@ -162,6 +162,21 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
       schedulePositionAttempts();
     });
 
+
+    // Tastaturfokus liegt oft im Beamer-Fenster (Presenter/Pfeiltasten): an die Konsole weiterreichen.
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var dir = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') dir = 'next';
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') dir = 'prev';
+      if (!dir) return;
+      e.preventDefault();
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type: 'sf_present_key', dir: dir }, window.location.origin);
+        }
+      } catch (err) { /* Konsole nicht erreichbar */ }
+    });
     var lastIndex = null;
     var lastFrag = undefined;
     var lastMediaCmdTs = null;
