@@ -1,7 +1,5 @@
 (function () {
   'use strict';
-  var btn = document.getElementById('presentFullscreenBtn');
-  if (!btn) return;
   var root = document.documentElement;
   function active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
   function toggle() {
@@ -14,8 +12,18 @@
       }
     } catch (e) { /* Vollbild nicht verfuegbar */ }
   }
-  function sync() { btn.setAttribute('aria-pressed', active() ? 'true' : 'false'); }
-  btn.addEventListener('click', toggle);
+  function sync() {
+    var on = active() ? 'true' : 'false';
+    document.querySelectorAll('#presentFullscreenBtn, [data-ribbon-command="settings_fullscreen"]').forEach(function (b) {
+      b.setAttribute('aria-pressed', on);
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('#presentFullscreenBtn, [data-ribbon-command="settings_fullscreen"]');
+    if (!btn) return;
+    e.preventDefault();
+    toggle();
+  });
   document.addEventListener('fullscreenchange', sync);
   document.addEventListener('webkitfullscreenchange', sync);
   document.addEventListener('keydown', function (e) {

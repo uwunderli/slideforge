@@ -283,6 +283,7 @@ class PresentRibbonLayout
             'panel_ghost' => 'panel_slides',
             'panel_laser' => 'panel_ghost',
             'settings_notes' => 'settings_laser',
+            'settings_fullscreen' => 'settings_notes',
         ];
         foreach ($insertAfter as $newId => $afterId) {
             if (!isset($catalog[$newId])) {

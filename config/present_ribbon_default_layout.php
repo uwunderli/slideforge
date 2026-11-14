@@ -84,6 +84,7 @@ function present_ribbon_default_layout(): array
                             ['id' => 'settings_clock'],
                             ['id' => 'settings_laser'],
                             ['id' => 'settings_notes'],
+                            ['id' => 'settings_fullscreen'],
                             ['id' => 'ribbon_customize'],
                         ],
                     ],

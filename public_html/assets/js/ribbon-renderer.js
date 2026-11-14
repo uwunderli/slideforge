@@ -122,6 +122,11 @@
         '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>' +
         '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
     },
+    fullscreen: {
+      strokeWidth: 1.5,
+      paths:
+        '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
+    },
     notes: {
       strokeWidth: 1.5,
       paths:

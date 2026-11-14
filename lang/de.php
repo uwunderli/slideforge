@@ -585,6 +585,7 @@ return [
     'present.local_start' => 'Präsentieren',
     'present.local_reopen' => 'Fenster fokussieren',
     'present.fullscreen_toggle' => 'Vollbild (F)',
+    'present.fullscreen_label' => 'Vollbild',
     'present.fullscreen_start' => 'Vollbild starten',
     'present.fullscreen_hint' => 'Ein Klick startet die Präsentation im Vollbild auf dem gewählten Bildschirm.',
     'present.clock_studio' => 'Studiouhr',
