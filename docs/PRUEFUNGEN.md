@@ -52,6 +52,7 @@ Neueste zuoberst. Eine Zeile je Stand: Commit · was geändert wurde · was gepr
 
 | Stand | Änderung | Geprüft | Offen |
 |---|---|---|---|
+| 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.33; Vollbild-Knopf in present.php entfernt (ASSET_VERSION 698) | php -l; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Vollbild im Hub-Rahmen geht nicht: hub public/app/embed.php hat im iframe kein allow="fullscreen" (Entwickler gemeldet) |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.32; F5 = Vollbild (Konsole, Beamer), Tasten in present-remote.js (ASSET_VERSION 697) | php -l, node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok (kein neuer Schreibweg: sendStep ist der bestehende Knopf-Weg) | Tablet-Stick ungeprüft |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.31; Beamer-Fenster leitet Tasten per postMessage an die Konsole (ASSET_VERSION 696) | php -l, node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok (gleicher Ursprung geprüft) | Ursache aus Urs-Screenshot: Konsole zeigte present_audience.php; mit echtem Presenter ungeprüft |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.30; Nav-Tasten sofort gebunden (ASSET_VERSION 695) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Ursache vermutet (Bindung hing an Reveal-Boot), nicht belegt; Presenter sendet laut Urs nur Pfeil links/rechts |

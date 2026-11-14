@@ -112,7 +112,6 @@ require __DIR__ . '/includes/header.php';
     <?php if ($canBroadcast && $remoteUrl): ?>
     <input type="hidden" id="presentRemoteLinkInput" value="<?= h($remoteUrl) ?>">
     <?php endif; ?>
-    <button type="button" id="presentFullscreenBtn" class="button-ghost present-fullscreen-btn" aria-pressed="false" title="<?= h(t('present.fullscreen_toggle')) ?>"><?= h(t('present.fullscreen_toggle')) ?></button>
     <span id="presentStatus" class="save-status present-topbar-status"><?= $canBroadcast ? h(t('present.live')) : h(t('present.view_only')) ?></span>
   </div>
   <div class="present-topbar-splitter present-layout-splitter" data-split="main-side" aria-hidden="true"></div>
