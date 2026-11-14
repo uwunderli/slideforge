@@ -29,6 +29,7 @@
   document.addEventListener('fullscreenchange', sync);
   document.addEventListener('webkitfullscreenchange', sync);
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'F5') { e.preventDefault(); if (!active()) toggle(); return; }
     if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey &&
         !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') &&
         !(e.target && e.target.isContentEditable)) {

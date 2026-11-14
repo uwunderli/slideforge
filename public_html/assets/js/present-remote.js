@@ -629,4 +629,17 @@
     sendRemoteHeartbeat();
     poll();
   });
+
+  /* Presenter-Stick am Tablet: Pfeile / Bild auf-ab / Leertaste schalten wie die Knoepfe. */
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      sendStep('next');
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      sendStep('prev');
+    }
+  });
 })();

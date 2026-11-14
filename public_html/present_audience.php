@@ -166,6 +166,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     // Tastaturfokus liegt oft im Beamer-Fenster (Presenter/Pfeiltasten): an die Konsole weiterreichen.
     document.addEventListener('keydown', function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'F5' || ((e.key === 'f' || e.key === 'F') && !document.fullscreenElement)) { e.preventDefault(); enterPresentFullscreen(targetScreenIndex); return; }
       var dir = null;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') dir = 'next';
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') dir = 'prev';
