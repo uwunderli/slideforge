@@ -23,6 +23,8 @@
     if (!btn) return;
     e.preventDefault();
     toggle();
+    /* Fokus abgeben, damit Presenter-Tasten nicht am Knopf haengen bleiben */
+    if (btn.blur) btn.blur();
   });
   document.addEventListener('fullscreenchange', sync);
   document.addEventListener('webkitfullscreenchange', sync);

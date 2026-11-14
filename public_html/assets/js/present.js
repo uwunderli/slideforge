@@ -2020,6 +2020,10 @@
        weiterzugehen. Für die Navigationstasten zählt der Filmstreifen darum
        nicht als Bedienelement — angeklickt wird er weiterhin ganz normal. */
     if (t.closest('.filmstrip-item')) return false;
+    /* Presenter (Funkfernbedienung) sendet Bild auf/ab bzw. Pfeile: Die gehen auch,
+       wenn nach einem Klick noch ein Knopf den Fokus hat. Leertaste/Enter bleiben
+       beim Knopf. */
+    if (/^(PageUp|PageDown|ArrowLeft|ArrowRight|ArrowUp|ArrowDown)$/.test(e.key)) return false;
     if (t.closest('button, a, [role="button"], #presentClockArea')) return true;
     const qrModal = document.getElementById('presentRemoteQrModal');
     if (qrModal && qrModal.classList.contains('open')) return true;
@@ -2048,10 +2052,10 @@
         return;
       }
       if (!mainReveal || shouldSkipPresentNav(e)) return;
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
         e.preventDefault();
         presentUserNavigate(() => mainReveal.next());
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault();
         presentUserNavigate(() => mainReveal.prev());
       }
