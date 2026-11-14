@@ -2076,6 +2076,10 @@
     document.addEventListener('fullscreenchange', grabPresentFocus);
   }
 
+  /* Tasten sofort binden, nicht erst wenn Reveal im Frame bereit ist und bindControls
+     lief: Ein Fehler oder eine Verzoegerung davor liess sonst den Presenter tot. */
+  bindPresentNavKeys();
+
   function bindControls() {
     document.getElementById('presPrevBtn').addEventListener('click', () => {
       presentUserNavigate(() => { if (mainReveal) mainReveal.prev(); });
