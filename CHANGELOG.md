@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [2.1.27] - 2026-11-14
+
+### Added
+
+- Präsentationsmodus: Vollbild als Ribbon-Befehl (Icon hinter «Notizen»).
+
+## [2.1.26] - 2026-11-14
+
+### Changed
+
+- Editor und Präsentationsmodus ohne Kopfleiste (mehr Platz auf dem Tablet); Titel steht neben «← Dashboard».
+- Präsentationsmodus: Vollbild-Knopf und Taste F.
+
 ## [2.1.25] - 2026-11-06
 
 ### Fixed
