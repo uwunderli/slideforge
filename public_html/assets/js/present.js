@@ -2061,7 +2061,19 @@
       }
     }
 
-    document.addEventListener('keydown', handleParentNavKey);
+    /* Capture: kein anderer Zuhoerer soll die Tasten des Presenters schlucken. */
+    document.addEventListener('keydown', handleParentNavKey, true);
+
+    /* Fokus auf die Seite holen (Start, Rueckkehr ins Fenster, Vollbild), damit der
+       Presenter ohne vorherigen Klick schaltet. */
+    function grabPresentFocus() {
+      const a = document.activeElement;
+      if (a && a !== document.body && a !== document.documentElement) return;
+      try { window.focus(); } catch (e) { /* ignore */ }
+    }
+    window.addEventListener('load', grabPresentFocus);
+    window.addEventListener('focus', grabPresentFocus);
+    document.addEventListener('fullscreenchange', grabPresentFocus);
   }
 
   function bindControls() {

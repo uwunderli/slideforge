@@ -52,6 +52,7 @@ Neueste zuoberst. Eine Zeile je Stand: Commit · was geändert wurde · was gepr
 
 | Stand | Änderung | Geprüft | Offen |
 |---|---|---|---|
+| 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.29; Nav-Tasten im Capture, Fokus beim Start (ASSET_VERSION 694) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Presenter weiter ungeprüft, Ursache nicht belegt |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.28; Presenter-Tasten trotz Knopf-Fokus, Pfeil auf/ab (ASSET_VERSION 693) | node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | mit echtem Presenter ungeprüft; Ursache vermutet (Fokus auf Knopf), nicht belegt |
 | 2026-11-14 · helferlein/install-gruppe1-slide | Ribbon-Befehl `settings_fullscreen` (Icon, hinter Notizen), JS bindet Ribbon + Knopf (ASSET_VERSION 692) | php -l, node --check; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok | Sicherung `.sicherung/vollbild2-*`; bestehende Nutzer-Layouts bekommen den Befehl über ensurePanelCommands, ungeprüft |
 | 2026-11-14 · helferlein/install-gruppe1-slide | VERSION 2.1.26, rebased auf ddfc999; Editor/Präsentation ohne Kopfleiste (`$hideTopbar`), Titel in Zeile «← Dashboard», Vollbild-Knopf + Taste F im Präsentationsmodus (ASSET_VERSION 691) | php -l der geänderten Dateien; Liste UI: ok, UI nicht im Browser geprüft; Liste ACL/Kommunikation: ok (keine ACL-Änderung) | Fernsteuerung Tablet/Presenter war schon da (present_remote.php, Tasten PgUp/PgDn), nicht neu gebaut; nicht ausgeliefert |
