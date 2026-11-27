@@ -257,6 +257,8 @@ return [
     'editor.template_badge' => 'Folienvorlage',
     'editor.tab_slides' => 'Folien',
     'editor.new_slide' => 'Neue Folie',
+    'editor.resize_filmstrip' => 'Breite der Folienleiste ziehen (Pfeiltasten)',
+    'editor.resize_props' => 'Breite der Seitenleiste ziehen (Pfeiltasten)',
     'editor.duplicate_slide' => 'Duplizieren',
     'editor.delete_slide' => 'Löschen',
     'editor.delete_slides' => 'Folien löschen',

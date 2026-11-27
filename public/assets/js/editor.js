@@ -25,6 +25,8 @@
     activePropsTab: 'format',
     activeFormatGroup: null,
     notesHeight: Math.max(60, Math.min(900, parseInt((boot.editorUi && boot.editorUi.notesHeight), 10) || 140)),
+    /* Trennerbreiten (HubSplit), Schlüssel ohne «split:», serverseitig in editor_ui.splits */
+    splits: Object.assign({}, (boot.editorUi && boot.editorUi.splits && typeof boot.editorUi.splits === 'object' && !Array.isArray(boot.editorUi.splits)) ? boot.editorUi.splits : {}),
     activeSideTab: (boot.editorUi && boot.editorUi.sideTab) || 'templates',
     activePosSubtab: (boot.editorUi && boot.editorUi.posSubtab) || 'layout',
     activeFormatSubtab: (boot.editorUi && boot.editorUi.formatSubtab) || 'text',
@@ -93,6 +95,7 @@
             formatSubtab: SF.activeFormatSubtab,
             objectOpen: SF.objectPanelOpen !== false,
             notesHeight: SF.notesHeight,
+            splits: SF.splits,
           },
           csrf_token: SF.csrfToken,
         }),
@@ -1165,6 +1168,7 @@
     initOpenclipartPanel();
     initMediaSearchButtons();
     bindNotesResize();
+    bindEditorSplit();
     initMediaLibraryPanel();
     initSideTabs();
     initMediaSidebarPanel();
@@ -1727,6 +1731,14 @@
     });
   }
 
+  /* Nur wenn das Element ausserhalb des sichtbaren Bereichs liegt: knapp in den Blick, ohne Animation. */
+  function scrollIntoViewIfHidden(scroller, el) {
+    if (!scroller || !el) return;
+    const sr = scroller.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    if (er.top < sr.top || er.bottom > sr.bottom) el.scrollIntoView({ block: 'nearest' });
+  }
+
   async function renderSlideFilmstrip() {
     const ae = document.activeElement;
     const hatteFilmstreifenFokus = !!(ae && ae.closest && ae.closest('#slideFilmstrip'));
@@ -1741,6 +1753,9 @@
       return;
     }
 
+    /* Bildlauf beim Neuaufbau halten (Urs 27.11.: «spult der Filmstreifen immer von anfang»):
+       Stand vor dem Leeren merken, nach dem Aufbau im selben Schritt (vor dem Zeichnen) zurücksetzen. */
+    const keepScrollTop = container.scrollTop;
     container.innerHTML = '';
     container.setAttribute('role', 'listbox');
     container.setAttribute('aria-multiselectable', 'true');
@@ -1854,8 +1869,9 @@
       new ResizeObserver(() => updateFilmstripDimensions()).observe(container);
     }
 
+    container.scrollTop = keepScrollTop;
     const activeItem = container.querySelector('.filmstrip-item.active');
-    if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    scrollIntoViewIfHidden(container, activeItem);
     /* Stand die Eingabemarke vor dem Neuzeichnen im Filmstreifen, gehört sie auch
        danach dorthin: Sonst gälte das nächste Strg+C wieder dem Objekt, und ein
        zweites Ausschneiden hintereinander wäre nicht möglich. */
@@ -1984,28 +2000,118 @@
     handle.dataset.bound = '1';
     applyNotesHeight(SF.notesHeight);
 
-    handle.addEventListener('mousedown', (e) => {
+    /* Wie der Hub-Trenner (HubSplit), nur senkrecht: Zeiger ziehen, Pfeiltasten je 24 px,
+       Doppelklick zurück auf die Standardhöhe. Die Bühne passt sich über ihren ResizeObserver an. */
+    handle.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       const startY = e.clientY;
       const startH = input.getBoundingClientRect().height;
       document.body.classList.add('notes-resizing');
 
-      const onMove = (ev) => applyNotesHeight(startH + (startY - ev.clientY));
+      const onMove = (ev) => {
+        ev.preventDefault();
+        applyNotesHeight(startH + (startY - ev.clientY));
+      };
       const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
         document.body.classList.remove('notes-resizing');
         persistEditorUi({ notesHeight: SF.notesHeight });
       };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      document.addEventListener('pointermove', onMove, { passive: false });
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
     });
 
-    /* Doppelklick auf die Linie: zurueck auf die Standardhoehe. */
+    handle.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      applyNotesHeight(SF.notesHeight + (e.key === 'ArrowUp' ? 24 : -24));
+      persistEditorUi({ notesHeight: SF.notesHeight });
+    });
+
     handle.addEventListener('dblclick', () => {
       applyNotesHeight(140);
       persistEditorUi({ notesHeight: SF.notesHeight });
+    });
+  }
+
+  /* Ablage für HubSplit (Signatur von HubUserPrefsUi, wie FileForge ff-ribbon.js): «split:»-Schlüssel
+     liegen je Person auf dem Server (editor_ui.splits über user_api.php set_editor_ui), alles andere
+     (z. B. Schwebedialog-Lage von hub-float-dialog.js) wie bisher im Browser unter «sf_ui:». */
+  function ensureUserPrefsUi() {
+    if (window.HubUserPrefsUi) return;
+    const splitKey = (key) => {
+      const k = String(key || '');
+      return k.indexOf('split:') === 0 ? k.slice(6) : null;
+    };
+    const local = {
+      get(k) {
+        try {
+          const raw = localStorage.getItem('sf_ui:' + k);
+          return raw == null ? null : JSON.parse(raw);
+        } catch (_) { return null; }
+      },
+      set(k, v) {
+        try {
+          if (v == null) localStorage.removeItem('sf_ui:' + k);
+          else localStorage.setItem('sf_ui:' + k, JSON.stringify(v));
+        } catch (_) { /* ignore */ }
+      },
+    };
+    window.HubUserPrefsUi = {
+      ensure: () => Promise.resolve(),
+      flush: () => {},
+      get(key, fallback) {
+        const sk = splitKey(key);
+        if (sk !== null) return Object.prototype.hasOwnProperty.call(SF.splits, sk) ? SF.splits[sk] : fallback;
+        const v = local.get(String(key || ''));
+        return v == null ? fallback : v;
+      },
+      set(key, value) {
+        const sk = splitKey(key);
+        if (sk !== null) {
+          if (!/^[a-z0-9_]{1,40}$/.test(sk)) return;
+          const px = parseInt(String(value == null ? '' : value), 10);
+          if (px > 0) SF.splits[sk] = px;
+          else delete SF.splits[sk];
+          persistEditorUi({});
+          return;
+        }
+        local.set(String(key || ''), value);
+      },
+      migrateLocal(lsKey, uiKey) {
+        try {
+          const raw = localStorage.getItem(lsKey);
+          if (raw == null || raw === '') return;
+          if (this.get(uiKey, null) == null) {
+            let val = raw;
+            try { val = JSON.parse(raw); } catch (_) { /* Text */ }
+            this.set(uiKey, val);
+          }
+          localStorage.removeItem(lsKey);
+        } catch (_) { /* ignore */ }
+      },
+    };
+  }
+
+  /* Folienleiste links und Seitenleiste rechts per Trenner verbreitern (Hub-Vorlage Lab › Layout).
+     Miniaturen und Bühne folgen über ihre ResizeObserver (updateFilmstripDimensions, resizeStageToFit). */
+  function bindEditorSplit() {
+    const root = document.querySelector('.editor-layout');
+    if (!root || !window.HubSplit) return;
+    ensureUserPrefsUi();
+    window.HubSplit.bind(root, {
+      sideVar: '--editor-filmstrip-width',
+      sideStorage: 'sf_editor_filmstrip',
+      sideMin: 160,
+      sideDefault: 300,
+      detailVar: '--editor-props-width',
+      detailStorage: 'sf_editor_props',
+      detailMin: 260,
+      detailDefault: 300,
     });
   }
 
@@ -2122,8 +2228,7 @@
     loadSlideIntoStage(index);
     updateFilmstripActive();
     const container = document.getElementById('slideFilmstrip');
-    const activeItem = container?.querySelector('.filmstrip-item.active');
-    if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    scrollIntoViewIfHidden(container, container?.querySelector('.filmstrip-item.active'));
   }
 
   function loadSlideIntoStage(index, skipHistoryReset) {
@@ -2961,6 +3066,9 @@
     const grid = document.getElementById('slideGrid');
     if (!grid) return;
     const scale = gridCellScale();
+    /* Bildlauf halten wie im Filmstreifen (kein Springen an den Anfang beim Löschen/Verschieben). */
+    const gridScroller = grid.closest('.editor-slide-grid-scroll') || grid;
+    const keepGridScroll = gridScroller.scrollTop;
     grid.innerHTML = '';
     SF.slides.forEach((slide, i) => {
       const thumb = SF.thumbnails[slide.id] || {};
@@ -3039,6 +3147,7 @@
       }
       grid.appendChild(card);
     });
+    gridScroller.scrollTop = keepGridScroll;
     bindGridReorder(grid);
     updateGridSelectionUi();
   }

@@ -244,6 +244,8 @@ return [
     'editor.template_badge' => 'Modèle de diapositive',
     'editor.tab_slides' => 'Diapositives',
     'editor.new_slide' => 'Nouvelle diapositive',
+    'editor.resize_filmstrip' => 'Glisser pour redimensionner la bande de diapositives (flèches)',
+    'editor.resize_props' => 'Glisser pour redimensionner le panneau latéral (flèches)',
     'editor.duplicate_slide' => 'Dupliquer',
     'editor.delete_slide' => 'Supprimer',
     'editor.delete_slides' => 'Supprimer les diapositives',

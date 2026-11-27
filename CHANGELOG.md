@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.9.1] - 2026-11-27
+
+- **Editor-Spalten verstellbar wie im Hub** (Urs: «Die Spalten kann ich auch nicht vergrössern und verkleinern. Mach die so wie im Hub Vorgegeben.»): Folienleiste links und Seitenleiste rechts haben den Hub-Trenner (`HubSplit`, `.hub-split__resize--end`/`--start`, Lab › Layout): ziehen oder Pfeiltasten. Breite je Person serverseitig (`editor_ui.splits` über `user_api.php set_editor_ui`), Grenzen links 160 px bis 40 % und rechts 260 px bis 50 % der Fensterbreite. Miniaturen und Bühne passen sich über ihre ResizeObserver an. `hub-split.js` kommt vom Hub (`sf_hub_asset`), eigene Kopie nur als Rückfall.
+- **Filmstreifen bleibt stehen** (Urs: «Wenn ich da was lösche, dann spult der Filmstreifen immer von anfang bis zu dem Punkt …»): Beim Neuaufbau (Löschen, Verschieben, Einfügen, Duplizieren, Rückgängig) bleibt die Bildlaufposition; die aktive Folie wird nur ohne Animation knapp in den Blick geholt, wenn sie ausserhalb liegt. Gleich in der Rasteransicht und beim Folienwechsel. Nach dem Speichern wird wie bisher nur die eine Miniatur ersetzt.
+- Notizbereich: Höhen-Trenner jetzt auch mit Pfeiltasten (auf/ab je 24 px), Zeigerereignisse (Touch/Stift) und Fokus sichtbar.
+
 ## [3.9.0] - 2026-11-27
 
 - **Schriften aus dem Hub** (Urs 27.11.: Ordner mit dem FF-Picker im Hub, «für die verschiedenen Programme»): Editor, Presenter, Vorschau, Zuschauer/Player laden `<Hub>/api/fonts.php?css=1`; jede Schriftwahl bietet die Hub-Schriften zuoberst an. Eigene Schriften-Upload-Verwaltung entfernt, Reiter «Schriftarten» verweist auf Hub › Palette › Schriften. Übergang: früher hochgeladene Schriften laufen weiter (auch als Alias ohne Schnitt-Wort). `scripts/schriften-in-hub.php` kopiert sie in den Hub-Ordner. Braucht Hub 2.34.0. Assets 727.
@@ -16,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Felder im Lab-Stil (`hub-admin-field`/`hub-admin-check`), automatisches Speichern mit «speichert …/gespeichert» statt Speichern-Knöpfen (Allgemein, Rechtschreibung, Medien, Textvorlagen, Vorlageelemente, Farben); Logo lädt nach der Wahl im FileForge-Dialog sofort hoch. LanguageTool-Adresse mit HubUrl (Browser `hub-url.js`, Server `src/HubUrl.php`, Kopie aus dem Hub).
 - Weg (Altes raus): SMTP-Abschnitt, Testmail (`admin_api.php`), `SmtpMailer`, SMTP-/Registrierungs-Vorgaben in Config/Demo, Rollen-Nachtrag «erster Benutzer wird Admin» in config.php. Die FolienSchmiede verschickt keine Mails mehr.
 - Übernahme: `php scripts/migrate-to-ff.php --source=<alt> --settings [--run]` holt Seitentitel, Logo, LanguageTool, Pixabay, Iconify, Openclipart, Markenfarben, Textvorlagen, Vorlageelemente und Logos-Importvorlagen aus der alten Installation, nur wo neu leer oder ab Werk; Sicherung `*.vor-settings-*`; Ausgabe nur Schlüsselnamen.
+
 ## [3.8.2] - 2026-11-27
 
 - **Folienschrift im Editor** (Urs: «Schrift stimmt irgend wie auch noch nicht»): Die Übernahme aus der alten FolienSchmiede brachte die hochgeladenen Schriften nicht mit (`custom_fonts` in config.json und Dateien in `public_html/uploads/fonts`; Biel: «Myriad Pro»). Die Editor-Bühne (Canvas) fiel deshalb auf die Serif-Vorgabe des Browsers, Miniaturen/Präsentation (HTML, `font-family:X,sans-serif`) auf eine serifenlose Ersatzschrift. `Migration` holt die Schriften jetzt nach (nur fehlende, Datei nie ersetzt, im Protokoll gezählt); ein erneuter `migrate-to-ff.php … --run` holt nur das Fehlende.

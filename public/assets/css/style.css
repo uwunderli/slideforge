@@ -7627,6 +7627,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   min-width: 0;
 }
 .editor-right-sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -7639,6 +7640,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   background: var(--surface);
 }
 .options-panel.options-panel-filmstrip {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -7646,6 +7648,39 @@ body.editor-grid-dragging .editor-slide-grid-item {
   border-right: 1px solid var(--border);
   background: var(--surface);
   padding: 0;
+}
+/* Spaltentrenner wie Hub-Vorlage (Hub style.css .hub-split__resize, Lab › Layout); HubSplit setzt
+   --editor-filmstrip-width / --editor-props-width auf .editor-layout. Liegt innen am Rand der Spalte. */
+.editor-layout .hub-split__resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+  background: transparent;
+}
+.editor-layout .hub-split__resize--end { right: 0; }
+.editor-layout .hub-split__resize--start { left: 0; }
+.editor-layout .hub-split__resize:hover,
+.editor-layout .hub-split__resize:focus-visible,
+.editor-layout.is-resizing-side .hub-split__resize--end,
+.editor-layout.is-resizing-detail .hub-split__resize--start {
+  background: var(--border);
+  outline: none;
+}
+body.hub-split-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.notes-resize-handle:focus-visible { outline: none; }
+.notes-resize-handle:focus-visible::after {
+  opacity: 1;
+  background: var(--accent);
+}
+@media (max-width: 900px) {
+  .editor-layout .hub-split__resize { display: none; }
 }
 .options-panel-filmstrip .editor-slides-toolbar {
   flex-shrink: 0;

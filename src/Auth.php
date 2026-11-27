@@ -646,6 +646,8 @@ class Auth
             'formatSubtab' => 'text',
             'objectOpen' => true,
             'notesHeight' => 140,
+            /* Spaltenbreiten der Editor-Trenner (HubSplit, Schlüssel ohne «split:»), Pixel. */
+            'splits' => [],
             /* Zuletzt benutzte Einstellungen des Logos-Import-Dialogs. Bewusst nur die
                dokumentunabhängigen Werte - Abwahl einzelner Folien und eigene Notizen
                gehören zu einer bestimmten Predigt und werden nicht gemerkt. */
@@ -693,8 +695,31 @@ class Auth
                 : $defaults['objectOpen'],
             /* Höhe des Notizfeldes in Pixeln, per Ziehen an der Trennlinie gesetzt. */
             'notesHeight' => max(60, min(900, (int)($ui['notesHeight'] ?? $defaults['notesHeight']))),
+            'splits' => self::normalizeSplits($ui['splits'] ?? null),
             'import' => self::normalizeImportUi($ui['import'] ?? null, $defaults['import']),
         ];
+    }
+
+    /**
+     * Trennerbreiten aus dem Browser: nur einfache Schlüssel, ganze Pixel, höchstens 16 Einträge.
+     */
+    private static function normalizeSplits($splits): array
+    {
+        if (!is_array($splits)) {
+            return [];
+        }
+        $out = [];
+        foreach ($splits as $k => $v) {
+            if (count($out) >= 16) {
+                break;
+            }
+            $k = (string)$k;
+            if (!preg_match('/^[a-z0-9_]{1,40}$/', $k) || !is_numeric($v)) {
+                continue;
+            }
+            $out[$k] = max(80, min(2000, (int)$v));
+        }
+        return $out;
     }
 
     /**

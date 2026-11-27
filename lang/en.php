@@ -251,6 +251,8 @@ return [
     'editor.template_badge' => 'Slide template',
     'editor.tab_slides' => 'Slides',
     'editor.new_slide' => 'New slide',
+    'editor.resize_filmstrip' => 'Drag to resize the slide strip (arrow keys)',
+    'editor.resize_props' => 'Drag to resize the sidebar (arrow keys)',
     'editor.duplicate_slide' => 'Duplicate',
     'editor.delete_slide' => 'Delete',
     'editor.delete_slides' => 'Delete slides',

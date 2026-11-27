@@ -886,7 +886,14 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </script>
 <?php else: ?>
 
-<div class="editor-layout<?= ($isTemplateMode && !$isLayoutSetMode) ? ' editor-layout-no-filmstrip' : '' ?>">
+<?php
+/* Gemerkte Spaltenbreiten (HubSplit) schon im ersten Bild setzen, damit nichts springt; Werte sind in Auth::normalizeSplits auf ganze Pixel begrenzt. */
+$sfSplits = Auth::getEditorUi($me)['splits'] ?? [];
+$sfSplitStyle = '';
+if (!empty($sfSplits['sf_editor_filmstrip'])) { $sfSplitStyle .= '--editor-filmstrip-width:' . (int)$sfSplits['sf_editor_filmstrip'] . 'px;'; }
+if (!empty($sfSplits['sf_editor_props'])) { $sfSplitStyle .= '--editor-props-width:' . (int)$sfSplits['sf_editor_props'] . 'px;'; }
+?>
+<div class="editor-layout<?= ($isTemplateMode && !$isLayoutSetMode) ? ' editor-layout-no-filmstrip' : '' ?>"<?= $sfSplitStyle !== '' ? ' style="' . h($sfSplitStyle) . '"' : '' ?>>
   <?php if (!$isTemplateMode || $isLayoutSetMode): ?>
   <aside class="options-panel options-panel-filmstrip">
     <div class="editor-slides-toolbar">
@@ -895,6 +902,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
       <?php endif; ?>
     </div>
     <div id="slideFilmstrip" class="editor-slide-filmstrip"></div>
+    <?php /* Trenner wie Hub-Vorlage Lab › Layout (.hub-split__resize, HubSplit): ziehen oder Pfeiltasten, Breite je Person in editor_ui.splits */ ?>
+    <div class="hub-split__resize hub-split__resize--end" data-hub-split-resize="side" role="separator" aria-orientation="vertical" aria-label="<?= h(t('editor.resize_filmstrip')) ?>" title="<?= h(t('editor.resize_filmstrip')) ?>" tabindex="0"></div>
   </aside>
   <?php endif; ?>
 
@@ -917,7 +926,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <?php endif; ?>
     <?php if ($canEdit): ?>
     <div class="notes-panel-editor">
-      <div class="notes-resize-handle" id="notesResizeHandle" role="separator" aria-orientation="horizontal" title="<?= h(t('notes.resize_hint')) ?>"></div>
+      <div class="notes-resize-handle" id="notesResizeHandle" role="separator" aria-orientation="horizontal" aria-label="<?= h(t('notes.resize_hint')) ?>" title="<?= h(t('notes.resize_hint')) ?>" tabindex="0"></div>
       <div class="notes-panel-header">
         <span><?= h(t('notes.title')) ?></span>
         <span><?= t('notes.hint') ?></span>
@@ -965,6 +974,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
   };
   ?>
   <div class="editor-right-sidebar" id="editorRightSidebar">
+    <div class="hub-split__resize hub-split__resize--start" data-hub-split-resize="detail" role="separator" aria-orientation="vertical" aria-label="<?= h(t('editor.resize_props')) ?>" title="<?= h(t('editor.resize_props')) ?>" tabindex="0"></div>
     <aside class="props-panel-wrap props-sidebar-a props-sidebar-tabs" id="propsPanelWrap">
       <nav class="props-side-tabs" id="propsSideTabs" role="tablist" aria-label="<?= h(t('props.side_tabs')) ?>">
         <button type="button" class="props-side-tab" role="tab" id="propsSideTabTemplates" data-side-tab="templates" aria-selected="true" aria-controls="propsSidePanelTemplates" title="<?= h(t('props.side_tab_templates')) ?>">
@@ -1580,6 +1590,7 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon-customize.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-split.js')) ?>"></script>
 <?php endif; ?>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
 <?php $ffStatus = Workspace::status($id, (string)$me['id']); if ($ffStatus !== null): ?>

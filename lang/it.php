@@ -237,6 +237,8 @@ return [
     'editor.template_badge' => 'Modello diapositiva',
     'editor.tab_slides' => 'Diapositive',
     'editor.new_slide' => 'Nuova diapositiva',
+    'editor.resize_filmstrip' => 'Trascina per ridimensionare la barra delle diapositive (frecce)',
+    'editor.resize_props' => 'Trascina per ridimensionare la barra laterale (frecce)',
     'editor.duplicate_slide' => 'Duplica',
     'editor.delete_slide' => 'Elimina',
     'editor.delete_slides' => 'Elimina diapositive',

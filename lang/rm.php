@@ -237,6 +237,8 @@ return [
     'editor.template_badge' => 'Model da slide',
     'editor.tab_slides' => 'Slides',
     'editor.new_slide' => 'Nova slide',
+    'editor.resize_filmstrip' => 'Tira per midar la ladezza da la trav da slides (tastas da frizza)',
+    'editor.resize_props' => 'Tira per midar la ladezza da la trav laterala (tastas da frizza)',
     'editor.duplicate_slide' => 'Duplicar',
     'editor.delete_slide' => 'Stizzar',
     'editor.delete_slides' => 'Stizzar folias',
