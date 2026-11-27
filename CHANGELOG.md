@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.55] - 2026-11-27
+
+### Changed
+- **Start-Menüband aus Einzelbefehlen** (Urs 27.11.: «Ok, umsetzen»): Die festen Blöcke «Zeichen», «Absatz» und «Schriftfarbe» sind zerlegt. Schriftart, Schriftgrösse, Fett, Kursiv, Unterstrichen, Durchgestrichen, GROSS, Kapitälchen, Aufzählung, Nummerierung, Zeilen- und Zeichenabstand, Ausrichtung links/Mitte/rechts, Schriftfarbe (Anwenden + Farbfeld), Markerfarbe (Anwenden + Farbfeld), «Kein Marker» und Deckkraft sind je ein eigener Befehl: im «Ribbon anpassen» einzeln verschiebbar, ausblendbar, in Gruppen und Zeilen anordenbar, je mit Kürzelfeld. Die bisherigen Kürzel-Einträge Fett/Kursiv/Unterstrichen/Marker sind dieselben Befehle (Kürzel der Personen bleiben).
+- Gespeicherte Menübänder mit den alten Blöcken bekommen beim Laden an derselben Stelle die Einzelbefehle; die Vorgabe sieht aus wie bisher (je zwei Zeilen).
+
 ## [3.12.54] - 2026-11-27
 
 ### Fixed

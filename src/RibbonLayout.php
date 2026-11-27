@@ -199,6 +199,10 @@ class RibbonLayout
                     'widget:collab_menu' => [
                         ['id' => 'export', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                     ],
+                    /* 4.0: feste Start-Blöcke → Einzelbefehle an derselben Stelle, gleich wie die Vorgabe. */
+                    'widget:zeichen' => ribbon_default_items_zeichen(),
+                    'widget:absatz' => ribbon_default_items_absatz(),
+                    'widget:text_colors' => ribbon_default_items_text_colors(),
                 ];
                 $settingsLegacyIds = [
                     'settings_slides',
@@ -269,6 +273,12 @@ class RibbonLayout
                         continue;
                     }
                     if ($itemId !== '' && isset($legacyExpand[$itemId])) {
+                        /* 4.0: Teilt ein früherer Start-Block die Gruppe mit anderem, trennt ein Trenner die Einzelbefehle davon
+                           (sonst rutschten ihre Zeilen in den Zeilenstapel davor). */
+                        if (in_array($itemId, ['widget:zeichen', 'widget:absatz', 'widget:text_colors'], true)
+                            && $items !== [] && ($items[count($items) - 1]['id'] ?? '') !== 'separator') {
+                            $items[] = ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]];
+                        }
                         foreach ($legacyExpand[$itemId] as $exp) {
                             $expId = is_array($exp) ? (string)($exp['id'] ?? '') : (string)$exp;
                             if ($expId === '' || !isset($catalog[$expId])) {

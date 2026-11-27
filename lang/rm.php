@@ -397,6 +397,7 @@ return [
     'ribbon.group_text_color' => 'Colur da scrit',
     'ribbon.color_apply' => 'Applitgar la colur da scrittira tschernida',
     'ribbon.mark_color' => 'Colur dal marcader',
+    'ribbon.font_size' => 'Grondezza da la scrittira',
     'ribbon.mark_apply' => 'Applitgar la colur dal marcader',
     'ribbon.mark_clear' => 'Nagin marcader',
     'ribbon.group_present' => 'Preschentaziun',

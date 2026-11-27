@@ -11129,6 +11129,19 @@
     SFS.register('text_bold', textFormatKey('rb_bold'));
     SFS.register('text_italic', textFormatKey('rb_italic'));
     SFS.register('text_underline', textFormatKey('rb_underline'));
+    /* 4.0: Durchgestrichen/GROSS/Kapitälchen sind eigene Menüband-Befehle mit einstellbarem Kürzel — gleicher Weg wie Fett. */
+    SFS.register('text_strike', textFormatKey('rb_strikethrough'));
+    SFS.register('text_uppercase', textFormatKey('rb_uppercase'));
+    SFS.register('text_smallcaps', textFormatKey('rb_smallcaps'));
+    /* 4.0: Kürzel eines Feld-Befehls (Schriftart, Grösse, Abstände, Farben, Deckkraft) setzt den Fokus ins Feld. */
+    const fieldFocusKey = (id) => () => {
+      const el = document.getElementById(id + 'In') || document.getElementById(id);   // Schriftart: Suchfeld von SfFontSelect
+      if (!el || el.disabled || !el.getClientRects().length) return 'native';
+      el.focus();
+      return true;
+    };
+    [['text_font', 'rb_font'], ['text_fontsize', 'rb_fontsize'], ['text_lineheight', 'rb_lineheight'], ['text_letterspacing', 'rb_letterspacing'],
+      ['text_color', 'rb_color'], ['text_mark_color', 'rb_mark'], ['text_opacity', 'rb_opacity']].forEach(([cmd, id]) => SFS.register(cmd, fieldFocusKey(id)));
     /* 3.12.49: Markerfarbe anwenden / Kein Marker (Kürzel frei wählbar) — gleicher Weg wie die Knöpfe im Menüband. */
     const markKey = (clear) => (e) => {
       const notesEl = notesField();
@@ -11144,6 +11157,18 @@
     };
     SFS.register('text_mark', markKey(false));
     SFS.register('text_mark_clear', markKey(true));
+    /* 4.0: «Gewählte Schriftfarbe anwenden» als eigener Befehl — gleicher Zusammenhang wie der Marker (Notizen, Bearbeiten an Ort, Bühne). */
+    SFS.register('text_color_apply', (e) => {
+      const notesEl = notesField();
+      const inNotes = !!(notesEl && notesRich() && e && e.target && notesEl.contains(e.target));
+      const ie = SF.inlineEdit;
+      const inInline = !!(ie && e && e.target && ie.el.contains(e.target));
+      if (!inNotes && !inInline && (inField(e) || !ribbonStartTextNode() || !stagePlayContext())) return 'native';
+      const btn = document.getElementById('rb_color_apply');
+      if (!btn || btn.disabled) return 'native';
+      btn.click();
+      return true;
+    });
     /* Entf: im Filmstreifen/Raster Folien löschen, sonst weiter an die Bühne (markierte Objekte löschen). */
     SFS.register('delete_slides', () => {
       if (SF.canEdit && slideShortcutContext()) { deleteSlides(shortcutSlideIndices()); return true; }

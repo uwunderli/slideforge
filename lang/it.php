@@ -397,6 +397,7 @@ return [
     'ribbon.group_text_color' => 'Colore testo',
     'ribbon.color_apply' => 'Applica il colore del testo scelto',
     'ribbon.mark_color' => 'Colore evidenziatore',
+    'ribbon.font_size' => 'Dimensione carattere',
     'ribbon.mark_apply' => 'Applica colore evidenziatore',
     'ribbon.mark_clear' => 'Nessun evidenziatore',
     'ribbon.group_present' => 'Presentazione',

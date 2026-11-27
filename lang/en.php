@@ -422,6 +422,7 @@ return [
     'ribbon.group_text_color' => 'Font color',
     'ribbon.color_apply' => 'Apply selected font colour',
     'ribbon.mark_color' => 'Highlight color',
+    'ribbon.font_size' => 'Font size',
     'ribbon.mark_apply' => 'Apply highlight color',
     'ribbon.mark_clear' => 'No highlight',
     'ribbon.group_present' => 'Present',

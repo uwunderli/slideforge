@@ -11,37 +11,41 @@ $rbIconAlignRight = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="non
 $rbIconMarkClear = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19h7"/><path d="M8 15l8-10 3 3-10 8z"/><path d="M15 15l5 5M20 15l-5 5"/></svg>';
 $rbTemplateSample = h(t('ribbon.template_style_sample'));
 ?>
-<div class="ribbon-widget-grid ribbon-widget-grid--zeichen" data-widget-id="widget-zeichen" id="ribbonStartZeichen">
-  <div class="ribbon-wcell ribbon-wcell-font">
-    <label class="ribbon-field ribbon-field-font">
-      <span class="sr-only"><?= h(t('props.font')) ?></span>
-      <select id="rb_font" disabled title="<?= h(t('props.font')) ?>"></select>
-    </label>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-size">
-    <label class="ribbon-field ribbon-field-num">
-      <span class="sr-only"><?= h(t('props.size')) ?></span>
-      <input type="number" id="rb_fontsize" min="1" disabled aria-label="<?= h(t('props.size')) ?>" title="<?= h(t('props.size')) ?>">
-    </label>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon" id="ribbonStartFormat">
-    <button type="button" class="ribbon-icon-btn" id="rb_bold" disabled title="<?= h(t('props.bold')) ?>">B</button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn" id="rb_italic" disabled title="<?= h(t('props.italic')) ?>">I</button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn" id="rb_underline" disabled title="<?= h(t('props.underline')) ?>">U</button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn" id="rb_strikethrough" disabled title="<?= h(t('props.strikethrough')) ?>">S</button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-wide" id="rb_uppercase" disabled title="<?= h(t('props.uppercase')) ?>">AA</button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-wide" id="rb_smallcaps" disabled title="<?= h(t('props.smallcaps')) ?>">Aa</button>
-  </div>
+<?php
+/* 4.0 (Urs 27.11.: «Ok, umsetzen»): Zeichen, Absatz und Schriftfarbe sind keine festen Blöcke mehr. Jedes Element ist ein eigener
+   Menüband-Befehl (kind 'field', config/ribbon_commands.php) und liegt hier einzeln im Vorrat (data-widget-id = templateId).
+   Das Element wandert beim Zeichnen in seine Zelle und zurück — die IDs (rb_*) und alle Zuhörer in editor.js bleiben.
+   data-field-control = das bedienbare Element (bekommt data-ribbon-command: Tooltip mit Kürzel, Tastentipps). */
+?>
+<div class="ribbon-wcell ribbon-wcell-font ribbon-field-item" data-widget-id="field-text-font">
+  <label class="ribbon-field ribbon-field-font">
+    <span class="sr-only"><?= h(t('props.font')) ?></span>
+    <select id="rb_font" disabled title="<?= h(t('props.font')) ?>" data-field-control></select>
+  </label>
+</div>
+<div class="ribbon-wcell ribbon-wcell-size ribbon-field-item" data-widget-id="field-text-fontsize">
+  <label class="ribbon-field ribbon-field-num">
+    <span class="sr-only"><?= h(t('ribbon.font_size')) ?></span>
+    <input type="number" id="rb_fontsize" min="1" disabled aria-label="<?= h(t('ribbon.font_size')) ?>" title="<?= h(t('ribbon.font_size')) ?>" data-field-control>
+  </label>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-bold">
+  <button type="button" class="ribbon-icon-btn" id="rb_bold" disabled title="<?= h(t('props.bold')) ?>" data-field-control>B</button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-italic">
+  <button type="button" class="ribbon-icon-btn" id="rb_italic" disabled title="<?= h(t('props.italic')) ?>" data-field-control>I</button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-underline">
+  <button type="button" class="ribbon-icon-btn" id="rb_underline" disabled title="<?= h(t('props.underline')) ?>" data-field-control>U</button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-strike">
+  <button type="button" class="ribbon-icon-btn" id="rb_strikethrough" disabled title="<?= h(t('props.strikethrough')) ?>" data-field-control>S</button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-uppercase">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-wide" id="rb_uppercase" disabled title="<?= h(t('props.uppercase')) ?>" data-field-control>AA</button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-smallcaps">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-wide" id="rb_smallcaps" disabled title="<?= h(t('props.smallcaps')) ?>" data-field-control>Aa</button>
 </div>
 
 <div class="ribbon-widget-grid ribbon-widget-grid--templates" data-widget-id="widget-templates">
@@ -56,65 +60,61 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
   </div>
 </div>
 
-<div class="ribbon-widget-grid ribbon-widget-grid--absatz" data-widget-id="widget-absatz" id="ribbonStartAbsatz">
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_bullet" disabled title="<?= h(t('ribbon.bullet_list')) ?>"><?= $rbIconBullet ?></button>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-bullet">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_bullet" disabled title="<?= h(t('ribbon.bullet_list')) ?>" data-field-control><?= $rbIconBullet ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-number">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_number" disabled title="<?= h(t('ribbon.number_list')) ?>" data-field-control><?= $rbIconNumber ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-field ribbon-wcell-lineheight ribbon-field-item" data-widget-id="field-text-lineheight">
+  <div class="ribbon-field-inline">
+    <span class="ribbon-field-icon" title="<?= h(t('props.line_height')) ?>"><?= $rbIconLineHeight ?></span>
+    <input type="number" id="rb_lineheight" min="0.8" max="3" step="0.05" disabled title="<?= h(t('props.line_height')) ?>" aria-label="<?= h(t('props.line_height')) ?>" data-field-control>
   </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_number" disabled title="<?= h(t('ribbon.number_list')) ?>"><?= $rbIconNumber ?></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-field ribbon-wcell-lineheight">
-    <div class="ribbon-field-inline">
-      <span class="ribbon-field-icon" title="<?= h(t('props.line_height')) ?>"><?= $rbIconLineHeight ?></span>
-      <input type="number" id="rb_lineheight" min="0.8" max="3" step="0.05" disabled title="<?= h(t('props.line_height')) ?>" aria-label="<?= h(t('props.line_height')) ?>">
-    </div>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_left" disabled title="<?= h(t('ribbon.align_left')) ?>" data-align="left"><?= $rbIconAlignLeft ?></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_center" disabled title="<?= h(t('ribbon.align_center')) ?>" data-align="center"><?= $rbIconAlignCenter ?></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_right" disabled title="<?= h(t('ribbon.align_right')) ?>" data-align="right"><?= $rbIconAlignRight ?></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-field ribbon-wcell-letterspacing">
-    <div class="ribbon-field-inline">
-      <span class="ribbon-field-icon" title="<?= h(t('props.letter_spacing')) ?>"><?= $rbIconLetterSpacing ?></span>
-      <input type="number" id="rb_letterspacing" min="-0.2" max="1" step="0.05" disabled title="<?= h(t('props.letter_spacing')) ?>" aria-label="<?= h(t('props.letter_spacing')) ?>">
-    </div>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-align-left">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_left" disabled title="<?= h(t('ribbon.align_left')) ?>" data-align="left" data-field-control><?= $rbIconAlignLeft ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-align-center">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_center" disabled title="<?= h(t('ribbon.align_center')) ?>" data-align="center" data-field-control><?= $rbIconAlignCenter ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-field-item" data-widget-id="field-text-align-right">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_align_right" disabled title="<?= h(t('ribbon.align_right')) ?>" data-align="right" data-field-control><?= $rbIconAlignRight ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-field ribbon-wcell-letterspacing ribbon-field-item" data-widget-id="field-text-letterspacing">
+  <div class="ribbon-field-inline">
+    <span class="ribbon-field-icon" title="<?= h(t('props.letter_spacing')) ?>"><?= $rbIconLetterSpacing ?></span>
+    <input type="number" id="rb_letterspacing" min="-0.2" max="1" step="0.05" disabled title="<?= h(t('props.letter_spacing')) ?>" aria-label="<?= h(t('props.letter_spacing')) ?>" data-field-control>
   </div>
 </div>
 
-<div class="ribbon-widget-grid ribbon-widget-grid--farben" data-widget-id="widget-text-colors" id="ribbonStartColors">
-  <?php /* 3.12.52 (Urs 27.11.): «A» bzw. Marker wenden die zuletzt gewählte Farbe mit einem Klick an (wie Office); das Farbfeld öffnet die Wahl. */ ?>
-  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-colorapply">
-    <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_color_apply" data-apply-for="rb_color" disabled aria-label="<?= h(t('ribbon.color_apply')) ?>" title="<?= h(t('ribbon.color_apply')) ?>"><span class="ribbon-color-apply-a">A</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-color">
-    <label class="ribbon-color-picker-wrap">
-      <span class="sr-only"><?= h(t('props.color')) ?></span>
-      <input type="color" id="rb_color" value="#ffffff" disabled title="<?= h(t('props.color')) ?>">
-    </label>
-  </div>
-  <?php /* Markerfarbe (3.12.49, Urs 27.11.): wie die Schriftfarbe, [mark=#hex] auf Markierung bzw. ganzen Text; daneben «Kein Marker». */ ?>
-  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markapply">
-    <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_mark_apply" data-apply-for="rb_mark" disabled aria-label="<?= h(t('ribbon.mark_apply')) ?>" title="<?= h(t('ribbon.mark_apply')) ?>"><span class="ribbon-color-apply-a ribbon-color-apply-a--mark">ab</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-color ribbon-wcell-mark">
-    <label class="ribbon-color-picker-wrap">
-      <span class="sr-only"><?= h(t('ribbon.mark_color')) ?></span>
-      <input type="color" id="rb_mark" value="#fff176" disabled aria-label="<?= h(t('ribbon.mark_color')) ?>" title="<?= h(t('ribbon.mark_color')) ?>">
-    </label>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markclear">
-    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_mark_clear" disabled aria-label="<?= h(t('ribbon.mark_clear')) ?>" title="<?= h(t('ribbon.mark_clear')) ?>"><?= $rbIconMarkClear ?></button>
-  </div>
-  <div class="ribbon-wcell ribbon-wcell-opacity">
-    <div class="ribbon-field-inline ribbon-field-opacity">
-      <span class="ribbon-field-icon ribbon-opacity-icon" id="rb_opacityIcon" title="<?= h(t('props.opacity')) ?>"><?= $rbIconOpacity ?></span>
-      <input type="range" data-hub-range data-hub-range-unit="%" id="rb_opacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled aria-label="<?= h(t('props.opacity')) ?>">
-      <span class="ribbon-opacity-val" id="rb_opacityVal" aria-hidden="true">100</span>
-    </div>
+<?php /* 3.12.52 (Urs 27.11.): «A» bzw. Marker wenden die zuletzt gewählte Farbe mit einem Klick an (wie Office); das Farbfeld öffnet die Wahl. */ ?>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-colorapply ribbon-field-item" data-widget-id="field-text-color-apply">
+  <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_color_apply" data-apply-for="rb_color" disabled aria-label="<?= h(t('ribbon.color_apply')) ?>" title="<?= h(t('ribbon.color_apply')) ?>" data-field-control><span class="ribbon-color-apply-a">A</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-color ribbon-field-item" data-widget-id="field-text-color">
+  <label class="ribbon-color-picker-wrap">
+    <span class="sr-only"><?= h(t('ribbon.group_text_color')) ?></span>
+    <input type="color" id="rb_color" value="#ffffff" disabled title="<?= h(t('ribbon.group_text_color')) ?>" data-field-control>
+  </label>
+</div>
+<?php /* Markerfarbe (3.12.49, Urs 27.11.): wie die Schriftfarbe, [mark=#hex] auf Markierung bzw. ganzen Text; daneben «Kein Marker». */ ?>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markapply ribbon-field-item" data-widget-id="field-text-mark-apply">
+  <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_mark_apply" data-apply-for="rb_mark" disabled aria-label="<?= h(t('ribbon.mark_apply')) ?>" title="<?= h(t('ribbon.mark_apply')) ?>" data-field-control><span class="ribbon-color-apply-a ribbon-color-apply-a--mark">ab</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-color ribbon-wcell-mark ribbon-field-item" data-widget-id="field-text-mark-color">
+  <label class="ribbon-color-picker-wrap">
+    <span class="sr-only"><?= h(t('ribbon.mark_color')) ?></span>
+    <input type="color" id="rb_mark" value="#fff176" disabled aria-label="<?= h(t('ribbon.mark_color')) ?>" title="<?= h(t('ribbon.mark_color')) ?>" data-field-control>
+  </label>
+</div>
+<div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markclear ribbon-field-item" data-widget-id="field-text-mark-clear">
+  <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_mark_clear" disabled aria-label="<?= h(t('ribbon.mark_clear')) ?>" title="<?= h(t('ribbon.mark_clear')) ?>" data-field-control><?= $rbIconMarkClear ?></button>
+</div>
+<div class="ribbon-wcell ribbon-wcell-opacity ribbon-field-item" data-widget-id="field-text-opacity">
+  <div class="ribbon-field-inline ribbon-field-opacity">
+    <span class="ribbon-field-icon ribbon-opacity-icon" id="rb_opacityIcon" title="<?= h(t('props.opacity')) ?>"><?= $rbIconOpacity ?></span>
+    <input type="range" data-hub-range data-hub-range-unit="%" id="rb_opacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled aria-label="<?= h(t('props.opacity')) ?>" data-field-control>
+    <span class="ribbon-opacity-val" id="rb_opacityVal" aria-hidden="true">100</span>
   </div>
 </div>

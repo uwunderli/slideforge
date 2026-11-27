@@ -219,6 +219,28 @@
         '<path d="M15.5 11.5h4"/>' +
         '<path d="M17.5 9.5L20 12l-2.5 2.5"/>',
     },
+    /* 4.0: Einzelbefehle der Start-Gruppen (Zeichen, Absatz, Schriftfarbe) — Symbole für Katalog und «Ribbon anpassen». */
+    font: '<path d="M4 19l5-14h1l5 14"/><path d="M6.2 13h6.6"/><path d="M17 9h4M19 9v10"/>',
+    font_size: '<path d="M3 19l4.5-12h1L13 19"/><path d="M4.8 15h6.4"/><path d="M17 11l2-2 2 2M17 15l2 2 2-2M19 9v8"/>',
+    bold: '<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7z"/><path d="M7 12h7a3.5 3.5 0 0 1 0 7H7z"/>',
+    italic: '<path d="M10 5h8M6 19h8M14 5l-4 14"/>',
+    underline: '<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M5 20h14"/>',
+    strikethrough: '<path d="M16.5 7.5A4 3 0 0 0 12 5c-2.5 0-4 1.3-4 3 0 1.4 1 2.3 2.5 2.8"/><path d="M8 16.5c.8 1.6 2.3 2.5 4.2 2.5 2.6 0 4.3-1.4 4.3-3.3 0-.7-.2-1.3-.6-1.7"/><path d="M4 12h16"/>',
+    uppercase: '<path d="M2.5 18l4-12h1l4 12"/><path d="M4 14h5"/><path d="M12.5 18l4-12h1l4 12"/><path d="M14 14h5"/>',
+    smallcaps: '<path d="M3 18l4.5-12h1L13 18"/><path d="M4.8 14h6.4"/><path d="M14.5 18l3-8h1l3 8"/><path d="M15.7 15.5h4.6"/>',
+    bullet_list: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.25" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.25" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.25" fill="currentColor" stroke="none"/>',
+    number_list: '<path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 7.5h1.5M4.5 6v3"/><path d="M4 16.5c0-1 .8-1.5 1.5-1.5s1.5.6 1.5 1.5c0 .8-.7 1.2-1.5 1.8L4 20"/>',
+    line_height: '<path d="M4 7h11"/><path d="M4 12h11"/><path d="M4 17h11"/><path d="M19 8v8"/><path d="M16.5 10.5L19 8l2.5 2.5"/><path d="M16.5 13.5L19 16l2.5-2.5"/>',
+    letter_spacing: '<path d="M9 18V6l2.5 2.5L14 6v12"/><path d="M3 12h2.5"/><path d="M18.5 12H21"/><path d="M3 12l1.8-1.5"/><path d="M3 12l1.8 1.5"/><path d="M21 12l-1.8-1.5"/><path d="M21 12l-1.8 1.5"/>',
+    align_left: '<path d="M4 6h16M4 12h10M4 18h14"/>',
+    align_center: '<path d="M4 6h16M7 12h10M5 18h14"/>',
+    align_right: '<path d="M4 6h16M10 12h10M6 18h14"/>',
+    color_apply: '<path d="M6 16l5-12h2l5 12"/><path d="M8.2 11h7.6"/><path d="M4 20h16" stroke-width="3"/>',
+    text_color: '<rect x="4" y="5" width="11" height="14" rx="1.5"/><path d="M18 10l2 2.5 2-2.5"/>',
+    mark_apply: '<path d="M5 19h7"/><path d="M8 15l8-10 3 3-10 8z"/><path d="M4 21.5h16" stroke-width="2"/>',
+    mark_color: '<path d="M8 15l8-10 3 3-10 8z"/><path d="M5 19h7"/><path d="M18 15l2 2.5 2-2.5"/>',
+    mark_clear: '<path d="M5 19h7"/><path d="M8 15l8-10 3 3-10 8z"/><path d="M15 15l5 5M20 15l-5 5"/>',
+    opacity: '<rect x="4" y="4" width="11" height="11" rx="1"/><rect x="9" y="9" width="11" height="11" rx="1" fill="currentColor" fill-opacity="0.28"/>',
   };
 
   const commandIndex = {};
@@ -313,6 +335,7 @@
   function isTileable(cmd) {
     if (!cmd) return false;
     if (cmd.kind === 'row_separator') return false;
+    if (cmd.kind === 'field') return false;   // 4.0: Feld/Knopf aus dem Vorrat hat seine natürliche Breite (gridSpan im Katalog)
     if (cmd.kind === 'widget') return !!cmd.tileable || cmd.id === 'widget:slide_transition';
     return cmd.kind !== 'widget';
   }
@@ -341,13 +364,6 @@
   }
 
   function getGridSpan(cmd, item) {
-    /* Feste Inhaltsbreiten für kompakte Start-Widgets. */
-    if (cmd && (cmd.id === 'widget:absatz' || cmd.templateId === 'widget-absatz')) {
-      return { cols: 5, rows: 2 };
-    }
-    if (cmd && (cmd.id === 'widget:text_colors' || cmd.templateId === 'widget-text-colors')) {
-      return { cols: 7, rows: 2 };   // 3.12.54: A · Farbe · ▾ · ab · Marker · ▾ · Kein Marker
-    }
     if (item && item.gridSpan) return normalizeSpan(item.gridSpan);
     return defaultGridSpan(cmd);
   }
@@ -670,6 +686,7 @@
     if (!cmd || cmd.id === 'ribbon_customize') return null;
     const span = (ctx && ctx.span) || { cols: 1, rows: 2 };
     const sfCmd = Object.assign({}, cmd, { icon: cmd.iconName || '', shortcut: '' });  // Kürzel im Tooltip setzt der Hub
+    if (cmd.kind === 'field') return takeField(cmd);
     if (cmd.kind === 'widget') {
       const state = renderState || (renderState = { usedDomIds: new Set(), usedWidgetTemplates: new Set() });
       if (state.usedWidgetTemplates.has(cmd.templateId)) return null;
@@ -692,6 +709,23 @@
     return el;
   }
 
+  /**
+   * Einzelbefehl aus dem Vorrat (4.0, kind 'field'): ein Feld oder Knopf mit fester ID (z. B. rb_bold) wandert in die Zelle.
+   * Das bedienbare Element trägt data-ribbon-command → der Hub setzt Tooltip mit Kürzel und Tastentipps; die Zuhörer bleiben.
+   */
+  function takeField(cmd) {
+    const state = renderState || (renderState = { usedDomIds: new Set(), usedWidgetTemplates: new Set() });
+    if (!cmd.templateId || state.usedWidgetTemplates.has(cmd.templateId)) return null;
+    const node = takeWidget(cmd.templateId);
+    if (!node) return null;
+    state.usedWidgetTemplates.add(cmd.templateId);
+    node.dataset.sfField = cmd.id;
+    let ctl = node.querySelector('[data-field-control]');
+    if (ctl && ctl.classList.contains('sf-fsel-native')) ctl = node.querySelector('.sf-fsel-input') || ctl;   // Schriftart: sichtbares Suchfeld
+    if (ctl) ctl.setAttribute('data-ribbon-command', cmd.id);
+    return node;
+  }
+
   /** Vor jedem Zeichnen: Widgets zurück in den Vorrat, Merker für doppelte IDs leeren. */
   function beginRender(config) {
     if (config) {
@@ -706,6 +740,9 @@
 
   /** Nach dem Zeichnen: Zellen-Klassen, die vom Widget-Inhalt abhängen (Übergänge als Reihe oder Raster). */
   function afterRender(root) {
+    (root || getRibbonEl())?.querySelectorAll('[data-sf-field]').forEach((el) => {
+      if (el.parentElement && el.parentElement.classList.contains('ribbon-grid-cell')) el.parentElement.classList.add('ribbon-grid-cell--field');
+    });
     (root || getRibbonEl())?.querySelectorAll('[data-transition-layout]').forEach((body) => {
       const cell = body.parentElement;
       if (!cell) return;

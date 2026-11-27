@@ -404,6 +404,7 @@ return [
     'ribbon.group_text_color' => 'Couleur du texte',
     'ribbon.color_apply' => 'Appliquer la couleur de police choisie',
     'ribbon.mark_color' => 'Couleur de surlignage',
+    'ribbon.font_size' => 'Taille de police',
     'ribbon.mark_apply' => 'Appliquer la couleur de surlignage',
     'ribbon.mark_clear' => 'Aucun surlignage',
     'ribbon.group_present' => 'Présentation',

@@ -34,15 +34,10 @@ function ribbon_default_layout(): array
                         ['id' => 'find_replace', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'notes_to_path', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
-                    ['id' => 'g_zeichen', 'labelKey' => 'ribbon.group_zeichen', 'items' => [
-                        ['id' => 'widget:zeichen'],
-                    ]],
-                    ['id' => 'g_absatz', 'labelKey' => 'ribbon.group_paragraph', 'items' => [
-                        ['id' => 'widget:absatz'],
-                    ]],
-                    ['id' => 'g_colors', 'labelKey' => 'ribbon.group_text_color', 'items' => [
-                        ['id' => 'widget:text_colors'],
-                    ]],
+                    /* 4.0: Zeichen, Absatz und Schriftfarbe aus Einzelbefehlen, je zwei Zeilen (row_separator = neue Zeile). */
+                    ['id' => 'g_zeichen', 'labelKey' => 'ribbon.group_zeichen', 'items' => ribbon_default_items_zeichen()],
+                    ['id' => 'g_absatz', 'labelKey' => 'ribbon.group_paragraph', 'items' => ribbon_default_items_absatz()],
+                    ['id' => 'g_colors', 'labelKey' => 'ribbon.group_text_color', 'items' => ribbon_default_items_text_colors()],
                     ['id' => 'g_templates', 'labelKey' => 'ribbon.group_templates', 'items' => [
                         ['id' => 'widget:templates'],
                     ]],
@@ -172,5 +167,55 @@ function ribbon_default_layout(): array
             'iconSize' => 'medium',
             'showLabels' => true,
         ],
+    ];
+}
+
+/**
+ * Einzelbefehle der früheren Blöcke (4.0) — Vorgabe-Layout und Übergang alter Layouts (src/RibbonLayout.php) nehmen dieselbe Liste,
+ * damit ein ersetzter Block genau so aussieht wie die Vorgabe.
+ *
+ * @return list<array<string,mixed>>
+ */
+function ribbon_default_items_zeichen(): array
+{
+    return [
+        ['id' => 'text_font', 'gridSpan' => ['cols' => 5, 'rows' => 1]],
+        ['id' => 'text_fontsize', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+        ['id' => 'row_separator'],
+        ['id' => 'text_bold', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_italic', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_underline', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_strike', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_uppercase', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_smallcaps', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+    ];
+}
+
+/** @return list<array<string,mixed>> */
+function ribbon_default_items_absatz(): array
+{
+    return [
+        ['id' => 'text_bullet', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_number', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_lineheight', 'gridSpan' => ['cols' => 3, 'rows' => 1]],   // rechtsbündig über dem Zeichenabstand
+        ['id' => 'row_separator'],
+        ['id' => 'text_align_left', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_align_center', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_align_right', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_letterspacing', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+    ];
+}
+
+/** @return list<array<string,mixed>> */
+function ribbon_default_items_text_colors(): array
+{
+    return [
+        ['id' => 'text_color_apply', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_color', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+        ['id' => 'text_mark', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'text_mark_color', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+        ['id' => 'text_mark_clear', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'row_separator'],
+        ['id' => 'text_opacity', 'gridSpan' => ['cols' => 7, 'rows' => 1]],
     ];
 }

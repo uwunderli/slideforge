@@ -424,6 +424,7 @@ return [
     'ribbon.group_text_color' => 'Schriftfarbe',
     'ribbon.color_apply' => 'Gewählte Schriftfarbe anwenden',
     'ribbon.mark_color' => 'Markerfarbe',
+    'ribbon.font_size' => 'Schriftgrösse',
     'ribbon.mark_apply' => 'Markerfarbe anwenden',
     'ribbon.mark_clear' => 'Kein Marker',
     'ribbon.group_present' => 'Präsentation',

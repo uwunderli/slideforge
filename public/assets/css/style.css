@@ -4619,12 +4619,19 @@ body.editor-grid-dragging .editor-slide-grid-item {
   box-sizing: border-box;
   overflow: visible;
 }
-.ribbon-widget-grid--zeichen { --widget-cols: 8; }
-.ribbon-widget-grid--absatz { --widget-cols: 5; }
-.ribbon-widget-grid--farben { --widget-cols: 7; }
 .ribbon-widget-grid--templates {
   --widget-cols: 2;
   grid-template-columns: repeat(2, var(--ribbon-cell));
+}
+/* 4.0: Einzelbefehle (kind 'field') füllen ihre Rasterzelle; Rahmen, Fokus und «▾» der Farbwahl dürfen über den Rand. */
+.ribbon-grid-cell.ribbon-grid-cell--field,
+.ribbon-line-stack-row > .ribbon-grid-cell.ribbon-grid-cell--field {
+  overflow: visible;
+}
+.ribbon-grid-cell--field > .ribbon-field-item {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
 }
 .ribbon-wcell {
   display: flex;
@@ -4662,7 +4669,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   border: none;
   background: var(--ribbon-bg-active, rgba(58, 108, 141, 0.22));
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-icon > .ribbon-icon-btn-wide {
+.editor-ribbon .ribbon-wcell-icon > .ribbon-icon-btn-wide {
   width: 24px;
   max-width: 24px;
   min-width: 0;
@@ -4680,24 +4687,23 @@ body.editor-grid-dragging .editor-slide-grid-item {
   width: 13px;
   height: 13px;
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-icon > .ribbon-icon-btn#rb_uppercase,
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-icon > .ribbon-icon-btn#rb_smallcaps {
+.editor-ribbon .ribbon-wcell-icon > .ribbon-icon-btn#rb_uppercase,
+.editor-ribbon .ribbon-wcell-icon > .ribbon-icon-btn#rb_smallcaps {
   font-size: 0.55rem;
 }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon,
-.ribbon-widget-grid--absatz .ribbon-wcell-icon {
+.ribbon-wcell-icon {
   z-index: 2;
 }
 /* Schrift/Grösse: volle Zelle, Rahmen nicht abschneiden */
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-font,
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-size {
+.editor-ribbon .ribbon-wcell-font,
+.editor-ribbon .ribbon-wcell-size {
   overflow: visible;
   z-index: 3;
   padding: 2px 1px;
   box-sizing: border-box;
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-font .ribbon-field,
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-size .ribbon-field {
+.editor-ribbon .ribbon-wcell-font .ribbon-field,
+.editor-ribbon .ribbon-wcell-size .ribbon-field {
   width: 100%;
   height: 100%;
   max-height: none;
@@ -4709,8 +4715,8 @@ body.editor-grid-dragging .editor-slide-grid-item {
   padding: 0;
   box-sizing: border-box;
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-font select,
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-size input[type="number"] {
+.editor-ribbon .ribbon-wcell-font select,
+.editor-ribbon .ribbon-wcell-size input[type="number"] {
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
@@ -4727,15 +4733,15 @@ body.editor-grid-dragging .editor-slide-grid-item {
   background: var(--surface-raised);
   color: var(--text);
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-font select:focus,
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-size input[type="number"]:focus {
+.editor-ribbon .ribbon-wcell-font select:focus,
+.editor-ribbon .ribbon-wcell-size input[type="number"]:focus {
   outline: none;
   border-color: var(--accent);
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-font select {
+.editor-ribbon .ribbon-wcell-font select {
   max-width: none;
 }
-.editor-ribbon .ribbon-widget-grid--zeichen .ribbon-wcell-size input[type="number"] {
+.editor-ribbon .ribbon-wcell-size input[type="number"] {
   max-width: none;
 }
 .ribbon-wcell-field .ribbon-field,
@@ -4771,34 +4777,18 @@ body.editor-grid-dragging .editor-slide-grid-item {
   height: 16px;
 }
 
-/* Zeichen: Schrift+Größe oben, Format-Icons unten */
-.ribbon-widget-grid--zeichen .ribbon-wcell-font { grid-area: 1 / 1 / 2 / 6; z-index: 1; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-size { grid-area: 1 / 6 / 2 / 8; z-index: 1; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(3) { grid-area: 2 / 1 / 3 / 2; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(4) { grid-area: 2 / 2 / 3 / 3; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(5) { grid-area: 2 / 3 / 3 / 4; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(6) { grid-area: 2 / 4 / 3 / 5; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(7) { grid-area: 2 / 5 / 3 / 6; }
-.ribbon-widget-grid--zeichen .ribbon-wcell-icon:nth-of-type(8) { grid-area: 2 / 6 / 3 / 7; }
 
-/* Absatz: 5 Spalten — Zahlenfelder ab Spalte 4 untereinander ausgerichtet */
+/* Absatz: Zahlenfelder rechtsbündig in ihrer Zelle → Zeilen- und Zeichenabstand stehen in der Vorgabe untereinander */
 .ribbon-group[data-ribbon-group="g_absatz"] {
   flex: 0 0 auto;
 }
-.ribbon-widget-grid--absatz .ribbon-wcell-icon:nth-of-type(1) { grid-area: 1 / 1 / 2 / 2; }
-.ribbon-widget-grid--absatz .ribbon-wcell-icon:nth-of-type(2) { grid-area: 1 / 2 / 2 / 3; }
-.ribbon-widget-grid--absatz .ribbon-wcell-lineheight { grid-area: 1 / 4 / 2 / 6; }
-.ribbon-widget-grid--absatz .ribbon-wcell-icon:nth-of-type(4) { grid-area: 2 / 1 / 3 / 2; }
-.ribbon-widget-grid--absatz .ribbon-wcell-icon:nth-of-type(5) { grid-area: 2 / 2 / 3 / 3; }
-.ribbon-widget-grid--absatz .ribbon-wcell-icon:nth-of-type(6) { grid-area: 2 / 3 / 3 / 4; }
-.ribbon-widget-grid--absatz .ribbon-wcell-letterspacing { grid-area: 2 / 4 / 3 / 6; }
-.ribbon-widget-grid--absatz .ribbon-wcell-lineheight,
-.ribbon-widget-grid--absatz .ribbon-wcell-letterspacing {
-  justify-content: flex-start;
+.ribbon-wcell-lineheight,
+.ribbon-wcell-letterspacing {
+  justify-content: flex-end;
   overflow: visible;
 }
-.ribbon-widget-grid--absatz .ribbon-wcell-lineheight .ribbon-field-inline,
-.ribbon-widget-grid--absatz .ribbon-wcell-letterspacing .ribbon-field-inline {
+.ribbon-wcell-lineheight .ribbon-field-inline,
+.ribbon-wcell-letterspacing .ribbon-field-inline {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -4810,16 +4800,16 @@ body.editor-grid-dragging .editor-slide-grid-item {
   padding: 2px 0;
   box-sizing: border-box;
 }
-.ribbon-widget-grid--absatz .ribbon-wcell-lineheight .ribbon-field-icon,
-.ribbon-widget-grid--absatz .ribbon-wcell-letterspacing .ribbon-field-icon {
+.ribbon-wcell-lineheight .ribbon-field-icon,
+.ribbon-wcell-letterspacing .ribbon-field-icon {
   width: 20px;
   flex: 0 0 20px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.ribbon-widget-grid--absatz .ribbon-wcell-lineheight input[type="number"],
-.ribbon-widget-grid--absatz .ribbon-wcell-letterspacing input[type="number"] {
+.ribbon-wcell-lineheight input[type="number"],
+.ribbon-wcell-letterspacing input[type="number"] {
   flex: 0 0 44px;
   width: 44px;
   min-width: 44px;
@@ -4844,46 +4834,37 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-group[data-ribbon-group="g_colors"] .ribbon-grid-cell--widget {
   overflow: visible;
 }
-.ribbon-widget-grid--farben {
-  --widget-cols: 7;
-  position: relative;
-  overflow: visible;
-}
-.ribbon-widget-grid--farben .ribbon-wcell-color {
-  grid-area: 1 / 2 / 2 / 3;
+.ribbon-wcell-color {
   z-index: 3;
   overflow: visible;
+  justify-content: flex-start;   /* Farbfeld links, «▾» daneben in der zweiten Zelle */
   padding: 2px;
   box-sizing: border-box;
 }
 
-/* Markerfarbe (3.12.49): neben der Schriftfarbe (Spalte 1–2 mit «▾»), «Kein Marker» rechts. */
-.ribbon-widget-grid--farben .ribbon-wcell-mark { grid-area: 1 / 5 / 2 / 6; }
-.ribbon-widget-grid--farben .ribbon-wcell-markclear { grid-area: 1 / 7 / 2 / 8; display: flex; align-items: center; justify-content: center; }
-/* 3.12.52: Anwenden-Knöpfe vor den Farbfeldern; der Balken zeigt die zuletzt gewählte Farbe. */
-.ribbon-widget-grid--farben .ribbon-wcell-colorapply { grid-area: 1 / 1 / 2 / 2; }
-.ribbon-widget-grid--farben .ribbon-wcell-markapply { grid-area: 1 / 4 / 2 / 5; }
+/* Markerfarbe (3.12.49): «Kein Marker» mittig in seiner Zelle. */
+.ribbon-wcell-markclear { display: flex; align-items: center; justify-content: center; }
+/* 3.12.52: Anwenden-Knöpfe; der Balken zeigt die zuletzt gewählte Farbe. */
 .ribbon-color-apply { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
 .ribbon-color-apply-a { font-weight: 700; font-size: 0.8rem; line-height: 1; }
 .ribbon-color-apply-a--mark { font-weight: 400; font-size: 0.72rem; }
 .ribbon-color-apply-bar { display: block; width: 14px; height: 3px; border-radius: 1px; background: var(--apply-color, currentColor); }
 
-.ribbon-widget-grid--farben .ribbon-wcell-opacity {
-  grid-area: 2 / 1 / 3 / 8;
+.ribbon-wcell-opacity {
   z-index: 1;
   overflow: visible;
   padding: 2px 1px;
   box-sizing: border-box;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-color .ribbon-color-picker-wrap {
+.ribbon-wcell-color .ribbon-color-picker-wrap {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: visible;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-color input[type="color"] {
+.ribbon-wcell-color input[type="color"] {
   width: 100%;
   height: 100%;
   max-width: none;
@@ -4898,7 +4879,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   background: var(--surface-raised);
 }
 
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-field-inline {
+.ribbon-wcell-opacity .ribbon-field-inline {
   width: 100%;
   height: 100%;
   max-height: none;
@@ -4909,19 +4890,19 @@ body.editor-grid-dragging .editor-slide-grid-item {
   gap: 4px;
   box-sizing: border-box;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-opacity-icon {
+.ribbon-wcell-opacity .ribbon-opacity-icon {
   flex: 0 0 18px;
   width: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-opacity-icon svg,
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-opacity-icon .ribbon-type-icon {
+.ribbon-wcell-opacity .ribbon-opacity-icon svg,
+.ribbon-wcell-opacity .ribbon-opacity-icon .ribbon-type-icon {
   width: 14px;
   height: 14px;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-opacity-val {
+.ribbon-wcell-opacity .ribbon-opacity-val {
   flex: 0 0 22px;
   min-width: 22px;
   font-size: 0.62rem;
@@ -4930,7 +4911,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-opacity-slider {
+.ribbon-wcell-opacity .ribbon-opacity-slider {
   flex: 1 1 auto;
   width: 100%;
   min-width: 48px;
@@ -4942,16 +4923,16 @@ body.editor-grid-dragging .editor-slide-grid-item {
   appearance: none;
   background: transparent;
 }
-.ribbon-widget-grid--farben .ribbon-opacity-slider:disabled {
+.ribbon-opacity-slider:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
-.ribbon-widget-grid--farben .ribbon-opacity-slider::-webkit-slider-runnable-track {
+.ribbon-opacity-slider::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
   background: color-mix(in srgb, var(--border) 85%, var(--text-muted));
 }
-.ribbon-widget-grid--farben .ribbon-opacity-slider::-webkit-slider-thumb {
+.ribbon-opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -4963,12 +4944,12 @@ body.editor-grid-dragging .editor-slide-grid-item {
   box-shadow: 0 0 0 1px var(--border);
   cursor: pointer;
 }
-.ribbon-widget-grid--farben .ribbon-opacity-slider::-moz-range-track {
+.ribbon-opacity-slider::-moz-range-track {
   height: 4px;
   border-radius: 2px;
   background: color-mix(in srgb, var(--border) 85%, var(--text-muted));
 }
-.ribbon-widget-grid--farben .ribbon-opacity-slider::-moz-range-thumb {
+.ribbon-opacity-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
