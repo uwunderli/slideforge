@@ -85,6 +85,7 @@ final class Migration
             $counts['layoutSets']++;
             $echo('Folien-Set übernommen: ' . (string)($m['title'] ?? $pid));
         }
+        self::fonts($source, $dryRun, $counts, $echo);
         $rows = [];
         $perPerson = [];
         $title = 'FolienSchmiede: Übernahme nach FileForge' . ($dryRun ? ' (Probelauf)' : '');
@@ -230,6 +231,57 @@ final class Migration
         return mb_substr($s, 0, 120);
     }
 
+    /**
+     * Hochgeladene Schriften (3.8.2): Eintrag `custom_fonts` aus der alten config.json plus Datei aus `public_html/uploads/fonts`
+     * (bzw. `public/uploads/fonts`). Ohne sie zeichnet die Editor-Bühne (Canvas) die Folien in der Ersatzschrift. Gleiche ID oder
+     * Familie schon da = überspringen; Datei nie ersetzen.
+     *
+     * @param array<string,int> $counts
+     */
+    private static function fonts(string $source, bool $dryRun, array &$counts, callable $echo): void
+    {
+        $counts['fonts'] = 0;
+        $counts['fontsPresent'] = 0;
+        $cfg = self::json($source . '/config.json');
+        $old = is_array($cfg) && is_array($cfg['custom_fonts'] ?? null) ? $cfg['custom_fonts'] : [];
+        $base = dirname($source);
+        $fromDir = is_dir($base . '/public_html/uploads/fonts') ? $base . '/public_html/uploads/fonts' : $base . '/public/uploads/fonts';
+        $have = FontLibrary::customFonts();
+        $add = [];
+        foreach ($old as $f) {
+            if (!is_array($f)) {
+                continue;
+            }
+            $id = (string)($f['id'] ?? '');
+            $family = trim((string)($f['family'] ?? ''));
+            $file = (string)($f['file'] ?? '');
+            if ($id === '' || $family === '' || preg_match('/^[a-zA-Z0-9._-]+\z/', $file) !== 1 || !is_file($fromDir . '/' . $file)) {
+                continue;
+            }
+            foreach (array_merge($have, $add) as $h) {
+                if (($h['id'] ?? '') === $id || ($h['family'] ?? '') === $family) {
+                    $counts['fontsPresent']++;
+                    continue 2;
+                }
+            }
+            $counts['fonts']++;
+            if ($dryRun) {
+                continue;
+            }
+            $to = FONTS_UPLOAD_PATH . '/' . $file;
+            if (!is_file($to) && !@copy($fromDir . '/' . $file, $to)) {
+                $counts['fonts']--;
+                $echo('Schrift nicht kopiert: ' . $family);
+                continue;
+            }
+            $add[] = $f;
+            $echo('Schrift übernommen: ' . $family);
+        }
+        if ($add !== []) {
+            Config::update(['custom_fonts' => array_merge($have, $add)]);
+        }
+    }
+
     private static function copyDir(string $from, string $to): void
     {
         @mkdir($to, 0770, true);
@@ -273,6 +325,8 @@ final class Migration
             $counts['total'], $counts['done'], $counts['skipped'], $counts['unassigned'], $counts['failed'], $counts['templates'], $counts['sharesDropped']);
         $o .= sprintf("Folien-Sets nach data/presentations: %s %d · schon vorhanden %d\n\n", $dryRun ? 'würden übernommen' : 'übernommen',
             (int)($counts['layoutSets'] ?? 0), (int)($counts['layoutSetsPresent'] ?? 0));
+        $o .= sprintf("Schriften nach uploads/fonts: %s %d · schon vorhanden %d\n\n", $dryRun ? 'würden übernommen' : 'übernommen',
+            (int)($counts['fonts'] ?? 0), (int)($counts['fontsPresent'] ?? 0));
         $o .= "## Je Person\n\n";
         ksort($perPerson);
         foreach ($perPerson as $p => $c) {

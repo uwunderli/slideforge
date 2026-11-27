@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.8.2] - 2026-11-27
+
+- **Folienschrift im Editor** (Urs: «Schrift stimmt irgend wie auch noch nicht»): Die Übernahme aus der alten FolienSchmiede brachte die hochgeladenen Schriften nicht mit (`custom_fonts` in config.json und Dateien in `public_html/uploads/fonts`; Biel: «Myriad Pro»). Die Editor-Bühne (Canvas) fiel deshalb auf die Serif-Vorgabe des Browsers, Miniaturen/Präsentation (HTML, `font-family:X,sans-serif`) auf eine serifenlose Ersatzschrift. `Migration` holt die Schriften jetzt nach (nur fehlende, Datei nie ersetzt, im Protokoll gezählt); ein erneuter `migrate-to-ff.php … --run` holt nur das Fehlende.
+- Editor-Bühne fällt bei fehlender Schrift wie die Präsentation auf `sans-serif` (Konva-Text), der gespeicherte Familienname bleibt.
+
 ## [3.8.1] - 2026-11-27
 
 - **Kein Sand-Flackern beim Neuladen** (Urs: «Wenn ich das neu lade, kommt immer zuerst die sandfarbene Oberfläche»): SlideForge merkt sich den vom Hub gemeldeten Fenster-Stil und Akzent (Hell und Dunkel, von cf-theme.js geprüft) je Person (`users.json` `hub_look`) und setzt ihn beim nächsten Laden schon serverseitig ins erste Bild (`<html>`-Attribute und `window.__cfDialogChromePrefs`), wie OfficeForge seit 16.10. Vorher galt bis zur Nachricht des Hubs nur der eine Wert der Rahmenadresse (bei «System» der Dunkel-Wert, ohne Akzent gar keiner) oder die Sitzung. ASSET 724.

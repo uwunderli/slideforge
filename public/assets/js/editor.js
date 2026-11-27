@@ -1111,7 +1111,21 @@
     try { await document.fonts.ready; } catch (e) { /* ignore */ }
   }
 
+  // Fehlt eine Schrift (nicht hochgeladen/nicht geladen), soll die Bühne wie die Präsentation (SlideRenderer: «font-family:X,sans-serif»)
+  // auf die serifenlose Ersatzschrift fallen, nicht auf die Serif-Vorgabe des Canvas. Der gespeicherte Familienname bleibt unverändert.
+  function addCanvasFontFallback() {
+    const proto = window.Konva && Konva.Text && Konva.Text.prototype;
+    if (!proto || typeof proto._getContextFont !== 'function' || proto._sfSansFallback) return;
+    const orig = proto._getContextFont;
+    proto._getContextFont = function () {
+      const f = orig.call(this);
+      return /(?:^|[\s,])(?:sans-serif|serif|monospace)\s*$/.test(f) ? f : f + ', sans-serif';
+    };
+    proto._sfSansFallback = true;
+  }
+
   async function init() {
+    addCanvasFontFallback();
     await ensureFontsLoaded();
     try {
       const res = await apiGet('get_slides');
