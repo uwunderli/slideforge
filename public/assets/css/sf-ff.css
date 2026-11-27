@@ -16,28 +16,49 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-statusbar__file { max-width: 50vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); text-align: center; }
 .sf-statusbar__ver { justify-self: end; padding-right: .9rem; font-size: .72rem; opacity: .75; white-space: nowrap; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .sf-statusbar__ver { display: none; } }
-.sf-dev__act { text-align: right; white-space: nowrap; }
-/* Geräte-Dialoge (3.4.0): Felder wie Lab › Felder (hub-admin-field/-check aus admin.css, das SlideForge nicht lädt), nur Hub-Variablen. */
+/* Geräte-Dialoge (3.6.5, Urs 27.11. «Nicht schön»): Aufbau wie Lab › Dialoge (lab/dialogs.php:401–421, Felder untereinander in
+   lab-fields-stack lab.css:744, Fusszeile hub-dialog-actions). Feldregeln 1:1 aus Hub admin.css (hub-admin-field 525–604,
+   hub-admin-field-hint 1001, hub-admin-check 196–225), weil SlideForge admin.css nicht lädt; nur Hub-Variablen (hell/dunkel). */
 .sf-dev label { margin: 0; }
-.sf-dev__chk { width: 2rem; }
-.sf-dev__url code { word-break: break-all; }
-.sf-dev__msg { min-height: 1.2em; margin: .5rem 0; color: var(--text-muted); }
-.sf-dev__msg[data-state="error"] { color: var(--danger, #d9483a); }
-.sf-dev__msg[data-state="ok"] { color: var(--success, var(--accent)); }
+.sf-dev .hub-admin-field { display: grid; gap: .25rem; min-width: 0; max-width: none; }
+.sf-dev .hub-admin-field > span { font-size: .8rem; color: var(--text-muted); font-weight: 600; line-height: 1.3; text-transform: none; letter-spacing: normal; }
+.sf-dev .hub-admin-field input:not([type="checkbox"]):not([type="radio"]), .sf-dev .hub-admin-field select {
+  box-sizing: border-box; width: 100%; height: 38px; min-height: 38px; margin: 0; padding: .4rem .65rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font: inherit; line-height: 1.3; box-shadow: none; }
+.sf-dev .hub-admin-field input:focus-visible, .sf-dev .hub-admin-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sf-dev .hub-admin-field.is-error input, .sf-dev .hub-admin-field input[aria-invalid="true"] { border-color: var(--danger, #c44); }
+.sf-dev .hub-admin-field input:disabled, .sf-dev .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
+.sf-dev .hub-admin-field-hint { display: block; margin-top: .1rem; color: var(--text-muted); font-size: .8rem; line-height: 1.35; }
+.sf-dev .hub-admin-check { display: flex; align-items: center; gap: .55rem; margin: 0; cursor: pointer; }
+.sf-dev .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
+/* Registrieren: Kamera oben, Hinweis, Felder untereinander in voller Breite, Code gross und gut lesbar. */
+.sf-dev--reg { display: grid; gap: .75rem; }
+.sf-dev__stack { display: grid; gap: .75rem; }
+.sf-dev__lead { margin: 0; color: var(--text-muted); line-height: 1.45; }
+.sf-dev__link { color: var(--accent); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.sf-dev__link:hover, .sf-dev__link:focus-visible { text-decoration: underline; }
 .sf-dev__cam { border-radius: 8px; overflow: hidden; background: var(--surface-raised); aspect-ratio: 4 / 3; }
 .sf-dev__cam[hidden] { display: none; }
 .sf-dev__video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.sf-dev__fields { display: flex; flex-wrap: wrap; gap: .75rem; margin: .5rem 0 1rem; }
-.sf-dev .hub-admin-field { display: grid; gap: .25rem; min-width: 140px; flex: 1 1 160px; max-width: 22rem; }
-.sf-dev .hub-admin-field--narrow { flex: 0 0 96px; min-width: 72px; }
-.sf-dev .hub-admin-field > span { font-size: .8rem; color: var(--text-muted); font-weight: 600; }
-.sf-dev .hub-admin-field input, .sf-dev .hub-admin-field select { width: 100%; min-height: 38px; padding: .4rem .65rem; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font: inherit; }
-.sf-dev .hub-admin-field input:focus-visible, .sf-dev .hub-admin-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.sf-dev .hub-admin-field input[aria-invalid="true"] { border-color: var(--danger, #d9483a); }
-.sf-dev .hub-admin-field input:disabled, .sf-dev .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
-.sf-dev .hub-admin-check { display: flex; align-items: center; cursor: pointer; }
-.sf-dev .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.sf-dev .sf-dev__code input:not([type="checkbox"]) { height: 52px; font-size: 1.6rem; font-weight: 600; letter-spacing: .18em;
+  text-align: center; font-variant-numeric: tabular-nums; }
+.sf-dev__msg[hidden] { display: none; }
+.sf-dev__msg--busy { margin: 0; font-size: .85rem; color: var(--text-muted); }
+/* Geräte: Raster aus Kacheln (Icon gross, Name, «zeigt …» klein); gewählt = Akzentrand + Fläche wie hub-icon-picker (Hub admin.css:1882). */
+.sf-dev { display: grid; gap: .75rem; }
+.sf-dev__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: .6rem; }
+.sf-dev__tile { display: grid; gap: .35rem; align-content: start; justify-items: stretch; }
+.sf-dev__pick { box-sizing: border-box; display: grid; justify-items: center; gap: .3rem; width: 100%; min-height: 118px; margin: 0; padding: .8rem .5rem .6rem;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; text-align: center;
+  text-decoration: none; cursor: pointer; }
+.sf-dev__pick:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.sf-dev__pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sf-dev__pick[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.sf-dev__icon { width: 40px; height: 40px; color: var(--text); }
+.sf-dev__pick[aria-pressed="true"] .sf-dev__icon { color: var(--accent); }
+.sf-dev__name { font-weight: 600; font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
+.sf-dev__state { font-size: .75rem; color: var(--text-muted); line-height: 1.25; overflow-wrap: anywhere; }
+.sf-dev__tile .hub-btn { justify-self: center; }
 /* Dateifeld in Formularen (FfFile::fieldHtml): Knopf für den FileForge-Dialog, daneben der gewählte Name. */
 .sf-ff-field { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; margin-top: 4px; }
 .sf-ff-field-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--text); }

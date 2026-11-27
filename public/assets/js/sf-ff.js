@@ -46,10 +46,26 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
   }
+  // Meldung im Dialog als Hub-Hinweiskasten (hub-status, Lab › Status: lab/status.php:136–150); «busy» als leise Zeile.
   function devMsg(el, text, kind) {
     if (!el) return;
-    el.textContent = text || '';
-    el.setAttribute('data-state', kind || '');
+    if (!text) { el.hidden = true; el.className = 'sf-dev__msg'; el.innerHTML = ''; return; }
+    el.hidden = false;
+    if (kind === 'busy') {
+      el.className = 'sf-dev__msg sf-dev__msg--busy';
+      el.textContent = text;
+      return;
+    }
+    var k = kind === 'error' ? 'error' : (kind === 'ok' ? 'ok' : 'info');
+    el.className = 'sf-dev__msg hub-status hub-status--' + k;
+    el.setAttribute('role', k === 'error' ? 'alert' : 'status');
+    el.innerHTML = '<span class="hub-status__icon" aria-hidden="true">' + (k === 'error' ? '!' : (k === 'ok' ? '✓' : 'i')) + '</span>' +
+      '<div class="hub-status__body"><span>' + esc(text) + '</span></div>';
+  }
+  /** Gerät-Icon aus dem Hub-Sprite (`hub-icons.svg`, Hub ≥ 2.33.10 liefert `symbol`); unbekannt → Bildschirm. */
+  function devIcon(symbol) {
+    var s = /^[a-z-]{1,24}$/.test(String(symbol || '')) ? String(symbol) : 'monitor';
+    return '<svg class="sf-dev__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(location.origin + '/assets/icons/hub-icons.svg#hub-i-' + s) + '"></use></svg>';
   }
   /** Zuschauer-Ansicht als Adresse («Web»): dieselbe Seite wie «Präsentieren» im eigenen Fenster. */
   function webUrl(id) {
@@ -58,62 +74,65 @@
   /**
    * Dialog «Geräte»: «Web» (Zuschauer-Adresse kopieren/öffnen) und die Geräte des Hubs; mehrere wählen → «Senden»,
    * je Gerät «Leeren». Aus dem Editor («Auf Gerät zeigen») und aus dem Presenter (Gruppe «Geräte»).
+   * Aufbau wie Lab › Dialoge (lab/dialogs.php:401–421): Inhalt, Fusszeile `hub-dialog-actions` mit data-hub-dialog-footer.
    */
   function devices(id, opts) {
     opts = opts || {};
     if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
-    var title = opts.title || 'Geräte';
     var web = webUrl(id);
-    var shell = '<div class="sf-dev" aria-busy="true"><p class="muted small" role="status">Geräte werden geladen …</p></div>';
-    global.HubFloatDialog.open(title, shell, { id: 'sfDevices', width: 520, bind: function (body) {
-      var root = body.querySelector('.sf-dev');
+    var html = '<div class="sf-dev" aria-busy="true">' +
+      '<div class="sf-dev__list-wrap"><p class="muted small" role="status">Geräte werden geladen …</p></div>' +
+      '<div class="sf-dev__msg" hidden></div></div>' +
+      '<div class="hub-dialog-actions" data-hub-dialog-footer>' +
+      (opts.onRegister ? '<button type="button" class="hub-btn hub-btn--ghost hub-dialog-actions__start sf-dev__register">Registrieren …</button>' : '') +
+      '<button type="button" class="hub-btn hub-btn--ghost sf-dev__cancel">Schliessen</button>' +
+      '<button type="button" class="hub-btn hub-btn--primary sf-dev__send" data-hub-primary disabled>Senden</button></div>';
+    global.HubFloatDialog.open(opts.title || 'Geräte', html, { id: 'sfDevices', width: 480, bind: function (body, dlg) {
+      var host = dlg || body;
+      var root = body.querySelector('.sf-dev'), wrap = root.querySelector('.sf-dev__list-wrap'), msg = root.querySelector('.sf-dev__msg');
       var list = [];
+      function sendBtn() { return host.querySelector('.sf-dev__send'); }
+      function sync() { var s = sendBtn(); if (s) s.disabled = !wrap.querySelector('.sf-dev__pick[aria-pressed="true"]'); }
       function render(j) {
         root.removeAttribute('aria-busy');
         if (!j || !j.ok) {
-          root.innerHTML = '<p class="sf-dev__msg" role="alert" data-state="error">' + esc((j && j.message) || 'Die Geräte liessen sich nicht laden.') + '</p>' +
-            '<div class="hub-dialog-actions"><button type="button" class="hub-btn sf-dev__reload">Nochmals laden</button></div>';
+          wrap.innerHTML = '<button type="button" class="hub-btn hub-btn--sm sf-dev__reload">Nochmals laden</button>';
+          devMsg(msg, (j && j.message) || 'Die Geräte liessen sich nicht laden.', 'error');
+          sync();
           return;
         }
         list = j.geraete || [];
-        var rows = '<tr class="sf-dev__web"><td></td><td><strong>Web</strong><div class="muted small sf-dev__url"><code>' + esc(web) + '</code></div></td>' +
-          '<td class="muted small">Zuschauer-Ansicht im Browser</td>' +
-          '<td class="sf-dev__act"><button type="button" class="hub-btn hub-btn--sm sf-dev__copy">Kopieren</button> ' +
-          '<a class="hub-btn hub-btn--sm" href="' + esc(web) + '" target="_blank" rel="noopener">Öffnen</a></td></tr>';
-        rows += list.map(function (g, i) {
-          var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '–';
-          var cid = 'sfDevChk' + i;
-          return '<tr><td class="sf-dev__chk"><label class="hub-admin-check" for="' + cid + '"><input type="checkbox" id="' + cid + '" data-i="' + i + '" aria-label="' + esc(g.name) + ' wählen"></label></td>' +
-            '<td><label for="' + cid + '">' + esc(g.name) + '</label></td><td class="muted small">' + esc(zeigt) + '</td>' +
-            '<td class="sf-dev__act">' + (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</td></tr>';
+        // Raster aus Kacheln (Urs 27.11.: «pro Gerät ein Icon … ein Grid mit den Icons»): Icon gross, Name, «zeigt …» klein.
+        // Kachel antippen = wählen (mehrfach, aria-pressed). «Web» ist auch eine Kachel: Zuschauer-Adresse kopieren/öffnen.
+        var tiles = '<li class="sf-dev__tile sf-dev__tile--web"><a class="sf-dev__pick" href="' + esc(web) + '" target="_blank" rel="noopener">' +
+          devIcon('globe') + '<span class="sf-dev__name">Web</span><span class="sf-dev__state">Zuschauer-Ansicht öffnen</span></a>' +
+          '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__copy">Adresse kopieren</button></li>';
+        tiles += list.map(function (g, i) {
+          var zeigt = g.zeigt ? 'zeigt ' + (g.zeigt.titel || g.zeigt.app) : 'zeigt nichts';
+          return '<li class="sf-dev__tile"><button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '">' +
+            devIcon(g.symbol) + '<span class="sf-dev__name">' + esc(g.name) + '</span><span class="sf-dev__state">' + esc(zeigt) + '</span></button>' +
+            (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__clear" data-i="' + i + '" aria-label="' + esc(g.name) + ' leeren">Leeren</button>' : '') + '</li>';
         }).join('');
-        // Hub-Liste = Tabelle mit Spaltenköpfen (hub-list.css, Lab › Listen; Liste UI 2).
-        root.innerHTML = '<table class="hub-list sf-dev__list"><thead><tr><th><span class="sr-only">Wahl</span></th><th>Gerät</th><th>Zeigt</th><th><span class="sr-only">Aktionen</span></th></tr></thead><tbody>' + rows + '</tbody></table>' +
-          (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert.</p>') +
-          '<p class="sf-dev__msg small" role="status" aria-live="polite"></p>' +
-          '<div class="hub-dialog-actions">' +
-          (opts.onRegister ? '<button type="button" class="hub-btn hub-dialog-actions__start sf-dev__register">Registrieren …</button>' : '') +
-          (list.length ? '<button type="button" class="hub-btn hub-btn--primary sf-dev__send" disabled>Senden</button>' : '') + '</div>';
+        wrap.innerHTML = '<ul class="sf-dev__grid" aria-label="Geräte">' + tiles + '</ul>' +
+          (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert' + (opts.onRegister ? ' – mit «Registrieren …» eines hinzufügen.' : '.') + '</p>');
+        sync();
       }
       function load() {
         root.setAttribute('aria-busy', 'true');
         fetch(DEV, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; }).then(render);
       }
-      root.addEventListener('change', function (e) {
-        if (!e.target.matches('input[type="checkbox"]')) return;
-        var sendBtn = root.querySelector('.sf-dev__send');
-        if (sendBtn) sendBtn.disabled = !root.querySelector('input[type="checkbox"]:checked');
-      });
-      root.addEventListener('click', function (e) {
-        var msg = root.querySelector('.sf-dev__msg');
-        if (e.target.closest('.sf-dev__reload')) { load(); return; }
+      host.addEventListener('click', function (e) {
+        if (e.target.closest('.sf-dev__cancel')) { global.HubFloatDialog.close('sfDevices'); return; }
+        if (e.target.closest('.sf-dev__reload')) { devMsg(msg, ''); load(); return; }
         if (e.target.closest('.sf-dev__register')) { global.HubFloatDialog.close('sfDevices'); opts.onRegister(); return; }
         if (e.target.closest('.sf-dev__copy')) {
-          var done = function (ok) { devMsg(msg, ok ? 'Adresse kopiert.' : 'Kopieren ging nicht – Adresse von Hand markieren.', ok ? 'ok' : 'error'); };
+          var done = function (ok) { devMsg(msg, ok ? 'Adresse kopiert.' : 'Kopieren ging nicht – Link mit der rechten Maustaste kopieren.', ok ? 'ok' : 'error'); };
           if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(web).then(function () { done(true); }, function () { done(false); });
           else done(false);
           return;
         }
+        var pk = e.target.closest('button.sf-dev__pick');
+        if (pk) { pk.setAttribute('aria-pressed', pk.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); sync(); return; }
         var c = e.target.closest('.sf-dev__clear');
         if (c) {
           var g = list[+c.getAttribute('data-i')];
@@ -127,8 +146,8 @@
           return;
         }
         var s = e.target.closest('.sf-dev__send');
-        if (!s) return;
-        var picked = Array.prototype.map.call(root.querySelectorAll('input[type="checkbox"]:checked'), function (cb) { return list[+cb.getAttribute('data-i')]; })
+        if (!s || s.disabled) return;
+        var picked = Array.prototype.map.call(wrap.querySelectorAll('.sf-dev__pick[aria-pressed="true"]'), function (cb) { return list[+cb.getAttribute('data-i')]; })
           .filter(Boolean);
         if (!picked.length) return;
         s.disabled = true;
@@ -136,7 +155,6 @@
         Promise.all(picked.map(function (g) {
           return devSend({ action: 'zeigen', geraet: g.id, id: id }).then(function (r) { return { g: g, r: r }; });
         })).then(function (res) {
-          s.disabled = false;
           var bad = res.filter(function (x) { return !x.r.ok; });
           if (!bad.length) {
             toast('success', 'Läuft auf ' + picked.map(function (g) { return g.name; }).join(', ') + '.');
@@ -196,9 +214,15 @@
     t = t.replace(/\D/g, '');
     return t.length === 6 ? t : '';
   }
+  /** Code-Feld: nur Ziffern, höchstens sechs, angezeigt als «123 456». */
+  function fmtCode(v) {
+    var d = String(v || '').replace(/\D/g, '').slice(0, 6);
+    return d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d;
+  }
   /**
    * Dialog «Gerät registrieren»: Kamera scannt den QR von device.php (oder Code tippen), Name und Dauer wählen, koppeln.
-   * Danach steht das Gerät im Dialog «Geräte» (opts.after).
+   * Danach steht das Gerät im Dialog «Geräte» (opts.after). Aufbau wie Lab › Dialoge (lab/dialogs.php:401–421):
+   * Felder untereinander (lab-fields-stack), Fusszeile Abbrechen + Registrieren.
    */
   function register(opts) {
     opts = opts || {};
@@ -209,31 +233,45 @@
       if (timer) { clearTimeout(timer); timer = 0; }
       if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
     }
-    var html = '<form class="sf-dev sf-dev--reg" novalidate>' +
+    var dev = location.origin + '/device.php';
+    var html = '<form class="sf-dev sf-dev--reg" id="sfDevRegForm" novalidate>' +
       '<div class="sf-dev__cam"><video class="sf-dev__video" muted playsinline aria-label="Kamerabild für den QR-Code"></video></div>' +
-      '<p class="sf-dev__msg small" role="status" aria-live="polite" data-state="busy">Kamera wird gestartet …</p>' +
-      '<p class="muted small">Auf dem Gerät <code>' + esc(location.origin) + '/device.php</code> öffnen und den QR-Code vor die Kamera halten – oder den Code eintippen.</p>' +
-      '<div class="sf-dev__fields">' +
-      '<label class="hub-admin-field hub-admin-field--narrow"><span>Code vom Gerät</span><input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="123 456" required></label>' +
+      '<div class="sf-dev__msg" hidden></div>' +
+      '<p class="sf-dev__lead small">Auf dem Gerät <a class="sf-dev__link" href="' + esc(dev) + '" target="_blank" rel="noopener">' + esc(location.host) + '/device.php</a> öffnen, dann den QR-Code vor die Kamera halten oder den Code eintippen.</p>' +
+      '<div class="sf-dev__stack">' +
+      '<label class="hub-admin-field sf-dev__code"><span>Code vom Gerät</span><input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" aria-describedby="sfDevCodeHint" required>' +
+      '<small class="hub-admin-field-hint" id="sfDevCodeHint">6 Ziffern, steht unter dem QR-Code.</small></label>' +
       '<label class="hub-admin-field"><span>Name</span><input type="text" name="name" maxlength="60" autocomplete="off" placeholder="z. B. Beamer Saal"></label>' +
       '<label class="hub-admin-field"><span>Freigegeben</span><select name="dauer"><option value="heute">für heute (bis Mitternacht)</option><option value="dauerhaft">dauerhaft</option></select></label>' +
-      '</div>' +
-      '<div class="hub-dialog-actions"><button type="submit" class="hub-btn hub-btn--primary">Registrieren</button></div></form>';
-    global.HubFloatDialog.open('Gerät registrieren', html, { id: 'sfDeviceRegister', width: 460, onClose: stop, bind: function (body) {
+      '</div></form>' +
+      '<div class="hub-dialog-actions" data-hub-dialog-footer>' +
+      '<button type="button" class="hub-btn hub-btn--ghost sf-dev__cancel">Abbrechen</button>' +
+      '<button type="submit" form="sfDevRegForm" class="hub-btn hub-btn--primary" data-hub-primary>Registrieren</button></div>';
+    global.HubFloatDialog.open('Gerät registrieren', html, { id: 'sfDeviceRegister', width: 420, onClose: stop, bind: function (body, dlg) {
+      var host = dlg || body;
       var form = body.querySelector('form'), video = form.querySelector('video'), msg = form.querySelector('.sf-dev__msg');
-      var codeIn = form.elements.code, nameIn = form.elements.name, btn = form.querySelector('button[type="submit"]');
-      function noCam(text) { stop(); form.querySelector('.sf-dev__cam').hidden = true; devMsg(msg, text, ''); codeIn.focus(); }
+      var cam = form.querySelector('.sf-dev__cam');
+      var codeIn = form.elements.code, nameIn = form.elements.name, btn = host.querySelector('button[form="sfDevRegForm"]');
+      var cancel = host.querySelector('.sf-dev__cancel');
+      if (cancel) cancel.addEventListener('click', function () { stop(); global.HubFloatDialog.close('sfDeviceRegister'); });
+      codeIn.addEventListener('input', function () {
+        var f = fmtCode(codeIn.value);
+        if (f !== codeIn.value) codeIn.value = f;
+        codeIn.removeAttribute('aria-invalid');
+        codeIn.closest('.hub-admin-field').classList.remove('is-error');
+      });
+      function noCam(text) { stop(); cam.hidden = true; devMsg(msg, text, 'info'); codeIn.focus(); }
       function found(code) {
         stop();
-        codeIn.value = code.slice(0, 3) + ' ' + code.slice(3);
-        codeIn.removeAttribute('aria-invalid');
-        form.querySelector('.sf-dev__cam').hidden = true;
+        codeIn.value = fmtCode(code);
+        cam.hidden = true;
         devMsg(msg, 'Code erkannt. Name wählen und registrieren.', 'ok');
         nameIn.focus();
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !global.isSecureContext) {
-        noCam('Keine Kamera verfügbar – Code eintippen.');
+        noCam('Keine Kamera verfügbar – bitte den Code eintippen.');
       } else {
+        devMsg(msg, 'Kamera wird gestartet …', 'busy');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }).then(function (s) {
           if (stopped) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
           stream = s;
@@ -247,9 +285,9 @@
                 if (code) found(code); else if (!stopped) timer = setTimeout(tick, 250);
               }, function () { if (!stopped) timer = setTimeout(tick, 500); });
             })();
-          }, function () { noCam('QR-Leser nicht verfügbar – Code eintippen.'); });
+          }, function () { noCam('QR-Leser nicht verfügbar – bitte den Code eintippen.'); });
         }, function (err) {
-          noCam(err && err.name === 'NotAllowedError' ? 'Kamera nicht erlaubt – Code eintippen.' : 'Keine Kamera gefunden – Code eintippen.');
+          noCam(err && err.name === 'NotAllowedError' ? 'Kamera nicht erlaubt – bitte den Code eintippen.' : 'Keine Kamera gefunden – bitte den Code eintippen.');
         });
       }
       form.addEventListener('submit', function (e) {
@@ -257,17 +295,17 @@
         var code = String(codeIn.value).replace(/\D/g, '');
         if (code.length !== 6) {
           codeIn.setAttribute('aria-invalid', 'true');
+          codeIn.closest('.hub-admin-field').classList.add('is-error');
           devMsg(msg, 'Der Code hat sechs Ziffern.', 'error');
           codeIn.focus();
           return;
         }
-        codeIn.removeAttribute('aria-invalid');
-        btn.disabled = true;
+        if (btn) btn.disabled = true;
         devMsg(msg, 'Registriert …', 'busy');
         devSend({ action: 'koppeln', code: code, name: String(nameIn.value).trim(), dauer: form.elements.dauer.value }).then(function (r) {
-          btn.disabled = false;
+          if (btn) btn.disabled = false;
           if (!r.ok) {
-            if (r.error === 'code') codeIn.setAttribute('aria-invalid', 'true');
+            if (r.error === 'code') { codeIn.setAttribute('aria-invalid', 'true'); codeIn.closest('.hub-admin-field').classList.add('is-error'); }
             devMsg(msg, r.message || 'Das ging nicht.', 'error');
             return;
           }
