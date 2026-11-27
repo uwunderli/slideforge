@@ -20,9 +20,15 @@ final class Migration
 {
     private const TASK_ID = 'slideforge.uebernahme';
 
+    /** Ziel-Ablage für das Protokoll ('' = eigene Ablage der Person). */
+    private static string $ablage = '';
+
     /** @return array{ok:bool,error?:string,protocol?:string,counts?:array<string,int>} */
-    public static function run(string $source, bool $dryRun, ?callable $echo = null): array
+    public static function run(string $source, bool $dryRun, ?callable $echo = null, string $ablage = ''): array
     {
+        // $ablage (Urs 27.11.: «Soll sie unter die Ablage BK - Office legen»): statt «Meine Ablage» in diese Ablage (per Name), als die Person;
+        // fehlt ihr das Schreibrecht, ist das ein Fehler im Protokoll — kein Ausweichen auf eine andere Ablage.
+        self::$ablage = trim($ablage);
         $echo ??= static function (string $line): void {
         };
         $source = rtrim($source, '/');
@@ -83,12 +89,16 @@ final class Migration
             } elseif ($dryRun) {
                 $row['result'] = 'würde übernommen';
             } else {
-                $r = self::one($src, $pid, $person, '/' . $folder, $name);
+                $r = self::one($src, $pid, $person, '/' . $folder, $name, self::$ablage !== '' ? 'name:' . self::$ablage : 'own');
                 if ($r['ok']) {
                     $counts['done']++;
                     $state[$pid] = ['ref' => $r['ref'], 'person' => $person, 'at' => date('c')];
                     Storage::write($statePath, $state);
                     $row['result'] = 'übernommen als ' . $r['name'];
+                } elseif (self::$ablage !== '' && in_array($r['error'], ['no_access', 'read_only', 'no_library', 'ambiguous'], true)) {
+                    $counts['failed']++;
+                    $row['result'] = 'Fehler: ' . ['no_access' => 'kein Zugang', 'read_only' => 'kein Schreibrecht', 'no_library' => 'Ablage nicht gefunden',
+                        'ambiguous' => 'Ablagename mehrdeutig'][$r['error']] . ' («' . self::$ablage . '»)';
                 } elseif ($r['error'] === 'no_access') {
                     $counts['unassigned']++;
                     $row['result'] = 'nicht zuordenbar (keine eigene Ablage in FileForge)';
@@ -117,7 +127,7 @@ final class Migration
     }
 
     /** Eine Präsentation packen und als die Person ablegen. @return array{ok:bool,error:string,ref?:string,name?:string} */
-    private static function one(string $src, string $pid, string $person, string $dir, string $name): array
+    private static function one(string $src, string $pid, string $person, string $dir, string $name, string $repo = 'own'): array
     {
         $made = [];
         try {
@@ -143,7 +153,7 @@ final class Migration
                 if (!$p['ok']) {
                     return ['ok' => false, 'error' => $p['error']];
                 }
-                $c = FfFile::create($person, 'own', $dir, $name, $tmp, true);
+                $c = FfFile::create($person, $repo, $dir, $name, $tmp, true);
             } finally {
                 @unlink($tmp);
             }
@@ -229,7 +239,8 @@ final class Migration
     private static function protocol(array $rows, array $counts, array $perPerson, bool $dryRun, bool $cancelled): string
     {
         $f = DATA_PATH . '/migration/protokoll-' . date('Ymd-His') . ($dryRun ? '-probe' : '') . '.md';
-        $o = '# Übernahme nach FileForge ' . date('d.m.Y H:i') . ($dryRun ? ' (Probelauf, nichts abgelegt)' : '') . ($cancelled ? ' — abgebrochen' : '') . "\n\n";
+        $o = '# Übernahme nach FileForge ' . date('d.m.Y H:i') . ($dryRun ? ' (Probelauf, nichts abgelegt)' : '') . ($cancelled ? ' — abgebrochen' : '') . "\n\n"
+            . 'Ziel: ' . (self::$ablage !== '' ? 'Ablage «' . self::$ablage . '»' : 'eigene Ablage der Person') . "\n\n";
         $o .= sprintf("Präsentationen %d · übernommen %d · schon übernommen %d · nicht zuordenbar %d · Fehler %d · davon Vorlagen (nach Präsentationen/Vorlagen) %d · Freigaben weggelassen %d\n\n",
             $counts['total'], $counts['done'], $counts['skipped'], $counts['unassigned'], $counts['failed'], $counts['templates'], $counts['sharesDropped']);
         $o .= "## Je Person\n\n";
