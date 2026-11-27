@@ -9147,6 +9147,34 @@ body.notes-resizing {
   flex: 1;
   margin: 0;
 }
+/* Schritt-Feld ‹ Nummer › (3.12.11): grosse Knöpfe links/rechts, Zahl in der Mitte, ohne Browser-Pfeilchen. */
+.sf-step-field {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sf-step-field .sf-step-btn {
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 38px;
+  padding: 0 10px;
+  justify-content: center;
+}
+.sf-step-field .sf-step-btn svg { width: 20px; height: 20px; display: block; }
+.sf-step-field input[type="number"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.sf-step-field input[type="number"]::-webkit-outer-spin-button,
+.sf-step-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 .props-effects-panel .props-transfer-row {
   width: 100%;
   max-width: 100%;

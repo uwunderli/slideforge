@@ -6641,8 +6641,19 @@
     const t = texte || {};
     const mitTitel = t.mitTitel || I.animWithPrevHint || 'Gleichzeitig mit dem letzten Schritt dieser Folie';
     const nachTitel = t.nachTitel || I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
+    /* ‹ Nummer › in einer Zeile mit grossen Knöpfen (3.12.11, Urs 27.11.: «grössere Schaltflächen um auf und ab zu klicken»). */
+    const pfeil = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7')
+      + '" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const frueher = I.animStepPrev || 'Einen Schritt früher';
+    const spaeter = I.animStepNext || 'Einen Schritt später';
     return '<div><label for="' + id + '">' + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '</label>'
-      + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '"></div>'
+      + '<div class="sf-step-field">'
+      + '<button type="button" class="hub-btn hub-btn--ghost sf-step-btn" data-step-for="' + id + '" data-step-dir="-1" title="' + escapeHtml(frueher)
+      + '" aria-label="' + escapeHtml(frueher) + '"' + ((parseInt(wert, 10) || 1) <= 1 ? ' disabled' : '') + '>' + pfeil(-1) + '</button>'
+      + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '">'
+      + '<button type="button" class="hub-btn hub-btn--ghost sf-step-btn" data-step-for="' + id + '" data-step-dir="1" title="' + escapeHtml(spaeter)
+      + '" aria-label="' + escapeHtml(spaeter) + '">' + pfeil(1) + '</button>'
+      + '</div></div>'
       + '<div class="props-transfer-row props-fx-row">'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_mit" title="'
       + escapeHtml(mitTitel) + '">' + hubSpriteIcon('link') + '<span>' + escapeHtml(t.mit || I.animWithPrev || 'Mit vorherigem') + '</span></button>'
@@ -6650,6 +6661,18 @@
       + escapeHtml(nachTitel) + '">' + hubSpriteIcon('play') + '<span>' + escapeHtml(t.nach || I.animAfterPrev || 'Nach vorherigem') + '</span></button>'
       + '</div>';
   }
+
+  /* ‹ › neben dem Schritt-Feld: Wert ±1 (mindestens 1), dann dasselbe «change» wie bei der Eingabe von Hand. */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('.sf-step-btn[data-step-for]');
+    if (!btn || btn.disabled) return;
+    const input = document.getElementById(btn.dataset.stepFor);
+    if (!input) return;
+    const neu = Math.max(1, (parseInt(input.value, 10) || 1) + (parseInt(btn.dataset.stepDir, 10) || 0));
+    if (String(neu) === input.value) return;
+    input.value = String(neu);
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
   /** Abschnitt «Ausblenden» im Effekte-Reiter. */
   function buildExitPropsHtml(node) {

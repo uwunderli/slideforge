@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.11] - 2026-11-27
+
+### Changed
+- **Schritt (Klick-Nr.) mit grossen Knöpfen** (Urs 27.11.): Unter Einblenden und Ausblenden steht der Schritt als ‹ Nummer › in einer Zeile; die Knöpfe zählen eins hinunter/hinauf (mindestens 1), die Zahl bleibt von Hand eintippbar.
+
 ## [3.12.10] - 2026-11-27
 
 ### Added
