@@ -57,7 +57,7 @@
               (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</span></li>';
           }).join('') + '</ul>'
         : '<p class="muted small">Noch kein Gerät angemeldet.</p>') +
-        '<p class="muted small">Neues Gerät: dort <code>' + esc(location.origin) + '/geraet.php</code> öffnen, QR abknipsen oder den Code im Hub eingeben.</p>' +
+        '<p class="muted small">Neues Gerät: dort <code>' + esc(location.origin) + '/device.php</code> öffnen, QR abknipsen oder den Code im Hub eingeben.</p>' +
         '<p><a class="hub-btn" href="' + esc(anmelden) + '" target="_blank" rel="noopener">Gerät anmelden …</a></p></div>';
       if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
       global.HubFloatDialog.open('Auf Gerät zeigen', html, { id: 'sfDevices', width: 440, bind: function (body) {

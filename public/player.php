@@ -1,6 +1,6 @@
 <?php
 /**
- * **Einstieg des Anzeige-Geräts** (Urs, 27.11.2026). Der Hub (`geraet.php`) lädt diese Seite im Vollbild-Rahmen mit
+ * **Einstieg des Anzeige-Geräts** (Urs, 27.11.2026). Der Hub (`device.php`) lädt diese Seite im Vollbild-Rahmen mit
  * `?p=<Präsentation>&hub_geraet=<Gerät>&hub_gt=<Einmal-Ticket>`. SlideForge löst das Ticket beim Hub ein (`Geraete::einloesen`)
  * und öffnet die Zuschauer-Ansicht, die dem Presenter bzw. der Tablet-Fernsteuerung folgt. Ohne gültiges Ticket: nichts.
  */
