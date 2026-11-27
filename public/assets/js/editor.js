@@ -5587,12 +5587,12 @@
 
   function updateSelectionActionButtons() {
     const count = SF.selectedNodes.length;
-    const hasSingle = count === 1 && SF.canEdit;
     const hasMultiTopLevel = SF.selectedNodes.filter(isTopLevelNode).length >= 2 && SF.canEdit;
     const canUngroup = count === 1 && isObjectGroup(SF.selectedNodes[0]) && SF.canEdit;
-    setRibbonCommandsDisabled('duplicate', !hasSingle);
-    setRibbonCommandsDisabled('copy', !hasSingle);
-    setRibbonCommandsDisabled('cut', !hasSingle);
+    const hasAny = count >= 1 && SF.canEdit;   // 3.12.17: auch mehrere Objekte
+    setRibbonCommandsDisabled('duplicate', !hasAny);
+    setRibbonCommandsDisabled('copy', !hasAny);
+    setRibbonCommandsDisabled('cut', !hasAny);
     setRibbonCommandsDisabled('group', !hasMultiTopLevel);
     setRibbonCommandsDisabled('ungroup', !canUngroup);
     syncRibbonStartTab();
@@ -9016,12 +9016,40 @@
   SF.positionClipboard = null;
   SF.animationClipboard = null;
 
+  /* Mehrere Objekte (3.12.17, Urs 27.11.: «Kann ich auch alle Objekte die ich angewählt habe kopieren?»):
+     Kopieren/Ausschneiden/Duplizieren nehmen alle gewählten Objekte in ihrer Ebenen-Reihenfolge; Einfügen setzt alle
+     und wählt sie. Auf einer anderen Folie landen sie an derselben Stelle, auf derselben Folie je 24 px versetzt. */
+  function gewaehlteObjekte() {
+    const list = (SF.selectedNodes && SF.selectedNodes.length) ? SF.selectedNodes : (SF.selectedNode ? [SF.selectedNode] : []);
+    const top = list.filter((n) => n && n.getLayer && n.getLayer() && isTopLevelNode(n));
+    return (top.length ? top : list.filter(Boolean)).slice().sort((x, y) => x.zIndex() - y.zIndex());
+  }
+
+  function insertNodes(nodes) {
+    if (!nodes.length) return;
+    nodes.forEach((node) => {
+      node.name('sf-node');
+      SF.layer.add(node);
+      bindNodeEvents(node);
+      updateAnimationBadge(node);
+    });
+    if (SF.transformer) SF.transformer.moveToTop();
+    if (nodes.length === 1) selectNode(nodes[0]);
+    else selectNodes(nodes);
+    refreshCanvas();
+    scheduleSave();
+  }
+
   function duplicateNode(node, offset) {
     if (!node || !SF.canEdit) return;
-    const obj = cloneObjectWithNewIds(nodeToObject(node));
-    obj.x = (obj.x || 0) + (offset ?? 24);
-    obj.y = (obj.y || 0) + (offset ?? 24);
-    insertNode(createNode(obj));
+    const liste = gewaehlteObjekte().includes(node) ? gewaehlteObjekte() : [node];
+    const d = offset ?? 24;
+    insertNodes(liste.map((n) => {
+      const obj = cloneObjectWithNewIds(nodeToObject(n));
+      obj.x = (obj.x || 0) + d;
+      obj.y = (obj.y || 0) + d;
+      return createNode(obj);
+    }));
   }
 
   function cloneObjectWithNewIds(obj) {
@@ -9037,8 +9065,10 @@
   }
 
   function copySelected() {
-    if (!SF.selectedNode) return;
-    SF.clipboard = nodeToObject(SF.selectedNode);
+    const liste = gewaehlteObjekte();
+    if (!liste.length) return;
+    SF.clipboard = liste.map(nodeToObject);
+    SF.clipboardSlideId = SF.slides[SF.currentIndex] ? SF.slides[SF.currentIndex].id : null;
     SF.pasteCount = 0;
     updatePasteButton();
   }
@@ -9048,10 +9078,10 @@
   }
 
   function cutSelected() {
-    if (!SF.selectedNode || !SF.canEdit) return;
+    const liste = gewaehlteObjekte();
+    if (!liste.length || !SF.canEdit) return;
     copySelected();
-    removeAnimationBadge(SF.selectedNode);
-    SF.selectedNode.destroy();
+    liste.forEach((n) => { removeAnimationBadge(n); n.destroy(); });
     deselect();
     refreshCanvas();
     scheduleSave();
@@ -9060,11 +9090,17 @@
   SF.pasteCount = 0;
   function pasteClipboard() {
     if (!SF.clipboard || !SF.canEdit) return;
-    SF.pasteCount++;
-    const obj = cloneObjectWithNewIds(SF.clipboard);
-    obj.x = (obj.x || 0) + 24 * SF.pasteCount;
-    obj.y = (obj.y || 0) + 24 * SF.pasteCount;
-    insertNode(createNode(obj));
+    const items = Array.isArray(SF.clipboard) ? SF.clipboard : [SF.clipboard];
+    const hier = SF.slides[SF.currentIndex] ? SF.slides[SF.currentIndex].id : null;
+    if (hier !== SF.clipboardSlideId) { SF.clipboardSlideId = hier; SF.pasteCount = 0; }
+    else SF.pasteCount++;
+    const d = 24 * SF.pasteCount;
+    insertNodes(items.map((it) => {
+      const obj = cloneObjectWithNewIds(it);
+      obj.x = (obj.x || 0) + d;
+      obj.y = (obj.y || 0) + d;
+      return createNode(obj);
+    }));
   }
 
   let replaceTargetNode = null;

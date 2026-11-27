@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.17] - 2026-11-27
+
+### Changed
+- **Mehrere Objekte kopieren** (Urs 27.11.): Kopieren, Ausschneiden, Duplizieren und Einfügen nehmen alle gewählten Objekte (Ebenen-Reihenfolge bleibt); nach dem Einfügen sind alle gewählt. Auf einer anderen Folie landen sie an derselben Stelle, auf derselben Folie versetzt.
+
 ## [3.12.16] - 2026-11-27
 
 ### Added
