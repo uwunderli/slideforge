@@ -12130,3 +12130,35 @@ select.sf-fsel-native { display: none !important; }
   border: 0;
   background: #000;
 }
+
+/* Mehrere Folien ziehen (3.11.1): gezogene Kachel = Einfügemarke mit Anzahl, übrige markierte halbtransparent. */
+.editor-slide-grid-item.slide-drag-lead { position: relative; }
+.slide-drag-companion { opacity: 0.35; }
+.slide-drag-lead::before {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.editor-filmstrip-item.slide-drag-lead::before { left: 0; right: 0; top: 0; height: 4px; }
+.editor-slide-grid-item.slide-drag-lead::before { left: 0; top: 0; bottom: 0; width: 4px; }
+.slide-drag-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}

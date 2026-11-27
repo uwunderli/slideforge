@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.11.1 gebaut** (`entwickler/slide-mehrfach-ziehen` auf 3.11.0 225a452, Worktree `_claude/entwickler/wt-slide-mehrfach-ziehen`, beim Gitwart): mehrere markierte Folien als Block ziehen (Raster + Folienleiste, Plakette mit Anzahl), Strg+Umschalt+Pfeil verschiebt die Auswahl. 3.12.0 (Menüband auf Hub) rebased darauf.
+
 - **27.11. 3.11.0 gebaut** (`entwickler/slide-abspielen` ab 3.10.2 fc0124c, Worktree `_claude/entwickler/wt-slide-abspielen`, beim Gitwart): «▶ Abspielen» (Effekte-Reiter, Ansicht › Vorschau) als Überlagerung mit `preview.php?play=1`, ▶ je Effekt auf der Bühne, Mitlaufen folgt Schritt für Schritt (`frag`), Schalter «Animationen beim Folienwechsel abspielen» im Dialog «Auf Gerät» (`editor_ui.mitAnim` → Live `anim`), Geräte-Kacheln gleich gross, Filmstreifen ←/→, Raster-Pfeile. Ungeprüft im Browser.
 
 - **27.11. 3.10.2 gebaut** (`entwickler/slide-effekte-klappen` ab 3.10.1 f448749, Worktree `_claude/entwickler/wt-slide-ausblenden`, beim Gitwart): Abschnitte Einblenden/Ausblenden im Effekte-Reiter ein-/ausklappbar, Zusammenfassung in der Kopfzeile, Zustand je Person in editor_ui.collapsed.

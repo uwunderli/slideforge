@@ -1789,6 +1789,7 @@
 
     let dragItem = null;
     let dragMoved = false;
+    let block = null;
 
     container.addEventListener('mousedown', (e) => {
       if (!SF.canEdit || e.button !== 0) return;
@@ -1797,11 +1798,20 @@
 
       dragItem = item;
       dragMoved = false;
+      block = null;
+      /* Mehrfachauswahl (3.11.1): Strg/Umschalt-Klick ändert nur die Auswahl, zieht keinen Block. */
+      const mitZusatz = e.ctrlKey || e.metaKey || e.shiftKey;
+      const startY = e.clientY;
+      let blockGeprueft = false;
       item.classList.add('dragging');
       document.body.classList.add('editor-filmstrip-dragging');
 
       const onMove = (ev) => {
         if (!dragItem) return;
+        if (!blockGeprueft && !mitZusatz && Math.abs(ev.clientY - startY) >= 5) {
+          blockGeprueft = true;
+          block = slideDragBlockStart(container, '.editor-filmstrip-item', dragItem);
+        }
         const after = getFilmstripAfterElement(container, ev.clientY);
         const prev = [...container.querySelectorAll('.editor-filmstrip-item')].map((el) => el.dataset.id);
         if (after == null) container.appendChild(dragItem);
@@ -1819,10 +1829,16 @@
         document.body.classList.remove('editor-filmstrip-dragging');
         if (!dragItem) return;
         dragItem.classList.remove('dragging');
+        const order = dragMoved && block
+          ? slideDragBlockOrder(container, '.editor-filmstrip-item', dragItem.dataset.id, block)
+          : null;
+        slideDragBlockEnd(container, '.editor-filmstrip-item');
         dragItem = null;
+        block = null;
         if (dragMoved) {
           SF.filmstripSuppressClick = true;
-          commitFilmstripOrder();
+          if (order) commitSlideOrder(order);
+          else commitFilmstripOrder();
           setTimeout(() => { SF.filmstripSuppressClick = false; }, 100);
         }
       };
@@ -2248,6 +2264,7 @@
     let startX = 0;
     let startY = 0;
     let dragging = false;
+    let block = null;
 
     container.addEventListener('mousedown', (e) => {
       if (!SF.canEdit || e.button !== 0) return;
@@ -2258,6 +2275,7 @@
       dragItem = item;
       dragMoved = false;
       dragging = false;
+      block = null;
       startX = e.clientX;
       startY = e.clientY;
 
@@ -2270,6 +2288,8 @@
           dragging = true;
           dragItem.classList.add('dragging');
           document.body.classList.add('editor-grid-dragging');
+          /* Gehört die Kachel zu einer Mehrfachauswahl, wandern alle markierten mit (3.11.1). */
+          block = slideDragBlockStart(container, '.editor-slide-grid-item', dragItem);
         }
         const after = getGridAfterElement(container, ev.clientX, ev.clientY);
         const prev = [...container.querySelectorAll('.editor-slide-grid-item')].map((el) => el.dataset.id);
@@ -2288,16 +2308,86 @@
         document.body.classList.remove('editor-grid-dragging');
         if (!dragItem) return;
         dragItem.classList.remove('dragging');
+        const order = dragMoved && block
+          ? slideDragBlockOrder(container, '.editor-slide-grid-item', dragItem.dataset.id, block)
+          : null;
+        slideDragBlockEnd(container, '.editor-slide-grid-item');
         dragItem = null;
+        block = null;
         if (dragMoved) {
           gridSuppressClick = true;
-          commitGridOrder();
+          if (order) commitSlideOrder(order);
+          else commitGridOrder();
           setTimeout(() => { gridSuppressClick = false; }, 100);
         }
       };
 
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  /* Mehrere Folien verschieben (3.11.1, Urs 27.11.): Wird eine Folie gezogen, die zur
+     Mehrfachauswahl gehört, wandern alle markierten als Block in ihrer bisherigen Reihenfolge
+     an die Stelle der gezogenen Kachel. Die gezogene Kachel ist die Einfügemarke und trägt
+     die Anzahl, die übrigen markierten bleiben halbtransparent an ihrem Platz. */
+  function slideDragBlockStart(container, itemSel, dragItem) {
+    const idx = SF.slides.findIndex((s) => s.id === dragItem.dataset.id);
+    if (gridSelectedIndices.size < 2 || !gridSelectedIndices.has(idx)) return null;
+    const ids = slideIdsAt([...gridSelectedIndices].sort((a, b) => a - b));
+    if (ids.length < 2) return null;
+    const set = new Set(ids);
+    container.querySelectorAll(itemSel).forEach((el) => {
+      if (el !== dragItem && set.has(el.dataset.id)) el.classList.add('slide-drag-companion');
+    });
+    dragItem.classList.add('slide-drag-lead');
+    const badge = document.createElement('span');
+    badge.className = 'slide-drag-count';
+    badge.setAttribute('aria-hidden', 'true');
+    badge.textContent = String(ids.length);
+    dragItem.appendChild(badge);
+    return ids;
+  }
+
+  function slideDragBlockEnd(container, itemSel) {
+    container.querySelectorAll(itemSel).forEach((el) => el.classList.remove('slide-drag-companion', 'slide-drag-lead'));
+    container.querySelectorAll('.slide-drag-count').forEach((el) => el.remove());
+  }
+
+  /** Neue Reihenfolge: an der Stelle der gezogenen Kachel steht der ganze Block. */
+  function slideDragBlockOrder(container, itemSel, dragId, blockIds) {
+    const set = new Set(blockIds);
+    const out = [];
+    container.querySelectorAll(itemSel).forEach((el) => {
+      const id = el.dataset.id;
+      if (id === dragId) out.push(...blockIds);
+      else if (!set.has(id)) out.push(id);
+    });
+    return out;
+  }
+
+  /** Strg+Umschalt+Pfeil (3.11.1): markierte Folien um eine Stelle verschieben; Lücken bleiben,
+      eine Folie am Rand oder direkt hinter einer blockierten bleibt stehen. Ein Rückgängig-Schritt. */
+  function moveSelectedSlides(dir) {
+    if (!SF.canEdit) return Promise.resolve();
+    const ids = slideIdsAt(shortcutSlideIndices());
+    return deckUi(null, () => {
+      const order = SF.slides.map((s) => s.id);
+      const set = new Set(ids);
+      if (dir < 0) {
+        for (let i = 1; i < order.length; i++) {
+          if (set.has(order[i]) && !set.has(order[i - 1])) {
+            const t = order[i - 1]; order[i - 1] = order[i]; order[i] = t;
+          }
+        }
+      } else {
+        for (let i = order.length - 2; i >= 0; i--) {
+          if (set.has(order[i]) && !set.has(order[i + 1])) {
+            const t = order[i + 1]; order[i + 1] = order[i]; order[i] = t;
+          }
+        }
+      }
+      return commitSlideOrderNow(order);
     });
   }
 
@@ -9709,6 +9799,17 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      /* Strg+Umschalt+Pfeil (3.11.1): markierte Folien um eine Stelle verschieben; Folienleiste ↑/↓ (auch ←/→),
+         Raster ←/→. Nur ausserhalb von Eingabefeldern, dort bleibt es wortweises Markieren. */
+      if (SF.canEdit && (e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && slideShortcutContext()
+          && !(document.activeElement && document.activeElement.isContentEditable)
+          && (SF.editorViewMode === 'grid'
+            ? ['ArrowLeft', 'ArrowRight'].includes(e.key)
+            : ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key))) {
+        e.preventDefault();
+        moveSelectedSlides(e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1);
+        return;
+      }
       /* Pfeil hoch/runter/links/rechts (auch Bild hoch/runter, Pos1/Ende) im Filmstreifen: vorige/nächste Folie öffnen
          (Urs 27.11.; ←/→ seit 3.11.0). */
       if (SF.editorViewMode !== 'grid' && slideShortcutContext() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
