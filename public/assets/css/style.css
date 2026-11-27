@@ -8054,6 +8054,7 @@ body.hub-split-resizing {
 /* Notizen eingeklappt (3.12.19): nur die Leiste mit Titel und Abspielen bleibt. */
 .notes-panel-editor.is-notes-off { padding-bottom: 8px; }
 .notes-panel-editor.is-notes-off #slideNotesInput,
+.notes-panel-editor.is-notes-off .notes-format-bar,
 .notes-panel-editor.is-notes-off .notes-resize-handle { display: none; }
 .notes-panel-editor.is-notes-off .notes-panel-header { margin-bottom: 0; }
 .notes-panel-title { display: inline-flex; align-items: center; gap: 6px; }
@@ -8121,6 +8122,46 @@ body.notes-resizing {
   font-size: 0.88rem;
   line-height: 1.4;
 }
+/* Notizen formatiert (3.12.41): contenteditable statt textarea; Leerzeichen bleiben wie im Text. */
+#slideNotesInput.notes-rich-input {
+  position: relative;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+  cursor: text;
+}
+#slideNotesInput.notes-rich-input:focus-visible { border-color: var(--accent); }
+#slideNotesInput.notes-rich-input.is-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.notes-format-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.notes-format-bar .hub-icon-btn { width: 26px; height: 26px; margin-left: 0; font-size: 0.9rem; line-height: 1; }
+.notes-format-bar .hub-icon-btn svg { width: 15px; height: 15px; }
+.notes-format-b { font-weight: 700; }
+.notes-format-i { font-style: italic; }
+.notes-format-u { text-decoration: underline; }
+.notes-format-bar .hub-icon-btn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.notes-format-bar[hidden] { display: none; }
+.notes-format-sep { width: 1px; height: 18px; background: var(--border); margin: 0 6px; }
+.notes-format-color { display: inline-flex; align-items: center; gap: 3px; margin-right: 6px; }
+.notes-format-glyph { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
+.notes-format-glyph--mark { font-weight: 400; padding: 0 2px; border-radius: 2px; color: var(--text); }
 .zoom-bar {
   display: flex;
   align-items: center;

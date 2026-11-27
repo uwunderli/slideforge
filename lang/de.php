@@ -481,6 +481,11 @@ return [
     'notes.title' => 'Notizen zu dieser Folie',
     'notes.hint' => 'Markdown &middot; nur im Präsentationsmodus sichtbar',
     'notes.placeholder' => 'Notizen für den Vortragenden…',
+    'notes.format_bar' => 'Notizen formatieren',
+    'notes.color' => 'Schriftfarbe',
+    'notes.mark' => 'Marker',
+    'notes.clear_format' => 'Formatierung entfernen',
+    'notes.format_sel_hint' => 'wirkt auf die Markierung',
 
     'props.empty' => 'Kein Objekt ausgewählt.<br>Klicke ein Objekt an, um es zu bearbeiten.',
     'props.layers_title' => 'Ebenen',

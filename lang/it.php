@@ -404,6 +404,11 @@ return [
     'notes.title' => 'Note per questa diapositiva',
     'notes.hint' => 'Markdown &middot; visibile solo in modalità presentatore',
     'notes.placeholder' => 'Note per il relatore…',
+    'notes.format_bar' => 'Formatta le note',
+    'notes.color' => 'Colore del testo',
+    'notes.mark' => 'Evidenziatore',
+    'notes.clear_format' => 'Cancella formattazione',
+    'notes.format_sel_hint' => 'si applica alla selezione',
 
     'props.empty' => 'Nessun oggetto selezionato.<br>Clicca un oggetto per modificarlo.',
     'props.layers_title' => 'Livelli',

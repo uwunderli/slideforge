@@ -411,6 +411,11 @@ return [
     'notes.title' => 'Notes pour cette diapositive',
     'notes.hint' => 'Markdown &middot; visible uniquement en mode présentateur',
     'notes.placeholder' => 'Notes pour le présentateur…',
+    'notes.format_bar' => 'Mettre en forme les notes',
+    'notes.color' => 'Couleur du texte',
+    'notes.mark' => 'Surligneur',
+    'notes.clear_format' => 'Effacer la mise en forme',
+    'notes.format_sel_hint' => 's\'applique à la sélection',
 
     'props.empty' => 'Aucun objet sélectionné.<br>Cliquez sur un objet pour le modifier.',
     'props.layers_title' => 'Calques',

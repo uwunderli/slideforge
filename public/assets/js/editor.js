@@ -2354,6 +2354,196 @@
     return h;
   }
 
+  /* Notizen formatiert bearbeiten (3.12.41, Urs 27.11.: «kleinen Editor für Markdown Befehle also Fett, kursiv und Farben.
+     Gespeichert wird es wie jetzt»). #slideNotesInput ist ein contenteditable wie das Bearbeiten an Ort der Textobjekte:
+     Inhalt SfMarkup.toHtml(notes), zurück mit SfMarkup.fromHtml() (gleiche Regeln wie Markdown.php); Enter, Einfügen
+     (nur reiner Text) und Formatieren der Markierung über das Zeilenmodell (SfRichEdit), kein execCommand.
+     Geladene Notizen gehen unverändert zurück, solange niemand im Feld schreibt (notesEd.raw). */
+  const NOTES_BTN_KEY = { notesBoldBtn: 'b', notesItalicBtn: 'i', notesUnderlineBtn: 'u' };
+  const notesEd = { raw: '', saved: null };
+  function notesField() { return document.getElementById('slideNotesInput'); }
+  function notesRich() { return !!(window.SfMarkup && window.SfRichEdit); }
+  /* Grundfarbe des Felds: vom Browser beim Zusammenfügen kopierte Farben fallen weg (wie base() beim Bearbeiten an Ort). */
+  function notesBase(el) { return { color: getComputedStyle(el).color }; }
+  function getNotesText() {
+    return notesField() ? notesEd.raw : '';
+  }
+  function setNotesText(text) {
+    const el = notesField();
+    notesEd.raw = String(text || '');
+    notesEd.saved = null;
+    if (!el) return;
+    if (notesRich()) el.innerHTML = window.SfMarkup.toHtml(notesEd.raw);
+    else el.textContent = notesEd.raw;
+    syncNotesEmpty(el);
+    syncNotesFormatState(null);
+  }
+  function syncNotesEmpty(el) {
+    el.classList.toggle('is-empty', !(el.textContent || '').replace(/\u200b/g, '').length);
+  }
+  /* Feld geändert: Auszeichnung lesen, in die Folie schreiben, speichern. */
+  function notesChanged() {
+    const el = notesField();
+    if (!el) return;
+    notesEd.raw = notesRich()
+      ? window.SfMarkup.fromHtml(el, { base: notesBase(el) })
+      : String(el.innerText || '').replace(/\n$/, '');
+    syncNotesEmpty(el);
+    const slide = SF.slides[SF.currentIndex];
+    if (slide) {
+      slide.notes = notesEd.raw;
+      syncFilmstripNotesBadge(SF.currentIndex);
+    }
+    scheduleSave();
+  }
+  /* Markierung im Feld; liegt der Fokus in einem Farbfeld der Leiste, gilt die zuletzt gemerkte. */
+  function notesSelection() {
+    const el = notesField();
+    if (!el || !notesRich()) return null;
+    const R = window.SfRichEdit;
+    const cur = R.readSelection(el, notesBase(el));
+    if (cur) return cur;
+    if (!notesEd.saved) return null;
+    return { lines: window.SfMarkup.readLines(el, { base: notesBase(el) }), a: notesEd.saved.a, b: notesEd.saved.b };
+  }
+  /** fn(lines, a, b) → lines auf die Markierung; false = keine Markierung. */
+  function notesApply(fn) {
+    const el = notesField();
+    const cur = notesSelection();
+    if (!el || !cur || window.SfRichEdit.isEmptyRange(cur.lines, cur.a, cur.b)) return false;
+    window.SfRichEdit.render(el, fn(cur.lines, cur.a, cur.b), cur.a, cur.b, document.activeElement === el);
+    notesEd.saved = { a: cur.a, b: cur.b };
+    notesChanged();
+    syncNotesFormatState({ lines: window.SfMarkup.readLines(el, { base: notesBase(el) }), a: cur.a, b: cur.b });
+    return true;
+  }
+  function notesToggle(key) {
+    return notesApply((lines, a, b) => window.SfRichEdit.toggle(lines, a, b, key));
+  }
+  function notesSetValue(key, val) {
+    return notesApply((lines, a, b) => window.SfRichEdit.setValue(lines, a, b, key, val, false));
+  }
+  /** Modell-Eingriff an der Schreibmarke (Enter, Einfügen): fn(lines, a, b) → {lines, pos} */
+  function notesModelEdit(fn) {
+    const el = notesField();
+    const cur = el && notesRich() ? window.SfRichEdit.readSelection(el, notesBase(el)) : null;
+    if (!cur) return false;
+    const res = fn(cur.lines, cur.a, cur.b);
+    if (!res) return false;
+    window.SfRichEdit.render(el, res.lines, res.pos, res.pos, true);
+    notesChanged();
+    return true;
+  }
+  /* Knöpfe zeigen den Zustand an der Schreibmarke (bzw. am Anfang der Markierung). */
+  function syncNotesFormatState(cur) {
+    const R = window.SfRichEdit;
+    const r = (cur && R) ? R.propsAt(cur.lines, cur.a, R.cmp(cur.a, cur.b) !== 0) : null;
+    Object.keys(NOTES_BTN_KEY).forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.setAttribute('aria-pressed', r && r[NOTES_BTN_KEY[id]] ? 'true' : 'false');
+    });
+    [['notesColorInput', r && r.color], ['notesMarkInput', r && r.mark]].forEach(([id, val]) => {
+      const inp = document.getElementById(id);
+      if (inp && val && document.activeElement !== inp && /^#[0-9a-f]{6}$/i.test(val)) inp.value = val;
+    });
+    syncNotesGlyphs();
+  }
+  /* Die Zeichen «A»/«ab» vor den Farbfeldern zeigen die gewählte Farbe. */
+  function syncNotesGlyphs() {
+    const c = document.getElementById('notesColorInput');
+    const m = document.getElementById('notesMarkInput');
+    const gc = c?.closest('.notes-format-color')?.querySelector('.notes-format-glyph');
+    const gm = m?.closest('.notes-format-color')?.querySelector('.notes-format-glyph');
+    if (gc && c) gc.style.color = c.value;
+    if (gm && m) gm.style.backgroundColor = m.value;
+  }
+  function initNotesEditor() {
+    const el = notesField();
+    if (!el || el.dataset.bound) return;
+    el.dataset.bound = '1';
+    applySpellcheckAttrs(el);
+    el.addEventListener('input', notesChanged);
+    /* Format-Befehle des Browsers (z. B. ein anders belegtes Ctrl+B) nicht ins Feld lassen: sonst fremdes HTML. */
+    el.addEventListener('beforeinput', (e) => {
+      if (String(e.inputType || '').startsWith('format')) e.preventDefault();
+    });
+    el.addEventListener('keydown', (e) => {
+      if (!notesRich()) return;
+      if (e.key === 'Enter' && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        notesModelEdit((lines, a, b) => {
+          const d = window.SfRichEdit.deleteRange(lines, a, b);
+          return window.SfRichEdit.splitLine(d.lines, d.pos);
+        });
+      }
+    });
+    /* Einfügen nur als reiner Text (Zeilenumbrüche → neue Zeilen, Format der Schreibmarke). */
+    el.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+      if (!txt) return;
+      if (!notesRich()) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount) {
+          const rg = sel.getRangeAt(0);
+          rg.deleteContents();
+          rg.insertNode(document.createTextNode(txt));
+          rg.collapse(false);
+        }
+        notesChanged();
+        return;
+      }
+      notesModelEdit((lines, a, b) => {
+        const R = window.SfRichEdit;
+        const props = R.propsAt(lines, a);
+        const d = R.deleteRange(lines, a, b);
+        return R.insertText(d.lines, d.pos, txt, props);
+      });
+    });
+    el.addEventListener('drop', (e) => { e.preventDefault(); });
+    document.addEventListener('selectionchange', () => {
+      if (!notesRich()) return;
+      const cur = window.SfRichEdit.readSelection(el, notesBase(el));
+      if (!cur) return;
+      notesEd.saved = { a: cur.a, b: cur.b };
+      syncNotesFormatState(cur);
+    });
+
+    const bar = document.getElementById('notesFormatBar');
+    if (!bar) return;
+    if (!notesRich()) { bar.hidden = true; return; }
+    Object.keys(NOTES_BTN_KEY).forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.addEventListener('mousedown', (e) => e.preventDefault());   // Fokus und Markierung bleiben im Feld
+      btn.addEventListener('click', () => {
+        if (!notesToggle(NOTES_BTN_KEY[id])) el.focus();
+      });
+    });
+    const clearBtn = document.getElementById('notesClearFormatBtn');
+    clearBtn?.addEventListener('mousedown', (e) => e.preventDefault());
+    clearBtn?.addEventListener('click', () => {
+      const R = window.SfRichEdit;
+      const done = notesApply((lines, a, b) => {
+        let out = lines;
+        ['b', 'i', 'u', 's', 'upper', 'sc'].forEach((k) => { out = R.setValue(out, a, b, k, false, false); });
+        ['color', 'mark', 'size'].forEach((k) => { out = R.setValue(out, a, b, k, null, false); });
+        return out;
+      });
+      if (!done) el.focus();
+    });
+    /* Farbfelder (HubColorPicker über sf-color.js): jede Wahl wirkt auf die gemerkte Markierung. */
+    [['notesColorInput', 'color'], ['notesMarkInput', 'mark']].forEach(([id, key]) => {
+      const inp = document.getElementById(id);
+      inp?.addEventListener('input', () => {
+        syncNotesGlyphs();
+        if (/^#[0-9a-f]{6}$/i.test(inp.value)) notesSetValue(key, inp.value.toLowerCase());
+      });
+    });
+    syncNotesGlyphs();
+  }
+
   /* Notizen ein-/ausklappen (3.12.19, Urs 27.11.: «wie die Seitenleiste … bleibt der Play Button unten im Bild»).
      Gemerkt je Person in editor_ui.collapsed.sf_editor_notes; Befehl «Notizen ein-/ausblenden» im Katalog. */
   function toggleNotesPanel(force) {
@@ -2760,8 +2950,7 @@
       populateBackgroundControls(bg);
       setTransitionPickerValue(slide.transition || 'slide');
       document.getElementById('autoAdvanceInput').value = slide.autoAdvance || 0;
-      const notesEl = document.getElementById('slideNotesInput');
-      if (notesEl) notesEl.value = slide.notes || '';
+      setNotesText(slide.notes || '');
     }
     if (!skipHistoryReset) resetHistoryForCurrentSlide();
     updatePresentLinkOnSlideChange();
@@ -10271,8 +10460,7 @@
           const next = replaceSegmentText(slide.notes || '', issue, suggestion);
           slide.notes = next;
           if (SF.currentIndex === slideIndex) {
-            const notesEl = document.getElementById('slideNotesInput');
-            if (notesEl) notesEl.value = next;
+            setNotesText(next);
             syncFilmstripNotesBadge(slideIndex);
             scheduleSave();
           } else {
@@ -10696,14 +10884,7 @@
       if (SF.editorViewMode === 'grid') return;
       scheduleSave();
     });
-    document.getElementById('slideNotesInput')?.addEventListener('input', () => {
-      if (SF.slides[SF.currentIndex]) {
-        SF.slides[SF.currentIndex].notes = document.getElementById('slideNotesInput')?.value || '';
-        syncFilmstripNotesBadge(SF.currentIndex);
-      }
-      scheduleSave();
-    });
-    applySpellcheckAttrs(document.getElementById('slideNotesInput'));
+    initNotesEditor();   // 3.12.41: Eingabe, Einfügen, Leiste, Rechtschreibprüfung
     applySpellcheckAttrs(document.getElementById('edTitle'));
 
     /*
@@ -10748,6 +10929,12 @@
     const textFormatKey = (rbId) => (e) => {
       const ie = SF.inlineEdit;
       const inInline = !!(ie && e && e.target && ie.el.contains(e.target));
+      /* 3.12.41: im Notizfeld auf die Markierung der Notizen */
+      const notesEl = notesField();
+      if (notesEl && notesRich() && e && e.target && notesEl.contains(e.target)) {
+        notesToggle(RB_INLINE_KEY[rbId]);
+        return true;
+      }
       if (!inInline && (inField(e) || !ribbonStartTextNode() || !stagePlayContext())) return 'native';
       const btn = document.getElementById(rbId);
       if (!btn || btn.disabled) return 'native';
@@ -10969,8 +11156,7 @@
     const transition = transitionEl ? getTransitionValue() : 'slide';
     const autoAdvanceEl = document.getElementById('autoAdvanceInput');
     const autoAdvance = autoAdvanceEl ? (parseInt(autoAdvanceEl.value, 10) || 0) : 0;
-    const notesEl = document.getElementById('slideNotesInput');
-    const notes = notesEl ? notesEl.value : '';
+    const notes = getNotesText();
     const slide = SF.slides[SF.currentIndex] || {};
     return {
       background,
@@ -11200,8 +11386,7 @@
     const autoAdvance = SF.editorViewMode === 'grid'
       ? (Math.max(0, parseInt(slideMeta.autoAdvance, 10) || 0))
       : ribbonAutoAdvanceValue();
-    const notesEl = document.getElementById('slideNotesInput');
-    const notes = notesEl ? notesEl.value : '';
+    const notes = getNotesText();
     const layoutKey = SF.layoutSetMode || Object.prototype.hasOwnProperty.call(slideMeta, 'layoutKey')
       ? (slideMeta.layoutKey || '')
       : null;

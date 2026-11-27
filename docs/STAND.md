@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.41 gebaut** (`entwickler/slide-notizen-editor` ab 3.12.40 f4426ad, Worktree `gemeinde/wt-slide-notizen-editor`): Notizen formatiert bearbeiten (contenteditable über SfMarkup/SfRichEdit, Leiste B/I/U/Farbe/Marker, Ctrl+B/I/U). Nicht im Browser geprüft.
 - **27.11. 3.12.40 gebaut** (`entwickler/slide-uebergang` ab 3.12.39): Folienübergang gehört der kommenden Folie (SlideRenderer transitionPairs/transitionCss). Bei Gitwart.
 - **27.11. 3.12.39 gebaut** (`entwickler/slide-ebenen-fix` ab 3.12.38): Ebenen-Kürzel auch mit Fokus in der Seitenleiste. Bei Gitwart.
 - **27.11. 3.12.38 gebaut** (`entwickler/slide-keytip-seite` ab 3.12.35 bf5d1ec, Worktree `_claude/entwickler/wt-slide-keytip`, Version nicht angehoben): Tastentipps Seitenleiste/Filmstreifen (Ctrl wechselt, Foliennummern), neue Datei sf-keytips-side.js. Braucht Hub 2.37.4 (`entwickler/hub-keytip-bereiche`). Nicht im Browser gesehen.

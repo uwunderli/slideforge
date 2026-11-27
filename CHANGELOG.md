@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.41] - 2026-11-27
+
+### Added
+- **Notizen formatiert bearbeiten** (Urs 27.11.): Das Notizfeld im Editor zeigt Fett, Kursiv, Unterstrichen, Farben und Marker so, wie sie in der Präsentation erscheinen. Kleine Leiste über dem Feld (Fett, Kursiv, Unterstrichen, Schriftfarbe, Marker, Formatierung entfernen) wirkt auf die Markierung; Ctrl+B/I/U ebenso (Kürzel aus dem Katalog). Gespeichert wird wie bisher die Auszeichnung; Einfügen nur als reiner Text.
+
 ## [3.12.40] - 2026-11-27
 
 ### Changed

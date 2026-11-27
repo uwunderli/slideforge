@@ -404,6 +404,11 @@ return [
     'notes.title' => 'Notas per questa slide',
     'notes.hint' => 'Markdown &middot; mo visibel en modus da preschataziun',
     'notes.placeholder' => 'Notas per il preschatai…',
+    'notes.format_bar' => 'Formatar las notas',
+    'notes.color' => 'Colur dal text',
+    'notes.mark' => 'Marcader',
+    'notes.clear_format' => 'Allontanar la formataziun',
+    'notes.format_sel_hint' => 'vala per la selecziun',
 
     'props.empty' => 'Nagin object seleccionà.<br>Clicca sin in object per modifitgar el.',
     'props.layers_title' => 'Stratos',

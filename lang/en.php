@@ -429,6 +429,11 @@ return [
     'notes.title' => 'Notes for this slide',
     'notes.hint' => 'Markdown &middot; only visible in presenter mode',
     'notes.placeholder' => 'Notes for the presenter…',
+    'notes.format_bar' => 'Format notes',
+    'notes.color' => 'Text colour',
+    'notes.mark' => 'Highlighter',
+    'notes.clear_format' => 'Clear formatting',
+    'notes.format_sel_hint' => 'applies to the selection',
 
     'props.empty' => 'No object selected.<br>Click an object to edit it.',
     'props.layers_title' => 'Layers',
