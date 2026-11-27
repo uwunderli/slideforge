@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.2] - 2026-11-27
+
+### Changed
+- Effekte › Einblenden/Ausblenden: «Animation kopieren/einfügen», «Mit vorherigem/Nach vorherigem» (bzw. «Mit nächstem/Beim nächsten Klick») und «Dauer»/«Automatisch starten» je in einer Zeile mit zwei gleich breiten Spalten, Knöpfe und Beschriftungen mit Hub-Symbolen; bei sehr schmaler Seitenleiste untereinander.
+- Effektliste: Schritt-Abzeichen als Pillen («5 → 6», Ausblenden umrandet), auch zweistellig lesbar; Plakette auf der Bühne misst die Textbreite.
 ## [3.12.1] - 2026-11-27
 
 ### Changed

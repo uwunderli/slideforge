@@ -8244,17 +8244,37 @@ body.notes-resizing {
   opacity: 0.55;
 }
 .props-effect-order {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+/* Pille je Schritt: wächst mit der Zahl (min. Kreis), tabellarische Ziffern (3.12.2) */
+.props-effect-pill {
+  box-sizing: border-box;
   min-width: 20px;
   height: 20px;
+  padding: 0 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
+  border: 1px solid var(--accent);
   background: var(--accent);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.props-effect-pill--out {
+  background: transparent;
+  color: var(--accent);
+}
+.props-effect-arrow {
+  font-size: 0.7rem;
+  color: var(--text-muted);
 }
 .props-effect-text {
   flex: 1;
@@ -12167,4 +12187,50 @@ select.sf-fsel-native { display: none !important; }
    blendete im Reiter-Modus auch den Klapp-Kopf der Effekte-Abschnitte aus – sichtbar blieb nur das kleine ▶. */
 .props-sidebar-tabs .props-fx-fold .props-fx-head {
   display: flex;
+}
+
+/* Effekte: Knopf- und Auswahl-Paare je in einer Zeile, zwei gleich breite Spalten,
+   bei sehr schmaler Seitenleiste untereinander (3.12.2, Urs 27.11.) */
+.props-effects-panel .props-fx-row,
+.props-sidebar-a .props-effects-panel .props-transfer-row.props-fx-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  flex-direction: unset;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+.props-effects-panel .props-fx-row > * {
+  min-width: 0;
+}
+.props-effects-panel .props-fx-row .button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: normal;
+  line-height: 1.2;
+  text-align: left;
+}
+.props-effects-panel .props-fx-selects label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.props-effects-panel .props-fx-selects select {
+  width: 100%;
+  max-width: 100%;
+}
+.props-fx-ico {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: currentColor;
 }

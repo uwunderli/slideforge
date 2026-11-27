@@ -4439,20 +4439,32 @@
     return aus ? ein + '→' + aus.order : ein;
   }
 
+  /** Schritt-Abzeichen der Effektliste: Pille je Schritt, «5 → 6» lesbar auch zweistellig (3.12.2). */
+  function animBadgeHtml(node) {
+    const ein = hatEinblenden(node) ? String(Math.max(1, parseInt(node.getAttr('animOrder'), 10) || 1)) : '';
+    const aus = nodeExit(node);
+    const titel = animBadgeText(node);
+    let html = '<span class="props-effect-order" title="' + escapeHtml(titel) + '">';
+    if (ein) html += '<span class="props-effect-pill">' + escapeHtml(ein) + '</span>';
+    if (aus) {
+      html += '<span class="props-effect-arrow" aria-hidden="true">→</span>'
+        + '<span class="props-effect-pill props-effect-pill--out">' + escapeHtml(String(aus.order)) + '</span>';
+    }
+    return html + '</span>';
+  }
+
   function updateAnimationBadge(node) {
     removeAnimationBadge(node);
     const text = animBadgeText(node);
     if (!text || !SF.layer) return;
     const box = node.getClientRect({ relativeTo: SF.layer });
-    const breite = Math.max(22, 10 + text.length * 8);
+    /* Pille mit gemessener Textbreite (min. Kreis 22 px, 7 px Rand je Seite) — «12→13» passt (3.12.2). */
+    const schrift = new Konva.Text({ x: 0, y: 0, height: 22, text: text, fontSize: 12, fontFamily: 'JetBrains Mono', fill: '#ffffff', verticalAlign: 'middle' });
+    const breite = Math.max(22, Math.ceil(schrift.width()) + 14);
+    schrift.x(Math.round((breite - schrift.width()) / 2));
     const badge = new Konva.Group({ x: box.x - 11, y: box.y - 11, listening: false, name: 'sf-badge' });
     badge.add(new Konva.Rect({ x: 0, y: 0, width: breite, height: 22, cornerRadius: 11, fill: '#3a6c8d', stroke: '#ffffff', strokeWidth: 1 }));
-    badge.add(new Konva.Text({
-      x: 0, y: 0, width: breite, height: 22,
-      text: text,
-      fontSize: 12, fontFamily: 'JetBrains Mono', fill: '#ffffff',
-      align: 'center', verticalAlign: 'middle',
-    }));
+    badge.add(schrift);
     SF.layer.add(badge);
     badge.moveToTop();
     if (SF.transformer) SF.transformer.moveToTop();
@@ -6600,11 +6612,11 @@
     const nachTitel = t.nachTitel || I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
     return '<div><label for="' + id + '">' + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '</label>'
       + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '"></div>'
-      + '<div class="props-transfer-row">'
+      + '<div class="props-transfer-row props-fx-row">'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_mit" title="'
-      + escapeHtml(mitTitel) + '">' + escapeHtml(t.mit || I.animWithPrev || 'Mit vorherigem') + '</button>'
+      + escapeHtml(mitTitel) + '">' + hubSpriteIcon('link') + '<span>' + escapeHtml(t.mit || I.animWithPrev || 'Mit vorherigem') + '</span></button>'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_nach" title="'
-      + escapeHtml(nachTitel) + '">' + escapeHtml(t.nach || I.animAfterPrev || 'Nach vorherigem') + '</button>'
+      + escapeHtml(nachTitel) + '">' + hubSpriteIcon('play') + '<span>' + escapeHtml(t.nach || I.animAfterPrev || 'Nach vorherigem') + '</span></button>'
       + '</div>';
   }
 
@@ -6621,8 +6633,10 @@
         nach: 'Beim nächsten Klick',
         nachTitel: 'Ein Klick nach dem eigenen Einblenden',
       });
-      html += fieldSelectKV('p_exitDuration', I.animDuration, ANIM_DURATION_OPTIONS, ex.duration);
-      html += fieldSelectKV('p_exitAuto', I.animAutostart, ANIM_AUTOSTART_OPTIONS, ex.auto);
+      html += fxSelectPairHtml(
+        { id: 'p_exitDuration', icon: 'clock', label: I.animDuration, options: ANIM_DURATION_OPTIONS, value: ex.duration },
+        { id: 'p_exitAuto', icon: 'refresh', label: I.animAutostart, options: ANIM_AUTOSTART_OPTIONS, value: ex.auto }
+      );
       html += '<div class="props-video-note">' + escapeHtml(I.exitHint
         || 'Das Objekt verschwindet bei diesem Schritt. Hat ein anderes Objekt dieselbe Nummer beim Einblenden, tauscht ein Klick die beiden.') + '</div>';
     }
@@ -6631,11 +6645,13 @@
 
   function buildEffectPropsHtml(node, obj, isText) {
     let html = fieldIconPicker('p_anim', I.effect, ANIMATIONS, obj.animType || 'none', 'effect-icon-grid anim-icon-grid');
-    html += propsTransferRowHtml('copyAnimationBtn', 'pasteAnimationBtn', I.animationCopy, I.animationPaste, !!SF.animationClipboard);
+    html += propsTransferRowHtml('copyAnimationBtn', 'pasteAnimationBtn', I.animationCopy, I.animationPaste, !!SF.animationClipboard, ['files', 'inbox']);
     if ((obj.animType || 'none') !== 'none') {
       html += effektSchrittHtml('p_animOrder', obj.animOrder || 1);
-      html += fieldSelectKV('p_animDuration', I.animDuration, ANIM_DURATION_OPTIONS, obj.animDuration || 0);
-      html += fieldSelectKV('p_animAuto', I.animAutostart, ANIM_AUTOSTART_OPTIONS, obj.animAutoAdvance || 0);
+      html += fxSelectPairHtml(
+        { id: 'p_animDuration', icon: 'clock', label: I.animDuration, options: ANIM_DURATION_OPTIONS, value: obj.animDuration || 0 },
+        { id: 'p_animAuto', icon: 'refresh', label: I.animAutostart, options: ANIM_AUTOSTART_OPTIONS, value: obj.animAutoAdvance || 0 }
+      );
       if (isText) {
         html += '<label style="display:flex; align-items:center; gap:8px; margin-top:12px;"><input type="checkbox" id="p_animPerLine" style="width:auto;" ' + (obj.animPerLine ? 'checked' : '') + '> ' + I.animPerLine + '</label>';
         html += '<div class="props-video-note">' + I.animPerLineHint + '</div>';
@@ -6832,7 +6848,7 @@
         body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '">'
           + '<span class="props-layer-drag-handle" draggable="true" title="'
           + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
-          + '<span class="props-effect-order">' + escapeHtml(animBadgeText(e.node)) + '</span>'
+          + animBadgeHtml(e.node)
           + '<span class="props-effect-text">'
           + '<span class="props-effect-name">' + escapeHtml(layerItemLabel(e.node)) + '</span>'
           + '<span class="props-effect-anim">' + escapeHtml(effektBeschreibung(e.node)) + '</span>'
@@ -7575,11 +7591,26 @@
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }
 
-  function propsTransferRowHtml(copyId, pasteId, copyLabel, pasteLabel, canPaste) {
-    return '<div class="props-transfer-row">' +
-      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + copyId + '">' + escapeHtml(copyLabel) + '</button>' +
-      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + pasteId + '"' + (canPaste ? '' : ' disabled') + '>' + escapeHtml(pasteLabel) + '</button>' +
+  /** Symbol aus dem Hub-Icon-Satz (Sprite des Hubs, wie sf-ff.js devIcon); Name nur nach Muster. */
+  function hubSpriteIcon(name) {
+    const n = /^[a-z0-9-]{1,24}$/.test(String(name || '')) ? String(name) : 'list';
+    return '<svg class="props-fx-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="'
+      + escapeHtml(location.origin + '/assets/icons/hub-icons.svg#hub-i-' + n) + '"></use></svg>';
+  }
+
+  /** Zwei Knöpfe nebeneinander; mit `icons` [links, rechts] je Symbol + Text (Effekte, 3.12.2). */
+  function propsTransferRowHtml(copyId, pasteId, copyLabel, pasteLabel, canPaste, icons) {
+    const ico = (i) => (icons && icons[i] ? hubSpriteIcon(icons[i]) : '');
+    return '<div class="props-transfer-row' + (icons ? ' props-fx-row' : '') + '">' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + copyId + '">' + ico(0) + '<span>' + escapeHtml(copyLabel) + '</span></button>' +
+      '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + pasteId + '"' + (canPaste ? '' : ' disabled') + '>' + ico(1) + '<span>' + escapeHtml(pasteLabel) + '</span></button>' +
       '</div>';
+  }
+
+  /** Zwei Auswahlfelder nebeneinander (Dauer + Automatisch starten), Beschriftung mit Symbol. */
+  function fxSelectPairHtml(a, b) {
+    const feld = (f) => fieldSelectKV(f.id, hubSpriteIcon(f.icon) + '<span>' + f.label + '</span>', f.options, f.value);
+    return '<div class="props-fx-row props-fx-selects">' + feld(a) + feld(b) + '</div>';
   }
 
   function copyPositionFromNode(node) {
