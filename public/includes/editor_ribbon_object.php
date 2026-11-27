@@ -28,7 +28,6 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
           <span class="sr-only"><?= h(t('props.fill_color')) ?></span>
           <input type="color" id="rb_objFill" value="#3a6c8d" disabled title="<?= h(t('props.fill_color')) ?>">
         </label>
-        <div class="ribbon-object-brand-swatches brand-palette mini" id="rb_objFillBrandSwatches" role="group" aria-label="<?= h(t('bg.brand_colors')) ?>"></div>
       </div>
     </div>
 
@@ -40,7 +39,6 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
             <span class="sr-only"><?= h(t('props.color1')) ?></span>
             <input type="color" id="objGradColor1" value="#3a6c8d" disabled title="<?= h(t('props.color1')) ?>">
           </label>
-          <div class="ribbon-object-brand-swatches brand-palette mini" id="rb_objGrad1BrandSwatches" role="group" aria-label="<?= h(t('bg.brand_colors')) ?>"></div>
         </div>
         <div class="ribbon-object-grad-field">
           <span><?= h(t('props.color2')) ?></span>
@@ -48,7 +46,6 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
             <span class="sr-only"><?= h(t('props.color2')) ?></span>
             <input type="color" id="objGradColor2" value="#87b42b" disabled title="<?= h(t('props.color2')) ?>">
           </label>
-          <div class="ribbon-object-brand-swatches brand-palette mini" id="rb_objGrad2BrandSwatches" role="group" aria-label="<?= h(t('bg.brand_colors')) ?>"></div>
         </div>
       </div>
       <div class="ribbon-object-grad-angle">
@@ -81,7 +78,6 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
         <input type="number" id="rb_objStrokeWidth" min="0" step="1" value="0" disabled title="<?= h(t('props.border_width')) ?>" aria-label="<?= h(t('props.border_width')) ?>">
       </label>
     </div>
-    <div class="ribbon-object-brand-swatches brand-palette mini" id="rb_objStrokeBrandSwatches" role="group" aria-label="<?= h(t('bg.brand_colors')) ?>"></div>
   </div>
   <div class="ribbon-group-label"><?= h(t('ribbon.group_object_stroke')) ?></div>
 </div>

@@ -39,7 +39,9 @@
     selectionPanelOpen: true,
     editorViewMode: 'slide',
     gridThumbMin: boot.editorGridThumbMin || 168,
-    brandColors: boot.brandColors || [],
+    // Markenfarben des Hubs (Palette, 3.9.2); ohne Antwort des Hubs die Liste des Bausteins HubColorPicker
+    brandColors: (boot.brandColors && boot.brandColors.length) ? boot.brandColors
+      : (window.HubColorPicker ? HubColorPicker.brandColors().filter((c) => c && !c.break) : []),
     textTemplates: boot.textTemplates || [],
     templateMode: !!boot.templateMode,
     layoutSetMode: !!boot.layoutSetMode,
@@ -2523,85 +2525,6 @@
     const item = document.querySelector('.filmstrip-item[data-id="' + slide.id + '"]');
     if (!item) return;
     item.style.setProperty('--fs-color', slideBgColor({ background: SF.currentBackground }));
-  }
-
-  function renderBrandPalette() {
-    initRibbonBgBrandDropdown();
-  }
-
-  function closeRibbonBgBrandDropdown() {
-    const panel = document.getElementById('bgBrandPalette');
-    const btn = document.getElementById('bgBrandBtn');
-    if (panel) {
-      panel.hidden = true;
-      panel.style.left = '';
-      panel.style.top = '';
-      panel.style.minWidth = '';
-    }
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-  }
-
-  function positionRibbonBgBrandDropdown() {
-    const panel = document.getElementById('bgBrandPalette');
-    const btn = document.getElementById('bgBrandBtn');
-    if (!panel || !btn) return;
-    const rect = btn.getBoundingClientRect();
-    panel.style.position = 'fixed';
-    panel.style.left = Math.max(8, rect.left) + 'px';
-    panel.style.top = (rect.bottom + 4) + 'px';
-    panel.style.minWidth = rect.width + 'px';
-    panel.style.zIndex = '500';
-    const panelRect = panel.getBoundingClientRect();
-    if (panelRect.right > window.innerWidth - 8) {
-      panel.style.left = Math.max(8, window.innerWidth - panelRect.width - 8) + 'px';
-    }
-  }
-
-  function toggleRibbonBgBrandDropdown() {
-    const panel = document.getElementById('bgBrandPalette');
-    const btn = document.getElementById('bgBrandBtn');
-    if (!panel || !btn) return;
-    const willOpen = panel.hidden;
-    closeRibbonBgBrandDropdown();
-    closeRibbonBrandDropdown();
-    closeRibbonObjectBrandDropdowns();
-    if (willOpen) {
-      panel.hidden = false;
-      btn.setAttribute('aria-expanded', 'true');
-      positionRibbonBgBrandDropdown();
-    }
-  }
-
-  function initRibbonBgBrandDropdown() {
-    const panel = document.getElementById('bgBrandPalette');
-    if (!panel || panel.dataset.wired === '1') return;
-    panel.dataset.wired = '1';
-    panel.innerHTML = SF.brandColors.map((c) =>
-      '<button type="button" class="brand-swatch" role="menuitem" data-color="' + c.hex + '" title="' + escapeHtml(c.name || c.hex) + '" style="background:' + c.hex + '"></button>'
-    ).join('');
-    panel.querySelectorAll('.brand-swatch').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const colorInput = document.getElementById('bgColorInput');
-        if (colorInput) colorInput.value = btn.dataset.color;
-        SF.currentBackground = { type: 'color', value: btn.dataset.color };
-        applyBackgroundVisual(SF.currentBackground);
-        populateBackgroundControls(SF.currentBackground);
-        updateCurrentTabSwatch();
-        scheduleSave();
-        closeRibbonBgBrandDropdown();
-      });
-    });
-    document.getElementById('bgBrandBtn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleRibbonBgBrandDropdown();
-    });
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-ribbon-brand-menu="bgColor"]')) closeRibbonBgBrandDropdown();
-    });
-    window.addEventListener('resize', () => {
-      const btn = document.getElementById('bgBrandBtn');
-      if (panel && btn && !panel.hidden) positionRibbonBgBrandDropdown();
-    });
   }
 
   function updateSlideBgMediaModalPreview() {
@@ -5508,8 +5431,6 @@
     if (!panel || !btn || btn.disabled) return;
     const willOpen = panel.hidden;
     closeRibbonTemplateDropdown();
-    closeRibbonBrandDropdown();
-    closeRibbonBgBrandDropdown();
     if (willOpen) {
       panel.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
@@ -5580,36 +5501,8 @@
       if (el) el.disabled = !enabled;
     });
     setRibbonTemplateControlsEnabled(enabled);
-    const brandBtn = document.getElementById('rb_brandBtn');
-    if (brandBtn) brandBtn.disabled = !enabled;
-    document.querySelectorAll('#rb_brandPalette .brand-swatch').forEach((btn) => {
-      btn.disabled = !enabled;
-    });
     if (!enabled) {
       closeRibbonTemplateDropdown();
-      closeRibbonBrandDropdown();
-    }
-  }
-
-  function closeRibbonBrandDropdown() {
-    const panel = document.getElementById('rb_brandPalette');
-    const btn = document.getElementById('rb_brandBtn');
-    if (panel) panel.hidden = true;
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-  }
-
-  function toggleRibbonBrandDropdown() {
-    const panel = document.getElementById('rb_brandPalette');
-    const btn = document.getElementById('rb_brandBtn');
-    if (!panel || !btn || btn.disabled) return;
-    const willOpen = panel.hidden;
-    closeRibbonBrandDropdown();
-    closeRibbonBgBrandDropdown();
-    closeRibbonObjectBrandDropdowns();
-    closeRibbonTemplateDropdown();
-    if (willOpen) {
-      panel.hidden = false;
-      btn.setAttribute('aria-expanded', 'true');
     }
   }
 
@@ -5654,7 +5547,6 @@
     if (lsEl) lsEl.value = obj.letterSpacing ?? 0;
     const colorEl = document.getElementById('rb_color');
     if (colorEl) colorEl.value = obj.color || '#ffffff';
-    markActiveBrandSwatches('rb_brandPalette', obj.color || '#ffffff');
     const opEl = document.getElementById('rb_opacity');
     const opVal = Math.round((obj.opacity ?? 1) * 100);
     if (opEl) {
@@ -5692,32 +5584,6 @@
       '<option value="' + escapeHtml(f) + '">' + escapeHtml(f) + '</option>'
     ).join('');
 
-    const palette = document.getElementById('rb_brandPalette');
-    if (palette) {
-      palette.innerHTML = SF.brandColors.map((c) =>
-        '<button type="button" class="brand-swatch" role="menuitem" data-color="' + c.hex + '" title="' + escapeHtml(c.name || c.hex) + '" aria-label="' + escapeHtml(c.name || c.hex) + '" style="background:' + c.hex + '"></button>'
-      ).join('');
-      palette.querySelectorAll('.brand-swatch').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const node = ribbonStartTextNode();
-          if (!node) return;
-          const colorInput = document.getElementById('rb_color');
-          if (colorInput) colorInput.value = btn.dataset.color;
-          node.fill(btn.dataset.color);
-          markActiveBrandSwatches('rb_brandPalette', btn.dataset.color);
-          refreshCanvas();
-          scheduleSave();
-          closeRibbonBrandDropdown();
-        });
-      });
-    }
-    document.getElementById('rb_brandBtn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleRibbonBrandDropdown();
-    });
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-ribbon-brand-menu="textColor"]')) closeRibbonBrandDropdown();
-    });
     renderRibbonTemplateMenu();
     initRibbonTemplateGalleryObserver();
     document.getElementById('rb_templateBtn')?.addEventListener('click', (e) => {
@@ -5833,7 +5699,6 @@
       const node = ribbonStartTextNode();
       if (!node) return;
       node.fill(e.target.value);
-      markActiveBrandSwatches('rb_brandPalette', e.target.value);
       refreshCanvas();
       scheduleSave();
     });
@@ -5912,37 +5777,6 @@
     });
     const opEl = document.getElementById('rb_objOpacity');
     if (opEl) opEl.disabled = !enabled;
-    document.querySelectorAll(
-      '#rb_objFillBrandSwatches .brand-swatch, #rb_objGrad1BrandSwatches .brand-swatch, #rb_objGrad2BrandSwatches .brand-swatch'
-    ).forEach((btn) => {
-      btn.disabled = !enabled || !fillSupported;
-    });
-    document.querySelectorAll('#rb_objStrokeBrandSwatches .brand-swatch').forEach((btn) => {
-      btn.disabled = !enabled;
-    });
-  }
-
-  function closeRibbonObjectBrandDropdowns() {
-    /* Objekt-Fläche/Kontur nutzen Inline-Swatches; Dropdowns nur noch andernorts. */
-  }
-
-  function positionRibbonObjectBrandDropdown() {}
-
-  function toggleRibbonObjectBrandDropdown() {}
-
-  function brandSwatchHtml() {
-    return (SF.brandColors || []).map((c) =>
-      '<button type="button" class="brand-swatch" data-color="' + c.hex + '" title="' + escapeHtml(c.name || c.hex) + '" aria-label="' + escapeHtml(c.name || c.hex) + '" style="background:' + c.hex + '"></button>'
-    ).join('');
-  }
-
-  function markActiveBrandSwatches(containerId, hex) {
-    const wrap = document.getElementById(containerId);
-    if (!wrap) return;
-    const target = String(hex || '').toLowerCase();
-    wrap.querySelectorAll('.brand-swatch').forEach((btn) => {
-      btn.classList.toggle('active', String(btn.dataset.color || '').toLowerCase() === target);
-    });
   }
 
   function applyObjectFillNone(node) {
@@ -6018,8 +5852,6 @@
       if (c1) c1.value = node.getAttr('gradColor1') || '#3a6c8d';
       if (c2) c2.value = node.getAttr('gradColor2') || '#87b42b';
       if (angle) angle.value = String(node.getAttr('gradAngle') !== undefined ? node.getAttr('gradAngle') : 90);
-      markActiveBrandSwatches('rb_objGrad1BrandSwatches', c1?.value);
-      markActiveBrandSwatches('rb_objGrad2BrandSwatches', c2?.value);
     }
     updateObjectGradientPreview();
   }
@@ -6048,12 +5880,10 @@
     const fillEl = document.getElementById('rb_objFill');
     if (fillEl && fillSupported && fillType === 'solid') {
       fillEl.value = node.fill() || obj.fill || '#cccccc';
-      markActiveBrandSwatches('rb_objFillBrandSwatches', fillEl.value);
     }
     const strokeVal = (obj.stroke && obj.stroke !== 'transparent') ? obj.stroke : '#ffffff';
     const strokeEl = document.getElementById('rb_objStroke');
     if (strokeEl) strokeEl.value = strokeVal;
-    markActiveBrandSwatches('rb_objStrokeBrandSwatches', strokeVal);
     const swEl = document.getElementById('rb_objStrokeWidth');
     if (swEl) swEl.value = String(obj.strokeWidth || 0);
     const opEl = document.getElementById('rb_objOpacity');
@@ -6072,51 +5902,6 @@
     const fillModes = document.getElementById('ribbonObjectFillModes');
     if (!fillModes || fillModes.dataset.wired === '1') return;
     fillModes.dataset.wired = '1';
-
-    const swatchHtml = brandSwatchHtml();
-    const fillSwatches = document.getElementById('rb_objFillBrandSwatches');
-    const grad1Swatches = document.getElementById('rb_objGrad1BrandSwatches');
-    const grad2Swatches = document.getElementById('rb_objGrad2BrandSwatches');
-    const strokeSwatches = document.getElementById('rb_objStrokeBrandSwatches');
-    if (fillSwatches) fillSwatches.innerHTML = swatchHtml;
-    if (grad1Swatches) grad1Swatches.innerHTML = swatchHtml;
-    if (grad2Swatches) grad2Swatches.innerHTML = swatchHtml;
-    if (strokeSwatches) strokeSwatches.innerHTML = swatchHtml;
-
-    fillSwatches?.querySelectorAll('.brand-swatch').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const node = ribbonObjectColorNode();
-        if (!node || !shapeSupportsRibbonFill(node)) return;
-        const fillEl = document.getElementById('rb_objFill');
-        if (fillEl) fillEl.value = btn.dataset.color;
-        applyObjectFillSolid(node, btn.dataset.color);
-      });
-    });
-    strokeSwatches?.querySelectorAll('.brand-swatch').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const node = ribbonObjectColorNode();
-        if (!node) return;
-        const strokeEl = document.getElementById('rb_objStroke');
-        if (strokeEl) strokeEl.value = btn.dataset.color;
-        node.stroke(btn.dataset.color);
-        refreshCanvas();
-        scheduleSave();
-        syncRibbonObjectColor();
-      });
-    });
-    const wireGradSwatches = (wrap, colorInputId) => {
-      wrap?.querySelectorAll('.brand-swatch').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const node = ribbonObjectColorNode();
-          if (!node || !shapeSupportsRibbonFill(node)) return;
-          const colorEl = document.getElementById(colorInputId);
-          if (colorEl) colorEl.value = btn.dataset.color;
-          applyObjectGradientFromEditor(node);
-        });
-      });
-    };
-    wireGradSwatches(grad1Swatches, 'objGradColor1');
-    wireGradSwatches(grad2Swatches, 'objGradColor2');
 
     document.getElementById('rb_objFillNone')?.addEventListener('click', () => {
       const node = ribbonObjectColorNode();
@@ -6152,7 +5937,6 @@
       const node = ribbonObjectColorNode();
       if (!node) return;
       node.stroke(e.target.value);
-      markActiveBrandSwatches('rb_objStrokeBrandSwatches', e.target.value);
       refreshCanvas();
       scheduleSave();
     });
@@ -6296,7 +6080,6 @@
       html += '<div class="' + previewClass + '"><img src="' + previewSrc + '" alt=""></div>';
       if (isIcon) {
         html += fieldColor('p_iconColor', I.iconColor, obj.iconColor || defaultIconColor());
-        html += miniPaletteHtml('p_iconColor');
       }
       html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="replaceAssetBtn" style="width:100%;">' + I.replaceImage + '</button>';
       html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="removeBgBtn" style="width:100%; margin-top:8px;">' + I.removeBackground + '</button>';
@@ -6888,8 +6671,8 @@
       '<button type="button" class="format-toggle-btn" id="markSelectionBtn" title="' + I.mark + '">🖊</button>' +
       '<button type="button" class="format-toggle-btn" id="colorSelectionBtn" title="' + I.textColorBtn + '">🎨</button>' +
       '</div>';
-    body += '<div id="markSelectionPalette" hidden><div class="options-subtitle" style="margin-top:8px;">' + I.markColorPick + '</div><input type="color" id="markColorPicker" value="#fff176" style="width:100%; height:32px; margin-bottom:6px;">' + miniPaletteHtml('markColorPicker') + '</div>';
-    body += '<div id="colorSelectionPalette" hidden><div class="options-subtitle" style="margin-top:8px;">' + I.textColorPick + '</div><input type="color" id="textColorPicker" value="#3a6c8d" style="width:100%; height:32px; margin-bottom:6px;">' + miniPaletteHtml('textColorPicker') + '</div>';
+    body += '<div id="markSelectionPalette" hidden><div class="options-subtitle" style="margin-top:8px;">' + I.markColorPick + '</div><input type="color" id="markColorPicker" value="#fff176" style="width:100%; height:32px; margin-bottom:6px;">' + '</div>';
+    body += '<div id="colorSelectionPalette" hidden><div class="options-subtitle" style="margin-top:8px;">' + I.textColorPick + '</div><input type="color" id="textColorPicker" value="#3a6c8d" style="width:100%; height:32px; margin-bottom:6px;">' + '</div>';
     body += propsHelpDisclosure('selection', I.selectionHintTitle || 'Hilfe: Text markieren', I.selectionHint);
     body += propsHelpDisclosure('markdown', I.markdownHintTitle || 'Hilfe: Markdown', I.markdownHint);
 
@@ -6938,12 +6721,6 @@
     });
   }
 
-  function miniPaletteHtml(forId) {
-    return '<div class="brand-palette mini" data-for="' + forId + '">' +
-      SF.brandColors.map(c => '<button type="button" class="brand-swatch" data-color="' + c.hex + '" data-for="' + forId + '" style="background:' + c.hex + '" title="' + (c.name || c.hex) + '"></button>').join('') +
-      '</div>';
-  }
-
   function fieldNumber(id, label, value) {
     return '<div><label for="' + id + '">' + label + '</label><input type="number" id="' + id + '" value="' + value + '"></div>';
   }
@@ -6961,7 +6738,7 @@
   }
   /** Farbfeld mit den Markenfarben darunter. */
   function tableColorField(id, label, value) {
-    return fieldColor(id, escapeHtml(label), value) + miniPaletteHtml(id);
+    return fieldColor(id, escapeHtml(label), value);
   }
   /** Kleiner Knopf für die Tabellen-Eigenschaften (Zeile/Spalte mehr oder weniger). */
   function tableBtn(id, label) {
@@ -7281,14 +7058,6 @@
       });
     });
 
-    document.querySelectorAll('.brand-palette.mini .brand-swatch').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = document.getElementById(btn.dataset.for);
-        if (!target) return;
-        target.value = btn.dataset.color;
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    });
 
     if (type === 'text') {
       on('p_text', 'input', (e) => { node.text(e.target.value); refreshCanvas(); scheduleSave(); autoGrowTextarea(e.target); });
@@ -7371,13 +7140,6 @@
           wrapTextSelection('[' + tagName + '=' + picker.value + ']', '[/' + tagName + ']');
           palette.hidden = true;
           btn.classList.remove('active');
-        });
-        palette.querySelectorAll('.brand-swatch').forEach(sw => {
-          sw.addEventListener('click', () => {
-            wrapTextSelection('[' + tagName + '=' + sw.dataset.color + ']', '[/' + tagName + ']');
-            palette.hidden = true;
-            btn.classList.remove('active');
-          });
         });
       }
       bindColorSelectionTool('markSelectionBtn', 'markSelectionPalette', 'markColorPicker', 'mark');
@@ -9285,7 +9047,6 @@
       scheduleSave();
     });
 
-    renderBrandPalette();
     initSlideBgMediaModal();
     initSlideBgGradientModal();
 

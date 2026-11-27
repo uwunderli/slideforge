@@ -8,7 +8,7 @@ declare(strict_types=1);
  *   php scripts/migrate-to-ff.php --source=/data/slideforge/data --run    übernehmen (zweiter Lauf überspringt Übernommenes)
  *   … --ablage="BK - Office"   statt «Meine Ablage» in diese Ablage (per Name, als die Besitzerin; ohne Schreibrecht = Fehler)
  *   … --settings               nur die Einstellungen nachholen (3.8.3: Seitentitel, Logo, LanguageTool, Pixabay, Iconify, Openclipart,
- *                              Markenfarben, Textvorlagen, Vorlageelemente); füllt nur Leeres/Werkseinstellung, Sicherung *.vor-settings-*,
+ *                              Textvorlagen, Vorlageelemente; Markenfarben nicht, die kommen aus der Hub-Palette); füllt nur Leeres/Werkseinstellung, Sicherung *.vor-settings-*,
  *                              ohne --run nur Probelauf. Ausgabe nennt Schlüssel, nie Werte.
  *
  * Protokoll: data/migration/protokoll-<zeit>.md. Die Quelle wird nur gelesen.

@@ -363,29 +363,6 @@
   box-sizing: border-box;
 }
 
-/* Markenfarben als kleine Felder unter dem Farbwähler. */
-.import-brand-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.import-brand-swatch {
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  border-radius: 3px;
-  padding: 0;
-  cursor: pointer;
-}
-
-.import-brand-swatch:hover,
-.import-brand-swatch:focus-visible {
-  outline: 2px solid var(--accent, #8a6d3b);
-  outline-offset: 1px;
-}
-
 /* Notizen in der Vorschau als gesetztes Markdown: Überschriften nach Ebene. */
 .import-note-part.is-head span {
   font-weight: 600;
@@ -411,65 +388,6 @@
 
 .import-note-part.is-head:first-child {
   margin-top: 0;
-}
-
-/* Farbwahl als Ausklappfeld, wie bei den Ribbon-Auswahlfeldern. */
-.import-color-field {
-  position: relative;
-}
-
-.import-color-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 5px 8px;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.import-color-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  flex: 0 0 auto;
-}
-
-.import-color-name {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.import-color-caret {
-  flex: 0 0 auto;
-  opacity: 0.6;
-}
-
-/* Die Auswahl liegt über dem Inhalt, nicht im Fluss — sonst springt die Spalte auf. */
-.import-color-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 220px;
-  padding: 8px;
-  border: 1px solid rgba(128, 128, 128, 0.5);
-  border-radius: 6px;
-  background: var(--panel-bg, #efeae3);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-}
-
-.import-color-panel .import-brand-swatches {
-  margin: 0 0 8px;
 }
 
 /* Etwas Luft am unteren Rand jeder Spalte, damit die letzte Zeile nicht bündig

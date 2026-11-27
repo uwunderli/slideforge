@@ -72,34 +72,10 @@ class Config
         return Demo::isActive();
     }
 
-    /** Markenfarben einer frischen Installation (config.php; Übernahme erkennt daran «noch nie geändert»). @return list<array{name:string,hex:string}> */
-    public static function defaultBrandColors(): array
-    {
-        return [
-            ['name' => 'Weiss', 'hex' => '#ffffff'],
-            ['name' => 'Grau', 'hex' => '#808080'],
-            ['name' => 'Schwarz', 'hex' => '#000000'],
-            ['name' => 'Brilliant Blau', 'hex' => '#3a6c8d'],
-            ['name' => 'Blümchen Grün', 'hex' => '#87b42b'],
-            ['name' => 'Gold', 'hex' => '#d1b633'],
-            ['name' => 'Braun', 'hex' => '#85612d'],
-            ['name' => 'Hellblau', 'hex' => '#94c2dc'],
-            ['name' => 'Graublau', 'hex' => '#6a8aa1'],
-            ['name' => 'Terracotta', 'hex' => '#d67d5d'],
-            ['name' => 'Beere', 'hex' => '#862b6e'],
-            ['name' => 'Taupe', 'hex' => '#917158'],
-            ['name' => 'Himmelblau', 'hex' => '#61a8e0'],
-            ['name' => 'Limette', 'hex' => '#97c764'],
-            ['name' => 'Dunkelgrün', 'hex' => '#252e1b'],
-            ['name' => 'Rostrot', 'hex' => '#64180b'],
-            ['name' => 'Hellgrün', 'hex' => '#b7de45'],
-            ['name' => 'Indigo', 'hex' => '#4449a5'],
-        ];
-    }
-
+    /** Markenfarben: nur aus der Palette des Hubs (3.9.2, Regel Urs 09.11.: eine Quelle); `brand_colors` in config.json gilt nicht mehr. */
     public static function brandColors(): array
     {
-        return self::get('brand_colors', []);
+        return SfPalette::brandColors();
     }
 
     public static function languageTool(): array

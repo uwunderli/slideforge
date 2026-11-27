@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.9.2 gebaut** (`entwickler/slide-farbwahl`, nach 3.9.1): Farbwahl überall HubColorPicker mit Hub-Palette (`SfPalette`, `sf-color.js`), eigene Markenfarben-Liste und Schnellwahlen entfernt; Reiter Farben nur Anzeige + Link Hub › Branding. Offen: im Browser ansehen (Menüband-Farbfelder).
+
 - **27.11. 3.9.1 gebaut** (`entwickler/slide-split`, Worktree `_claude/entwickler/wt-slide-split`, nach 3.9.0): Editor-Spalten links/rechts per Hub-Trenner (HubSplit) verstellbar, Breite je Person in `editor_ui.splits`; Notiz-Trenner mit Pfeiltasten; Filmstreifen/Raster behalten Bildlauf beim Neuaufbau. Presenter unverändert (eigene Trenner).
 - **27.11. 3.9.0 gebaut** (`entwickler/slide-hub-schriften` auf 3.8.3, Worktree `_claude/entwickler/wt-slide-hub-schriften`): Schriften aus dem Hub (braucht Hub 2.34.0 + FF 1.18.3), Upload-Verwaltung weg, Übergang alte `custom_fonts` (Biel: 1 Schrift, Myriad Pro Regular). Nach Auslieferung und Ordnerwahl durch Urs: `php scripts/schriften-in-hub.php --person=<Urs> [--run]` auf Biel (stösst Entwickler über ha-bkb an).
 - **27.11. 3.8.3 gebaut** (`entwickler/slide-einstellungen`, nach 3.8.2): Einstellungen vollständig (Reiter Folienvorlagen/Textvorlagen/Vorlageelemente/Schriftarten/Farben + Admin Allgemein/Rechtschreibung/Medien; Modul-Einstellungen + Startseite «Einstellungen»), Autosave, SMTP raus, `migrate-to-ff.php --settings` (Biel: ha-bkb nach Lieferung). Offen: Farben-Reiter → Hub-Palette (Entscheid), Schriftarten → Hub (Entscheid Urs).

@@ -1481,16 +1481,6 @@ if (!empty($sfSplits['sf_editor_props'])) { $sfSplitStyle .= '--editor-props-wid
           <span><?= h(t('iconify.icon_color')) ?></span>
           <input type="color" id="iconifyColor" value="<?= h($defaultIconColor) ?>">
         </label>
-        <?php if (!empty($iconBrandColors)): ?>
-        <div class="pixabay-filter-item iconify-color-palette-wrap">
-          <span><?= h(t('iconify.brand_colors')) ?></span>
-          <div class="brand-palette mini" id="iconifyColorPalette">
-            <?php foreach ($iconBrandColors as $c): ?>
-            <button type="button" class="brand-swatch" data-color="<?= h($c['hex']) ?>" style="background:<?= h($c['hex']) ?>" title="<?= h($c['name'] ?? $c['hex']) ?>"></button>
-            <?php endforeach; ?>
-          </div>
-        </div>
-        <?php endif; ?>
       </div>
     </div>
     <div class="pixabay-modal-meta">

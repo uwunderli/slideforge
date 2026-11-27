@@ -1470,126 +1470,7 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   align-items: center;
   gap: 8px 10px;
 }
-.present-brand-color-select-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1 1 160px;
-}
-.present-brand-color-select-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-}
-.present-brand-color-select {
-  flex: 1;
-  min-width: 0;
-  max-width: 220px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.82rem;
-}
-.present-brand-color-dropdown {
-  position: relative;
-  flex: 1 1 180px;
-  min-width: 0;
-  max-width: 240px;
-}
-.present-brand-color-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.82rem;
-  cursor: pointer;
-  text-align: left;
-}
-.present-brand-color-trigger:hover,
-.present-brand-color-dropdown.is-open .present-brand-color-trigger {
-  border-color: var(--accent);
-}
-.present-brand-color-trigger-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.present-brand-color-chevron {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-.present-brand-color-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: min(240px, 40vh);
-  overflow: auto;
-  padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
-}
-.present-brand-color-panel[hidden] {
-  display: none !important;
-}
-.present-brand-color-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.82rem;
-  cursor: pointer;
-  text-align: left;
-}
-.present-brand-color-option:hover,
-.present-brand-color-option.is-active {
-  background: var(--accent-dim, rgba(0, 0, 0, 0.06));
-}
-.present-brand-color-option-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-}
-.present-brand-color-option-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .font-upload-form { margin-top: 16px; max-width: 560px; }
 .font-row {
   display: flex;
@@ -4074,7 +3955,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .editor-ribbon.is-labels-hidden .ribbon-grid-cell--widget .present-config-btn > span:not(.present-config-chevron):not(.present-config-btn-icon) {
   display: none;
 }
-/* Ribbon: einheitliche Farben — aktiv/hell, deaktiviert/ausgegraut */
 .editor-ribbon .ribbon-btn,
 .editor-ribbon .ribbon-btn-tall,
 .editor-ribbon .ribbon-icon-btn,
@@ -4086,8 +3966,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .editor-ribbon .effect-icon-btn,
 .editor-ribbon .ribbon-shape-style-btn,
 .editor-ribbon .ribbon-template-tile,
-.editor-ribbon .ribbon-template-more-btn,
-.editor-ribbon .ribbon-brand-dropdown-btn {
+.editor-ribbon .ribbon-template-more-btn {
   color: var(--ribbon-fg);
 }
 .editor-ribbon .ribbon-btn > span,
@@ -4117,8 +3996,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .editor-ribbon .effect-icon-btn:disabled,
 .editor-ribbon .ribbon-shape-style-btn:disabled,
 .editor-ribbon .ribbon-template-tile:disabled,
-.editor-ribbon .ribbon-template-more-btn:disabled,
-.editor-ribbon .ribbon-brand-dropdown-btn:disabled {
+.editor-ribbon .ribbon-template-more-btn:disabled {
   color: var(--ribbon-fg-disabled);
   opacity: var(--ribbon-disabled-opacity);
   cursor: not-allowed;
@@ -4172,8 +4050,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .editor-ribbon .bg-type-btn:hover:not(.active),
 .editor-ribbon .format-toggle-btn:hover:not(:disabled),
 .editor-ribbon .effect-icon-btn:hover:not(:disabled),
-.editor-ribbon .ribbon-shape-style-btn:hover:not(:disabled),
-.editor-ribbon .ribbon-brand-dropdown-btn:hover:not(:disabled) {
+.editor-ribbon .ribbon-shape-style-btn:hover:not(:disabled) {
   color: var(--ribbon-fg);
   background: var(--ribbon-bg-hover);
   border-color: var(--ribbon-border-hover);
@@ -4441,8 +4318,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   gap: 4px;
   align-items: center;
 }
-.ribbon-line-stack-row .ribbon-slide-bg-color-inner .ribbon-color-picker-wrap,
-.ribbon-line-stack-row .ribbon-slide-bg-color-inner .ribbon-brand-dropdown-wrap {
+.ribbon-line-stack-row .ribbon-slide-bg-color-inner .ribbon-color-picker-wrap {
   height: 28px;
 }
 .ribbon-line-stack-row .ribbon-slide-bg-color-inner .ribbon-color-picker-wrap {
@@ -4452,14 +4328,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   width: 32px;
   height: 28px;
 }
-.ribbon-line-stack-row .ribbon-slide-bg-color-inner .ribbon-brand-dropdown-btn {
-  width: 100%;
-  height: 28px;
-  min-height: 28px;
-  max-height: 28px;
-  padding: 0 6px;
-  font-size: 0.68rem;
-}
+
 .ribbon-separator {
   box-sizing: border-box;
   width: 0;
@@ -4819,14 +4688,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   padding: 2px;
   box-sizing: border-box;
 }
-.ribbon-widget-grid--farben .ribbon-wcell-brand {
-  grid-area: 1 / 2 / 2 / 5;
-  z-index: 4;
-  overflow: visible;
-  padding: 2px 0 2px 2px;
-  box-sizing: border-box;
-  align-items: stretch;
-}
+
 .ribbon-widget-grid--farben .ribbon-wcell-opacity {
   grid-area: 2 / 1 / 3 / 5;
   z-index: 1;
@@ -4856,40 +4718,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   box-sizing: border-box;
   background: var(--surface-raised);
 }
-.ribbon-widget-grid--farben .ribbon-brand-dropdown-wrap {
-  position: relative;
-  display: flex;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.ribbon-widget-grid--farben .ribbon-brand-dropdown-btn {
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  padding: 0 6px;
-  gap: 4px;
-  box-sizing: border-box;
-  font-size: 0.68rem;
-}
-.ribbon-widget-grid--farben .ribbon-brand-btn-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-/* Panel öffnet nach unten und deckt die Transparenzzeile ab.
-   Bewusst KEIN position/left/right/top/z-index hier: das überschrieb die
-   Grundregel (position: fixed, z-index: 400), und erst dadurch beschnitt
-   .ribbon-group { overflow: hidden } das Panel an der Gruppenkante. */
-.ribbon-widget-grid--farben .ribbon-brand-dropdown-panel {
-  min-width: 148px;
-  width: max-content;
-  max-width: min(220px, calc(100vw - 16px));
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-}
+
 .ribbon-widget-grid--farben .ribbon-wcell-opacity .ribbon-field-inline {
   width: 100%;
   height: 100%;
@@ -5486,9 +5315,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-object-kontur-brand {
   width: 100%;
 }
-.ribbon-object-kontur-brand .ribbon-brand-dropdown-btn {
-  width: 100%;
-}
+
 .ribbon-object-stroke-width input[type="number"] {
   width: 52px;
   min-height: 28px;
@@ -6363,29 +6190,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   border: none;
   border-radius: 2px;
 }
-.ribbon-slide-bg-color-inner .ribbon-brand-dropdown-wrap {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-}
-.ribbon-slide-bg-color-inner .ribbon-brand-dropdown-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-  width: 100%;
-  height: 28px;
-  min-height: 28px;
-  max-height: 28px;
-  margin: 0;
-  padding: 0 8px;
-  line-height: 1;
-  box-sizing: border-box;
-}
+
 .ribbon-slide-bg-preview-inner {
   justify-content: center;
   width: 100%;
@@ -7145,61 +6950,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.ribbon-brand-dropdown-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-.ribbon-brand-dropdown-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 100%;
-  min-width: 110px;
-  padding: 4px 8px;
-  min-height: 28px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.ribbon-brand-dropdown-btn:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-.ribbon-brand-dropdown-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.ribbon-brand-chevron {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-.ribbon-brand-dropdown-panel {
-  position: fixed;
-  z-index: 400;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  min-width: 140px;
-  max-width: min(280px, calc(100vw - 16px));
-}
-.ribbon-brand-dropdown-panel[hidden] {
-  display: none !important;
-}
-.ribbon-brand-dropdown-panel .brand-swatch {
-  width: 22px;
-  height: 22px;
-}
+
 .ribbon-template-dropdown-panel {
   position: fixed;
   z-index: 400;
@@ -7263,8 +7014,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-zeichen-grid input:disabled,
 .ribbon-zeichen-grid select:disabled,
 .ribbon-absatz-grid input:disabled,
-.ribbon-farben-grid input:disabled,
-.ribbon-brand-dropdown-panel .brand-swatch:disabled {
+.ribbon-farben-grid input:disabled {
   color: var(--ribbon-fg-disabled, var(--text-muted));
   opacity: var(--ribbon-disabled-opacity, 0.42);
   cursor: not-allowed;
@@ -7336,21 +7086,12 @@ body.editor-grid-dragging .editor-slide-grid-item {
   height: 28px;
   padding: 2px;
 }
-.ribbon-brand-palette-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+
 .ribbon-field-label {
   font-size: 0.65rem;
   color: var(--text-muted);
 }
-.ribbon-brand-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  max-width: 140px;
-}
+
 .ribbon-field-range input[type="range"] {
   width: 100px;
 }
@@ -10022,19 +9763,7 @@ body:has(.editor-layout) > .editor-layout {
 .iconify-color-filter {
   flex: 0 0 120px;
 }
-.iconify-color-palette-wrap {
-  flex: 1 1 240px;
-}
-.iconify-color-palette-wrap .brand-palette.mini {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
-}
-.iconify-color-palette-wrap .brand-palette.mini .brand-swatch {
-  width: 22px;
-  height: 22px;
-}
+
 #iconifyColor {
   width: 100%;
   height: 32px;
@@ -11004,30 +10733,7 @@ body:has(.editor-layout) > .editor-layout {
   cursor: pointer;
   box-sizing: border-box;
 }
-.props-object-widgets .ribbon-object-brand-swatches.brand-palette.mini {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  width: 100%;
-}
-.props-object-widgets .ribbon-object-brand-swatches .brand-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  flex: 0 0 auto;
-  padding: 0;
-  cursor: pointer;
-}
-.props-object-widgets .ribbon-object-brand-swatches .brand-swatch.active {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-.props-object-widgets .ribbon-object-brand-swatches .brand-swatch:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+
 .props-object-widgets .ribbon-object-farbe-gradient {
   display: flex;
   flex-direction: column;
@@ -11105,13 +10811,7 @@ body:has(.editor-layout) > .editor-layout {
   min-width: 0;
   min-height: 36px;
 }
-.props-object-widgets .ribbon-object-kontur-grid .ribbon-object-brand-swatches {
-  width: 100%;
-}
-.props-object-widgets .ribbon-brand-dropdown-btn {
-  max-width: 100%;
-  width: 100%;
-}
+
 .props-object-widgets .ribbon-object-shapes-content {
   display: flex;
   flex-direction: column;

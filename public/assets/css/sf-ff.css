@@ -81,3 +81,12 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-set__state { min-height: 1.2em; font-size: .8rem; color: var(--text-muted); }
 .sf-set__state[data-state="error"] { color: var(--danger, #d9483a); }
 .sf-set-tabs { margin-top: .6rem; }
+
+/* Farbwahl (3.9.2): HubColorPicker (hub-color-picker.css) um jedes Farbfeld, sf-color.js. Im Menüband und in schmalen Zeilen
+   kompakt (Höhe wie die Menüband-Felder), sonst Baustein-Grösse. Abgeschaltet = Feld und «▾» gedämpft. */
+.sf-color-field { display: inline-grid; vertical-align: middle; }
+.sf-color-field.is-disabled { opacity: .55; }
+:is(.editor-ribbon, .hub-ribbon, #presentRibbon, .ribbon-farben-grid, .ribbon-object-kontur-grid) .sf-color-field input[type="color"] {
+  width: 2.2rem; min-width: 2.2rem; max-width: 2.2rem; flex-basis: 2.2rem; height: 28px; min-height: 28px; }
+:is(.editor-ribbon, .hub-ribbon, #presentRibbon, .ribbon-farben-grid, .ribbon-object-kontur-grid) .sf-color-field .hub-color-dropdown__btn {
+  height: 28px; min-height: 28px; padding: 0 .35rem; }

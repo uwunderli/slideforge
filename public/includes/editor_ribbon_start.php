@@ -92,15 +92,6 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
       <input type="color" id="rb_color" value="#ffffff" disabled title="<?= h(t('props.color')) ?>">
     </label>
   </div>
-  <div class="ribbon-wcell ribbon-wcell-brand">
-    <div class="ribbon-brand-dropdown-wrap" data-ribbon-brand-menu="textColor">
-      <button type="button" class="ribbon-brand-dropdown-btn" id="rb_brandBtn" disabled aria-expanded="false" aria-haspopup="true" title="<?= h(t('bg.brand_colors')) ?>">
-        <span class="ribbon-brand-btn-label"><?= h(t('ribbon.brand_colors_short')) ?></span>
-        <span class="ribbon-brand-chevron" aria-hidden="true">▾</span>
-      </button>
-      <div class="ribbon-brand-dropdown-panel" id="rb_brandPalette" hidden role="menu" aria-label="<?= h(t('bg.brand_colors')) ?>"></div>
-    </div>
-  </div>
   <div class="ribbon-wcell ribbon-wcell-opacity">
     <div class="ribbon-field-inline ribbon-field-opacity">
       <span class="ribbon-field-icon ribbon-opacity-icon" id="rb_opacityIcon" title="<?= h(t('props.opacity')) ?>"><?= $rbIconOpacity ?></span>

@@ -67,46 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $action = $_POST['action'] ?? '';
 
-    // ---- Farbvorlagen (nur Admin) ----
-    if ($action === 'save_colors' && $isAdmin) {
-        $names = $_POST['color_name'] ?? [];
-        $hexes = $_POST['color_hex'] ?? [];
-        $colors = [];
-        foreach ($hexes as $i => $hex) {
-            $hex = trim($hex);
-            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) continue;
-            $colors[] = ['name' => trim($names[$i] ?? '') !== '' ? trim($names[$i]) : $hex, 'hex' => $hex];
-        }
-        Config::update(['brand_colors' => $colors]);
-        $msg = t('tpl.colors_saved');
-    }
-    if ($action === 'add_color' && $isAdmin) {
-        $colors = Config::brandColors();
-        $colors[] = ['name' => t('tpl.new_color_name'), 'hex' => '#3a6c8d'];
-        Config::update(['brand_colors' => $colors]);
-        $msg = t('tpl.color_added');
-    }
-    if ($action === 'duplicate_color' && $isAdmin) {
-        $index = (int)($_POST['index'] ?? -1);
-        $colors = Config::brandColors();
-        if (isset($colors[$index])) {
-            $copy = $colors[$index];
-            $copy['name'] = $copy['name'] . ' (Kopie)';
-            array_splice($colors, $index + 1, 0, [$copy]);
-            Config::update(['brand_colors' => $colors]);
-        }
-        $msg = t('tpl.color_added');
-    }
-    if ($action === 'delete_color' && $isAdmin) {
-        $index = (int)($_POST['index'] ?? -1);
-        $colors = Config::brandColors();
-        if (isset($colors[$index])) {
-            array_splice($colors, $index, 1);
-            Config::update(['brand_colors' => $colors]);
-        }
-        $msg = t('tpl.color_removed');
-    }
-
     // Schriftarten: Upload/Löschen entfällt (3.9.0) — die Schriften kommen aus dem Hub (Einstellungen › Hub › Palette › Schriften).
 
     // ---- Textvorlagen (nur Admin) ----
@@ -321,56 +281,21 @@ require __DIR__ . '/includes/header.php';
 
   <?php if ($activeTab === 'colors'): ?>
 
+    <?php /* 3.9.2 (Regel Urs 09.11. «Markenfarben und Emojis: ein Standard»): Markenfarben gibt es nur noch im Hub (Einstellungen ›
+             Branding › Palette). Hier nur zur Ansicht; jede Farbwahl der FolienSchmiede zeigt sie im «▾» des Farbfelds. */ ?>
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.brand_colors_heading')) ?></h2></div>
-    <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('tpl.brand_colors_desc')) ?></p>
-
-    <?php if (!$isAdmin): ?>
-      <div class="alert alert-success"><?= h(t('tpl.admin_only_colors')) ?></div>
-      <div class="brand-palette" style="grid-template-columns: repeat(auto-fill, minmax(40px,1fr)); max-width:500px;">
+    <p class="muted small"><?= h(t('tpl.brand_colors_hub_desc')) ?></p>
+    <?php if ($brandColors): ?>
+      <div class="brand-palette" role="list" style="grid-template-columns: repeat(auto-fill, minmax(40px,1fr)); max-width:500px;">
         <?php foreach ($brandColors as $c): ?>
-          <div class="brand-swatch" style="background:<?= h($c['hex']) ?>; cursor:default;" title="<?= h($c['name']) ?> (<?= h($c['hex']) ?>)"></div>
+          <div class="brand-swatch" role="listitem" style="background:<?= h($c['hex']) ?>; cursor:default;" title="<?= h($c['name']) ?> (<?= h($c['hex']) ?>)" aria-label="<?= h($c['name']) ?>"></div>
         <?php endforeach; ?>
       </div>
     <?php else: ?>
-      <div class="options-subtitle" style="margin-top:0;"><?= h(t('tpl.quick_select')) ?></div>
-      <div class="brand-palette" style="grid-template-columns: repeat(auto-fill, minmax(40px,1fr)); max-width:500px; margin-bottom:20px;">
-        <?php foreach ($brandColors as $c): ?>
-          <div class="brand-swatch" style="background:<?= h($c['hex']) ?>; cursor:default;" title="<?= h($c['name']) ?> (<?= h($c['hex']) ?>)"></div>
-        <?php endforeach; ?>
-      </div>
-
-      <form method="post" id="colorsForm" data-sf-autosave>
-        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-        <input type="hidden" name="action" value="save_colors">
-        <?php foreach ($brandColors as $i => $c): ?>
-          <div class="color-row" draggable="true">
-            <span class="text-template-drag-handle" title="Ziehen zum Sortieren">⠿</span>
-            <input type="color" name="color_hex[]" value="<?= h($c['hex']) ?>">
-            <input type="text" name="color_name[]" value="<?= h($c['name']) ?>" placeholder="<?= h(t('tpl.name_placeholder')) ?>">
-            <span class="color-row-hex"><?= h($c['hex']) ?></span>
-            <button type="submit" form="duplicateColorForm<?= (int)$i ?>" class="icon-btn-ghost" title="<?= h(t('tpl.duplicate')) ?>">⧉</button>
-            <button type="submit" form="deleteColorForm<?= (int)$i ?>" class="icon-btn-danger" title="<?= h(t('tpl.delete_color')) ?>">🗑</button>
-          </div>
-        <?php endforeach; ?>
-        <span class="sf-set__state" data-sf-save-state aria-live="polite"></span>
-      </form>
-      <?php foreach ($brandColors as $i => $c): ?>
-        <form method="post" id="deleteColorForm<?= (int)$i ?>">
-          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-          <input type="hidden" name="action" value="delete_color">
-          <input type="hidden" name="index" value="<?= (int)$i ?>">
-        </form>
-        <form method="post" id="duplicateColorForm<?= (int)$i ?>">
-          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-          <input type="hidden" name="action" value="duplicate_color">
-          <input type="hidden" name="index" value="<?= (int)$i ?>">
-        </form>
-      <?php endforeach; ?>
-      <form method="post" style="margin-top:10px; display:inline-block;">
-        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-        <input type="hidden" name="action" value="add_color">
-        <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.add_color')) ?></button>
-      </form>
+      <p class="muted small"><?= h(t('tpl.brand_colors_hub_unavailable')) ?></p>
+    <?php endif; ?>
+    <?php if ($isAdmin): ?>
+      <p><a class="hub-btn hub-btn--sm" href="/admin/settings.php?tab=branding" target="_top"><?= h(t('tpl.brand_colors_hub_link')) ?></a></p>
     <?php endif; ?>
 
   <?php elseif ($activeTab === 'fonts'): ?>
@@ -533,14 +458,8 @@ require __DIR__ . '/includes/header.php';
         <div class="row" style="align-items:center;">
           <div>
             <label><?= h(t('tpl.color')) ?></label>
-            <input type="color" id="color_<?= h($t['id']) ?>" name="color" value="<?= h($t['color']) ?>" style="height:34px;" <?= $isAdmin ? '' : 'disabled' ?>>
-            <?php if ($isAdmin): ?>
-              <div class="brand-palette mini" style="margin-top:6px;">
-                <?php foreach ($brandColors as $c): ?>
-                  <button type="button" class="brand-swatch" style="background:<?= h($c['hex']) ?>" title="<?= h($c['name']) ?>" onclick="var i=document.getElementById('color_<?= h($t['id']) ?>');i.value='<?= h($c['hex']) ?>';i.dispatchEvent(new Event('change',{bubbles:true}))"></button>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
+            <?php /* Farbfeld + «▾» mit den Markenfarben des Hubs: sf-color.js (HubColorPicker, 3.9.2) */ ?>
+            <input type="color" id="color_<?= h($t['id']) ?>" name="color" value="<?= h($t['color']) ?>" aria-label="<?= h(t('tpl.color')) ?>" <?= $isAdmin ? '' : 'disabled' ?>>
           </div>
           <div>
             <label><?= h(t('tpl.align')) ?></label>
@@ -821,42 +740,6 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
   makeSortable('slideTemplatesList', 'li', 'reorder_slide_templates');
 
-  <?php if ($isAdmin): ?>
-  (function () {
-    const form = document.getElementById('colorsForm');
-    if (!form) return;
-    let dragEl = null;
-    let allowDrag = false;
-
-    form.querySelectorAll('.text-template-drag-handle').forEach((handle) => {
-      handle.addEventListener('mousedown', () => { allowDrag = true; });
-    });
-
-    form.querySelectorAll('.color-row').forEach((row) => {
-      row.addEventListener('dragstart', (e) => {
-        if (!allowDrag) { e.preventDefault(); return; }
-        dragEl = row;
-        row.classList.add('dragging');
-      });
-      row.addEventListener('dragend', () => {
-        allowDrag = false;
-        row.classList.remove('dragging');
-        form.querySelectorAll('.drag-over').forEach((r) => r.classList.remove('drag-over'));
-        form.requestSubmit();
-      });
-      row.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (row === dragEl) return;
-        row.classList.add('drag-over');
-        const rect = row.getBoundingClientRect();
-        const before = (e.clientY - rect.top) < rect.height / 2;
-        row.parentNode.insertBefore(dragEl, before ? row : row.nextSibling);
-      });
-      row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-      row.addEventListener('drop', (e) => { e.preventDefault(); row.classList.remove('drag-over'); });
-    });
-  })();
-  <?php endif; ?>
 })();
 </script>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>

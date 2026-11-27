@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '728');
+define('ASSET_VERSION', '729');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -125,7 +125,6 @@ if (!file_exists(SITE_CONFIG_FILE)) {
     file_put_contents(SITE_CONFIG_FILE, json_encode([
         'site_title' => APP_NAME,
         'logo' => '',
-        'brand_colors' => Config::defaultBrandColors(),
     ], JSON_PRETTY_PRINT));
 }
 if (!file_exists(TEXT_TEMPLATES_FILE)) {
@@ -144,16 +143,6 @@ if (!is_dir(EXPORT_CACHE_PATH)) {
 // (3.8.3) Rollen-Nachtrag «erster Benutzer wird Admin» entfernt: Admin-Recht kommt nur vom Hub (Auth::payloadIsAdmin).
 
 
-// Migration: bestehende config.json (aus einer Version vor den Vorlagen) um
-// brand_colors nachrüsten, falls das Feld fehlt.
-$__cfg = Storage::read(SITE_CONFIG_FILE, []);
-if (!isset($__cfg['brand_colors'])) {
-    Storage::update(SITE_CONFIG_FILE, function ($cfg) {
-        $cfg['brand_colors'] = Config::defaultBrandColors();
-        return $cfg;
-    }, []);
-}
-unset($__cfg);
 
 $__cfg = Storage::read(SITE_CONFIG_FILE, []);
 if (!isset($__cfg['pixabay'])) {

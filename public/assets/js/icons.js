@@ -253,14 +253,6 @@
     const colorInput = $('iconifyColor');
     colorInput?.addEventListener('input', refreshPreviewColors);
     colorInput?.addEventListener('change', refreshPreviewColors);
-    $('iconifyColorPalette')?.querySelectorAll('.brand-swatch').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const input = $('iconifyColor');
-        if (!input) return;
-        input.value = btn.dataset.color;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    });
   }
 
   async function runSearchEnglish(page) {

@@ -74,23 +74,9 @@ $pageTitle = t('agenda.heading');
 require __DIR__ . '/includes/header.php';
 ?>
 <?php
-/** Farbfeld mit Markenfarben als Farbfeldern; Auswahl löst die Vorschau neu aus. */
-$brandColors = Config::brandColors();
-$colorPicker = function (string $id, string $name, string $value, string $swatchesId) use ($brandColors): string {
-    $html = '';
-    if ($brandColors) {
-        $html .= '<div class="import-brand-swatches" id="' . h($swatchesId) . '" data-target="' . h($id) . '" style="margin-bottom:8px;">';
-        foreach ($brandColors as $bc) {
-            $hex = (string)($bc['hex'] ?? '');
-            if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) {
-                continue;
-            }
-            $nm = h((string)($bc['name'] ?? $hex));
-            $html .= '<button type="button" class="import-brand-swatch" data-hex="' . h($hex) . '" style="background:' . h($hex) . ';" title="' . $nm . '" aria-label="' . $nm . '"></button>';
-        }
-        $html .= '</div>';
-    }
-    return $html . '<input type="color" id="' . h($id) . '" name="' . h($name) . '" value="' . h($value) . '" data-auto>';
+/** Farbfeld; «▾» mit den Markenfarben des Hubs setzt sf-color.js (HubColorPicker, 3.9.2). Auswahl löst die Vorschau neu aus. */
+$colorPicker = function (string $id, string $name, string $value, string $swatchesId): string {
+    return '<input type="color" id="' . h($id) . '" name="' . h($name) . '" value="' . h($value) . '" data-auto>';
 };
 ?>
 <link rel="stylesheet" href="assets/css/import-dialog.css?v=<?= ASSET_VERSION ?>">
@@ -239,13 +225,6 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
       var f = document.getElementById('agendaForm');
       document.getElementById('agendaStep').value = 'preview';
       f.submit();
-    });
-  });
-  document.querySelectorAll('.import-brand-swatches .import-brand-swatch').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var c = document.getElementById(b.parentNode.getAttribute('data-target'));
-      c.value = b.getAttribute('data-hex');
-      c.dispatchEvent(new Event('change'));
     });
   });
   (function () {

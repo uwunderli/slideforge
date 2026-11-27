@@ -11,13 +11,6 @@
             <span class="sr-only"><?= h(t('bg.color')) ?></span>
             <input type="color" id="bgColorInput" value="#111111" title="<?= h(t('bg.color')) ?>">
           </label>
-          <div class="ribbon-brand-dropdown-wrap" data-ribbon-brand-menu="bgColor">
-            <button type="button" class="ribbon-brand-dropdown-btn" id="bgBrandBtn" aria-expanded="false" aria-haspopup="true">
-              <span><?= h(t('bg.brand_colors')) ?></span>
-              <span class="ribbon-brand-chevron" aria-hidden="true">▾</span>
-            </button>
-            <div class="ribbon-brand-dropdown-panel" id="bgBrandPalette" hidden role="menu"></div>
-          </div>
         </div>
       </div>
     </div>

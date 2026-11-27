@@ -119,7 +119,6 @@
         </div>
         <label for="presentLaserColor"><?= h(t('present.laser_color')) ?></label>
         <input type="color" id="presentLaserColor" value="<?= h($presentLayout['laserPointerColor'] ?? '#ff0000') ?>">
-        <div class="brand-palette mini" id="presentLaserPalette"></div>
         <label for="presentLaserSize" style="margin-top:12px;"><?= h(t('present.laser_size')) ?> (<span id="presentLaserSizeVal"><?= (int)($presentLayout['laserPointerSize'] ?? 24) ?></span> px)</label>
         <input type="range" id="presentLaserSize" min="8" max="64" step="1" value="<?= (int)($presentLayout['laserPointerSize'] ?? 24) ?>">
         <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;">

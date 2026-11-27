@@ -278,41 +278,8 @@ require __DIR__ . '/includes/header.php';
         </label>
         <div class="import-opt-row import-opt-color">
           <label for="import_opt_agendaColor"><?= h(t('import.agenda_color')) ?></label>
-          <?php $brandColors = Config::brandColors(); ?>
-          <div class="import-color-field" id="importColorField">
-            <button type="button" class="import-color-button" id="importColorButton"
-                    aria-haspopup="true" aria-expanded="false">
-              <?php
-              $farbe = (string)($importUi['agendaColor'] ?? '#b7de45');
-              /* Namen der Markenfarbe anzeigen statt des Hex-Werts — beim Aufbau der
-                 Seite, damit nicht erst nach einer Auswahl der Name erscheint. */
-              $farbName = $farbe;
-              foreach ($brandColors as $bc) {
-                  if (strtolower((string)($bc['hex'] ?? '')) === strtolower($farbe)) {
-                      $farbName = (string)($bc['name'] ?? $farbe);
-                      break;
-                  }
-              }
-              ?>
-              <span class="import-color-dot" id="importColorDot" style="background:<?= h($farbe) ?>;"></span>
-              <span class="import-color-name" id="importColorName"><?= h($farbName) ?></span>
-              <span class="import-color-caret" aria-hidden="true">▾</span>
-            </button>
-            <div class="import-color-panel" id="importColorPanel" hidden>
-              <?php if ($brandColors): ?>
-              <div class="import-brand-swatches" id="importBrandSwatches">
-                <?php foreach ($brandColors as $bc): ?>
-                  <?php $hex = (string)($bc['hex'] ?? ''); if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) { continue; } ?>
-                  <button type="button" class="import-brand-swatch" data-hex="<?= h($hex) ?>"
-                          data-name="<?= h((string)($bc['name'] ?? $hex)) ?>"
-                          style="background:<?= h($hex) ?>;" title="<?= h((string)($bc['name'] ?? $hex)) ?>"
-                          aria-label="<?= h((string)($bc['name'] ?? $hex)) ?>"></button>
-                <?php endforeach; ?>
-              </div>
-              <?php endif; ?>
-              <input type="color" id="import_opt_agendaColor" data-import-opt="agendaColor" value="<?= h((string)($importUi['agendaColor'] ?? '#b7de45')) ?>">
-            </div>
-          </div>
+          <?php /* Farbfeld + «▾» mit den Markenfarben des Hubs (HubColorPicker über sf-color.js, 3.9.2) */ ?>
+          <input type="color" id="import_opt_agendaColor" data-import-opt="agendaColor" value="<?= h((string)($importUi['agendaColor'] ?? '#b7de45')) ?>">
         </div>
         <?php elseif ($logosImporterEnabled): ?>
         <div class="alert alert-error" style="margin-top:0;"><?= t('import.layout_set_none_available') ?></div>
@@ -1067,62 +1034,6 @@ require __DIR__ . '/includes/header.php';
   if (sectionSel) sectionSel.addEventListener('change', saveImportUi);
   if (layoutSel) layoutSel.addEventListener('change', saveImportUi);
 
-  /* Markenfarben: ein Klick setzt das Farbfeld. `change` wird von Hand ausgelöst,
-     weil ein gesetzter Wert allein kein Ereignis auslöst und die Vorschau sonst
-     nicht nachzöge. */
-  var colorField = document.getElementById('importColorField');
-  var colorButton = document.getElementById('importColorButton');
-  var colorPanel = document.getElementById('importColorPanel');
-  var colorDot = document.getElementById('importColorDot');
-  var colorName = document.getElementById('importColorName');
-  var colorInput = document.getElementById('import_opt_agendaColor');
-  var brandSwatches = document.getElementById('importBrandSwatches');
-
-  function setColorLabel(hex, name) {
-    if (colorDot) colorDot.style.background = hex;
-    if (colorName) colorName.textContent = name || hex;
-  }
-
-  function openColorPanel(open) {
-    if (!colorPanel || !colorButton) return;
-    colorPanel.hidden = !open;
-    colorButton.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-
-  if (colorButton) {
-    colorButton.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      openColorPanel(colorPanel.hidden);
-    });
-    // Aussenklick und Escape schliessen — wie bei den Ribbon-Auswahlfeldern.
-    document.addEventListener('click', function (ev) {
-      if (colorField && !colorField.contains(ev.target)) openColorPanel(false);
-    });
-    document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape') openColorPanel(false);
-    });
-  }
-
-  if (brandSwatches) {
-    brandSwatches.addEventListener('click', function (ev) {
-      var btn = ev.target.closest ? ev.target.closest('[data-hex]') : null;
-      if (!btn || !colorInput) return;
-      colorInput.value = btn.getAttribute('data-hex');
-      setColorLabel(btn.getAttribute('data-hex'), btn.getAttribute('data-name'));
-      colorInput.dispatchEvent(new Event('change', { bubbles: true }));
-      openColorPanel(false);
-    });
-  }
-
-  if (colorInput) {
-    colorInput.addEventListener('input', function () {
-      // Trifft der freie Wert eine Markenfarbe, deren Namen zeigen statt des Hex.
-      var treffer = brandSwatches
-        ? brandSwatches.querySelector('[data-hex="' + colorInput.value.toLowerCase() + '"]')
-        : null;
-      setColorLabel(colorInput.value, treffer ? treffer.getAttribute('data-name') : null);
-    });
-  }
   if (layoutSel) layoutSel.addEventListener('change', schedulePreviewRefresh);
 
   var waitJobId = <?= json_encode($waitJobId !== '' && empty($error) ? $waitJobId : '', JSON_UNESCAPED_UNICODE) ?>;

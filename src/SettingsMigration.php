@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Füllt nur, was in der neuen Installation noch leer oder unverändert ab Werk ist; was jemand hier schon gesetzt hat, bleibt.
  * Idempotent: ein zweiter Lauf findet nichts mehr. Vor dem Schreiben eine Sicherung `<datei>.vor-settings-<zeit>` neben der Datei.
  * Ausgabe nennt nur Schlüssel, nie Werte (API-Schlüssel). SMTP und Benutzer/Einladungen nicht (Hub-Sache, 3.8.3 entfernt);
- * Schriften holt Migration::fonts (3.8.2).
+ * Schriften holt Migration::fonts (3.8.2). Markenfarben nicht: sie kommen nur noch aus der Hub-Palette (3.9.2).
  */
 final class SettingsMigration
 {
@@ -104,15 +104,6 @@ final class SettingsMigration
                 }
                 $note($sec, $take);
             }
-        }
-
-        // Markenfarben: neu fehlend oder ab Werk
-        if (is_array($old['brand_colors'] ?? null) && $old['brand_colors'] !== [] && $old['brand_colors'] !== Config::defaultBrandColors()) {
-            $take = !isset($new['brand_colors']) || $new['brand_colors'] === Config::defaultBrandColors();
-            if ($take) {
-                $set['brand_colors'] = array_values($old['brand_colors']);
-            }
-            $note('brand_colors', $take);
         }
 
         if ($set !== [] && !$dryRun) {

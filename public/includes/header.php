@@ -60,6 +60,12 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <?= sf_theme_after() ?><script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-page-busy.js')) ?>"></script>
+<?php /* Farbwahl (3.9.2, Regel Urs 09.11. «Markenfarben und Emojis: ein Standard»): Palette des Hubs + HubColorPicker vom Hub;
+         sf-color.js hüllt jedes Farbfeld der Seite in den Baustein (Farbfeld + «▾» mit den Markenfarben). */ ?>
+<?= SfPalette::scriptTag() ?>
+<link rel="stylesheet" href="<?= h(sf_hub_asset('css/hub-color-picker.css')) ?>">
+<script src="<?= h(sf_hub_asset('js/hub-color-picker.js')) ?>"></script>
+<script src="assets/js/sf-color.js?v=<?= ASSET_VERSION ?>"></script>
 <script>
 window.SF_DIALOG_I18N = <?= json_encode([
     'ok' => t('common.ok'),
