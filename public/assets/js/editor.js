@@ -7046,7 +7046,17 @@
   const play = { el: null, frame: null, slide: 0, step: 0, total: 0, ready: false, prevFocus: null, sync: null };
 
   /* Abspielen-Knopf über der Folie (3.12.7, vorher im Effekte-Bereich). */
-  document.getElementById('stagePlayBtn')?.addEventListener('click', () => openPlayOverlay());
+  const stagePlayBtn = document.getElementById('stagePlayBtn');
+  if (stagePlayBtn) {
+    stagePlayBtn.addEventListener('click', () => openPlayOverlay());
+    /* Kürzel im Mouseover (DESIGN Hub § Tastenkürzel), immer das aktuell eingestellte. */
+    const tipBase = stagePlayBtn.title;
+    stagePlayBtn.addEventListener('mouseenter', () => {
+      const h = window.SFRibbon && typeof window.SFRibbon.hub === 'function' ? window.SFRibbon.hub() : null;
+      const k = h && typeof h.formatShortcut === 'function' ? h.formatShortcut('stage_play') : '';
+      stagePlayBtn.title = k ? tipBase + ' (' + k + ')' : tipBase;
+    });
+  }
 
   function wirePlayBar(panel, node) {
     panel.querySelectorAll('[data-fx-play-one]').forEach((btn) => {
@@ -10041,6 +10051,12 @@
     SFS.register('zoom_fit', () => {
       if (SF.editorViewMode === 'grid') applyGridThumbMin(168, { save: true });
       else zoomFit();
+      return true;
+    });
+    /* Abspielen per Kürzel (3.12.8, Urs 27.11.: «Kann ich dem kein ShortCut verpassen?»), Vorgabe Ctrl+Enter, im Anpassen-Dialog änderbar. */
+    SFS.register('stage_play', () => {
+      if (!SF.canEdit || play.el || SF.masterSlideEditing || SF.editorViewMode === 'grid' || !SF.slides[SF.currentIndex]) return 'native';
+      openPlayOverlay();
       return true;
     });
     SFS.register('notes_focus', () => {

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.8] - 2026-11-27
+
+### Added
+- **Kürzel für «Abspielen»** (Urs 27.11.): Befehl «Abspielen (Knopf über der Folie)» im Katalog (Ribbon anpassen › Weitere Befehle), Vorgabe Ctrl+Enter, je Person änderbar; das Kürzel steht im Mouseover des Knopfs.
+
 ## [3.12.7] - 2026-11-27
 
 ### Changed

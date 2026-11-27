@@ -1609,6 +1609,7 @@ return [
     'shortcut.play_prev' => 'Riproduci: indietro',
     'shortcut.play_close' => 'Chiudi riproduzione',
     'shortcut.play_hint' => 'Nella finestra «Riproduci» (effetti della diapositiva).',
+    'shortcut.stage_play' => 'Riproduci (pulsante sopra la diapositiva)',
     'shortcut.stage_play_next' => 'Area diapositiva: riproduci, avanti',
     'shortcut.stage_play_prev' => 'Area diapositiva: riproduci, indietro',
     'shortcut.stage_play_hint' => 'Senza oggetto selezionato: riproduce effetti e transizioni come nella presentazione. Un clic o un altro tasto termina.',
