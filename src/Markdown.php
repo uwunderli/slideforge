@@ -10,7 +10,7 @@
  * [mark=#hex]markiert[/mark], [color=#hex]farbig[/color].
  * WICHTIG: Escaped IMMER zuerst per h() (htmlspecialchars), bevor Markdown-Syntax
  * in HTML umgewandelt wird - der Text kommt von Nutzereingaben und landet auf
- * öffentlich einsehbaren Seiten (view.php), XSS-Sicherheit hat Priorität.
+ * Zuschauer-Ansicht und Vorschau, XSS-Sicherheit hat Priorität.
  */
 class Markdown
 {

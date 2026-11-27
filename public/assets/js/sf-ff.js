@@ -61,6 +61,7 @@
       chip.setAttribute('data-state', kind || '');
     }
     function idle() {
+      if (st.source === 'local') { show('Noch nicht in FileForge · Speichern unter …', 'dirty'); return; }
       if (blocked) { show('Nicht gespeichert – Kopie nötig', 'error'); return; }
       if (!st.canWrite && st.source !== 'import') { show('Nur lesen · ' + st.name, ''); return; }
       show(st.dirty ? 'Ungespeichert · ' + st.name : 'Gespeichert · ' + st.name, st.dirty ? 'dirty' : 'ok');
@@ -69,7 +70,7 @@
 
     function save(manual) {
       if (busy) { again = again || manual; return Promise.resolve(); }
-      if (!st.canWrite && st.source !== 'import') { if (manual) saveCopy(); return Promise.resolve(); }
+      if (st.source === 'local' || (!st.canWrite && st.source !== 'import')) { if (manual) saveCopy(); return Promise.resolve(); }
       if (blocked && !manual) return Promise.resolve();
       busy = true;
       show('Speichert …', 'busy');
@@ -97,10 +98,10 @@
     }
     function saveCopy() {
       var dir;
-      choose(['dir'], [], 'Ordner für die Kopie wählen').then(function (r) {
+      choose(['dir'], [], st.source === 'local' ? 'Speicherort in FileForge wählen' : 'Ordner für die Kopie wählen').then(function (r) {
         if (!r || !r.ref) return null;
         dir = r.ref;
-        return ask('Name der Kopie', stem(st.name) + ' (Kopie)');
+        return ask(st.source === 'local' ? 'Name der Datei' : 'Name der Kopie', stem(st.name) + (st.source === 'local' ? '' : ' (Kopie)'));
       }).then(function (name) {
         if (!dir || name == null || String(name).trim() === '') return;
         show('Speichert …', 'busy');
@@ -211,9 +212,27 @@
     var actions = {
       newBlank: function () { create(''); },
       newFromTemplate: function () {
-        choose(['file'], ['cfs'], 'Vorlage wählen' + (state.templateDir ? ' (Ordner: ' + (state.templateDir.label || '') + ')' : '')).then(function (r) {
-          if (r && r.ref) create(r.ref, stem(r.name));
-        }).catch(pickError);
+        var other = function () {
+          choose(['file'], ['cfs'], 'Vorlage wählen').then(function (r) { if (r && r.ref) create(r.ref, stem(r.name)); }).catch(pickError);
+        };
+        if (!state.templateDir || !global.HubFloatDialog) { other(); return; }
+        fetch(API + '?action=templates', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+          var list = j && j.ok ? (j.items || []) : [];
+          if (!j || !j.ok) toast('error', (j && j.message) || 'Vorlagen nicht lesbar.');
+          var html = '<div class="sf-tpl">' + (list.length
+            ? '<ul class="hub-list sf-tpl__list">' + list.map(function (it, i) {
+                return '<li><button type="button" class="hub-list__sprung sf-tpl__pick" data-i="' + i + '">' + esc(stem(it.name)) + '</button></li>';
+              }).join('') + '</ul>'
+            : '<p class="muted small">Im Vorlagen-Ordner «' + esc(state.templateDir.label || '') + '» liegen keine Vorlagen (.cfs).</p>') +
+            '<p><button type="button" class="hub-btn sf-tpl__other">Andere Vorlage aus FileForge …</button></p></div>';
+          global.HubFloatDialog.open('Neu aus Vorlage', html, { id: 'sfTemplates', width: 420, bind: function (body) {
+            body.addEventListener('click', function (e) {
+              var b = e.target.closest('.sf-tpl__pick');
+              if (b) { var it = list[+b.getAttribute('data-i')]; global.HubFloatDialog.close('sfTemplates'); if (it) create(it.ref, stem(it.name)); return; }
+              if (e.target.closest('.sf-tpl__other')) { global.HubFloatDialog.close('sfTemplates'); other(); }
+            });
+          } });
+        }).catch(other);
       },
       open: function () {
         choose(['file'], ['cfs'], 'Präsentation öffnen').then(function (r) { if (r && r.ref) openTarget(r.ref, ''); }).catch(pickError);
@@ -247,6 +266,13 @@
       }).catch(pickError);
     }
     reload();
+    // Aus FileForge «Öffnen mit» (hooks/open.php → index.php?open=<ref>): hier im Browser laden, ohne Zeitfenster des App-Aufrufs
+    var q = new URLSearchParams(location.search);
+    if (q.get('open')) {
+      var ref = q.get('open');
+      if (global.history && global.history.replaceState) global.history.replaceState(null, '', location.pathname);
+      openTarget(ref, '');
+    }
     return actions;
   }
 

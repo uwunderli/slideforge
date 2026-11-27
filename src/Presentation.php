@@ -296,38 +296,6 @@ class Presentation
         });
     }
 
-    public static function removeShare(string $id, string $targetUserId): void
-    {
-        Storage::update(self::dir($id) . '/acl.json', function ($acl) use ($targetUserId) {
-            $acl['shares'] = array_values(array_filter($acl['shares'], fn($s) => $s['user_id'] !== $targetUserId));
-            return $acl;
-        });
-    }
-
-    public static function setPublic(string $id, bool $enabled, string $permission = 'view'): array
-    {
-        return Storage::update(self::dir($id) . '/acl.json', function ($acl) use ($enabled, $permission) {
-            $acl['public']['enabled'] = $enabled;
-            $acl['public']['permission'] = $permission;
-            if ($enabled && empty($acl['public']['token'])) {
-                $acl['public']['token'] = Storage::generateId(12);
-            }
-            if (!$enabled) {
-                // Token bleibt bestehen (falls User später wieder aktiviert), Link ist aber inaktiv
-            }
-            return $acl;
-        })['public'];
-    }
-
-    public static function regeneratePublicToken(string $id): string
-    {
-        $acl = Storage::update(self::dir($id) . '/acl.json', function ($acl) {
-            $acl['public']['token'] = Storage::generateId(12);
-            return $acl;
-        });
-        return $acl['public']['token'];
-    }
-
     /** Findet eine Präsentations-ID anhand des öffentlichen Tokens. */
     public static function getSlides(string $id): array
     {
@@ -1245,7 +1213,7 @@ class Presentation
                 $presentSessionActive = self::isLiveSessionActive($data, 'present');
 
                 // Input-Steuerung nur für den Leader; Live-Position darf der Present-Modus
-                // aber immer an view.php weiterleiten (genaue Folie + Fragmente).
+                // aber immer an die Zuschauer-Ansicht weiterleiten (genaue Folie + Fragmente).
                 if (!$isInputLeader && !$presentSessionActive) {
                     $accepted = false;
                     $leaderResult = [
@@ -1337,7 +1305,7 @@ class Presentation
             $currentIndex = (int)($data['present']['index'] ?? 0);
             $newIndex = self::nearestPresentEnabledIndex($disabled, $currentIndex, $stepDir) ?? $currentIndex;
 
-            // Ohne aktiven Present-Modus: Live-Position direkt setzen (view.php folgt per Poll).
+            // Ohne aktiven Present-Modus: Live-Position direkt setzen (Zuschauer-Ansicht folgt per Poll).
             if (!$presentActive) {
                 $data['present']['index'] = $newIndex;
                 $data['present']['frag'] = null;
@@ -1345,7 +1313,7 @@ class Presentation
                 $data['present']['source'] = 'remote';
                 $liveOut = ['index' => $newIndex, 'frag' => null];
             } else {
-                // Present-Modus aktiv: Sitzung für view.php am Leben halten; genaue Position kommt per Broadcast.
+                // Present-Modus aktiv: Sitzung für die Zuschauer-Ansicht am Leben halten; genaue Position kommt per Broadcast.
                 $data['present']['ts'] = time();
             }
 
@@ -1811,21 +1779,6 @@ class Presentation
     public static function setArchived(string $id, bool $archived): void
     {
         self::updateMeta($id, ['archived' => $archived]);
-    }
-
-    public static function findByPublicToken(string $token): ?string
-    {
-        if (!is_dir(PRESENTATIONS_PATH)) {
-            return null;
-        }
-        foreach (scandir(PRESENTATIONS_PATH) as $id) {
-            if ($id === '.' || $id === '..') continue;
-            $acl = self::getAcl($id);
-            if (!empty($acl['public']['enabled']) && ($acl['public']['token'] ?? null) === $token) {
-                return $id;
-            }
-        }
-        return null;
     }
 
     /** Dateiname aus asset.php-URL extrahieren. */

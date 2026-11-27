@@ -140,7 +140,6 @@ function ribbon_default_layout(): array
                         ['id' => 'widget:settings_spellcheck', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     ['id' => 'g_collab', 'labelKey' => 'ribbon.group_collaboration', 'items' => [
-                        ['id' => 'share', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                         ['id' => 'export', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                     ]],
                 ],

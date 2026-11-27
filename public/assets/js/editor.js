@@ -69,7 +69,6 @@
     pixabayConfig: boot.pixabay || null,
     iconifyConfig: boot.iconify || null,
     openclipartConfig: boot.openclipart || null,
-    webdav: boot.webdav || null,
     i18n: boot.i18n || {},
   };
 
@@ -693,10 +692,6 @@
         case 'present_local':
           openLocalPresentWindow();
           break;
-        case 'share':
-          e.preventDefault();
-          openShareModal();
-          break;
         case 'export':
           e.preventDefault();
           openExportModal();
@@ -744,303 +739,6 @@
     document.getElementById('presentLocalBtn')?.click();
   }
 
-  function syncEditorPublicLinkUi(enabled, url) {
-    const toggle = document.getElementById('publicLinkToggle');
-    const input = document.getElementById('presentPublicLinkInput');
-    const copyBtn = document.getElementById('copyPublicLinkBtn');
-    if (toggle) toggle.checked = !!enabled;
-    if (input) input.value = url || '';
-    if (copyBtn) copyBtn.disabled = !enabled || !url;
-  }
-
-  let shareModalApi = null;
-
-  async function openShareModal() {
-    if (!shareModalApi) return;
-    await shareModalApi.open();
-  }
-
-  function openExportModal() {
-    const modal = document.getElementById('exportModal');
-    if (!modal) return;
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeExportModal() {
-    const modal = document.getElementById('exportModal');
-    if (!modal) return;
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-  }
-
-  function initExportModal() {
-    const modal = document.getElementById('exportModal');
-    if (!modal) return;
-
-    document.getElementById('exportModalClose')?.addEventListener('click', closeExportModal);
-    document.getElementById('exportModalDone')?.addEventListener('click', closeExportModal);
-    window.SFModalBackdrop?.bindDismiss(modal, closeExportModal);
-
-    modal.querySelectorAll('[data-export-download]').forEach((link) => {
-      link.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const url = link.getAttribute('href');
-        if (!url) return;
-        if (SF.canEdit) {
-          try {
-            await saveCurrentSlide(true);
-          } catch (err) {
-            console.error(err);
-          }
-        }
-        setSaveStatus(I.exportPreparing || 'Export wird vorbereitet…');
-        if (window.CfStatus) CfStatus.show('info', I.exportPreparing || 'Export wird vorbereitet…');
-        const busyTitle = I.exportPreparing || 'Export wird vorbereitet…';
-        if (window.SFBusy) SFBusy.show(busyTitle);
-        else if (window.HubPageBusy) HubPageBusy.show({ title: busyTitle, soft: true });
-        try {
-          const startRes = await fetch(url + (url.includes('?') ? '&' : '?') + 'async=1', {
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin',
-          });
-          const startJson = await startRes.json();
-          if (!startJson.ok || !startJson.job_id) {
-            throw new Error(startJson.error || I.exportFailed || 'Export fehlgeschlagen');
-          }
-          const jobId = startJson.job_id;
-          for (;;) {
-            const stRes = await fetch('export.php?action=status&job=' + encodeURIComponent(jobId), {
-              credentials: 'same-origin',
-            });
-            const stJson = await stRes.json();
-            if (!stJson.ok) throw new Error(stJson.error || I.exportFailed || 'Export fehlgeschlagen');
-            const status = stJson.job && stJson.job.status;
-            if (status === 'done') {
-              if (window.SFBusy) SFBusy.hide();
-              else if (window.HubPageBusy) HubPageBusy.hide();
-              window.location.href = 'export.php?action=download&job=' + encodeURIComponent(jobId);
-              setSaveStatus(I.exportStarted || 'Download gestartet');
-              if (window.CfStatus) CfStatus.show('ok', I.exportStarted || 'Download gestartet');
-              return;
-            }
-            if (status === 'failed') {
-              throw new Error((stJson.job && stJson.job.error) || I.exportFailed || 'Export fehlgeschlagen');
-            }
-            await new Promise((r) => setTimeout(r, 700));
-          }
-        } catch (err) {
-          if (window.SFBusy) SFBusy.hide();
-          else if (window.HubPageBusy) HubPageBusy.hide();
-          const msg = err?.message || I.exportFailed || 'Export fehlgeschlagen';
-          setSaveStatus(msg);
-          if (window.CfStatus) CfStatus.show('error', msg);
-        }
-      });
-    });
-  }
-
-  function initShareModal() {
-    const modal = document.getElementById('shareModal');
-    if (!modal || !SF.share?.enabled) return;
-
-    const i18n = SF.share.i18n || {};
-    const statusEl = document.getElementById('shareModalStatus');
-    const userSelect = document.getElementById('shareUsername');
-    const permSelect = document.getElementById('sharePermission');
-    const addBtn = document.getElementById('shareAddBtn');
-    const listEl = document.getElementById('shareList');
-    const publicEnabled = document.getElementById('sharePublicEnabled');
-    const publicSaveBtn = document.getElementById('sharePublicSaveBtn');
-    const publicBox = document.getElementById('sharePublicLinkBox');
-    const publicUrl = document.getElementById('sharePublicUrl');
-    const publicCopyBtn = document.getElementById('sharePublicCopyBtn');
-    const publicResetBtn = document.getElementById('sharePublicResetBtn');
-    let busy = false;
-
-    function setStatus(message, kind) {
-      if (!statusEl) return;
-      if (!message) {
-        statusEl.hidden = true;
-        statusEl.textContent = '';
-        statusEl.className = 'share-modal-status';
-        return;
-      }
-      statusEl.hidden = false;
-      statusEl.textContent = message;
-      statusEl.className = 'share-modal-status alert ' + (kind === 'error' ? 'alert-error' : 'alert-success');
-    }
-
-    function renderState(state) {
-      const users = state.users || [];
-      const shares = state.shares || [];
-      const pub = state.public || {};
-
-      if (userSelect) {
-        userSelect.innerHTML = '';
-        if (!users.length) {
-          const opt = document.createElement('option');
-          opt.value = '';
-          opt.textContent = i18n.noOtherUsers || '—';
-          userSelect.appendChild(opt);
-          userSelect.disabled = true;
-          if (addBtn) addBtn.disabled = true;
-        } else {
-          userSelect.disabled = false;
-          if (addBtn) addBtn.disabled = false;
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.disabled = true;
-          placeholder.selected = true;
-          placeholder.textContent = i18n.pleaseChoose || '…';
-          userSelect.appendChild(placeholder);
-          users.forEach((u) => {
-            const opt = document.createElement('option');
-            opt.value = u.username;
-            opt.textContent = u.username + (u.email ? ' (' + u.email + ')' : '')
-              + (u.shared ? (i18n.alreadyShared || '') : '');
-            userSelect.appendChild(opt);
-          });
-        }
-      }
-
-      if (listEl) {
-        listEl.innerHTML = '';
-        if (!shares.length) {
-          const li = document.createElement('li');
-          li.className = 'share-list-empty';
-          li.textContent = i18n.noneYet || '';
-          listEl.appendChild(li);
-        } else {
-          shares.forEach((s) => {
-            const li = document.createElement('li');
-            const label = document.createElement('span');
-            const tag = document.createElement('span');
-            tag.className = 'perm-tag ' + (s.permission === 'edit' ? 'edit' : 'view');
-            tag.textContent = s.permission === 'edit'
-              ? (i18n.permEdit || 'edit')
-              : (i18n.permView || 'view');
-            label.appendChild(document.createTextNode(s.username + ' '));
-            label.appendChild(tag);
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm';
-            btn.textContent = i18n.remove || 'Remove';
-            btn.addEventListener('click', () => removeShare(s.user_id));
-            li.appendChild(label);
-            li.appendChild(btn);
-            listEl.appendChild(li);
-          });
-        }
-      }
-
-      if (publicEnabled) publicEnabled.checked = !!pub.enabled;
-      const url = pub.url || '';
-      if (publicUrl) publicUrl.value = url;
-      if (publicBox) publicBox.hidden = !pub.enabled || !url;
-      if (publicResetBtn) publicResetBtn.hidden = !pub.enabled || !url;
-      syncEditorPublicLinkUi(!!pub.enabled, url);
-    }
-
-    async function refresh() {
-      const state = await apiGet('get_share');
-      renderState(state);
-      return state;
-    }
-
-    async function withBusy(fn) {
-      if (busy) return;
-      busy = true;
-      try {
-        await fn();
-      } catch (err) {
-        setStatus(err.message || String(err), 'error');
-      } finally {
-        busy = false;
-      }
-    }
-
-    async function removeShare(userId) {
-      await withBusy(async () => {
-        const state = await api('remove_share', { user_id: userId });
-        renderState(state);
-        setStatus(state.message || '', 'success');
-      });
-    }
-
-    function closeShareModal() {
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden', 'true');
-    }
-
-    shareModalApi = {
-      async open() {
-        setStatus('', '');
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden', 'false');
-        await withBusy(async () => {
-          await refresh();
-        });
-      },
-    };
-
-    document.getElementById('shareModalClose')?.addEventListener('click', closeShareModal);
-    document.getElementById('shareModalDone')?.addEventListener('click', closeShareModal);
-    window.SFModalBackdrop?.bindDismiss(modal, closeShareModal);
-
-    addBtn?.addEventListener('click', () => {
-      withBusy(async () => {
-        const username = userSelect?.value || '';
-        if (!username) return;
-        const state = await api('add_share', {
-          username,
-          permission: permSelect?.value === 'edit' ? 'edit' : 'view',
-        });
-        renderState(state);
-        if (state.warning) {
-          setStatus((state.message ? state.message + ' ' : '') + state.warning, 'error');
-        } else {
-          setStatus(state.message || '', 'success');
-        }
-      });
-    });
-
-    publicSaveBtn?.addEventListener('click', () => {
-      withBusy(async () => {
-        const state = await api('set_public_share', { enabled: !!publicEnabled?.checked });
-        renderState(state);
-        setStatus(state.message || '', 'success');
-      });
-    });
-
-    publicCopyBtn?.addEventListener('click', async () => {
-      const value = publicUrl?.value || '';
-      if (!value) return;
-      const original = publicCopyBtn.textContent;
-      const done = () => {
-        publicCopyBtn.textContent = i18n.copied || 'OK';
-        setTimeout(() => { publicCopyBtn.textContent = original; }, 1500);
-      };
-      try {
-        await navigator.clipboard.writeText(value);
-        done();
-      } catch (e) {
-        publicUrl.select();
-        document.execCommand('copy');
-        done();
-      }
-    });
-
-    publicResetBtn?.addEventListener('click', () => {
-      withBusy(async () => {
-        if (!(await SFDialog.confirm(i18n.resetConfirm || '', { danger: true }))) return;
-        const state = await api('regenerate_public_token');
-        renderState(state);
-        setStatus(state.message || '', 'success');
-      });
-    });
-  }
-
   async function handleMasterSlideNavClick(btn, e) {
     e.preventDefault();
     e.stopPropagation();
@@ -1074,7 +772,7 @@
     const ribbonEl = document.getElementById('editorRibbon');
     if (!ribbonEl) return;
 
-    const commandIds = ['present_mode', 'share', 'export', 'preview_tab', 'preview_window', 'present_local'];
+    const commandIds = ['present_mode', 'export', 'preview_tab', 'preview_window', 'present_local'];
     commandIds.forEach((cmdId) => {
       ribbonEl.querySelectorAll('[data-ribbon-command="' + cmdId + '"]').forEach((el) => {
         el.classList.add('is-master-disabled');
@@ -1388,7 +1086,6 @@
     initPixabayPanel();
     initIconifyPanel();
     initOpenclipartPanel();
-    initWebdavPanel();
     initMediaSearchButtons();
     bindNotesResize();
     initMediaLibraryPanel();
@@ -8555,51 +8252,6 @@
     });
   }
 
-  function initWebdavPanel() {
-    if (!window.SlideForgeWebdav) return;
-
-    const cfg = SF.webdav || { enabled: false, drives: [], i18n: {} };
-    if (!cfg.enabled) return;
-
-    async function applyWebdavAsset(mode, url, kind) {
-      const mediaKind = kind || 'image';
-      const isBg = mode === 'background-image' || mode === 'background-video';
-      if (isBg) {
-        const bgKind = mode === 'background-video' ? 'video' : 'image';
-        setBgType(bgKind);
-        SF.currentBackground = { type: bgKind, value: url };
-        applyBackgroundVisual(SF.currentBackground);
-        populateBackgroundControls(SF.currentBackground);
-        updateCurrentTabSwatch();
-        scheduleSave();
-        return;
-      }
-
-      if (mediaKind === 'image') {
-        await insertImageObjectAtCenter(url);
-        return;
-      }
-
-      const defaultSize = mediaKind === 'audio' ? { w: 280, h: 56 } : { w: 400, h: 240 };
-      const centerX = Math.round(SF.meta.width / 2) - defaultSize.w / 2;
-      const centerY = Math.round(SF.meta.height / 2) - defaultSize.h / 2;
-      const id = 'o' + Math.random().toString(16).slice(2, 10);
-      const obj = {
-        id, type: mediaKind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h,
-        rotation: 0, opacity: 1, src: url,
-      };
-      insertNode(createNode(obj));
-    }
-
-    window.SlideForgeWebdav.init({
-      id: SF.id,
-      csrfToken: SF.csrfToken,
-      webdavConfig: cfg,
-      applyWebdav: applyWebdavAsset,
-      refreshMediaLibrary: () => SF.refreshMediaLibrary?.(),
-    });
-  }
-
   function initMediaSearchButtons() {
     document.getElementById('pixabayOpenBtn')?.addEventListener('click', () => {
       if (window.SlideForgePixabay?.openPixabayModal) {
@@ -9646,7 +9298,6 @@
 
   if (SF.canEdit) {
     initRibbonCommandDelegation();
-    initShareModal();
     initExportModal();
     initFindReplace();
     initNotesOutline();

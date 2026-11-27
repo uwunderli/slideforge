@@ -1,7 +1,7 @@
 <?php
 /**
  * Zuschauer-Ansicht für lokale Präsentation (Beamer/ zweiter Monitor).
- * Folgt live.php wie view.php, aber per Login statt öffentlichem Token.
+ * Zuschauer-Ansicht: folgt live.php, nur mit Anmeldung.
  */
 require __DIR__ . '/../config.php';
 Auth::requireLogin();

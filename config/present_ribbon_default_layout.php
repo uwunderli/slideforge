@@ -32,7 +32,6 @@ function present_ribbon_default_layout(): array
                         'items' => [
                             ['id' => 'show_progress'],
                             ['id' => 'show_controls'],
-                            ['id' => 'widget:audience'],
                         ],
                     ],
                     [

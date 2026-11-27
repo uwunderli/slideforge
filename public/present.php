@@ -43,15 +43,6 @@ $swatches = array_map(function ($s) {
     return '#222';
 }, $slides);
 
-$acl = Presentation::getAcl($id);
-$publicUrl = '';
-if (!empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
-    $scheme = current_scheme();
-    $host = http_request_host();
-    $base = sf_base();
-    $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
-}
-
 $remoteUrl = '';
 $scheme = current_scheme();
 $host = http_request_host();

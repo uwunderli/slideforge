@@ -6,7 +6,7 @@ declare(strict_types=1);
  *   meta.json    {cfs:1, app, version, title, width, height, … Präsentations-Einstellungen, external?:{datei: ff-Verweis}}
  *   slides.json  {slides:[…]} — Bilder/Videos als `asset:<datei>` (URL-kodiert wie in der Folie)
  *   assets/…     Medien, unkomprimiert gespeichert (Bilder/Videos sind schon gepackt)
- *   thumb.png    optional
+ *   thumb.png    erste Folie, 320 px breit (CfsThumb, beim Packen neu; ohne GD keins)
  * Medien über 100 MB liegen nicht in der Datei, sondern als FileForge-Verweis in `meta.external` (Entscheid Urs 27.11.).
  * In der Arbeitskopie (data/presentations/<id>) stehen die Medien wie bisher als `asset.php?id=<id>&file=<datei>`.
  */
@@ -91,6 +91,7 @@ final class CfsFile
             $zip->addFile($p, 'assets/' . $n);
             $zip->setCompressionName('assets/' . $n, ZipArchive::CM_STORE);
         }
+        CfsThumb::make($id);
         $thumb = $dir . '/thumb.png';
         if (is_file($thumb) && !is_link($thumb)) {
             $zip->addFile($thumb, 'thumb.png');

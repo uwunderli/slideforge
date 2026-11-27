@@ -58,20 +58,11 @@ $isLayoutSetMode = $isTemplateMode && !empty($meta['is_layout_set']);
 $iconBrandColors = Config::brandColors();
 $defaultIconColor = $iconBrandColors[0]['hex'] ?? '#3a6c8d';
 
-$acl = Presentation::getAcl($id);
-$publicUrl = '';
-if (!$isTemplateMode && !empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
-    $scheme = current_scheme();
-    $host = $_SERVER['HTTP_HOST'];
-    $base = sf_base();
-    $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
-}
 
 if (!isset($meta['safe_margin'])) {
     $meta['safe_margin'] = 100; // ältere Präsentationen (von vor dieser Funktion) haben das Feld noch nicht gespeichert
 }
 
-$webdavDrives = Auth::listWebdavDrivesPublic($me);
 [$mineLayoutSets, $sharedLayoutSets] = $isTemplateMode ? [[], []] : LayoutSet::listForUser($me['id']);
 $editorLayoutSets = array_merge($mineLayoutSets, $sharedLayoutSets);
 
@@ -516,7 +507,6 @@ $bootstrap = [
     'presentConfig' => [
         'enabled' => !$isTemplateMode && $canEdit,
         'isOwner' => $perm === 'owner',
-        'publicUrl' => $publicUrl,
         'i18n' => [
             'copied' => t('present.copied'),
             'copyLink' => t('present.copy_link'),
@@ -527,20 +517,6 @@ $bootstrap = [
             'screenMultiHint' => t('present.screen_multi_hint'),
             'localStart' => t('present.local_start'),
             'localReopen' => t('present.local_reopen'),
-        ],
-    ],
-    'share' => [
-        'enabled' => $perm === 'owner' && !$isTemplateMode,
-        'i18n' => [
-            'noneYet' => t('share.none_yet'),
-            'pleaseChoose' => t('share.please_choose'),
-            'noOtherUsers' => t('share.no_other_users'),
-            'alreadyShared' => t('share.already_shared'),
-            'permEdit' => t('dashboard.permission_edit'),
-            'permView' => t('dashboard.permission_view'),
-            'remove' => t('common.remove'),
-            'resetConfirm' => t('share.reset_confirm'),
-            'copied' => t('present.copied'),
         ],
     ],
     'spellcheck' => [
@@ -671,29 +647,6 @@ $bootstrap = [
             'translating' => t('media.translating'),
         ],
     ],
-    'webdav' => [
-        'enabled' => $canEdit && count($webdavDrives) > 0,
-        'drives' => $webdavDrives,
-        'i18n' => [
-            'title' => t('webdav.title'),
-            'loading' => t('webdav.loading'),
-            'importing' => t('webdav.importing'),
-            'importDone' => t('webdav.import_done'),
-            'emptyFolder' => t('webdav.empty_folder'),
-            'errorGeneric' => t('webdav.error_generic'),
-            'useObject' => t('webdav.use_object'),
-            'useBackground' => t('pixabay.use_background'),
-            'previewHint' => t('pixabay.preview_hint'),
-            'kindVideo' => t('media_lib.kind_video'),
-            'kindAudio' => t('media_lib.kind_audio'),
-            'targetObject' => t('webdav.target_object'),
-            'up' => t('webdav.up'),
-            'root' => t('webdav.root'),
-            'folder' => t('webdav.folder'),
-            'file' => t('webdav.file'),
-            'openFolder' => t('webdav.open_folder'),
-        ],
-    ],
     'mediaLibrary' => [
         'i18n' => [
             'subInsert' => t('media_lib.sub_insert'),
@@ -730,7 +683,6 @@ $bootstrap = [
             'urls' => [
                 'present' => 'present.php?id=' . urlencode($id) . '&slide=0',
                 'preview' => 'preview.php?id=' . urlencode($id) . '&slide=0',
-                'share' => 'presentation_share.php?id=' . urlencode($id),
                 'export' => 'export.php?id=' . urlencode($id),
             ],
             'masterSlideNav' => $showMasterSlideNav ? [
@@ -1236,54 +1188,6 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
   </div>
 </div>
 
-<?php if ($perm === 'owner' && !$isTemplateMode): ?>
-<div class="modal-backdrop" id="shareModal" aria-hidden="true">
-  <div class="modal share-modal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
-    <div class="sf-dialog-header share-modal-header">
-      <h2 id="shareModalTitle" class="sf-dialog-title"><?= h(t('editor.share')) ?></h2>
-      <button type="button" class="sf-dialog-close" id="shareModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
-    </div>
-    <div class="share-modal-scroll">
-      <div id="shareModalStatus" class="share-modal-status" hidden></div>
-      <div class="present-config-section">
-        <div class="present-config-section-title"><?= h(t('share.with_people')) ?></div>
-        <div class="share-modal-row">
-          <div class="share-modal-field share-modal-field-grow">
-            <label for="shareUsername"><?= h(t('share.user_label')) ?></label>
-            <select id="shareUsername"></select>
-          </div>
-          <div class="share-modal-field">
-            <label for="sharePermission"><?= h(t('share.permission')) ?></label>
-            <select id="sharePermission">
-              <option value="view"><?= h(t('share.view_only_opt')) ?></option>
-              <option value="edit"><?= h(t('share.edit_opt')) ?></option>
-            </select>
-          </div>
-        </div>
-        <button type="button" class="button hub-btn hub-btn--primary" id="shareAddBtn" style="margin-top:12px;"><?= h(t('share.share_btn')) ?></button>
-        <ul class="share-list" id="shareList"></ul>
-      </div>
-      <div class="present-config-section">
-        <div class="present-config-section-title"><?= h(t('share.public_link')) ?></div>
-        <p class="props-video-note" style="margin:0 0 10px;"><?= t('share.public_link_desc') ?></p>
-        <label class="present-config-check">
-          <input type="checkbox" id="sharePublicEnabled">
-          <span><?= h(t('share.enable_public_link')) ?></span>
-        </label>
-        <button type="button" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" id="sharePublicSaveBtn" style="margin-top:10px;"><?= h(t('common.save')) ?></button>
-        <div class="public-link-box" id="sharePublicLinkBox" hidden>
-          <input type="text" id="sharePublicUrl" readonly>
-          <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="sharePublicCopyBtn"><?= h(t('present.copy')) ?></button>
-        </div>
-        <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="sharePublicResetBtn" style="margin-top:10px;" hidden><?= h(t('share.reset_link')) ?></button>
-      </div>
-    </div>
-    <div class="present-config-panel-footer modal-actions">
-      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="shareModalDone"><?= h(t('common.close')) ?></button>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
 
 <?php if ($canEdit && !$isTemplateMode): ?>
 <div class="modal-backdrop" id="exportModal" aria-hidden="true">
@@ -1645,38 +1549,6 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
 </div>
 <?php endif; ?>
 
-<?php if ($canEdit && count($webdavDrives) > 0): ?>
-<div class="modal-backdrop" id="webdavModal" aria-hidden="true">
-  <div class="modal pixabay-modal webdav-modal" role="dialog" aria-modal="true" aria-labelledby="webdavModalTitle">
-    <div class="sf-dialog-header pixabay-modal-header">
-      <h2 id="webdavModalTitle" class="sf-dialog-title pixabay-modal-title"><?= h(t('webdav.title')) ?></h2>
-      <button type="button" class="sf-dialog-close" id="webdavModalClose" aria-label="<?= h(t('common.close')) ?>">×</button>
-    </div>
-    <p class="sf-dialog-hint pixabay-target-hint"><?= h(t('webdav.target_object')) ?></p>
-    <div class="pixabay-modal-toolbar webdav-modal-toolbar">
-      <nav class="webdav-breadcrumb" id="webdavBreadcrumb" aria-label="<?= h(t('webdav.breadcrumb')) ?>"></nav>
-    </div>
-    <div class="pixabay-modal-meta">
-      <div class="pixabay-status" id="webdavStatus"></div>
-    </div>
-    <div class="pixabay-modal-body">
-      <div class="webdav-folder-bar" id="webdavFolderBar" hidden></div>
-      <div class="pixabay-grid" id="webdavGrid"></div>
-    </div>
-  </div>
-  <div class="pixabay-lightbox" id="webdavLightbox" aria-hidden="true">
-    <button type="button" class="pixabay-lightbox-close" id="webdavLightboxClose" aria-label="<?= h(t('common.close')) ?>">✕</button>
-    <div class="pixabay-lightbox-backdrop" id="webdavLightboxBackdrop" aria-hidden="true"></div>
-    <div class="pixabay-lightbox-panel" role="dialog" aria-modal="true">
-      <div class="pixabay-lightbox-media" id="webdavLightboxMedia"></div>
-      <div class="pixabay-lightbox-footer">
-        <div class="pixabay-lightbox-meta" id="webdavLightboxMeta"></div>
-        <div class="pixabay-lightbox-actions" id="webdavLightboxActions"></div>
-      </div>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
 
 <script>
 window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
@@ -1694,9 +1566,6 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php endif; ?>
 <?php if ($canEdit && Config::openclipartEnabled()): ?>
 <script src="assets/js/clipart.js?v=<?= ASSET_VERSION ?>"></script>
-<?php endif; ?>
-<?php if ($canEdit && count($webdavDrives) > 0): ?>
-<script src="assets/js/webdav.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
 <?php if ($canEdit): ?>

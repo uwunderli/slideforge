@@ -1339,7 +1339,7 @@
       });
       // Fragmente (schrittweise Animationen innerhalb einer Folie) lösen KEIN
       // 'slidechanged' aus, müssen aber genauso live übertragen werden - sonst bleibt
-      // die Zuschauer-Ansicht (view.php) beim vorherigen Fragment-Stand hängen und
+      // die Zuschauer-Ansicht (present_audience.php) beim vorherigen Fragment-Stand hängen und
       // überspringt ihn beim nächsten echten Folienwechsel.
       mainReveal.on('fragmentshown', () => {
         if (!presentBootLocked) broadcastPosition(currentIndex);
@@ -1868,7 +1868,7 @@
   function canBroadcastPosition() {
     if (!P.canBroadcast || applyingRemote) return false;
     if (isPresentLeader) return true;
-    // Present-Modus leitet Remote-Schritte an Zuschauer (view.php) weiter.
+    // Present-Modus leitet Remote-Schritte an Zuschauer (present_audience.php) weiter.
     if (globalLeaderKind === 'remote') return true;
     return false;
   }

@@ -1,5 +1,5 @@
 /**
- * Laserpointer in der Live-/Zuschauer-Ansicht (view.php, present_audience.php).
+ * Laserpointer in der Live-/Zuschauer-Ansicht (present_audience.php).
  */
 (function (global) {
   'use strict';

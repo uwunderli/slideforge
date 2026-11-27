@@ -68,9 +68,10 @@ final class FfFile
     }
 
     /** Neue Datei anlegen (ersetzt nie; belegt → «Name (1).ext»). @return array{ok:bool,error:string,ref:string,name:string,oid:string} */
-    public static function create(string $person, string $repo, string $dir, string $name, string $file): array
+    public static function create(string $person, string $repo, string $dir, string $name, string $file, bool $mkdirs = false): array
     {
-        $q = 'action=create&repo=' . rawurlencode($repo) . '&dir=' . rawurlencode($dir) . '&name=' . rawurlencode($name);
+        // repo 'own' = eigene Ablage der Person; mkdirs legt fehlende Ordner an (FileForge ≥ 1.18.1)
+        $q = 'action=create&repo=' . rawurlencode($repo) . '&dir=' . rawurlencode($dir) . '&name=' . rawurlencode($name) . ($mkdirs ? '&mkdirs=1' : '');
         $r = HubApp::stream('fileforge', '/hooks/app-file.php?' . $q, $file, $person, 1800);
         $j = is_array($r['json']) ? $r['json'] : [];
         if (empty($r['ok']) || empty($j['ok'])) {
@@ -93,5 +94,28 @@ final class FfFile
             }
         }
         return $out;
+    }
+
+    /**
+     * Ordnerinhalt als die Person (FileForge ≥ 1.18.1, Aktion `list`), Dateien nur mit diesen Endungen.
+     *
+     * @param list<string> $exts
+     * @return array{ok:bool,error:string,items:list<array{name:string,ref:string,isDir:bool,mtime:int}>}
+     */
+    public static function listing(string $person, string $dirRef, array $exts): array
+    {
+        $ext = implode(',', array_filter($exts, static fn($x) => preg_match('/^[a-z0-9]{1,10}\z/', (string)$x) === 1));
+        $r = HubApp::call('fileforge', 'GET', '/hooks/app-file.php?action=list&ref=' . rawurlencode($dirRef) . ($ext !== '' ? '&ext=' . $ext : ''), null, $person, 15);
+        $j = is_array($r['json']) ? $r['json'] : [];
+        if (empty($r['ok']) || empty($j['ok'])) {
+            return ['ok' => false, 'error' => (string)($j['error'] ?? $r['error']), 'items' => []];
+        }
+        $out = [];
+        foreach ((array)($j['items'] ?? []) as $it) {
+            if (is_array($it) && self::parseRef((string)($it['ref'] ?? '')) !== null) {
+                $out[] = ['name' => (string)($it['name'] ?? ''), 'ref' => (string)$it['ref'], 'isDir' => !empty($it['isDir']), 'mtime' => (int)($it['mtime'] ?? 0)];
+            }
+        }
+        return ['ok' => true, 'error' => '', 'items' => $out];
     }
 }

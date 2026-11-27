@@ -3,7 +3,6 @@ require __DIR__ . '/../config.php';
 
 $id = $_GET['id'] ?? '';
 $file = $_GET['file'] ?? '';
-$token = $_GET['token'] ?? '';
 
 if (!Presentation::exists($id) || $file === '' || basename($file) !== $file) {
     http_response_code(404);
@@ -15,12 +14,6 @@ $allowed = false;
 if (Auth::isLoggedIn()) {
     $me = Auth::currentUser();
     if ($me && Presentation::canView($id, $me['id'])) {
-        $allowed = true;
-    }
-}
-if (!$allowed && $token !== '') {
-    $acl = Presentation::getAcl($id);
-    if (!empty($acl['public']['enabled']) && hash_equals($acl['public']['token'] ?? '', $token)) {
         $allowed = true;
     }
 }

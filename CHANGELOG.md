@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.2.0] - 2026-11-27
+
+- **Übernahme des Altbestands** (H6, Entscheid Urs: in «Meine Ablage», ohne Freigaben): `php scripts/migrate-to-ff.php --source=<alt> [--run]`, Probelauf ohne `--run`, Protokoll in `data/migration/`, sichtbar im Task Manager des Hubs.
+- **Öffnen aus FileForge ohne Zeitfenster**: der Haken prüft nur das Recht, geladen wird im Browser (`index.php?open=`).
+- **Neu aus Vorlage** zeigt die Vorlagen aus dem eingestellten Ordner (FileForge ≥ 1.18.1, Aktion `list`).
+- **Vorschaubild** `thumb.png` in jeder .cfs (erste Folie, schematisch).
+- **Präsentationen ausserhalb von FileForge** (Logos-/Agenda-Import) speichert «Speichern unter …» als .cfs in FileForge.
+- **Entfernt:** WebDAV-Laufwerke, Freigaben in der FolienSchmiede, öffentlicher Zuschauer-Link (`view.php`), Teilen-Dialog. Freigeben geht über FileForge.
+
 ## [3.0.0] - 2026-11-27
 
 - **Läuft im Hub** (Urs 27.11.: «slide Forge ganz in den Hub integrieren»): Ordner `public_html/` heisst `public/`; SlideForge liegt im Web-Share des Hubs und ist unter `<Hub>/slideforge/` erreichbar (NPM bildet `/slideforge/` auf `/slideforge/public/` ab). Basispfad über `sf_base()`.

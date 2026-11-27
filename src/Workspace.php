@@ -241,7 +241,7 @@ final class Workspace
     {
         $w = self::forPresentation($id);
         if ($w === null) {
-            return ['ok' => false, 'error' => 'not_ff'];
+            return ['ok' => false, 'error' => self::local($id, $person) !== null ? 'need_copy' : 'not_ff'];
         }
         $lock = self::lock((string)$w['key']);
         try {
@@ -291,7 +291,7 @@ final class Workspace
      */
     public static function saveCopy(string $id, string $person, string $dirRef, string $name): array
     {
-        $w = self::forPresentation($id);
+        $w = self::forPresentation($id) ?? self::local($id, $person);
         $loc = FfFile::parseRef($dirRef);
         if ($w === null || $loc === null || !$loc['dir']) {
             return ['ok' => false, 'error' => 'bad_request'];
@@ -434,15 +434,29 @@ final class Workspace
         return $can ? 'edit' : 'view';
     }
 
+    /**
+     * Präsentation, die noch nicht in FileForge liegt (Logos-/Agenda-Import, Übernahme): nur die Besitzerin darf sie mit
+     * «Speichern unter …» als .cfs ablegen; danach ist sie eine gewöhnliche FileForge-Datei. @return array<string,mixed>|null
+     */
+    private static function local(string $id, string $person): ?array
+    {
+        if (Presentation::checkPermission($id, $person) !== 'owner') {
+            return null;
+        }
+        $meta = Presentation::getMeta($id);
+        return ['key' => 'l' . sha1($id), 'id' => $id, 'ref' => '', 'share' => '', 'name' => self::title((string)($meta['title'] ?? '')) . '.cfs',
+            'oid' => '', 'external' => [], 'source' => 'local', 'sig' => '', 'savedAt' => 0, 'savedBy' => ''];
+    }
+
     /** Für den Editor. @return array<string,mixed>|null */
     public static function status(string $id, string $person): ?array
     {
-        $w = self::forPresentation($id);
+        $w = self::forPresentation($id) ?? self::local($id, $person);
         if ($w === null) {
             return null;
         }
         return ['name' => (string)$w['name'], 'source' => (string)$w['source'], 'viaShare' => (string)$w['share'] !== '',
-            'dirty' => $w['source'] === 'import' || self::signature($id) !== (string)($w['sig'] ?? ''),
+            'dirty' => $w['source'] === 'import' || $w['source'] === 'local' || self::signature($id) !== (string)($w['sig'] ?? ''),
             'canWrite' => !empty($w['checked'][$person]['canWrite']), 'savedAt' => (int)($w['savedAt'] ?? 0)];
     }
 

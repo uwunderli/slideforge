@@ -194,17 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Lesen (GET): angemeldet mit View-Recht oder gültiger öffentlicher Token
-$token = $_GET['token'] ?? '';
 $allowed = false;
 if (Auth::isLoggedIn()) {
     $me = Auth::currentUser();
     if ($me && Presentation::canView($id, $me['id'])) {
-        $allowed = true;
-    }
-}
-if (!$allowed && $token !== '') {
-    $acl = Presentation::getAcl($id);
-    if (!empty($acl['public']['enabled']) && hash_equals($acl['public']['token'] ?? '', $token)) {
         $allowed = true;
     }
 }

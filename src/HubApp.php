@@ -196,6 +196,42 @@ final class HubApp
     }
 
     /**
+     * Aufgabe im Task Manager des Hubs melden (`api/tasks.php?op=report`, signiert mit dem App-Schlüssel, Ziel `hub`).
+     *
+     * @param array<string,mixed> $body
+     * @return array{ok:bool,status:int,json:?array<string,mixed>,error:string}
+     */
+    public static function task(array $body, int $timeout = 8): array
+    {
+        $path = '/api/tasks.php?op=report';
+        $ctx = self::ready() ? self::context() : [];
+        if ($ctx === [] || !method_exists('AppKeyClient', 'hubHeaders')) {
+            return ['ok' => false, 'status' => 0, 'json' => null, 'error' => 'no_app_call'];
+        }
+        $raw = (string)json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $sig = AppKeyClient::hubHeaders($ctx['dataDir'], $ctx['selfId'], 'POST', $path, $raw);
+        if ($sig === []) {
+            return ['ok' => false, 'status' => 0, 'json' => null, 'error' => 'no_app_key'];
+        }
+        $h = ['Accept: application/json', 'Content-Type: application/json'];
+        foreach ($sig as $k => $v) {
+            $h[] = is_int($k) ? (string)$v : $k . ': ' . $v;
+        }
+        if ($ctx['hostHeader'] !== '') {
+            $h[] = 'Host: ' . $ctx['hostHeader'];
+        }
+        $ch = curl_init($ctx['hubBaseUrl'] . $path);
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $raw, CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_FOLLOWLOCATION => false]);
+        $resp = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $j = is_string($resp) ? json_decode($resp, true) : null;
+        $ok = $status >= 200 && $status < 300 && is_array($j) && !empty($j['ok']);
+        return ['ok' => $ok, 'status' => $status, 'json' => is_array($j) ? $j : null, 'error' => $ok ? '' : ($status === 0 ? 'unreachable' : 'http_' . $status)];
+    }
+
+    /**
      * @param array<string,string> $headers
      * @return array{ok:bool,caller:string,person:string,error:string}
      */

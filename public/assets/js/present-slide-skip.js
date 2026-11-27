@@ -78,7 +78,7 @@
   global.SlideForgePresentSlideSkip = {
     install: installSkip,
 
-    /** Zielindex für Live-Sync (view.php): deaktivierte Folien überspringen. */
+    /** Zielindex für Live-Sync (present_audience.php): deaktivierte Folien überspringen. */
     normalizeLiveIndex(disabled, index, direction) {
       if (!Array.isArray(disabled) || !disabled.some(Boolean)) return index;
       const count = disabled.length;

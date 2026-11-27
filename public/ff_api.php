@@ -5,6 +5,7 @@ declare(strict_types=1);
  * Dateien in FileForge für die Oberfläche (Startseite und Editor). POST JSON mit csrf_token; GET nur zum Lesen.
  *
  *   GET  ?action=home                                  → {recent:[…], forme:[…], templateDir:{ref,label}|null}
+ *   GET  ?action=templates                             → {items:[{name, ref}]}  .cfs im Vorlagen-Ordner der Person
  *   POST {action:open, ref|share}                      → {ok, id}
  *   POST {action:create, dir, name, template?}         → {ok, id}           neue .cfs im Ordner (dir = ff-Verweis eines Ordners)
  *   POST {action:save, id}                             → {ok, saved, error?} error: changed | read_only | need_copy | …
@@ -55,6 +56,18 @@ $templateDir = static function () use ($me): ?array {
 };
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    if (($_GET['action'] ?? '') === 'templates') {
+        $t = $templateDir();
+        if ($t === null) {
+            $fail('no_template_dir');
+        }
+        $l = FfFile::listing($person, $t['ref'], ['cfs']);
+        if (!$l['ok']) {
+            $fail($l['error'] === 'no_access' ? 'no_access' : 'unreachable');
+        }
+        $items = array_values(array_filter($l['items'], static fn(array $i): bool => !$i['isDir']));
+        $out(['ok' => true, 'items' => array_map(static fn(array $i): array => ['name' => $i['name'], 'ref' => $i['ref']], $items)]);
+    }
     if (($_GET['action'] ?? '') !== 'home') {
         $fail('bad_request', 400);
     }

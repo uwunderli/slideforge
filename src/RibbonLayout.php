@@ -185,7 +185,6 @@ class RibbonLayout
                         ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ],
                     'widget:collab_menu' => [
-                        ['id' => 'share', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                         ['id' => 'export', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                     ],
                 ];
@@ -350,7 +349,6 @@ class RibbonLayout
         $tabs = self::migrateLegacyStartGroups($tabs);
         $tabs = self::migrateDesignApplySettingsGroup($tabs);
         $tabs = self::migratePresentModeLabel($tabs);
-        $tabs = self::migrateCollabShare($tabs);
         $tabs = self::migratePresentPreviewToView($tabs, $injectViewPreviews);
         $tabs = self::migrateRestorePresentTabDefaults($tabs);
 
@@ -695,7 +693,6 @@ class RibbonLayout
         }
         $needsRestore = empty($have['present_mode'])
             || (empty($have['show_progress']) && empty($have['show_controls']) && empty($have['widget:present_display']))
-            || empty($have['share'])
             || empty($have['export'])
             || empty($have['widget:settings_duration'])
             || empty($have['widget:settings_layout_set']);
@@ -793,56 +790,6 @@ class RibbonLayout
                     }
                 }
                 unset($item);
-            }
-            unset($group);
-        }
-        unset($tab);
-
-        return $tabs;
-    }
-
-    /**
-     * Zusammenarbeit: «Teilen» wieder einfügen, falls nur noch Export übrig ist
-     * (Ribbon-API speicherte früher ohne isOwner und strich den Befehl).
-     *
-     * @param list<array<string,mixed>> $tabs
-     * @return list<array<string,mixed>>
-     */
-    private static function migrateCollabShare(array $tabs): array
-    {
-        foreach ($tabs as &$tab) {
-            if (($tab['id'] ?? '') !== 'present') {
-                continue;
-            }
-            foreach ($tab['groups'] ?? [] as &$group) {
-                if (($group['id'] ?? '') !== 'g_collab') {
-                    continue;
-                }
-                $hasShare = false;
-                $hasExport = false;
-                foreach ($group['items'] ?? [] as $item) {
-                    $id = (string)($item['id'] ?? '');
-                    if ($id === 'share') {
-                        $hasShare = true;
-                    }
-                    if ($id === 'export') {
-                        $hasExport = true;
-                    }
-                }
-                if ($hasShare || !$hasExport) {
-                    continue;
-                }
-                $newItems = [];
-                foreach ($group['items'] ?? [] as $item) {
-                    if (($item['id'] ?? '') === 'export') {
-                        $newItems[] = [
-                            'id' => 'share',
-                            'gridSpan' => ['cols' => 1, 'rows' => 2],
-                        ];
-                    }
-                    $newItems[] = $item;
-                }
-                $group['items'] = $newItems;
             }
             unset($group);
         }

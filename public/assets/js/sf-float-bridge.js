@@ -14,7 +14,6 @@
     pixabayModal: { width: 920, height: 680 },
     iconifyModal: { width: 920, height: 680 },
     openclipartModal: { width: 920, height: 680 },
-    webdavModal: { width: 920, height: 680 },
     templateModal: { width: 560, height: 480 },
     elementLinksModal: { width: 560, height: 480 },
     slideBgGradientModal: { width: 440, height: 420 },
