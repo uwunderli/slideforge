@@ -1156,17 +1156,30 @@
   }
 
   // ---------- Bootstrapping ----------
-  async function ensureFontsLoaded() {
-    if (!document.fonts || !document.fonts.load) return;
-    const families = FONT_OPTIONS.slice();
-    const weights = ['400', '700'];
-    const promises = [];
-    families.forEach((f) => {
-      weights.forEach((w) => {
-        promises.push(document.fonts.load(w + ' 32px "' + f + '"').catch(() => {}));
+  // Nur die Schriften laden, die die Folien brauchen (3.9.10): mit ~1000 Hub-Schriften wäre «alle laden» tausende Downloads.
+  function usedFontFamilies(slides) {
+    const set = new Set(['Open Sans']);
+    const walk = (v, depth) => {
+      if (!v || typeof v !== 'object' || depth > 12) return;
+      if (Array.isArray(v)) { v.forEach((x) => walk(x, depth + 1)); return; }
+      Object.keys(v).forEach((k) => {
+        if (k === 'fontFamily' && typeof v[k] === 'string' && v[k].trim()) set.add(v[k].trim());
+        else walk(v[k], depth + 1);
       });
-    });
-    try { await Promise.all(promises); } catch (e) { /* ignore */ }
+    };
+    walk(slides, 0);
+    return Array.from(set).slice(0, 60);
+  }
+
+  function loadFontFamily(f, weights) {
+    if (!document.fonts || !document.fonts.load || !f) return Promise.resolve();
+    const fam = String(f).replace(/["\\]/g, '');
+    return Promise.all((weights || ['400', '700']).map((w) => document.fonts.load(w + ' 32px "' + fam + '"').catch(() => {})));
+  }
+
+  async function ensureFontsLoaded(slides) {
+    if (!document.fonts || !document.fonts.load) return;
+    try { await Promise.all(usedFontFamilies(slides).map((f) => loadFontFamily(f))); } catch (e) { /* ignore */ }
     try { await document.fonts.ready; } catch (e) { /* ignore */ }
   }
 
@@ -1185,7 +1198,6 @@
 
   async function init() {
     addCanvasFontFallback();
-    await ensureFontsLoaded();
     try {
       const res = await apiGet('get_slides');
       SF.slides = res.slides;
@@ -1194,6 +1206,7 @@
       console.error(e);
       return;
     }
+    await ensureFontsLoaded(SF.slides);
     renderTextTemplateButtons();
     if (SF.templateMode && !SF.layoutSetMode) {
       SF.currentIndex = 0;
@@ -5795,6 +5808,7 @@
       node.fontFamily(e.target.value);
       refreshCanvas();
       scheduleSave();
+      loadFontFamily(e.target.value).then(() => refreshCanvas());   // Schrift erst bei Wahl laden, dann neu zeichnen
     });
     document.getElementById('rb_fontsize')?.addEventListener('input', (e) => {
       const node = ribbonStartTextNode();
