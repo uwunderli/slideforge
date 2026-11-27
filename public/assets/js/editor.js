@@ -466,20 +466,63 @@
   SF.deckUndo = [];
   SF.deckRedo = [];
 
-  async function api(action, data) {
-    if (DECK_ACTIONS.indexOf(action) !== -1) {
-      if (SF.deckBusy) throw new Error('Bitte warten – vorheriger Schritt läuft noch.');
+  /* Warteschlange der Folien-Schritte (3.9.5). Früher warf ein zweiter Schritt während
+     eines laufenden «Bitte warten – vorheriger Schritt läuft noch.» (Urs 27.11. bei «Neue Folie»).
+     Jetzt läuft ein Schritt nach dem anderen: gleiche Aktion während sie läuft oder wartet
+     (Doppelklick) wird still verworfen, andere Folien-Aktionen warten und laufen danach.
+     SF.deckBusy = true, solange ein Schritt läuft; api() ruft Folien-Aktionen darin direkt auf. */
+  SF.deckChain = Promise.resolve();
+  SF.deckPending = new Set();
+
+  /** fn als Folien-Schritt einreihen. key = gleiche Aktion verwerfen, solange sie läuft/wartet; null = immer einreihen. */
+  function deckRun(key, fn) {
+    if (key && SF.deckPending.has(key)) return Promise.resolve();
+    if (key) SF.deckPending.add(key);
+    const step = SF.deckChain.then(async () => {
       SF.deckBusy = true;
       try {
-        if (SF.saveTimer) {
-          clearTimeout(SF.saveTimer);
-          SF.saveTimer = null;
-          await saveCurrentSlide(true);
-        }
-        return await apiSend(action, data);
+        return await fn();
       } finally {
         SF.deckBusy = false;
+        if (key) SF.deckPending.delete(key);
       }
+    });
+    SF.deckChain = step.catch(() => {});
+    return step;
+  }
+
+  /** Wie deckRun, für Bedien-Wege: Fehler sachlich anzeigen statt still abbrechen. */
+  function deckUi(key, fn) {
+    return deckRun(key, fn).catch((e) => {
+      console.error(e);
+      setSaveStatus('Fehler', true);
+      if (window.CfStatus) CfStatus.show('error', (e && e.message) || 'Der Folien-Schritt ist fehlgeschlagen.');
+    });
+  }
+
+  /** Folien-Nummern beim Auslösen in IDs umrechnen; wartet der Schritt, haben sich die Nummern evtl. verschoben. */
+  function slideIdsAt(indices) {
+    return indices.map((i) => (SF.slides[i] ? SF.slides[i].id : null)).filter(Boolean);
+  }
+
+  function slideIndicesOf(ids) {
+    return ids.map((id) => SF.slides.findIndex((s) => s.id === id)).filter((i) => i >= 0);
+  }
+
+  async function api(action, data) {
+    if (DECK_ACTIONS.indexOf(action) !== -1) {
+      /* Ausserhalb eines Schritts (z. B. neuer Aufrufweg): selbst einreihen statt dazwischenfunken. */
+      if (!SF.deckBusy) return deckRun(null, () => apiDeckSend(action, data));
+      return apiDeckSend(action, data);
+    }
+    return apiSend(action, data);
+  }
+
+  async function apiDeckSend(action, data) {
+    if (SF.saveTimer) {
+      clearTimeout(SF.saveTimer);
+      SF.saveTimer = null;
+      await saveCurrentSlide(true);
     }
     return apiSend(action, data);
   }
@@ -680,9 +723,9 @@
         case 'slide_grid_view':
           toggleSlideGridView();
           break;
-        case 'add_slide':
-          document.getElementById('addSlideBtn')?.click();
-          break;
+        /* add_slide: kein Fall hier. Der Menüband-Knopf trägt data-ribbon-trigger="addSlideBtn"
+           (config/ribbon_commands.php), ribbon.js klickt #addSlideBtn schon; ein zweiter Klick hier
+           legte die Folie zweimal an bzw. löste «Bitte warten» aus (3.9.5). */
         case 'zoom_in':
           zoomBy(10);
           break;
@@ -1028,7 +1071,11 @@
     });
   }
 
-  async function applyLayoutFromSet(setId, layoutKey, layoutSlideId) {
+  function applyLayoutFromSet(setId, layoutKey, layoutSlideId) {
+    return deckUi('apply_layout_from_set', () => applyLayoutFromSetNow(setId, layoutKey, layoutSlideId));
+  }
+
+  async function applyLayoutFromSetNow(setId, layoutKey, layoutSlideId) {
     setSaveStatus('Wende Layout an…');
     try {
       pushHistory();
@@ -1078,7 +1125,11 @@
     });
   }
 
-  async function applySlideTemplate(templateId) {
+  function applySlideTemplate(templateId) {
+    return deckUi('apply_slide_template', () => applySlideTemplateNow(templateId));
+  }
+
+  async function applySlideTemplateNow(templateId) {
     setSaveStatus('Wende Vorlage an…');
     try {
       pushHistory();
@@ -2198,7 +2249,11 @@
     });
   }
 
-  async function commitSlideOrder(newOrderIds) {
+  function commitSlideOrder(newOrderIds) {
+    return deckUi(null, () => commitSlideOrderNow(newOrderIds));
+  }
+
+  async function commitSlideOrderNow(newOrderIds) {
     const oldOrderIds = SF.slides.map((s) => s.id);
     if (JSON.stringify(newOrderIds) === JSON.stringify(oldOrderIds)) return;
 
@@ -2725,7 +2780,12 @@
 
   /** Mehrere Folien duplizieren — ein Schritt im Verlauf. Von hinten nach vorn,
       damit die Kopien die noch offenen Nummern nicht verschieben. */
-  async function duplicateSlides(indices) {
+  function duplicateSlides(indices) {
+    const ids = slideIdsAt(indices);
+    return deckUi('duplicate_slide', () => duplicateSlidesNow(slideIndicesOf(ids)));
+  }
+
+  async function duplicateSlidesNow(indices) {
     if (!indices.length) return;
     const before = await deckBegin();
     try {
@@ -2765,19 +2825,23 @@
     const defaultKey = suggestedLayoutKey(slide);
     const layoutKey = await SFDialog.prompt(I.importSlideToSetPrompt || 'Layout-Schlüssel:', defaultKey);
     if (layoutKey === null) return;
-    try {
-      setSaveStatus('Speichere…');
-      const res = await api('import_slide_to_layout_set', {
-        index,
-        layout_set_id: SF.importLayoutSetId,
-        layout_key: layoutKey.trim(),
-      });
-      setSaveStatus(res.message || I.importSlideToSetDone || 'Gespeichert');
-    } catch (e) {
-      setSaveStatus('Fehler', true);
-      await SFDialog.alert(e.message || 'Import fehlgeschlagen.');
-      console.error(e);
-    }
+    await deckUi('import_slide_to_layout_set', async () => {
+      const idx = SF.slides.findIndex((s) => s.id === slide.id);
+      if (idx < 0) return;
+      try {
+        setSaveStatus('Speichere…');
+        const res = await api('import_slide_to_layout_set', {
+          index: idx,
+          layout_set_id: SF.importLayoutSetId,
+          layout_key: layoutKey.trim(),
+        });
+        setSaveStatus(res.message || I.importSlideToSetDone || 'Gespeichert');
+      } catch (e) {
+        setSaveStatus('Fehler', true);
+        await SFDialog.alert(e.message || 'Import fehlgeschlagen.');
+        console.error(e);
+      }
+    });
   }
 
   async function deleteSlide(index) {
@@ -2808,9 +2872,16 @@
       SF.deleteAsking = false;
     }
     if (!ja) return;
+    const ids = slideIdsAt(indices);
+    await deckUi('delete_slide', () => deleteSlidesNow(ids));
+  }
+
+  async function deleteSlidesNow(ids) {
+    const indices = slideIndicesOf(ids).sort((a, b) => a - b);
+    if (!indices.length || indices.length >= SF.slides.length) return;
     const before = await deckBegin();
     const currentId = currentSlideId();
-    const removedIds = new Set(indices.map((i) => SF.slides[i].id));
+    const removedIds = new Set(ids);
     try {
       setSaveStatus('Speichere…');
       /* Von hinten nach vorn, sonst verschieben sich die Nummern der noch zu löschenden Folien. */
@@ -7618,16 +7689,20 @@
     }
     let slideIndex = findSlideIndexForLogosRole(role);
     if (slideIndex < 0) {
-      await saveCurrentSlide(true);
-      const res = await api('add_slide', { after_index: SF.slides.length - 1 });
-      SF.slides = res.slides;
-      slideIndex = SF.slides.length - 1;
-      SF.slides[slideIndex].layoutKey = layoutKeyForLogosRole(role);
-      SF.currentIndex = slideIndex;
-      loadSlideIntoStage(slideIndex);
-      await renderSlideFilmstrip();
-      addLogosPlaceholder(role);
-      scheduleSave();
+      /* Neue Folie für die Rolle: als Folien-Schritt einreihen (3.9.5). */
+      await deckUi('logos_add_slide:' + role, async () => {
+        if (findSlideIndexForLogosRole(role) >= 0) return;
+        await saveCurrentSlide(true);
+        const res = await api('add_slide', { after_index: SF.slides.length - 1 });
+        SF.slides = res.slides;
+        const idx = SF.slides.length - 1;
+        SF.slides[idx].layoutKey = layoutKeyForLogosRole(role);
+        SF.currentIndex = idx;
+        loadSlideIntoStage(idx);
+        await renderSlideFilmstrip();
+        addLogosPlaceholder(role);
+        scheduleSave();
+      });
       return;
     }
     if (slideIndex !== SF.currentIndex) {
@@ -8752,7 +8827,7 @@
   function bindGlobalUI() {
     if (!SF.canEdit) return;
 
-    document.getElementById('addSlideBtn')?.addEventListener('click', async () => {
+    document.getElementById('addSlideBtn')?.addEventListener('click', () => deckUi('add_slide', async () => {
       await saveCurrentSlide(true);
       const before = await deckBegin();
       try {
@@ -8764,7 +8839,7 @@
       }
       await afterDeckChange(SF.slides[SF.currentIndex + 1] ? SF.slides[SF.currentIndex + 1].id : null);
       deckCommit(before);
-    });
+    }));
 
     (function initMetaSettingsAutoSave() {
       const titleEl = document.getElementById('edTitle');
@@ -9321,7 +9396,8 @@
       restoreHistorySnapshot(SF.history[SF.historyIndex]);
       return;
     }
-    if (SF.deckUndo.length) deckStep(-1);
+    /* Läuft ein Folien-Schritt noch, ist sein Eintrag noch nicht im Verlauf: trotzdem einreihen. */
+    if (SF.deckUndo.length || SF.deckBusy) deckStep(-1);
   }
 
   function redo() {
@@ -9331,7 +9407,7 @@
       restoreHistorySnapshot(SF.history[SF.historyIndex]);
       return;
     }
-    if (SF.deckRedo.length) deckStep(1);
+    if (SF.deckRedo.length || SF.deckBusy) deckStep(1);
   }
 
   // ---------- Verlauf der Folien-Aktionen (3.7.0) ----------
@@ -9352,7 +9428,7 @@
 
   /** Vor einer Folien-Aktion: anstehende Änderung speichern, Stand merken. null = nicht aufzeichnen. */
   async function deckBegin() {
-    if (!SF.canEdit || SF.deckBusy) return null;
+    if (!SF.canEdit) return null;
     if (SF.saveTimer) {
       clearTimeout(SF.saveTimer);
       SF.saveTimer = null;
@@ -9391,12 +9467,17 @@
     mitlaufMelden(true);
   }
 
-  /** dir -1 = Rückgängig, +1 = Wiederholen. */
-  async function deckStep(dir) {
+  /** dir -1 = Rückgängig, +1 = Wiederholen. Reiht sich hinter laufende Folien-Schritte ein,
+      jeder Tastendruck ein Schritt; der Eintrag wird erst beim Ausführen gelesen. */
+  function deckStep(dir) {
+    return deckUi(null, () => deckStepNow(dir));
+  }
+
+  async function deckStepNow(dir) {
     const from = dir < 0 ? SF.deckUndo : SF.deckRedo;
     const to = dir < 0 ? SF.deckRedo : SF.deckUndo;
     const entry = from[from.length - 1];
-    if (!entry || SF.deckBusy) return;
+    if (!entry) return;
     try {
       setSaveStatus('Speichere…');
       if (SF.saveTimer) {
@@ -9665,7 +9746,11 @@
     });
   }
 
-  async function runFind() {
+  function runFind() {
+    return deckUi(null, () => runFindNow());
+  }
+
+  async function runFindNow() {
     const p = findReplaceParams();
     const status = document.getElementById('findReplaceStatus');
     if (p.search === '') {
@@ -9687,6 +9772,10 @@
     const ok = await SFDialog.confirm(I.findConfirmReplace || '', { danger: true });
     if (!ok) return;
     p.replace = document.getElementById('findReplaceInput')?.value || '';
+    await deckUi('find_replace', () => runReplaceNow(p));
+  }
+
+  async function runReplaceNow(p) {
     const status = document.getElementById('findReplaceStatus');
     try {
       const data = await api('find_replace', p);
@@ -9732,7 +9821,11 @@
     modal.setAttribute('aria-hidden', 'true');
   }
 
-  async function applyNotesOutlineStyle(style) {
+  function applyNotesOutlineStyle(style) {
+    return deckUi('notes_outline_style', () => applyNotesOutlineStyleNow(style));
+  }
+
+  async function applyNotesOutlineStyleNow(style) {
     const status = document.getElementById('notesOutlineStatus');
     setSaveStatus('Stelle Notizen um…');
     try {
@@ -9800,7 +9893,11 @@
     return indices.sort((a, b) => a - b);
   }
 
-  async function cutSlidesToClipboard() {
+  function cutSlidesToClipboard() {
+    return deckUi('cut_slides', () => cutSlidesToClipboardNow());
+  }
+
+  async function cutSlidesToClipboardNow() {
     const indices = shortcutSlideIndices();
     if (!indices.length) return;
     if (indices.length >= SF.slides.length) {
@@ -9850,6 +9947,10 @@
     }
     const src = await window.SfFf.pickMedia(INSERT_PRES_ACCEPT, I.insertPresTitle || 'Präsentation einfügen');
     if (!src) return;
+    await deckUi('insert_presentation_file', () => insertPresentationFileNow(src));
+  }
+
+  async function insertPresentationFileNow(src) {
     const before = await deckBegin();
     try {
       if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
@@ -9864,7 +9965,11 @@
     }
   }
 
-  async function pasteSlidesShortcut() {
+  function pasteSlidesShortcut() {
+    return deckUi('clip_paste_slides', () => pasteSlidesShortcutNow());
+  }
+
+  async function pasteSlidesShortcutNow() {
     let ids = clipCheckedIds();
     if (!ids.length && clipEntries.length) {
       ids = [clipEntries[0].id];
@@ -9892,7 +9997,11 @@
     await duplicateSlides(shortcutSlideIndices());
   }
 
-  async function pasteFromClipboard() {
+  function pasteFromClipboard() {
+    return deckUi('clip_paste_slides', () => pasteFromClipboardNow());
+  }
+
+  async function pasteFromClipboardNow() {
     const ids = clipCheckedIds();
     if (!ids.length) {
       if (window.CfStatus) CfStatus.show('info', I.clipSelectNone || '');
