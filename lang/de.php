@@ -767,6 +767,7 @@ return [
     'props.anim_in' => 'Einblenden',
     'props.anim_out' => 'Ausblenden',
     'props.anim_step' => 'Schritt (Klick-Nr.)',
+    'props.anim_step_short' => 'Schritt',
     'props.anim_with_prev' => 'Mit vorherigem',
     'props.anim_with_prev_hint' => 'Gleichzeitig mit dem letzten Schritt dieser Folie',
     'props.anim_after_prev' => 'Nach vorherigem',

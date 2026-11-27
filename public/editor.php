@@ -400,6 +400,7 @@ $bootstrap = [
         'animIn' => t('props.anim_in'),
         'animOut' => t('props.anim_out'),
         'animStep' => t('props.anim_step'),
+        'animStepShort' => t('props.anim_step_short'),
         'animWithPrev' => t('props.anim_with_prev'),
         'animWithPrevHint' => t('props.anim_with_prev_hint'),
         'animAfterPrev' => t('props.anim_after_prev'),

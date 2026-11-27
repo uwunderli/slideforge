@@ -12023,3 +12023,45 @@ select.sf-fsel-native { display: none !important; }
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* Effekte-Reiter: ein-/ausklappbare Abschnitte Einblenden/Ausblenden (3.10.2) */
+.props-fx-fold {
+  border-bottom: 1px solid var(--border);
+}
+.props-fx-fold .props-fx-head {
+  border-bottom: none;
+}
+.props-fx-fold.open .props-fx-head {
+  border-bottom: 1px solid var(--border);
+}
+.props-fx-head:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: -2px;
+}
+.props-fx-fold .props-accordion-chevron {
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+.props-fx-fold.open .props-accordion-chevron {
+  transform: none;
+}
+.props-fx-title {
+  flex: 0 0 auto;
+}
+.props-fx-summary {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-body, inherit);
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.props-fx-fold.open .props-fx-summary {
+  display: none;
+}
+.props-fx-body {
+  padding: 10px 12px 12px;
+}

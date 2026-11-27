@@ -6864,10 +6864,69 @@
       }
       return;
     }
+    const hatEin = (obj.animType || 'none') !== 'none';
+    const ex = nodeExit(node);
+    const einZus = hatEin
+      ? [(I.animStepShort || 'Schritt') + ' ' + (obj.animOrder || 1), animationLabel(obj.animType), dauerLabel(obj.animDuration)]
+      : [I.optAnim?.none || 'Keine'];
+    const ausZus = ex
+      ? [(I.animStepShort || 'Schritt') + ' ' + ex.order, exitLabel(ex.type), dauerLabel(ex.duration)]
+      : [I.optExit?.none || 'Keiner'];
     panel.innerHTML = '<div class="ribbon-props-sections">' +
-      ribbonPropsSection(I.animIn || 'Einblenden', buildEffectPropsHtml(node, obj, isText)) +
-      ribbonPropsSection(I.animOut || 'Ausblenden', buildExitPropsHtml(node)) +
+      effektKlappeHtml('in', I.animIn || 'Einblenden', einZus, effektKlappeOffen('in', hatEin), buildEffectPropsHtml(node, obj, isText)) +
+      effektKlappeHtml('out', I.animOut || 'Ausblenden', ausZus, effektKlappeOffen('out', !!ex), buildExitPropsHtml(node)) +
       '</div>';
+    wireEffektKlappen(panel);
+  }
+
+  /* Ein-/ausklappbare Abschnitte im Effekte-Reiter (3.10.2, Urs 27.11.). Muster wie die
+     Abschnitte im Objekt-Reiter (props-accordion-group / props-layers-header) mit
+     aria-expanded wie Lab › Navigation. Standard: mit Effekt offen, ohne Effekt zu.
+     Gemerkt je Person in editor_ui.collapsed (fx_in_auf/fx_in_zu, fx_out_auf/fx_out_zu). */
+  function effektKlappeOffen(teil, standard) {
+    const c = SF.collapsed || {};
+    if (c['fx_' + teil + '_auf']) return true;
+    if (c['fx_' + teil + '_zu']) return false;
+    return !!standard;
+  }
+
+  function dauerLabel(ms) {
+    const v = parseInt(ms, 10) || 0;
+    if (!v) return '';
+    const o = ANIM_DURATION_OPTIONS.find((d) => d.value === v);
+    return (o && o.label) || '';
+  }
+
+  function effektKlappeHtml(teil, titel, zusammenfassung, offen, bodyHtml) {
+    const bodyId = 'fxFold_' + teil;
+    const zus = zusammenfassung.filter(Boolean).join(' · ');
+    return '<div class="props-accordion-group props-fx-fold' + (offen ? ' open' : '') + '" data-fx-fold="' + teil + '">'
+      + '<button type="button" class="props-layers-header props-fx-head" aria-expanded="' + (offen ? 'true' : 'false')
+      + '" aria-controls="' + bodyId + '">'
+      + '<span class="props-accordion-chevron" aria-hidden="true">▾</span>'
+      + '<span class="props-fx-title">' + escapeHtml(titel) + '</span>'
+      + '<span class="props-fx-summary">' + escapeHtml(zus) + '</span>'
+      + '</button>'
+      + '<div class="props-accordion-body props-fx-body" id="' + bodyId + '">' + bodyHtml + '</div>'
+      + '</div>';
+  }
+
+  function wireEffektKlappen(panel) {
+    panel.querySelectorAll('.props-fx-fold').forEach((gruppe) => {
+      const kopf = gruppe.querySelector('.props-fx-head');
+      if (!kopf) return;
+      kopf.addEventListener('click', () => {
+        const teil = gruppe.dataset.fxFold;
+        const offen = !gruppe.classList.contains('open');
+        gruppe.classList.toggle('open', offen);
+        kopf.setAttribute('aria-expanded', offen ? 'true' : 'false');
+        if (!SF.collapsed) SF.collapsed = {};
+        delete SF.collapsed['fx_' + teil + '_auf'];
+        delete SF.collapsed['fx_' + teil + '_zu'];
+        SF.collapsed['fx_' + teil + (offen ? '_auf' : '_zu')] = true;
+        persistEditorUi({});
+      });
+    });
   }
 
   function renderPropsPanel(node) {
