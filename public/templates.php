@@ -269,7 +269,7 @@ $sharedSlideTemplates = array_values(array_filter($sharedTemplates, fn($t) => em
 
 $FONT_OPTIONS = $fontFamilies;
 
-$pageTitle = t('tpl.heading');
+$pageTitle = SettingsNav::label((string)$activeTab); // Seitentitel = Name des Unterpunkts (3.9.3)
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="container sf-set" style="max-width: 860px;">

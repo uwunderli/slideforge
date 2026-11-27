@@ -11854,3 +11854,7 @@ html[data-theme="light"] .editor-ribbon .effect-icon-btn.active {
 .ribbon-grid-cell[data-grid-cols="2"][data-grid-rows="2"] > .ribbon-btn .ribbon-btn-label {
   font-size: 0.66rem;
 }
+
+/* 3.9.3: Im Hub-Rahmen ersetzt die Hub-Seitenleiste (Modul-Einstellungen › Unterpunkte) die eigene Reiterleiste der Einstellungen. */
+html.sf-im-hub .sf-set-tabs,
+html.sf-im-hub .sf-set-back { display: none; }

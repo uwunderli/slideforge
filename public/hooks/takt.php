@@ -27,4 +27,9 @@ if (empty($r['ok']) || ($r['caller'] ?? '') !== '__system__') {
 }
 ignore_user_abort(true);
 @set_time_limit(600);
-echo json_encode(['ok' => true] + Workspace::cleanup(14));
+$nav = ['action' => 'error'];
+try {
+    $nav = SettingsNav::syncIfChanged(true); // Einstellungs-Unterpunkte beim Hub melden, einmal am Tag (3.9.3)
+} catch (Throwable) {
+}
+echo json_encode(['ok' => true, 'settingsNav' => $nav['action']] + Workspace::cleanup(14));

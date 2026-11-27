@@ -130,7 +130,7 @@ $iconify = Config::iconify();
 $openclipart = Config::openclipart();
 $keepPh = t('admin.smtp_password_unchanged');
 
-$pageTitle = t('admin.heading');
+$pageTitle = SettingsNav::label((string)$activeTab); // Seitentitel = Name des Unterpunkts (3.9.3)
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="container sf-set" style="max-width: 860px;">

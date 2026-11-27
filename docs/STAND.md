@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.9.3 gebaut** (Zweig `entwickler/slide-unterpunkte` auf 3.9.2, Worktree `_claude/entwickler/wt-slide-unterpunkte`), beim Gitwart, braucht Hub 2.34.1: Unterpunkte der Einstellungen meldet SF selbst an den Hub (`src/SettingsNav.php`, eine Quelle), Hub-Seitenleiste zeigt sie; im Rahmen eigene Reiterleiste aus.
+
 - **27.11. 3.9.2 gebaut** (`entwickler/slide-farbwahl`, nach 3.9.1): Farbwahl überall HubColorPicker mit Hub-Palette (`SfPalette`, `sf-color.js`), eigene Markenfarben-Liste und Schnellwahlen entfernt; Reiter Farben nur Anzeige + Link Hub › Branding. Offen: im Browser ansehen (Menüband-Farbfelder).
 
 - **27.11. 3.9.1 gebaut** (`entwickler/slide-split`, Worktree `_claude/entwickler/wt-slide-split`, nach 3.9.0): Editor-Spalten links/rechts per Hub-Trenner (HubSplit) verstellbar, Breite je Person in `editor_ui.splits`; Notiz-Trenner mit Pfeiltasten; Filmstreifen/Raster behalten Bildlauf beim Neuaufbau. Presenter unverändert (eigene Trenner).
