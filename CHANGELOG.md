@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.9.0] - 2026-11-27
+
+- **Schriften aus dem Hub** (Urs 27.11.: Ordner mit dem FF-Picker im Hub, «für die verschiedenen Programme»): Editor, Presenter, Vorschau, Zuschauer/Player laden `<Hub>/api/fonts.php?css=1`; jede Schriftwahl bietet die Hub-Schriften zuoberst an. Eigene Schriften-Upload-Verwaltung entfernt, Reiter «Schriftarten» verweist auf Hub › Palette › Schriften. Übergang: früher hochgeladene Schriften laufen weiter (auch als Alias ohne Schnitt-Wort). `scripts/schriften-in-hub.php` kopiert sie in den Hub-Ordner. Braucht Hub 2.34.0. Assets 727.
+
 ## [3.8.3] - 2026-11-27
 
 - **Einstellungen wieder vollständig** (Urs: «Bei den Einstellungen müsste ich nun aber auch die Einstellungen machen können, die ich zuvor gemacht habe» / «Also Vorlagen definieren. Schriftvorlagen, Dann Schriftarten etc.»): Hub › FolienSchmiede › Modul-Einstellungen und neu der Knopf «Einstellungen» auf der Startseite führen zu einer Reiterleiste (Hub-Stil `hub-list-tabs`): Folienvorlagen (mit Vorlagen-Ordner, jetzt für alle), Textvorlagen, Vorlageelemente, Schriftarten, Farben; für Admins dazu Allgemein (Seitentitel, Logo), Rechtschreibung (LanguageTool), Medien (Pixabay, Iconify, Openclipart). Vorher zeigte Modul-Einstellungen nur admin_settings.php (Vorlagen-Ordner + Admin-Abschnitte), die Vorlagen-Seite war von nirgends verlinkt.

@@ -45,6 +45,8 @@ $mitModus = ($_GET['mit'] ?? '') === '1';
 <title><?= h($meta['title']) ?></title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+<?php /* Schriften (3.9.0): Hub-Schriften und alte eigene Schriften wie im Presenter, sonst fällt der Zuschauer auf Ersatzschriften. */ ?>
+<?= FontLibrary::headMarkup('fonts.css.php') ?>
 <style>
 html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 .sf-laser-dot{

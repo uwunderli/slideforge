@@ -1,7 +1,13 @@
 <?php
 /**
- * System- und benutzerdefinierte Schriftarten (Upload in public/uploads/fonts/).
- * Metadaten in data/config.json unter custom_fonts.
+ * Schriftarten der FolienSchmiede.
+ *
+ * Seit 3.9.0 kommen die Schriften **aus dem Hub** (Einstellungen › Hub › Palette › Schriften; Hub `api/fonts.php`, Urs 27.11.2026: «Man
+ * könnte ja einen Ordner mit dem FF Picker angeben, wo die Schriftarten liegen. Die werden dann für die verschiedenen Programme verwendet»).
+ * Die eigene Upload-Verwaltung ist weg. **Übergang:** früher hochgeladene Schriften (`custom_fonts` in data/config.json, Dateien in
+ * public/uploads/fonts/) werden weiter unter ihrem bisherigen Namen ausgeliefert, damit bestehende Folien nicht brechen; zusätzlich unter
+ * dem Familiennamen ohne Schnitt-Wort («Myriad Pro Regular» → «Myriad Pro»), solange der Hub diese Familie nicht selbst hat.
+ * Übernahme der Dateien in den Hub-Ordner: scripts/schriften-in-hub.php.
  */
 class FontLibrary
 {
@@ -28,27 +34,109 @@ class FontLibrary
         return Config::get('custom_fonts', []);
     }
 
-    /** Alle wählbaren Schriftfamilien (System + hochgeladen). */
+    /** Alle wählbaren Schriftfamilien: zuoberst die des Hubs, dann die Standard-Schriften, dann alte eigene (Übergang). */
     public static function allFamilies(): array
     {
-        $custom = [];
+        $hub = self::hubFamilyNames();
+        $legacy = [];
         foreach (self::customFonts() as $f) {
             $family = trim((string)($f['family'] ?? ''));
-            if ($family !== '') {
-                $custom[] = $family;
+            if ($family !== '' && !self::inList($family, $hub)) {
+                $legacy[] = $family;
             }
         }
-        return array_values(array_unique(array_merge(self::SYSTEM_FONTS, $custom)));
+        $out = [];
+        foreach (array_merge($hub, self::SYSTEM_FONTS, $legacy) as $f) {
+            if (!self::inList($f, $out)) {
+                $out[] = $f;
+            }
+        }
+        return $out;
     }
 
-    public static function findById(string $id): ?array
+    private static function inList(string $family, array $list): bool
     {
-        foreach (self::customFonts() as $f) {
-            if (($f['id'] ?? '') === $id) {
-                return $f;
+        $k = mb_strtolower(trim($family));
+        foreach ($list as $x) {
+            if (mb_strtolower(trim((string)$x)) === $k) {
+                return true;
             }
         }
-        return null;
+        return false;
+    }
+
+    /** Adresse der @font-face-Datei des Hubs (öffentlich, CORS offen). */
+    public static function hubCssUrl(): string
+    {
+        $base = function_exists('churchforge_hub_url') ? rtrim((string)churchforge_hub_url(), '/') : '';
+        return $base . '/api/fonts.php?css=1';
+    }
+
+    /** Familiennamen der Hub-Schriften. @return list<string> */
+    public static function hubFamilyNames(): array
+    {
+        return array_values(array_map(static fn (array $f): string => (string)$f['family'], self::hubFamilies()));
+    }
+
+    /**
+     * Familien und Schnitte aus dem Hub (`api/fonts.php?liste=1`, signierter App-Aufruf), fünf Minuten zwischengespeichert in
+     * data/cache/hub-fonts.json; antwortet der Hub nicht, gilt der letzte Stand.
+     *
+     * @return list<array{family:string,faces:list<array<string,mixed>>}>
+     */
+    public static function hubFamilies(): array
+    {
+        static $mem = null;
+        if ($mem !== null) {
+            return $mem;
+        }
+        $file = DATA_PATH . '/cache/hub-fonts.json';
+        $d = is_readable($file) ? json_decode((string)@file_get_contents($file), true) : null;
+        $d = is_array($d) ? $d : [];
+        if ((time() - (int)($d['at'] ?? 0)) > 300) {
+            $r = class_exists('HubApp') ? HubApp::hubGet('/api/fonts.php?liste=1', 6) : ['ok' => false];
+            if (!empty($r['ok']) && is_array($r['json']['families'] ?? null)) {
+                $d = ['at' => time(), 'families' => $r['json']['families']];
+            } else {
+                $d['at'] = time() - 240;   // in einer Minute wieder fragen
+            }
+            if (!is_dir(dirname($file))) {
+                @mkdir(dirname($file), 0770, true);
+            }
+            @file_put_contents($file, json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        }
+        $out = [];
+        foreach (is_array($d['families'] ?? null) ? $d['families'] : [] as $f) {
+            $name = is_array($f) ? self::sanitizeFamily((string)($f['family'] ?? '')) : '';
+            if ($name !== '') {
+                $out[] = ['family' => $name, 'faces' => is_array($f['faces'] ?? null) ? $f['faces'] : []];
+            }
+        }
+        return $mem = $out;
+    }
+
+    /** «Myriad Pro Regular» → ['Myriad Pro', 400, 'normal']; ohne Schnitt-Wort null. @return array{0:string,1:int,2:string}|null */
+    public static function legacyAlias(string $family): ?array
+    {
+        $w = ['thin' => 100, 'extralight' => 200, 'ultralight' => 200, 'light' => 300, 'regular' => 400, 'normal' => 400, 'book' => 400, 'roman' => 400,
+            'medium' => 500, 'semibold' => 600, 'demibold' => 600, 'bold' => 700, 'extrabold' => 800, 'ultrabold' => 800, 'black' => 900, 'heavy' => 900];
+        $teile = preg_split('/\s+/', trim($family)) ?: [];
+        $weight = 400;
+        $style = 'normal';
+        $hit = false;
+        while (count($teile) > 1) {
+            $last = mb_strtolower((string)end($teile));
+            if ($last === 'italic' || $last === 'oblique') {
+                $style = 'italic';
+            } elseif (isset($w[$last])) {
+                $weight = $w[$last];
+            } else {
+                break;
+            }
+            array_pop($teile);
+            $hit = true;
+        }
+        return $hit ? [implode(' ', $teile), $weight, $style] : null;
     }
 
     public static function findByFamily(string $family): ?array
@@ -68,161 +156,6 @@ class FontLibrary
         return mb_substr($name, 0, 80);
     }
 
-    /** @return list<array<string, mixed>> */
-    public static function normalizeUploadedFiles(array $filesField): array
-    {
-        if (($filesField['name'] ?? '') === '' && ($filesField['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            return [];
-        }
-        if (!is_array($filesField['name'] ?? null)) {
-            return [$filesField];
-        }
-
-        $out = [];
-        foreach ($filesField['name'] as $i => $name) {
-            $out[] = [
-                'name' => $name,
-                'type' => $filesField['type'][$i] ?? '',
-                'tmp_name' => $filesField['tmp_name'][$i] ?? '',
-                'error' => $filesField['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-                'size' => $filesField['size'][$i] ?? 0,
-            ];
-        }
-        return $out;
-    }
-
-    /** @return array{font: array, error?: string} */
-    public static function upload(array $file, string $displayName = '', string $family = ''): array
-    {
-        $result = self::uploadBatch([[
-            'file' => $file,
-            'displayName' => $displayName,
-            'family' => $family,
-        ]]);
-        if (!empty($result['fonts'])) {
-            return ['font' => $result['fonts'][0]];
-        }
-        return ['font' => [], 'error' => $result['errors'][0]['error'] ?? 'Upload fehlgeschlagen.'];
-    }
-
-    /**
-     * @param list<array{file: array, displayName?: string, family?: string}> $items
-     * @return array{fonts: list<array>, errors: list<array{file: string, error: string}>}
-     */
-    public static function uploadBatch(array $items): array
-    {
-        if (!is_dir(FONTS_UPLOAD_PATH)) {
-            mkdir(FONTS_UPLOAD_PATH, 0770, true);
-        }
-
-        $uploaded = [];
-        $errors = [];
-        $newEntries = [];
-        $reservedFamilies = [];
-        foreach (self::customFonts() as $f) {
-            $family = trim((string)($f['family'] ?? ''));
-            if ($family !== '') {
-                $reservedFamilies[$family] = true;
-            }
-        }
-
-        foreach ($items as $item) {
-            $file = $item['file'] ?? [];
-            $fileLabel = (string)($file['name'] ?? 'Datei');
-            $entry = self::prepareUploadEntry(
-                $file,
-                (string)($item['displayName'] ?? ''),
-                (string)($item['family'] ?? ''),
-                $reservedFamilies
-            );
-            if (!empty($entry['error'])) {
-                $errors[] = ['file' => $fileLabel, 'error' => $entry['error']];
-                continue;
-            }
-
-            $newEntries[] = $entry['font'];
-            $uploaded[] = $entry['font'];
-            $reservedFamilies[$entry['font']['family']] = true;
-        }
-
-        if ($newEntries) {
-            Config::update(['custom_fonts' => array_merge(self::customFonts(), $newEntries)]);
-        }
-
-        return ['fonts' => $uploaded, 'errors' => $errors];
-    }
-
-    /** @param array<string, true> $reservedFamilies */
-    private static function prepareUploadEntry(array $file, string $displayName, string $family, array $reservedFamilies): array
-    {
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            return ['error' => 'Upload fehlgeschlagen.'];
-        }
-        if (($file['size'] ?? 0) > MAX_FONT_SIZE) {
-            return ['error' => 'Datei ist zu gross (max. ' . round(MAX_FONT_SIZE / 1024 / 1024) . ' MB).'];
-        }
-
-        $baseName = pathinfo($file['name'] ?? '', PATHINFO_FILENAME);
-        $displayName = trim($displayName) !== '' ? trim($displayName) : $baseName;
-        $family = self::sanitizeFamily($family !== '' ? $family : $displayName);
-        if ($family === '') {
-            return ['error' => 'Ungültiger Schriftname.'];
-        }
-        if (in_array($family, self::SYSTEM_FONTS, true)) {
-            return ['error' => 'Name ist für eine Standard-Schrift reserviert.'];
-        }
-        if (isset($reservedFamilies[$family])) {
-            return ['error' => 'Eine Schrift mit diesem Namen existiert bereits.'];
-        }
-
-        $ext = self::detectExtension($file);
-        if ($ext === null) {
-            return ['error' => 'Nicht unterstütztes Format. Erlaubt: WOFF2, WOFF, TTF, OTF.'];
-        }
-
-        $filename = Storage::generateId(12) . '.' . $ext;
-        $destination = FONTS_UPLOAD_PATH . '/' . $filename;
-        if (!@move_uploaded_file($file['tmp_name'], $destination)) {
-            return ['error' => 'Datei konnte nicht gespeichert werden.'];
-        }
-
-        return ['font' => [
-            'id' => Storage::generateId(12),
-            'name' => mb_substr($displayName, 0, 80),
-            'family' => $family,
-            'file' => $filename,
-            'format' => $ext,
-            'uploaded_at' => time(),
-        ]];
-    }
-
-    public static function delete(string $id): bool
-    {
-        $fonts = self::customFonts();
-        $found = null;
-        foreach ($fonts as $i => $f) {
-            if (($f['id'] ?? '') === $id) {
-                $found = $i;
-                break;
-            }
-        }
-        if ($found === null) {
-            return false;
-        }
-
-        $file = $fonts[$found]['file'] ?? '';
-        if ($file !== '' && preg_match('/^[a-zA-Z0-9._-]+$/', $file)) {
-            $path = FONTS_UPLOAD_PATH . '/' . $file;
-            if (is_file($path)) {
-                @unlink($path);
-            }
-        }
-
-        array_splice($fonts, $found, 1);
-        Config::update(['custom_fonts' => $fonts]);
-        return true;
-    }
-
     /** Google-Fonts-Link für Standard-Schriftarten. */
     public static function googleFontsLinkTag(): string
     {
@@ -230,7 +163,7 @@ class FontLibrary
             . '<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700;800&family=PT+Sans:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">';
     }
 
-    /** CSS mit @font-face für hochgeladene Schriften. */
+    /** CSS mit @font-face für früher hochgeladene Schriften (Übergang bis sie im Hub liegen). */
     public static function cssBlock(string $urlPrefix = 'uploads/fonts/', ?array $onlyFamilies = null, bool $embedBase64 = false): string
     {
         $css = '';
@@ -266,14 +199,22 @@ class FontLibrary
 
             $css .= "@font-face{font-family:'" . str_replace("'", "\\'", $family) . "';"
                 . "src:{$src};font-weight:400;font-style:normal;font-display:swap;}\n";
+            // Übergang (3.9.0): auch unter der Familie ohne Schnitt-Wort, solange der Hub sie nicht hat.
+            $alias = self::legacyAlias($family);
+            if ($alias !== null && !self::inList($alias[0], self::hubFamilyNames()) && !self::inList($alias[0], array_column(self::customFonts(), 'family'))) {
+                $css .= "@font-face{font-family:'" . str_replace("'", "\\'", $alias[0]) . "';"
+                    . "src:{$src};font-weight:{$alias[1]};font-style:{$alias[2]};font-display:swap;}\n";
+            }
         }
         return $css;
     }
 
-    /** Markup für Seiten-Kopf: Google Fonts + eigene Schriften. */
+    /** Markup für Seiten-Kopf: Google Fonts, Schriften des Hubs, alte eigene Schriften (Übergang). */
     public static function headMarkup(string $customCssHref = 'fonts.css.php', ?array $slidesData = null, bool $embedForExport = false): string
     {
         $html = self::googleFontsLinkTag() . "\n";
+        // Schriften des Hubs (3.9.0) in jeder Ansicht; im Export als Verweis (online).
+        $html .= '<link rel="stylesheet" href="' . h(self::hubCssUrl()) . '" crossorigin="anonymous">' . "\n";
         if ($embedForExport) {
             $families = $slidesData ? self::collectFamiliesFromSlides($slidesData) : null;
             $css = self::cssBlock('', $families, true);
@@ -404,38 +345,6 @@ class FontLibrary
             array_slice($bytes, 8, 8)
         );
         return pack('C*', ...array_reverse($guidMem));
-    }
-
-    private static function detectExtension(array $file): ?string
-    {
-        $allowed = [
-            'font/woff2' => 'woff2',
-            'font/woff' => 'woff',
-            'font/ttf' => 'ttf',
-            'font/otf' => 'otf',
-            'application/font-woff' => 'woff',
-            'application/font-woff2' => 'woff2',
-            'application/x-font-woff' => 'woff',
-            'application/x-font-ttf' => 'ttf',
-            'application/x-font-truetype' => 'ttf',
-            'application/x-font-otf' => 'otf',
-            'application/vnd.ms-opentype' => 'otf',
-            'application/octet-stream' => null,
-        ];
-
-        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
-        $mime = $finfo ? @finfo_file($finfo, $file['tmp_name']) : false;
-        if ($finfo) {
-            finfo_close($finfo);
-        }
-
-        if ($mime && isset($allowed[$mime]) && $allowed[$mime] !== null) {
-            return $allowed[$mime];
-        }
-
-        $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
-        $byExt = ['woff2' => 'woff2', 'woff' => 'woff', 'ttf' => 'ttf', 'otf' => 'otf'];
-        return $byExt[$ext] ?? null;
     }
 
     private static function mimeForFormat(string $format): string

@@ -107,52 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('tpl.color_removed');
     }
 
-    // ---- Schriftarten (nur Admin) ----
-    if ($action === 'upload_font' && $isAdmin) {
-        $fileList = FontLibrary::normalizeUploadedFiles($_FILES['font_file'] ?? []);
-        $items = [];
-        $singleFile = count($fileList) === 1;
-        $globalName = trim($_POST['font_name'] ?? '');
-        $globalFamily = trim($_POST['font_family'] ?? '');
-        foreach ($fileList as $file) {
-            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-                continue;
-            }
-            $items[] = [
-                'file' => $file,
-                'displayName' => $singleFile ? $globalName : '',
-                'family' => $singleFile ? $globalFamily : '',
-            ];
-        }
-        if (!$items) {
-            $error = t('tpl.font_no_files');
-        } else {
-            $result = FontLibrary::uploadBatch($items);
-            $okCount = count($result['fonts']);
-            $failCount = count($result['errors']);
-            if ($okCount > 0 && $failCount === 0) {
-                $msg = $okCount === 1 ? t('tpl.font_uploaded') : t('tpl.font_uploaded_many', ['count' => $okCount]);
-            } elseif ($okCount > 0) {
-                $msg = t('tpl.font_upload_partial', ['ok' => $okCount, 'fail' => $failCount]);
-                $error = implode("\n", array_map(
-                    fn($e) => ($e['file'] !== '' ? $e['file'] . ': ' : '') . $e['error'],
-                    $result['errors']
-                ));
-            } else {
-                $error = implode("\n", array_map(
-                    fn($e) => ($e['file'] !== '' ? $e['file'] . ': ' : '') . $e['error'],
-                    $result['errors']
-                ));
-            }
-        }
-    }
-    if ($action === 'delete_font' && $isAdmin) {
-        if (FontLibrary::delete($_POST['id'] ?? '')) {
-            $msg = t('tpl.font_deleted');
-        } else {
-            $error = t('tpl.font_not_found');
-        }
-    }
+    // Schriftarten: Upload/Löschen entfällt (3.9.0) — die Schriften kommen aus dem Hub (Einstellungen › Hub › Palette › Schriften).
 
     // ---- Textvorlagen (nur Admin) ----
     if ($action === 'add_text_template' && $isAdmin) {
@@ -419,71 +374,46 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
   <?php elseif ($activeTab === 'fonts'): ?>
+    <?php /* 3.9.0: Schriften kommen aus dem Hub; hier nur Anzeige und Verweis. Alte eigene Schriften laufen im Übergang weiter. */
+      $hubFams = FontLibrary::hubFamilies();
+      $hubAdmin = (function_exists('churchforge_hub_url') ? rtrim((string)churchforge_hub_url(), '/') : '') . '/admin/settings.php?tab=branding#hub-schriften-admin'; ?>
 
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.fonts_heading')) ?></h2></div>
-    <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('tpl.fonts_desc')) ?></p>
+    <p class="muted small"><?= h(t('tpl.fonts_hub_desc')) ?></p>
+    <?php if ($isAdmin): ?>
+      <p><a class="button button-sm hub-btn hub-btn--sm" href="<?= h($hubAdmin) ?>" target="_top"><?= h(t('tpl.fonts_hub_link')) ?></a></p>
+    <?php endif; ?>
 
-    <div class="options-subtitle" style="margin-top:0;"><?= h(t('tpl.fonts_builtin')) ?></div>
-    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px;">
-      <?= h(implode(', ', FontLibrary::SYSTEM_FONTS)) ?>
-    </p>
-
-    <?php if (!$isAdmin): ?>
-      <div class="alert alert-success"><?= h(t('tpl.admin_only_fonts')) ?></div>
-      <?php if ($customFonts): ?>
-        <ul class="font-list-readonly">
-          <?php foreach ($customFonts as $f): ?>
-            <li style="font-family:'<?= h($f['family']) ?>', sans-serif;"><?= h($f['name']) ?> <span class="text-template-meta">(<?= h($f['family']) ?>)</span></li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else: ?>
-        <p style="color:var(--text-muted);"><?= h(t('tpl.fonts_empty')) ?></p>
-      <?php endif; ?>
+    <div class="options-subtitle"><?= h(t('tpl.fonts_hub_heading')) ?></div>
+    <?php if (!$hubFams): ?>
+      <p class="muted small"><?= h(t('tpl.fonts_hub_empty')) ?></p>
     <?php else: ?>
-      <form method="post" enctype="multipart/form-data" class="font-upload-form" data-hub-page-busy="<?= h(t('tpl.font_upload_busy')) ?>">
-        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-        <input type="hidden" name="action" value="upload_font">
-        <input type="hidden" name="tab" value="fonts">
-        <div class="row">
-          <div>
-            <label style="margin-top:0;"><?= h(t('tpl.font_display_name')) ?></label>
-            <input type="text" name="font_name" placeholder="<?= h(t('tpl.font_display_name_ph')) ?>">
-          </div>
-          <div>
-            <label style="margin-top:0;"><?= h(t('tpl.font_family_css')) ?></label>
-            <input type="text" name="font_family" placeholder="<?= h(t('tpl.font_family_css_ph')) ?>">
+      <?php foreach ($hubFams as $f): ?>
+        <div class="font-row">
+          <div class="font-row-preview" style="font-family:'<?= h(FontLibrary::sanitizeFamily($f['family'])) ?>', sans-serif;">Aa Bb Cc 123</div>
+          <div class="font-row-meta">
+            <strong><?= h($f['family']) ?></strong>
+            <span class="text-template-meta"><?= h(implode(' · ', array_map(static fn ($fc) => (int)($fc['weight'] ?? 400) . (($fc['style'] ?? '') === 'italic' ? ' kursiv' : ''), $f['faces']))) ?></span>
           </div>
         </div>
-        <div style="margin-top:10px;">
-          <label><?= h(t('tpl.font_file')) ?></label>
-          <input type="file" name="font_file[]" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" multiple required>
-          <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;"><?= h(t('tpl.font_file_hint')) ?></p>
-          <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;"><?= h(t('tpl.font_multi_hint')) ?></p>
-        </div>
-        <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:12px;"><?= h(t('tpl.font_upload')) ?></button>
-      </form>
+      <?php endforeach; ?>
+    <?php endif; ?>
 
-      <div class="options-subtitle" style="margin-top:28px;"><?= h(t('tpl.fonts_custom_heading')) ?></div>
-      <?php if (!$customFonts): ?>
-        <p style="color:var(--text-muted);"><?= h(t('tpl.fonts_empty')) ?></p>
-      <?php else: ?>
-        <?php foreach ($customFonts as $f): ?>
-          <div class="font-row">
-            <div class="font-row-preview" style="font-family:'<?= h($f['family']) ?>', sans-serif;">Aa Bb Cc 123</div>
-            <div class="font-row-meta">
-              <strong><?= h($f['name']) ?></strong>
-              <span class="text-template-meta"><?= h($f['family']) ?> · <?= h(strtoupper($f['format'] ?? '')) ?></span>
-            </div>
-            <form method="post" data-sf-confirm="<?= h(t('tpl.font_delete_confirm')) ?>" data-sf-confirm-danger>
-              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="delete_font">
-              <input type="hidden" name="tab" value="fonts">
-              <input type="hidden" name="id" value="<?= h($f['id']) ?>">
-              <button type="submit" class="icon-btn-danger" title="<?= h(t('tpl.font_delete')) ?>">🗑</button>
-            </form>
+    <div class="options-subtitle" style="margin-top:20px;"><?= h(t('tpl.fonts_builtin')) ?></div>
+    <p class="muted small"><?= h(implode(', ', FontLibrary::SYSTEM_FONTS)) ?></p>
+
+    <?php if ($customFonts): ?>
+      <div class="options-subtitle" style="margin-top:20px;"><?= h(t('tpl.fonts_legacy_heading')) ?></div>
+      <p class="muted small"><?= h(t('tpl.fonts_legacy_desc')) ?></p>
+      <?php foreach ($customFonts as $f): ?>
+        <div class="font-row">
+          <div class="font-row-preview" style="font-family:'<?= h(FontLibrary::sanitizeFamily((string)$f['family'])) ?>', sans-serif;">Aa Bb Cc 123</div>
+          <div class="font-row-meta">
+            <strong><?= h($f['name'] ?? $f['family']) ?></strong>
+            <span class="text-template-meta"><?= h($f['family']) ?> · <?= h(strtoupper($f['format'] ?? '')) ?></span>
           </div>
-        <?php endforeach; ?>
-      <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
     <?php endif; ?>
 
   <?php elseif ($activeTab === 'vorlageelemente'): ?>

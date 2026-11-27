@@ -242,6 +242,39 @@ final class HubApp
     }
 
     /**
+     * Signierter GET an den eigenen Hub (Ziel `hub`, App-Schlüssel), z. B. `api/fonts.php?liste=1` (Schriften des Hubs, 3.9.0).
+     *
+     * @return array{ok:bool,status:int,json:?array<string,mixed>,error:string}
+     */
+    public static function hubGet(string $path, int $timeout = 8): array
+    {
+        $ctx = self::ready() ? self::context() : [];
+        if ($ctx === [] || !method_exists('AppKeyClient', 'hubHeaders')) {
+            return ['ok' => false, 'status' => 0, 'json' => null, 'error' => 'no_app_call'];
+        }
+        $sig = AppKeyClient::hubHeaders($ctx['dataDir'], $ctx['selfId'], 'GET', $path, '');
+        if ($sig === []) {
+            return ['ok' => false, 'status' => 0, 'json' => null, 'error' => 'no_app_key'];
+        }
+        $h = ['Accept: application/json'];
+        foreach ($sig as $k => $v) {
+            $h[] = is_int($k) ? (string)$v : $k . ': ' . $v;
+        }
+        if ($ctx['hostHeader'] !== '') {
+            $h[] = 'Host: ' . $ctx['hostHeader'];
+        }
+        $ch = curl_init($ctx['hubBaseUrl'] . $path);
+        curl_setopt_array($ch, [CURLOPT_HTTPHEADER => $h, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_FOLLOWLOCATION => false]);
+        $resp = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $j = is_string($resp) ? json_decode($resp, true) : null;
+        $ok = $status >= 200 && $status < 300 && is_array($j) && !empty($j['ok']);
+        return ['ok' => $ok, 'status' => $status, 'json' => is_array($j) ? $j : null, 'error' => $ok ? '' : ($status === 0 ? 'unreachable' : 'http_' . $status)];
+    }
+
+    /**
      * @param array<string,string> $headers
      * @return array{ok:bool,caller:string,person:string,error:string}
      */
