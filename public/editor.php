@@ -473,6 +473,7 @@ $bootstrap = [
         'clipCopied' => t('clip.copied'),
         'clipCut' => t('clip.cut'),
         'clipPasted' => t('clip.pasted'),
+        'insertPresTitle' => t('insertpres.title'),
         'insertPresBusy' => t('insertpres.busy'),
         'insertPresDone' => t('insertpres.done'),
         'clipSelectNone' => t('clip.select_none'),
@@ -656,6 +657,7 @@ $bootstrap = [
             'empty' => t('media_lib.empty'),
             'loading' => t('media_lib.loading'),
             'refresh' => t('media_lib.refresh'),
+            'insertFromFiles' => t('media_lib.insert_ff'),
             'usedOn' => t('media_lib.used_on'),
             'unused' => t('media_lib.unused'),
             'delete' => t('media_lib.delete'),
@@ -1116,6 +1118,7 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
                     <div class="media-library-header-actions">
                       <button type="button" class="hub-btn hub-btn--sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
                       <?php if ($canEdit): ?>
+                      <button type="button" class="hub-btn hub-btn--sm" id="mediaLibraryInsertFf"><?= h(t('media_lib.insert_ff')) ?></button>
                       <button type="button" class="hub-btn hub-btn--sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
                       <?php endif; ?>
                     </div>

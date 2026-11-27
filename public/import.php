@@ -61,6 +61,20 @@ if (($_GET['action'] ?? '') === 'status') {
     exit;
 }
 
+/* Dateianfang einer HTML-Datei aus FileForge, damit der Dialog eine Logos-Predigt erkennt (vorher FileReader am lokalen File). */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ff_head'])) {
+    csrf_check();
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $ff = FfFile::fetchTemp((string)$me['id'], (string)($_POST['import_ref'] ?? ''));
+        $text = (string)@file_get_contents($ff['path'], false, null, 0, 131072);
+        echo json_encode(['ok' => true, 'head' => mb_convert_encoding($text, 'UTF-8', 'UTF-8')], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    }
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['logos_preview'])) {
     csrf_check();
     header('Content-Type: application/json; charset=utf-8');
@@ -72,15 +86,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['logos_preview'])) {
         if ($layoutSetId === '' || !LayoutSet::isLayoutSet($layoutSetId)) {
             throw new RuntimeException(strip_tags(t('import.layout_set_required')));
         }
-        if (empty($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException(t('import.no_file'));
-        }
-        $file = $_FILES['import_file'];
-        $origName = strtolower($file['name']);
+        $ff = FfFile::fetchTemp((string)$me['id'], (string)($_POST['import_ref'] ?? ''));
+        $origName = strtolower($ff['name']);
         if (!str_ends_with($origName, '.html') && !str_ends_with($origName, '.htm')) {
             throw new RuntimeException(t('import.unsupported_type'));
         }
-        $htmlContent = file_get_contents($file['tmp_name']);
+        $htmlContent = file_get_contents($ff['path']);
         if ($htmlContent === false || !LogosSermonImporter::isLogosExport($htmlContent)) {
             throw new RuntimeException(t('import.unsupported_type'));
         }
@@ -99,12 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
         || str_contains($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest');
     try {
-        if (empty($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException(t('import.no_file'));
-        }
+        /* Datei aus dem FileForge-Dialog (Urs 27.11.: «FF Piker verwenden»), als die Person über AppCall geholt. */
+        $ff = FfFile::fetchTemp((string)$me['id'], (string)($_POST['import_ref'] ?? ''));
         $job = ImportJob::enqueueFromUpload(
             $me['id'],
-            $_FILES['import_file'],
+            ['error' => UPLOAD_ERR_OK, 'tmp_name' => $ff['path'], 'name' => $ff['name']],
             trim((string)($_POST['dashboard_section_id'] ?? '')),
             trim((string)($_POST['layout_set_id'] ?? '')),
             is_array($_POST['logos_opt'] ?? null) ? $_POST['logos_opt'] : []
@@ -159,14 +169,14 @@ require __DIR__ . '/includes/header.php';
 
   <?php if ($error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
 
-  <form method="post" enctype="multipart/form-data" id="importForm" style="margin-top:20px;">
+  <form method="post" id="importForm" style="margin-top:20px;">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <input type="hidden" name="dashboard_section_id" id="dashboard_section_id" value="">
     <input type="hidden" name="layout_set_id" id="layout_set_id_hidden" value="">
     <input type="hidden" name="logos_confirmed" id="logos_confirmed" value="">
     <input type="hidden" name="import_dialog_confirmed" id="import_dialog_confirmed" value="">
     <label for="import_file"><?= h(t('import.file_label')) ?></label>
-    <input type="file" id="import_file" name="import_file" required>
+    <?= FfFile::fieldHtml('import_ref', 'import_file', ['html', 'htm', 'zip', 'chs', 'pptx', 'odp', 'pdf', 'xlsx'], t('import.file_label')) ?>
     <?php if ($logosImporterEnabled): ?>
     <div class="props-video-note" style="margin-top:8px;"><?= t('import.logos_hint') ?></div>
     <?php endif; ?>
@@ -353,7 +363,7 @@ require __DIR__ . '/includes/header.php';
 <script>
 (function () {
   var form = document.getElementById('importForm');
-  var input = document.getElementById('import_file');
+  var input = form ? form.querySelector('input[name="import_ref"]') : null;
   var modal = document.getElementById('importDialog');
   var panel = document.getElementById('importDialogPanel');
   var sectionSel = document.getElementById('import_section_id');
@@ -419,6 +429,7 @@ require __DIR__ . '/includes/header.php';
   }
 
   var i18n = {
+    noFile: <?= json_encode(t('ff.no_file')) ?>,
     previewSlides: <?= json_encode(t('import.preview_slides')) ?>,
     previewSection: <?= json_encode(t('import.preview_section')) ?>,
     previewPreamble: <?= json_encode(t('import.preview_preamble')) ?>,
@@ -498,11 +509,14 @@ require __DIR__ . '/includes/header.php';
     }
   }
 
+  /* Anfang der gewählten FileForge-Datei vom Server (import.php ff_head), sonst leer. */
   function readFileHead(file, cb) {
-    var reader = new FileReader();
-    reader.onload = function () { cb(String(reader.result || '')); };
-    reader.onerror = function () { cb(''); };
-    reader.readAsText(file.slice(0, Math.min(file.size, 131072)));
+    var fd = new FormData(form);
+    fd.set('ff_head', '1');
+    fetch(window.location.pathname, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { cb(data && data.ok ? String(data.head || '') : ''); })
+      .catch(function () { cb(''); });
   }
 
     function prepareDialog(file, cb) {
@@ -999,8 +1013,11 @@ require __DIR__ . '/includes/header.php';
       return;
     }
     ev.preventDefault();
-    var file = input.files && input.files[0];
-    if (!file) return;
+    var file = input.value ? { name: input.getAttribute('data-name') || '' } : null;
+    if (!file) {
+      if (window.CfStatus) CfStatus.show('error', i18n.noFile || '');
+      return;
+    }
     prepareDialog(file, function () {
       modal.classList.add('open');
       maximizeFloat();
@@ -1120,4 +1137,5 @@ require __DIR__ . '/includes/header.php';
   }
 })();
 </script>
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

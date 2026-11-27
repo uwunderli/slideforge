@@ -452,7 +452,7 @@
   const DECK_ACTIONS = [
     'add_slide', 'duplicate_slide', 'delete_slide', 'reorder_slides',
     'apply_slide_template', 'apply_layout_from_set', 'import_slide_to_layout_set',
-    'clip_paste_slides', 'find_replace', 'notes_outline_style',
+    'clip_paste_slides', 'find_replace', 'notes_outline_style', 'insert_presentation_file',
   ];
 
   async function api(action, data) {
@@ -8589,8 +8589,26 @@
       }
     }
 
+    /* «Aus Dateien einfügen»: Datei im FileForge-Dialog wählen, Art aus der Endung, dann wie Menüband «Einfügen». */
+    async function insertFromFiles() {
+      if (!SF.canEdit) return;
+      if (!window.SfFf || !window.SfFf.pickMedia) {
+        statusEl.textContent = 'Der Dateidialog von FileForge ist nicht erreichbar.';
+        return;
+      }
+      const accept = [].concat(MEDIA_ACCEPT.image, MEDIA_ACCEPT.video, MEDIA_ACCEPT.audio);
+      const src = await window.SfFf.pickMedia(accept, cfg.insertFromFiles || 'Aus Dateien einfügen');
+      if (!src) return;
+      const ext = String(src.name || src.ref || '').split('.').pop().toLowerCase();
+      const kind = MEDIA_ACCEPT.video.includes(ext) ? 'video' : (MEDIA_ACCEPT.audio.includes(ext) ? 'audio' : 'image');
+      replaceTargetNode = null;
+      await uploadObjectAsset(kind, src);
+      refreshMediaLibrary();
+    }
+
     refreshBtn?.addEventListener('click', refreshMediaLibrary);
     cleanupBtn?.addEventListener('click', cleanupUnusedMedia);
+    document.getElementById('mediaLibraryInsertFf')?.addEventListener('click', insertFromFiles);
 
     SF.refreshMediaLibrary = refreshMediaLibrary;
     if (SF.mediaPanelOpen) refreshMediaLibrary();
@@ -9718,48 +9736,30 @@
   }
 
   /** Strg+V: die angehakten Einträge, sonst der zuletzt kopierte. */
-  /** Ribbon «Präsentation einfügen»: .pptx/.odp/.chs/.zip/.html/.cfs ab der gewählten Folie einfügen. */
-  function insertPresentationFile() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pptx,.odp,.xlsx,.chs,.zip,.html,.htm,.cfs';
-    input.addEventListener('change', async () => {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      if (SF.deckBusy) {
-        if (window.CfStatus) CfStatus.show('info', 'Bitte warten – vorheriger Schritt läuft noch.');
-        return;
-      }
-      SF.deckBusy = true;
-      try {
-        if (SF.saveTimer) {
-          clearTimeout(SF.saveTimer);
-          SF.saveTimer = null;
-          await saveCurrentSlide(true);
-        }
-        if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('api.php?action=insert_presentation_file&id=' + encodeURIComponent(SF.id) + '&after_index=' + encodeURIComponent(SF.currentIndex), {
-          method: 'POST',
-          headers: { 'X-CSRF-Token': SF.csrfToken },
-          body: fd,
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || ('HTTP ' + res.status));
-        SF.slides = data.slides;
-        await renderSlideFilmstrip();
-        if (SF.editorViewMode === 'grid') renderSlideGrid();
-        reloadPreviewWindow();
-        if (window.CfStatus) CfStatus.show('ok', (I.insertPresDone || '{n}').replace('{n}', String(data.inserted || 0)));
-        (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
-      } catch (e) {
-        if (window.CfStatus) CfStatus.show('error', e.message);
-      } finally {
-        SF.deckBusy = false;
-      }
-    });
-    input.click();
+  /** Ribbon «Präsentation einfügen»: .pptx/.odp/.xlsx/.chs/.zip/.html/.cfs ab der gewählten Folie einfügen.
+      Datei im FileForge-Dialog des Hubs wählen (Urs 27.11.: «FF Piker verwenden»; Hochladen vom Rechner bietet der Dialog),
+      api.php holt sie als die Person über AppCall. */
+  const INSERT_PRES_ACCEPT = ['pptx', 'odp', 'xlsx', 'chs', 'zip', 'html', 'htm', 'cfs'];
+  async function insertPresentationFile() {
+    if (!SF.canEdit) return;
+    if (!window.SfFf || !window.SfFf.pickMedia) {
+      if (window.CfStatus) CfStatus.show('error', 'Der Dateidialog von FileForge ist nicht erreichbar.');
+      return;
+    }
+    const src = await window.SfFf.pickMedia(INSERT_PRES_ACCEPT, I.insertPresTitle || 'Präsentation einfügen');
+    if (!src) return;
+    try {
+      if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
+      const data = await api('insert_presentation_file', { ref: src.ref, after_index: SF.currentIndex });
+      SF.slides = data.slides;
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      reloadPreviewWindow();
+      if (window.CfStatus) CfStatus.show('ok', (I.insertPresDone || '{n}').replace('{n}', String(data.inserted || 0)));
+      (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
+    } catch (e) {
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
   }
 
   async function pasteSlidesShortcut() {

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.6.4] - 2026-11-27
+
+- **FileForge-Dialog statt «Lokale Medien öffnen»** (Urs: «Das öffnet aber immer noch das Lokale Medien öffnen ding und nicht der FF Piker»): Menüband Einfügen › «Präsentation einfügen» wählt die Datei mit HubFiles.choose (pptx/odp/xlsx/chs/zip/html/cfs); api.php holt sie als die Person über AppCall (`FfFile::fetchTemp`) und gibt sie dem bestehenden Einfügen. Ebenso Import (import.php, inkl. Logos-Erkennung über den Dateianfang vom Server), Traktanden-Import und Zusatz-PowerPoint (agenda.php), Folien-Set importieren (templates.php) und Logo (Administration; SVG wird jetzt entschärft). Medien-Seitenleiste: Knopf «Aus Dateien einfügen». Hochladen vom Rechner bietet der Dialog selbst.
+
 ## [3.6.3] - 2026-11-27
 
 - **Ctrl+R im Hub bleibt in der Folie** (Urs: «Wenn ich ctrl+r klicke lande ich auf dem Dashboard statt in der Folie»): Startseite, Editor und Presenter melden dem Hub-Rahmen ihren Pfad (`hub-app-ort`, Hub ≥ 2.33.9; Editor/Presenter mit `slide=` und FileForge-Verweis `ref=`). Ist die Arbeitskopie beim Neuladen schon aufgeräumt, öffnet die Startseite die Datei neu aus FileForge (mit Hinweis) statt «kein Zugriff».

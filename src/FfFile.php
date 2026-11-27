@@ -55,6 +55,55 @@ final class FfFile
             'name' => rawurldecode((string)($r['headers']['x-ff-name'] ?? '')), 'size' => (int)$r['size']];
     }
 
+    /**
+     * Datei aus dem FileForge-Dialog (`ref`) als die Person in eine Temp-Datei holen (Präsentation einfügen, Import, Traktanden,
+     * Folien-Set, Logo). Die Temp-Datei wird am Ende der Anfrage gelöscht, sofern sie nicht verschoben wurde.
+     * @return array{path:string,name:string,size:int} @throws RuntimeException mit lesbarem Text
+     */
+    public static function fetchTemp(string $person, string $ref, int $maxBytes = self::MAX_BYTES): array
+    {
+        $p = self::parseRef($ref);
+        if ($p === null || $p['dir']) {
+            throw new RuntimeException('Keine Datei gewählt.');
+        }
+        $tmp = (string)tempnam(sys_get_temp_dir(), 'sf-ff-');
+        register_shutdown_function(static function () use ($tmp): void {
+            if ($tmp !== '' && is_file($tmp)) {
+                @unlink($tmp);
+            }
+        });
+        $r = self::read($person, $ref, '', $tmp);
+        $mb = (string)round($maxBytes / 1024 / 1024);
+        if (!$r['ok']) {
+            $msg = [
+                'too_large' => 'Datei ist zu gross (max. ' . $mb . ' MB).',
+                'no_access' => 'Kein Zugriff auf diese Datei.',
+                'no_person' => 'Kein Zugriff auf diese Datei.',
+                'busy' => 'FileForge ist gerade beschäftigt. Bitte gleich nochmals versuchen.',
+            ];
+            throw new RuntimeException($msg[$r['error']] ?? 'Die Datei liess sich aus FileForge nicht holen.');
+        }
+        $size = (int)@filesize($tmp);
+        if ($size > $maxBytes) {
+            throw new RuntimeException('Datei ist zu gross (max. ' . $mb . ' MB).');
+        }
+        $name = $r['name'] !== '' ? $r['name'] : basename($p['path']);
+        return ['path' => $tmp, 'name' => $name, 'size' => $size];
+    }
+
+    /** Dateifeld für Formulare: versteckter `ref`, Knopf «Aus Dateien wählen …» (FileForge-Dialog, sf-ff.js), Dateiname, Entfernen. */
+    public static function fieldHtml(string $name, string $id, array $accept, string $title, string $value = ''): string
+    {
+        $value = self::parseRef($value) !== null ? $value : '';
+        $shown = $value !== '' ? basename((string)self::parseRef($value)['path']) : '';
+        return '<div class="sf-ff-field" data-sf-ff-field data-accept="' . h(implode(',', $accept)) . '" data-title="' . h($title) . '">'
+            . '<input type="hidden" name="' . h($name) . '" value="' . h($value) . '" data-name="' . h($shown) . '">'
+            . '<button type="button" class="hub-btn hub-btn--sm" id="' . h($id) . '" data-sf-ff-pick>' . h(t('ff.pick_file')) . '</button>'
+            . '<span class="sf-ff-field-name" data-sf-ff-name data-empty="' . h(t('ff.no_file')) . '" aria-live="polite"></span>'
+            . '<button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-sf-ff-clear hidden aria-label="' . h(t('ff.clear_file')) . '">' . h(t('ff.clear_file')) . '</button>'
+            . '</div>';
+    }
+
     /** Neue Fassung ablegen, nur wenn FileForge noch `$expectOid` hat. 409 → `changed`. @return array{ok:bool,error:string,oid:string} */
     public static function replace(string $person, string $ref, string $share, string $file, string $expectOid): array
     {

@@ -218,15 +218,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     if ($action === 'import_layout_set_archive') {
-        $file = $_FILES['layout_set_archive'] ?? null;
-        if (!$file || (int)($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        // Datei aus dem FileForge-Dialog (Urs 27.11.: «FF Piker verwenden»), als die Person über AppCall geholt
+        $archiveRef = (string)($_POST['layout_set_ref'] ?? '');
+        if ($archiveRef === '') {
             $error = t('tpl.layout_set_import_no_file');
-        } elseif (!LayoutSet::isAllowedArchiveUpload((string)($file['tmp_name'] ?? ''), (string)($file['name'] ?? ''))) {
-            $error = t('tpl.layout_set_import_invalid_type');
         } else {
             try {
-                LayoutSet::importArchive($me['id'], (string)$file['tmp_name']);
-                $msg = t('tpl.layout_set_imported');
+                $ff = FfFile::fetchTemp((string)$me['id'], $archiveRef);
+                if (!LayoutSet::isAllowedArchiveUpload($ff['path'], $ff['name'])) {
+                    $error = t('tpl.layout_set_import_invalid_type');
+                } else {
+                    LayoutSet::importArchive($me['id'], $ff['path']);
+                    $msg = t('tpl.layout_set_imported');
+                }
             } catch (Throwable $e) {
                 $error = $e->getMessage();
             }
@@ -664,12 +668,12 @@ require __DIR__ . '/includes/header.php';
       </div>
       <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('tpl.create_layout_set')) ?></button>
     </form>
-    <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;" data-hub-page-busy="<?= h(t('tpl.layout_set_import_busy')) ?>">
+    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;" data-hub-page-busy="<?= h(t('tpl.layout_set_import_busy')) ?>">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="import_layout_set_archive">
       <div style="flex:1; min-width:240px;">
-        <label style="margin-top:0;"><?= h(t('tpl.layout_set_import_label')) ?></label>
-        <input type="file" name="layout_set_archive" required>
+        <label for="layout_set_archive" style="margin-top:0;"><?= h(t('tpl.layout_set_import_label')) ?></label>
+        <?= FfFile::fieldHtml('layout_set_ref', 'layout_set_archive', ['chs', 'zip'], t('tpl.layout_set_import_label')) ?>
       </div>
       <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.layout_set_import_submit')) ?></button>
     </form>
@@ -921,4 +925,5 @@ require __DIR__ . '/includes/header.php';
   <?php endif; ?>
 })();
 </script>
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

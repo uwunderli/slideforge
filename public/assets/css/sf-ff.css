@@ -38,3 +38,7 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-dev .hub-admin-field input:disabled, .sf-dev .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
 .sf-dev .hub-admin-check { display: flex; align-items: center; cursor: pointer; }
 .sf-dev .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
+/* Dateifeld in Formularen (FfFile::fieldHtml): Knopf für den FileForge-Dialog, daneben der gewählte Name. */
+.sf-ff-field { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; margin-top: 4px; }
+.sf-ff-field-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--text); }
+.sf-ff-field-name.is-empty { color: var(--text-muted); }

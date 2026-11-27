@@ -3,6 +3,7 @@
  *   SfFf.editor({ id, csrf, status })   Speichern im Editor: Menüband, Ctrl+S, alle 30 s, beim Schliessen; 409 → «Als Kopie speichern»
  *   SfFf.present({ id, csrf })          Presenter: Gruppe «Geräte» (Registrieren per QR/Code, Geräte inkl. «Web» wählen und senden)
  *   SfFf.home({ csrf })                 Startseite: Zuletzt geöffnet, Für mich freigegeben, Neu / Öffnen / Übernehmen, Vorlagen-Ordner
+ *   [data-sf-ff-field]                  Dateifeld in Formularen (FfFile::fieldHtml), bindet sich selbst
  * Dateiwahl: HubFiles (FileForge-Dialog vom Hub). Das Recht prüft immer FileForge als die angemeldete Person.
  */
 (function (global) {
@@ -584,5 +585,43 @@
     return choose(['file'], accept, title).then(function (r) { return r && r.ref ? r : null; }).catch(function (e) { pickError(e); return null; });
   }
 
-  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting, pickMedia: pickMedia, present: present, devices: devices, register: register };
+  /** Dateifeld in Formularen (Import, Traktanden, Folien-Set, Logo): Knopf öffnet den FileForge-Dialog, der `ref` landet im
+   *  versteckten Feld, der Server holt die Datei als die Person (FfFile::fetchTemp). Markup: FfFile::fieldHtml(). */
+  function bindField(box) {
+    if (box.getAttribute('data-sf-ff-bound')) return;
+    box.setAttribute('data-sf-ff-bound', '1');
+    var input = box.querySelector('input[type="hidden"]');
+    var pick = box.querySelector('[data-sf-ff-pick]');
+    var clear = box.querySelector('[data-sf-ff-clear]');
+    var label = box.querySelector('[data-sf-ff-name]');
+    if (!input || !pick || !label) return;
+    var empty = label.getAttribute('data-empty') || '';
+    var accept = String(box.getAttribute('data-accept') || '').split(',').filter(Boolean);
+    function show(name) {
+      label.textContent = name || empty;
+      label.classList.toggle('is-empty', !name);
+      if (clear) clear.hidden = !name;
+    }
+    pick.addEventListener('click', function () {
+      pickMedia(accept, box.getAttribute('data-title') || pick.textContent).then(function (r) {
+        if (!r) return;
+        input.value = r.ref;
+        input.setAttribute('data-name', r.name || '');
+        show(r.name || r.label || '');
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+    if (clear) clear.addEventListener('click', function () {
+      input.value = '';
+      input.setAttribute('data-name', '');
+      show('');
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      pick.focus();
+    });
+    show(input.value ? (input.getAttribute('data-name') || '') : '');
+  }
+  function bindFields() { Array.prototype.forEach.call(document.querySelectorAll('[data-sf-ff-field]'), bindField); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindFields); else bindFields();
+
+  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting, pickMedia: pickMedia, present: present, devices: devices, register: register, bindFields: bindFields };
 })(window);

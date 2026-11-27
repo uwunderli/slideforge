@@ -358,14 +358,12 @@ switch ($action) {
         break;
 
     case 'insert_presentation_file':
-        // Multipart-Upload (kein JSON-Body): Datei in `file`, Einfügeposition in `after_index`
-        $f = $_FILES['file'] ?? null;
-        if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            json_fail(t('import.no_file'), 400);
-        }
-        $afterIndex = isset($_GET['after_index']) ? (int)$_GET['after_index'] : null;
+        /* Datei aus dem FileForge-Dialog (Urs 27.11.: «FF Piker verwenden»): `ref` wird als die angemeldete Person über
+           AppCall geholt, das Recht prüft FileForge. Hochladen vom Rechner bietet der Dialog selbst. */
+        $afterIndex = isset($body['after_index']) ? (int)$body['after_index'] : null;
         try {
-            $geholt = PresentationInsert::slidesFromFile($id, (string)$f['tmp_name'], (string)$f['name']);
+            $ff = FfFile::fetchTemp((string)$me['id'], (string)($body['ref'] ?? ''));
+            $geholt = PresentationInsert::slidesFromFile($id, $ff['path'], $ff['name']);
         } catch (Throwable $e) {
             json_fail($e->getMessage(), 400);
         }

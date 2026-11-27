@@ -20,29 +20,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.general_saved');
     }
 
-    if ($action === 'upload_logo' && !empty($_FILES['logo']['name'])) {
-        $file = $_FILES['logo'];
-        if ($file['error'] === UPLOAD_ERR_OK && $file['size'] <= MAX_LOGO_SIZE) {
+    /* Logo aus dem FileForge-Dialog (Urs 27.11.: «FF Piker verwenden»), als die Person über AppCall geholt. SVG wird wie
+       Medien entschärft (SvgHelper), weil es aus uploads/ auf derselben Domain ausgeliefert wird. */
+    if ($action === 'upload_logo') {
+        try {
+            $ff = FfFile::fetchTemp((string)$me['id'], (string)($_POST['logo_ref'] ?? ''), MAX_LOGO_SIZE);
             $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/svg+xml' => 'svg'];
             $finfo = @finfo_open(FILEINFO_MIME_TYPE);
-            $mime = $finfo ? @finfo_file($finfo, $file['tmp_name']) : false;
-            if ($mime && isset($allowed[$mime])) {
-                $filename = 'logo-' . Storage::generateId(6) . '.' . $allowed[$mime];
-                if (@move_uploaded_file($file['tmp_name'], PUBLIC_UPLOADS_PATH . '/' . $filename)) {
-                    $oldLogo = Config::get('logo', '');
-                    Config::update(['logo' => $filename]);
-                    if ($oldLogo && file_exists(PUBLIC_UPLOADS_PATH . '/' . $oldLogo)) {
-                        @unlink(PUBLIC_UPLOADS_PATH . '/' . $oldLogo);
-                    }
-                    $msg = t('admin.logo_updated');
-                } else {
-                    $error = t('admin.logo_save_failed');
-                }
-            } else {
-                $error = t('admin.logo_unsupported_type');
+            $mime = $finfo ? @finfo_file($finfo, $ff['path']) : false;
+            if (in_array($mime, ['text/xml', 'application/xml', 'text/plain', 'image/svg'], true)
+                && stripos((string)@file_get_contents($ff['path'], false, null, 0, 512), '<svg') !== false) {
+                $mime = 'image/svg+xml';
             }
-        } else {
-            $error = t('admin.logo_upload_failed', ['mb' => round(MAX_LOGO_SIZE / 1024 / 1024)]);
+            if (!$mime || !isset($allowed[$mime])) {
+                throw new RuntimeException(t('admin.logo_unsupported_type'));
+            }
+            $filename = 'logo-' . Storage::generateId(6) . '.' . $allowed[$mime];
+            $dest = PUBLIC_UPLOADS_PATH . '/' . $filename;
+            if ($mime === 'image/svg+xml') {
+                $clean = SvgHelper::sanitize((string)@file_get_contents($ff['path']));
+                $saved = $clean !== null && @file_put_contents($dest, $clean) !== false;
+            } else {
+                $saved = @rename($ff['path'], $dest) || (@copy($ff['path'], $dest) && @unlink($ff['path']));
+            }
+            if (!$saved) {
+                throw new RuntimeException(t('admin.logo_save_failed'));
+            }
+            @chmod($dest, 0644);
+            $oldLogo = Config::get('logo', '');
+            Config::update(['logo' => $filename]);
+            if ($oldLogo && file_exists(PUBLIC_UPLOADS_PATH . '/' . $oldLogo)) {
+                @unlink(PUBLIC_UPLOADS_PATH . '/' . $oldLogo);
+            }
+            $msg = t('admin.logo_updated');
+        } catch (Throwable $e) {
+            $error = $e->getMessage();
         }
     }
 
@@ -175,10 +187,10 @@ require __DIR__ . '/includes/header.php';
     <?php else: ?>
       <p style="color:var(--text-muted); font-size:0.9rem;"><?= t('admin.no_logo') ?></p>
     <?php endif; ?>
-    <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <form method="post" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="upload_logo">
-      <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
+      <?= FfFile::fieldHtml('logo_ref', 'logo_file', ['png', 'jpg', 'jpeg', 'webp', 'svg'], 'Logo') ?>
       <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('profile.upload')) ?></button>
     </form>
     <?php if (Config::logoUrl()): ?>

@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.6.4 gebaut** (`entwickler/slide-ff-import`, auf 3.6.3, nach 3.6.3 einspielen): FF-Picker für «Präsentation einfügen», Import, Traktanden, Folien-Set, Logo, Medien-Seitenleiste «Aus Dateien einfügen» (`FfFile::fetchTemp`/`fieldHtml`). Offen: Schriften-Upload (Mehrfachwahl) noch lokal.
+
 - **27.11. 3.6.1 live Biel** (Farben bläulich, Urs «Halbwegs repariert»); **3.6.2 gebaut** (`entwickler/slide-farben`, auf 84502bf), beim Gitwart: Medienliste füllt die Seitenleiste (Flex-Kette, keine feste max-height).
 - **27.11. 3.6.1 gebaut** (`entwickler/slide-farben`, Worktree `_claude/entwickler/wt-slide-farben`, auf 3.6.0), beim Gitwart, nach 3.6.0: Hub-Farben griffen nicht, weil header.php die veraltete eigene cf-theme.js lud (Hub-Nachricht mit Akzent ignoriert) → jetzt hub_asset wie FF; Beigereste weg; Medienliste (Einträge zusammengedrückt) neu. sf_hub_asset() nimmt jetzt grundsätzlich die Hub-Datei, lokale Kopie nur Rückfall.
 - **27.11. 3.5.0 gebaut** (`entwickler/slide-ff-medien`, Worktree `_claude/entwickler/wt-slide-ff-medien`): Bild/Audio/Video/Hintergrund/Ersetzen über FF-Picker (HubFiles), upload.php nur `ref` via AppCall; beim Gitwart.

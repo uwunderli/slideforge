@@ -25,10 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     try {
         if ($step === 'outline') {
-            if (empty($_FILES['agenda_file']) || $_FILES['agenda_file']['error'] !== UPLOAD_ERR_OK) {
-                throw new RuntimeException(t('import.no_file'));
-            }
-            $outline = AgendaImporter::extractOutline($_FILES['agenda_file']['tmp_name'], (string)$_FILES['agenda_file']['name']);
+            // Dateien aus dem FileForge-Dialog (Urs 27.11.: «FF Piker verwenden»), als die Person über AppCall geholt
+            $ff = FfFile::fetchTemp((string)$me['id'], (string)($_POST['agenda_ref'] ?? ''));
+            $outline = AgendaImporter::extractOutline($ff['path'], $ff['name']);
         } else {
             $outline = (string)($_POST['outline'] ?? '');
             if ($layoutSetId === '' || !LayoutSet::isLayoutSet($layoutSetId)) {
@@ -36,12 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($step === 'create') {
                 $extra = null;
-                $f = $_FILES['extra_pptx'] ?? null;
-                if ($f && ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-                    if (!str_ends_with(strtolower((string)$f['name']), '.pptx')) {
+                $extraRef = (string)($_POST['extra_ref'] ?? '');
+                if ($extraRef !== '') {
+                    $ff = FfFile::fetchTemp((string)$me['id'], $extraRef);
+                    if (!str_ends_with(strtolower($ff['name']), '.pptx')) {
                         throw new RuntimeException(t('agenda.extra_not_pptx'));
                     }
-                    $extra = (string)$f['tmp_name'];
+                    $extra = $ff['path'];
                 }
                 @ini_set('memory_limit', '1024M');
                 @set_time_limit(300);
@@ -101,11 +101,11 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
   <?php if ($error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
 
 <?php if ($outline === ''): ?>
-  <form method="post" enctype="multipart/form-data" style="margin-top:20px;">
+  <form method="post" style="margin-top:20px;">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <input type="hidden" name="step" value="outline">
     <label for="agenda_file"><?= h(t('agenda.file_label')) ?></label>
-    <input type="file" id="agenda_file" name="agenda_file" accept=".docx,.md,.markdown,.pdf" required>
+    <?= FfFile::fieldHtml('agenda_ref', 'agenda_file', ['docx', 'md', 'markdown', 'pdf'], t('agenda.file_label')) ?>
     <label for="layout_set_id" style="margin-top:14px;"><?= h(t('import.layout_set_label')) ?></label>
     <select id="layout_set_id" name="layout_set_id">
       <?php foreach ($layoutSets as $set): ?>
@@ -130,7 +130,7 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
     @media (max-width: 1300px) { .agenda-cols.has-detail { grid-template-columns: 360px 1fr; } .agenda-detail { grid-column: 1 / -1; } }
     @media (max-width: 900px) { .agenda-cols, .agenda-cols.has-detail { grid-template-columns: 1fr; } }
   </style>
-  <form method="post" enctype="multipart/form-data" id="agendaForm">
+  <form method="post" id="agendaForm">
     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <input type="hidden" name="step" id="agendaStep" value="preview">
     <div class="agenda-cols">
@@ -191,7 +191,7 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
         </select>
 
         <label for="extra_pptx"><?= h(t('agenda.extra_label')) ?></label>
-        <input type="file" id="extra_pptx" name="extra_pptx" accept=".pptx">
+        <?= FfFile::fieldHtml('extra_ref', 'extra_pptx', ['pptx'], t('agenda.extra_label'), (string)($_POST['extra_ref'] ?? '')) ?>
         <label for="opt_insert"><?= h(t('agenda.insert_label')) ?></label>
         <select id="opt_insert" name="opt[insertAfter]">
           <option value="0"><?= h(t('agenda.insert_end')) ?></option>
@@ -271,4 +271,5 @@ $colorPicker = function (string $id, string $name, string $value, string $swatch
   </script>
 <?php endif; ?>
 </div>
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
 <?php require __DIR__ . '/includes/footer.php'; ?>
