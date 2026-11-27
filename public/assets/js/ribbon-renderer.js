@@ -175,6 +175,9 @@
         '<path d="M7.5 10l4.5 4.5L16.5 10"/>' +
         '<path d="M4.5 18.5h15"/>',
     },
+    save: '<path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="6" rx="1"/>',
+    save_copy: '<path d="M8 7V5a2 2 0 0 1 2-2h7l3 3v9a2 2 0 0 1-2 2h-2"/><rect x="4" y="7" width="12" height="14" rx="2"/><path d="M7 7v3h6V7"/>',
+    save_template: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/><path d="M8 9v9"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     master_slide: '<rect x="4" y="5" width="14" height="10" rx="1.5"/><path d="M8 19h12"/><rect x="10" y="9" width="14" height="10" rx="1.5"/>',
     widget: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/>',

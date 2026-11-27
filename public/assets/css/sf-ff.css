@@ -1,0 +1,11 @@
+/* FolienSchmiede als FileForge-Editor (27.11.2026): Startseite und Speicherstatus im Editor. Farben nur aus den Hub-Variablen. */
+.sf-home { max-width: 960px; margin: 0 auto; padding: 1rem 16px 2rem; }
+.sf-home__block { margin-bottom: 1.5rem; }
+.sf-home__block h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+.sf-home__act { width: 2.5rem; text-align: right; }
+.sf-home__hint { margin-top: 0.5rem; }
+.sf-ff-chip { position: fixed; right: 12px; bottom: 12px; z-index: 900; max-width: min(420px, calc(100vw - 24px));
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; }
+.sf-ff-chip[data-state="dirty"] { border-color: var(--warn, #d9a23a); }
+.sf-ff-chip[data-state="error"] { border-color: var(--danger, #d9483a); color: var(--danger, #d9483a); }
+.sf-ff-chip[data-state="busy"] { opacity: 0.8; }

@@ -14,6 +14,11 @@ function ribbon_default_layout(): array
                 'id' => 'start',
                 'labelKey' => 'ribbon.tab_start',
                 'groups' => [
+                    ['id' => 'g_file', 'labelKey' => 'ff.group', 'items' => [
+                        ['id' => 'ff_save', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'ff_save_copy', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+                        ['id' => 'ff_save_template', 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+                    ]],
                     ['id' => 'g_edit', 'labelKey' => 'ribbon.group_edit', 'items' => [
                         ['id' => 'undo', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'redo', 'gridSpan' => ['cols' => 2, 'rows' => 2]],

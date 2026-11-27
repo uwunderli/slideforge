@@ -9572,6 +9572,16 @@
     clearTimeout(SF.saveTimer);
     SF.saveTimer = setTimeout(() => saveCurrentSlide(false), 700);
   }
+  /* Speichern in FileForge (sf-ff.js): zuerst die laufende Folienänderung zum Server bringen. */
+  window.SFEditor = {
+    flush: async function () {
+      if (SF.saveTimer) {
+        clearTimeout(SF.saveTimer);
+        SF.saveTimer = null;
+        await saveCurrentSlide(true);
+      }
+    },
+  };
 
   async function saveCurrentSlide(immediate) {
     clearTimeout(SF.saveTimer);

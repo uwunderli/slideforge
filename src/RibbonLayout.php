@@ -21,6 +21,7 @@ class RibbonLayout
             'openclipartEnabled' => !empty($vars['openclipartEnabled']),
             'showMasterSlideNav' => !empty($vars['showMasterSlideNav']),
             'isOwner' => !empty($vars['isOwner']),
+            'ffFile' => !empty($vars['ffFile']),
         ];
     }
 
@@ -43,6 +44,7 @@ class RibbonLayout
             'openclipartEnabled' => true,
             'showMasterSlideNav' => true,
             'isOwner' => true,
+            'ffFile' => true,
             'masterSlideEditing' => false,
         ];
     }

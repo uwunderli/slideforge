@@ -5,7 +5,8 @@ Auth::requireLogin();
 $me = Auth::currentUser();
 
 $id = $_GET['id'] ?? '';
-$perm = Presentation::checkPermission($id, $me['id']);
+// FileForge-Dateien: Recht kommt aus FileForge (alle 5 Min. neu gefragt), sonst aus der Präsentation
+$perm = Presentation::exists($id) ? Workspace::recheck($id, (string)$me['id']) : null;
 if (!$perm) {
     http_response_code(403);
     die('Du hast keinen Zugriff auf diese Präsentation.');
@@ -142,6 +143,7 @@ $ribbonContext = RibbonLayout::buildContext([
     'showMasterSlideNav' => $showMasterSlideNav,
     /* Bei Masterfolie-Bearbeitung: Owner der Ausgangspräsentation, damit Teilen sichtbar bleibt (disabled). */
     'isOwner' => $masterSlideNavActive ? (($returnPerm ?? '') === 'owner') : ($perm === 'owner'),
+    'ffFile' => Workspace::forPresentation($id) !== null,
 ]);
 $ribbonUserLayout = $canEdit ? RibbonLayout::getLayout($me['id'], $ribbonContext) : null;
 
@@ -1705,6 +1707,10 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
 <?php endif; ?>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
+<?php $ffStatus = Workspace::status($id, (string)$me['id']); if ($ffStatus !== null): ?>
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
+<script>SfFf.editor(<?= json_encode(['id' => $id, 'csrf' => csrf_token(), 'status' => $ffStatus], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);</script>
+<?php endif; ?>
 <?php endif; // canEdit-Verzweigung Modals/Skripte ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
