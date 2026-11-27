@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.54] - 2026-11-27
+
+### Fixed
+- **Menüband «Schriftfarbe» breiter:** Die Gruppe hatte nur Platz für 4 Felder; mit den Anwenden-Knöpfen sind es 7 – Markerfeld und «Kein Marker» waren zusammengedrückt (Urs 27.11., Bildschirmfoto).
+
 ## [3.12.53] - 2026-11-27
 
 ### Fixed

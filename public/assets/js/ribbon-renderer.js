@@ -346,7 +346,7 @@
       return { cols: 5, rows: 2 };
     }
     if (cmd && (cmd.id === 'widget:text_colors' || cmd.templateId === 'widget-text-colors')) {
-      return { cols: 4, rows: 2 };
+      return { cols: 7, rows: 2 };   // 3.12.54: A · Farbe · ▾ · ab · Marker · ▾ · Kein Marker
     }
     if (item && item.gridSpan) return normalizeSpan(item.gridSpan);
     return defaultGridSpan(cmd);

@@ -31,7 +31,7 @@ function ribbon_command_catalog(): array
         ['id' => 'widget:zeichen', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_zeichen', 'templateId' => 'widget-zeichen', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 8, 'rows' => 2]],
         ['id' => 'widget:templates', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_templates', 'templateId' => 'widget-templates', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'widget:absatz', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_paragraph', 'templateId' => 'widget-absatz', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
-        ['id' => 'widget:text_colors', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_text_color', 'templateId' => 'widget-text-colors', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 4, 'rows' => 2]],
+        ['id' => 'widget:text_colors', 'kind' => 'widget', 'category' => 'start', 'labelKey' => 'ribbon.group_text_color', 'templateId' => 'widget-text-colors', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 7, 'rows' => 2]],
 
         // --- Einfügen ---
         ['id' => 'add_slide', 'kind' => 'trigger', 'category' => 'insert', 'labelKey' => 'editor.new_slide', 'icon' => 'add_slide', 'domId' => 'addSlideBtnRibbon', 'triggerId' => 'addSlideBtn', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
