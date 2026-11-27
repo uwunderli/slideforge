@@ -8085,14 +8085,18 @@ body.notes-resizing {
   user-select: none;
 }
 .notes-panel-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
   font-size: 0.72rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 6px;
 }
+.notes-panel-header > span:first-child { justify-self: start; }
+.notes-panel-header > span:last-child { justify-self: end; text-align: right; }
 #slideNotesInput {
   width: 100%;
   height: var(--notes-height, 140px);
@@ -12119,15 +12123,12 @@ select.sf-fsel-native { display: none !important; }
 }
 
 /* Abspielen (3.11.0): Knopfzeile oben im Effekte-Reiter, Überlagerung über der Bühne */
-/* Abspielen über der Folie (3.12.7): oben in der Mitte der Bühne, an derselben Stelle wie der Hinweis beim Abspielen. */
-.sf-stage-play {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
+/* Abspielen mittig in der Notizen-Leiste (3.12.18; vorher schwebend über der Folie). */
+.notes-panel-header .sf-stage-play {
+  justify-self: center;
   gap: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  text-transform: none;
+  letter-spacing: normal;
 }
 .canvas-area:has(> .sf-play-hint) .sf-stage-play { visibility: hidden; }
 /* Abspielen (3.12.3): Bild genau über der Folie, klick-durchlässig; kleiner Hinweis oben, nur ✕ ist anklickbar. */

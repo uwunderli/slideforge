@@ -952,9 +952,6 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
 
   <main class="canvas-area" id="canvasArea">
     <div class="canvas-slide-view" id="canvasSlideView">
-    <?php if ($canEdit): /* Abspielen immer sichtbar über der Folie (Urs 27.11.: «Irgend wohin wo es immer sichtbar ist»); während des Abspielens steht dort der Hinweis. */ ?>
-    <button type="button" class="hub-btn hub-btn--sm sf-stage-play" id="stagePlayBtn" title="<?= h(t('props.anim_play_hint')) ?>"><span aria-hidden="true">▶</span> <?= h(t('props.anim_play')) ?></button>
-    <?php endif; ?>
     <div class="canvas-scroll">
       <div id="stageWrap" class="stage-wrap">
         <div id="stageBgLayer" class="stage-bg-layer"></div>
@@ -975,6 +972,8 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
       <div class="notes-resize-handle" id="notesResizeHandle" role="separator" aria-orientation="horizontal" aria-label="<?= h(t('notes.resize_hint')) ?>" title="<?= h(t('notes.resize_hint')) ?>" tabindex="0"></div>
       <div class="notes-panel-header">
         <span><?= h(t('notes.title')) ?></span>
+        <?php /* Abspielen mittig in der Notizen-Leiste (3.12.18, Urs 27.11.: «Das Abspielen stört mich … in dieser Leiste, zentriert»). */ ?>
+        <button type="button" class="hub-btn hub-btn--sm sf-stage-play" id="stagePlayBtn" title="<?= h(t('props.anim_play_hint')) ?>"><span aria-hidden="true">▶</span> <?= h(t('props.anim_play')) ?></button>
         <span><?= t('notes.hint') ?></span>
       </div>
       <textarea id="slideNotesInput" placeholder="<?= h(t('notes.placeholder')) ?>"></textarea>

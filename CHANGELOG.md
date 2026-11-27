@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.18] - 2026-11-27
+
+### Changed
+- **Abspielen in der Notizen-Leiste** (Urs 27.11.): «▶ Abspielen» sitzt mittig in der Kopfzeile «Notizen zu dieser Folie» statt schwebend über der Folie.
+
 ## [3.12.17] - 2026-11-27
 
 ### Changed
