@@ -244,6 +244,8 @@ return [
     'editor.saved' => 'Saved',
     'editor.unnamed_slide' => 'Untitled slide',
     'editor.filmstrip_label_placeholder' => 'Layout name',
+    'editor.keytips_side' => 'Sidebar',
+    'editor.keytips_filmstrip' => 'Filmstrip',
     'editor.saving' => 'Saving…',
     'editor.dashboard' => 'SlideForge',
     'editor.apply_template' => 'Apply Template',

@@ -250,6 +250,8 @@ return [
     'editor.saved' => 'Gespeichert',
     'editor.unnamed_slide' => 'Unbenannte Folie',
     'editor.filmstrip_label_placeholder' => 'Layout-Name',
+    'editor.keytips_side' => 'Seitenleiste',
+    'editor.keytips_filmstrip' => 'Filmstreifen',
     'editor.saving' => 'Speichere…',
     'editor.dashboard' => 'FolienSchmiede',
     'editor.apply_template' => 'Vorlage anwenden',

@@ -499,6 +499,8 @@ $bootstrap = [
         'slideLabel' => t('editor.slide_label'),
         'reorderSlide' => t('editor.reorder_slide'),
         'filmstripLabelPlaceholder' => t('editor.filmstrip_label_placeholder'),
+        'keytipsSide' => t('editor.keytips_side'),
+        'keytipsFilmstrip' => t('editor.keytips_filmstrip'),
         'unnamedSlide' => t('editor.unnamed_slide'),
         'togglePresentDisabled' => t('editor.toggle_present_disabled'),
         'slidePresentEnabled' => t('editor.slide_present_enabled'),
@@ -1641,6 +1643,7 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/sf-markup.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-richedit.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-keytips-side.js?v=<?= ASSET_VERSION ?>"></script>
 <?php $ffStatus = Workspace::status($id, (string)$me['id']); if ($ffStatus !== null): ?>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
 <script>SfFf.editor(<?= json_encode(['id' => $id, 'csrf' => csrf_token(), 'status' => $ffStatus], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);</script>

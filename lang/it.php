@@ -1632,6 +1632,8 @@ return [
     'remote.control_status' => 'Controllo',
     'editor.unnamed_slide' => 'Diapositiva senza nome',
     'editor.filmstrip_label_placeholder' => 'Nome del layout',
+    'editor.keytips_side' => 'Barra laterale',
+    'editor.keytips_filmstrip' => 'Pellicola',
     'editor.master_slide' => 'Diapositiva master',
     'editor.master_slide_open' => 'Modifica set di slide (diapositiva master)',
     'editor.master_slide_back' => 'Torna alla presentazione',

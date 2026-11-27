@@ -1632,6 +1632,8 @@ return [
     'remote.control_status' => 'Controlla',
     'editor.unnamed_slide' => 'Folia senza num',
     'editor.filmstrip_label_placeholder' => 'Num dal layout',
+    'editor.keytips_side' => 'Trav laterala',
+    'editor.keytips_filmstrip' => 'Film',
     'editor.master_slide' => 'Masterfolia',
     'editor.master_slide_open' => 'Modifitgar il set da slides (masterfolia)',
     'editor.master_slide_back' => 'Enavos a la preschentaziun',

@@ -1636,6 +1636,8 @@ return [
     'remote.control_status' => 'Commande',
     'editor.unnamed_slide' => 'Diapositive sans nom',
     'editor.filmstrip_label_placeholder' => 'Nom de la mise en page',
+    'editor.keytips_side' => 'Barre latérale',
+    'editor.keytips_filmstrip' => 'Pellicule',
     'editor.master_slide' => 'Diapositive maître',
     'editor.master_slide_open' => 'Modifier le set de diapositives (diapositive maître)',
     'editor.master_slide_back' => 'Retour à la présentation',

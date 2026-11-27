@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.38] - 2026-11-27
+
+### Added
+- **Tastentipps für Seitenleiste und Filmstreifen** (Urs 27.11.: «Alt anschliessend Ctrl bringt die Tabs der rechten Werkzeugliste und dann weiter…», «erneutes Ctrl geht auf den Filmstreifen»): Nach Alt schaltet Ctrl reihum Menüband → rechte Seitenleiste → Filmstreifen (bzw. Raster) → Menüband. In der Seitenleiste: Buchstabe öffnet den Reiter, dann die Unter-Reiter (Position, Format, Effekte), dann Knöpfe und Felder; Esc eine Stufe zurück. Im Filmstreifen tippt man die Foliennummer, auch mehrstellig (15); eindeutige Nummern springen sofort, sonst Enter oder kurze Pause; auch zu weggerollten Folien. Alt lange halten zeigt auch die Foliennummern und die Kürzel der Ebenen-Knöpfe und von «Neue Folie». Braucht Hub 2.37.4.
 ## [3.12.37] - 2026-11-27
 
 ### Changed
