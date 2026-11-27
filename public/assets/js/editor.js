@@ -3416,6 +3416,13 @@
       el.classList.toggle('selected', gridSelectedIndices.has(idx));
     });
     updateGridSelectionUi();
+    /* Raster und Filmstreifen gleich (3.12.22, Urs 27.11.: «Grid und Filmstreifen sind nicht gleich mit der Markierung»):
+       die zuletzt angeklickte Folie wird auch die offene Folie; die Auswahl im Raster bleibt. */
+    if (gridSelectedIndices.has(index) && index !== SF.currentIndex) {
+      switchToSlide(index).then(() => updateFilmstripSelection()).catch(() => {});
+    } else {
+      updateFilmstripSelection();
+    }
   }
 
   async function applyTransitionToIndices(indices) {
@@ -9706,7 +9713,7 @@
       await saveCurrentSlide(true);
       const before = await deckBegin();
       try {
-        const res = await api('add_slide', { after_index: SF.currentIndex });
+        const res = await api('add_slide', { after_index: einfuegeNach() });
         SF.slides = res.slides;
       } catch (e) {
         if (window.CfStatus) CfStatus.show('error', e.message);
@@ -10933,6 +10940,13 @@
   }
 
   /** Folien, auf die sich ein Folien-Tastenkürzel bezieht. */
+  /* Einfügen (Folie, Zwischenablage, Präsentation) nach der gewählten Folie, bei mehreren nach der letzten — im Raster
+     wie im Filmstreifen (3.12.22, Urs 27.11.). */
+  function einfuegeNach() {
+    const ziel = shortcutSlideIndices();
+    return ziel.length ? ziel[ziel.length - 1] : SF.currentIndex;
+  }
+
   function shortcutSlideIndices() {
     /* Raster und Folienleiste teilen dieselbe Auswahl (3.7.0). */
     let indices = [...gridSelectedIndices].filter((i) => i >= 0 && i < SF.slides.length);
@@ -11001,7 +11015,7 @@
     const before = await deckBegin();
     try {
       if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
-      const data = await api('insert_presentation_file', { ref: src.ref, after_index: SF.currentIndex });
+      const data = await api('insert_presentation_file', { ref: src.ref, after_index: einfuegeNach() });
       SF.slides = data.slides;
       await afterDeckChange(currentSlideId());
       deckCommit(before);
@@ -11027,7 +11041,7 @@
     }
     try {
       const before = await deckBegin();
-      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
+      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: einfuegeNach() });
       SF.slides = data.slides;
       await afterDeckChange(currentSlideId());
       deckCommit(before);
@@ -11056,7 +11070,7 @@
     }
     try {
       const before = await deckBegin();
-      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
+      const data = await api('clip_paste_slides', { clip_ids: ids, after_index: einfuegeNach() });
       SF.slides = data.slides;
       await afterDeckChange(currentSlideId());
       deckCommit(before);

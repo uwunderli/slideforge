@@ -998,8 +998,7 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
         </div>
         <div class="editor-grid-statusbar" id="slideGridStatusBar">
           <label class="editor-grid-statusbar-label" for="gridThumbSizeSlider"><?= h(t('editor.slide_grid_thumb_size')) ?></label>
-          <input type="range" data-hub-range id="gridThumbSizeSlider" class="editor-grid-thumb-slider" min="100" max="360" step="4" value="<?= (int)Auth::editorGridThumbMin($me) ?>">
-          <span class="editor-grid-thumb-size-value" id="gridThumbSizeLabel"><?= (int)Auth::editorGridThumbMin($me) ?> px</span>
+          <input type="range" data-hub-range data-hub-range-unit="px" id="gridThumbSizeSlider" class="editor-grid-thumb-slider" min="100" max="360" step="4" value="<?= (int)Auth::editorGridThumbMin($me) ?>">
         </div>
       </div>
     </div>
