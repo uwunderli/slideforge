@@ -12162,3 +12162,9 @@ select.sf-fsel-native { display: none !important; }
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
+
+/* 3.11.2 (Urs 27.11.: «Ein Ausklappen geht noch nicht»): `.props-sidebar-tabs .props-layers-header { display:none }`
+   blendete im Reiter-Modus auch den Klapp-Kopf der Effekte-Abschnitte aus – sichtbar blieb nur das kleine ▶. */
+.props-sidebar-tabs .props-fx-fold .props-fx-head {
+  display: flex;
+}
