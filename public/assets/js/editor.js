@@ -4815,8 +4815,23 @@
     }).sort((a, b) => b.zIndex() - a.zIndex());   // oberstes zuerst
     if (unter.length < 2) { selectNodes([clicked]); return; }
     const jetzt = SF.selectedNodes.length === 1 ? unter.indexOf(SF.selectedNodes[0]) : -1;
-    const naechstes = jetzt >= 0 ? unter[(jetzt + 1) % unter.length] : unter[1];
+    const idx = jetzt >= 0 ? (jetzt + 1) % unter.length : 1;
+    const naechstes = unter[idx];
     selectNodes([naechstes]);
+    /* 3.12.25 (Urs 27.11.: «… verschiebe ich doch das Objekt darüber und ich kann die Vierecke am Rahmen gar nicht fassen»):
+       die Objekte darüber nehmen keine Maus an, solange das tiefere gewählt ist; die nächste andere Auswahl gibt sie frei. */
+    const darueber = unter.slice(0, idx);
+    darueber.forEach((n) => n.listening(false));
+    SF.deepCovers = darueber;
+    if (SF.layer) SF.layer.batchDraw();
+  }
+
+  SF.deepCovers = [];
+  function restoreDeepCovers() {
+    if (!SF.deepCovers || !SF.deepCovers.length) return;
+    SF.deepCovers.forEach((n) => { try { if (n.getLayer()) n.listening(true); } catch (e) { /* schon weg */ } });
+    SF.deepCovers = [];
+    if (SF.layer) SF.layer.batchDraw();
   }
 
   function bindNodeEvents(node) {
@@ -5599,6 +5614,7 @@
   }
 
   function selectNodes(nodes) {
+    restoreDeepCovers();
     const list = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
     SF.selectedNodes = list;
     SF.selectedNode = list.length === 1 ? list[0] : (list.length ? list[list.length - 1] : null);
@@ -5639,6 +5655,7 @@
   }
 
   function deselect() {
+    restoreDeepCovers();
     SF.selectedNodes = [];
     SF.selectedNode = null;
     if (SF.transformer) { SF.transformer.nodes([]); SF.layer.draw(); }

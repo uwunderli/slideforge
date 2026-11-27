@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.25] - 2026-11-27
+
+### Fixed
+- **Tiefer gewähltes Objekt lässt sich fassen** (Urs 27.11.): Nach Ctrl+Klick nehmen die Objekte darüber keine Maus mehr an, bis du etwas anderes wählst oder auf eine leere Stelle klickst. So lassen sich Rahmen, Ecken und das Objekt selbst ziehen, ohne das obere zu verschieben.
+
 ## [3.12.24] - 2026-11-27
 
 ### Added
