@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.24] - 2026-11-27
+
+### Added
+- **Ctrl+Klick wählt tiefer** (Urs 27.11.): Liegt ein Objekt über einem anderen, wählt Ctrl+Klick (Mac: Cmd+Klick) das Objekt eine Ebene darunter, jeder weitere Ctrl+Klick noch eine tiefer, nach dem untersten wieder das oberste. Umschalt+Klick bleibt Mehrfachauswahl.
+
 ## [3.12.23] - 2026-11-27
 
 ### Added

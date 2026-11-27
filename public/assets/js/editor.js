@@ -4802,11 +4802,29 @@
     refreshCanvas();
   }
 
+  /* Ctrl/Cmd+Klick wählt das Objekt eine Ebene tiefer unter dem Mauszeiger, jeder weitere Ctrl+Klick noch eine tiefer,
+     nach dem untersten wieder das oberste (3.12.24, Urs 27.11.: «ein Objekt tiefer wählt, mit dem nächsten Klick noch tiefer»).
+     Umschalt+Klick bleibt Mehrfachauswahl. Gesucht wird über die Umrisse (Rahmen) der Objekte. */
+  function selectDeeperAtPointer(clicked) {
+    const pos = SF.stage && SF.stage.getPointerPosition();
+    if (!pos) { selectNodes([clicked]); return; }
+    const unter = getTopLevelNodes().filter((n) => {
+      if (!n.isVisible || !n.isVisible()) return false;
+      const r = n.getClientRect();
+      return pos.x >= r.x && pos.x <= r.x + r.width && pos.y >= r.y && pos.y <= r.y + r.height;
+    }).sort((a, b) => b.zIndex() - a.zIndex());   // oberstes zuerst
+    if (unter.length < 2) { selectNodes([clicked]); return; }
+    const jetzt = SF.selectedNodes.length === 1 ? unter.indexOf(SF.selectedNodes[0]) : -1;
+    const naechstes = jetzt >= 0 ? unter[(jetzt + 1) % unter.length] : unter[1];
+    selectNodes([naechstes]);
+  }
+
   function bindNodeEvents(node) {
     if (!SF.canEdit) return;
     node.on('click tap', (e) => {
       e.cancelBubble = true;
       if (e.evt.shiftKey) toggleSelectNode(node);
+      else if (e.evt.ctrlKey || e.evt.metaKey) selectDeeperAtPointer(node);
       else selectNodes([node]);
     });
     node.on('dragmove', () => {
