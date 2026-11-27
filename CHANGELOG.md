@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.19] - 2026-11-27
+
+### Added
+- **Notizen ein- und ausblenden** (Urs 27.11.): Pfeil-Knopf links in der Notizen-Leiste klappt die Notizen ein wie die Seitenspalten; eingeklappt bleibt die Leiste mit «▶ Abspielen» unten. Gemerkt je Person; Befehl «Notizen ein-/ausblenden» unter Weitere Befehle (ohne Vorgabe-Kürzel).
+
 ## [3.12.18] - 2026-11-27
 
 ### Changed

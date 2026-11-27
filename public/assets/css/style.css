@@ -8051,6 +8051,15 @@ body.hub-split-resizing {
   padding: 10px 16px 12px;
   flex-shrink: 0;
 }
+/* Notizen eingeklappt (3.12.19): nur die Leiste mit Titel und Abspielen bleibt. */
+.notes-panel-editor.is-notes-off { padding-bottom: 8px; }
+.notes-panel-editor.is-notes-off #slideNotesInput,
+.notes-panel-editor.is-notes-off .notes-resize-handle { display: none; }
+.notes-panel-editor.is-notes-off .notes-panel-header { margin-bottom: 0; }
+.notes-panel-title { display: inline-flex; align-items: center; gap: 6px; }
+.notes-toggle { width: 24px; height: 24px; min-height: 0; padding: 0; }
+.notes-toggle svg { width: 18px; height: 18px; display: block; transform: rotate(-90deg); transition: transform 0.15s ease; }
+.notes-panel-editor.is-notes-off .notes-toggle svg { transform: rotate(90deg); }
 /* Trennlinie als Ziehgriff: liegt auf der Oberkante, greift 7px hoch/runter. */
 .notes-resize-handle {
   position: absolute;

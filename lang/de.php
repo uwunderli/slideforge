@@ -473,6 +473,9 @@ return [
     'ribbon.error_reset' => 'Zurücksetzen fehlgeschlagen.',
 
     'notes.resize_hint' => 'Höhe ziehen',
+    'notes.hide' => 'Notizen ausblenden',
+    'notes.show' => 'Notizen einblenden',
+    'notes.hide_show' => 'Notizen ein-/ausblenden',
     'notes.title' => 'Notizen zu dieser Folie',
     'notes.hint' => 'Markdown &middot; nur im Präsentationsmodus sichtbar',
     'notes.placeholder' => 'Notizen für den Vortragenden…',

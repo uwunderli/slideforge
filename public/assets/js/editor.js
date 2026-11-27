@@ -2157,6 +2157,27 @@
     return h;
   }
 
+  /* Notizen ein-/ausklappen (3.12.19, Urs 27.11.: «wie die Seitenleiste … bleibt der Play Button unten im Bild»).
+     Gemerkt je Person in editor_ui.collapsed.sf_editor_notes; Befehl «Notizen ein-/ausblenden» im Katalog. */
+  function toggleNotesPanel(force) {
+    const panel = document.getElementById('notesPanel');
+    const btn = document.getElementById('notesToggleBtn');
+    if (!panel) return;
+    const aus = typeof force === 'boolean' ? force : !panel.classList.contains('is-notes-off');
+    panel.classList.toggle('is-notes-off', aus);
+    SF.collapsed = SF.collapsed || {};
+    if (aus) SF.collapsed.sf_editor_notes = true;
+    else delete SF.collapsed.sf_editor_notes;
+    if (btn) {
+      const label = aus ? btn.dataset.labelShow : btn.dataset.labelHide;
+      btn.setAttribute('aria-expanded', aus ? 'false' : 'true');
+      if (label) { btn.setAttribute('aria-label', label); btn.title = label; }
+    }
+    if (!aus) document.getElementById('slideNotesInput')?.focus({ preventScroll: true });
+    persistEditorUi({});
+  }
+  document.getElementById('notesToggleBtn')?.addEventListener('click', () => toggleNotesPanel());
+
   function bindNotesResize() {
     const handle = document.getElementById('notesResizeHandle');
     const input = document.getElementById('slideNotesInput');
@@ -10174,6 +10195,7 @@
       openPlayOverlay();
       return true;
     });
+    SFS.register('notes_toggle', () => { toggleNotesPanel(); return true; });
     SFS.register('notes_focus', () => {
       const n = document.getElementById('slideNotesInput');
       if (!n || !n.getClientRects().length) return 'native';

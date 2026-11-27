@@ -968,10 +968,12 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
     </div>
     <?php endif; ?>
     <?php if ($canEdit): ?>
-    <div class="notes-panel-editor">
+    <?php $sfNotesOff = !empty($sfCollapsed['sf_editor_notes']); ?>
+    <div class="notes-panel-editor<?= $sfNotesOff ? ' is-notes-off' : '' ?>" id="notesPanel">
       <div class="notes-resize-handle" id="notesResizeHandle" role="separator" aria-orientation="horizontal" aria-label="<?= h(t('notes.resize_hint')) ?>" title="<?= h(t('notes.resize_hint')) ?>" tabindex="0"></div>
       <div class="notes-panel-header">
-        <span><?= h(t('notes.title')) ?></span>
+        <?php /* Notizen ein-/ausklappen wie die Seitenspalten (3.12.19, Urs 27.11.); eingeklappt bleibt die Leiste mit Abspielen unten. */ ?>
+        <span class="notes-panel-title"><button type="button" class="hub-icon-btn notes-toggle" id="notesToggleBtn" aria-controls="slideNotesInput" aria-expanded="<?= $sfNotesOff ? 'false' : 'true' ?>" data-label-hide="<?= h(t('notes.hide')) ?>" data-label-show="<?= h(t('notes.show')) ?>" aria-label="<?= h(t($sfNotesOff ? 'notes.show' : 'notes.hide')) ?>" title="<?= h(t($sfNotesOff ? 'notes.show' : 'notes.hide')) ?>"><?= $sfGripSvg ?></button><?= h(t('notes.title')) ?></span>
         <?php /* Abspielen mittig in der Notizen-Leiste (3.12.18, Urs 27.11.: «Das Abspielen stört mich … in dieser Leiste, zentriert»). */ ?>
         <button type="button" class="hub-btn hub-btn--sm sf-stage-play" id="stagePlayBtn" title="<?= h(t('props.anim_play_hint')) ?>"><span aria-hidden="true">▶</span> <?= h(t('props.anim_play')) ?></button>
         <span><?= t('notes.hint') ?></span>

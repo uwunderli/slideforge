@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.19 gebaut** (gleicher Zweig nach 3.12.18): Notizen ein-/ausklappbar, Abspielen bleibt in der Leiste. Bei Gitwart.
 - **27.11. 3.12.18 gebaut** (gleicher Zweig nach 3.12.17): Abspielen mittig in der Notizen-Leiste. Bei Gitwart.
 - **27.11. 3.12.17 gebaut** (`entwickler/slide-mehrfach-kopieren` ab 3.12.16 ed31e75): mehrere Objekte kopieren/einfügen, andere Folie gleiche Stelle. Bei Gitwart.
 - **27.11. 3.12.16 gebaut** (`entwickler/slide-alle-folien` ab 3.12.15 a7a2ce5): Befehl «Alle Folien wählen» (Ctrl+A in Filmstreifen/Raster). Bei Gitwart.

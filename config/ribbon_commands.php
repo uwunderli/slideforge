@@ -104,6 +104,7 @@ function ribbon_command_catalog(): array
         ['id' => 'zoom_in', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_in', 'titleKey' => 'shortcut.zoom_hint'],
         ['id' => 'zoom_out', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_out', 'titleKey' => 'shortcut.zoom_hint'],
         ['id' => 'zoom_fit', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_fit', 'titleKey' => 'shortcut.zoom_fit_hint'],
+        ['id' => 'notes_toggle', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'notes.hide_show', 'titleKey' => 'notes.hide_show', 'visibleWhen' => ['canEdit']],
         ['id' => 'notes_focus', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.notes_focus', 'titleKey' => 'shortcut.notes_focus_hint'],
         ['id' => 'delete_objects', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'stage', 'groupKey' => 'shortcut.group_stage', 'labelKey' => 'shortcut.delete_objects', 'titleKey' => 'shortcut.delete_objects_hint', 'shortcut' => ['Entf', 'Backspace'], 'visibleWhen' => ['canEdit']],
         // 3.12.3 (Urs 27.11.): ←/→ auf der Folienfläche ohne Markierung spielen Effekte und Übergänge ab (wie Präsentation).
