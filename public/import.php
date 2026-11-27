@@ -176,7 +176,7 @@ require __DIR__ . '/includes/header.php';
     <input type="hidden" name="logos_confirmed" id="logos_confirmed" value="">
     <input type="hidden" name="import_dialog_confirmed" id="import_dialog_confirmed" value="">
     <label for="import_file"><?= h(t('import.file_label')) ?></label>
-    <?= FfFile::fieldHtml('import_ref', 'import_file', ['html', 'htm', 'zip', 'chs', 'pptx', 'odp', 'pdf', 'xlsx'], t('import.file_label')) ?>
+    <?= FfFile::fieldHtml('import_ref', 'import_file', ['html', 'htm', 'zip', 'chs', 'pptx', 'odp', 'pdf', 'xlsx'], t('import.file_label'), (string)($_GET['ref'] ?? '')) ?>
     <?php if ($logosImporterEnabled): ?>
     <div class="props-video-note" style="margin-top:8px;"><?= t('import.logos_hint') ?></div>
     <?php endif; ?>
@@ -974,6 +974,10 @@ require __DIR__ . '/includes/header.php';
       });
   }
 
+  /* Von der Startseite (Logos-Predigt …) mit ?ref= gekommen: Datei ist schon gewählt, gleich weiter zum Dialog. */
+  if (<?= json_encode(FfFile::parseRef((string)($_GET['ref'] ?? '')) !== null) ?> && input.value) {
+    setTimeout(function () { if (form.requestSubmit) form.requestSubmit(); }, 0);
+  }
   form.addEventListener('submit', function (ev) {
     if (dialogConfirmed.value === '1') {
       dialogConfirmed.value = '';

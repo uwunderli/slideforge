@@ -52,11 +52,10 @@ require __DIR__ . '/includes/header.php';
       { id: 'datei', label: 'Datei', items: logosOn ? ['open', 'importPpt', 'importLogos'] : ['open', 'importPpt'] },
       { id: 'vorlagen', label: 'Vorlagen', items: ['settings'] }
     ] }, storageKey: 'sf_home_ribbon_v1', dialog: window.HubFloatDialog });
-  var map = { sfNewBlank: 'newBlank', sfNewTpl: 'newFromTemplate', sfOpen: 'open', sfImport: 'importPpt' };
+  var map = { sfNewBlank: 'newBlank', sfNewTpl: 'newFromTemplate', sfOpen: 'open', sfImport: 'importPpt', sfImportLogos: 'importLogos' };
   document.getElementById('sfRibbonBody').addEventListener('click', function (e) {
     var b = e.target.closest('button[id]');
     if (b && b.id === 'sfSettings') { window.location.href = 'templates.php?tab=slides'; return; }
-    if (b && b.id === 'sfImportLogos') { window.location.href = 'import.php'; return; }
     if (!b || b.disabled || !map[b.id]) return;
     act[map[b.id]]();
   });

@@ -674,6 +674,12 @@
       open: function () {
         choose(['file'], ['cfs'], 'Präsentation öffnen').then(function (r) { if (r && r.ref) openTarget(r.ref, ''); }).catch(pickError);
       },
+      /* Logos-Predigt (HTML-Export) aus FileForge wählen, dann Import-Seite mit Vorschau/Optionen (Urs 27.11.). */
+      importLogos: function () {
+        choose(['file'], ['html', 'htm'], 'Logos-Predigt übernehmen').then(function (r) {
+          if (r && r.ref) location.href = 'import.php?ref=' + encodeURIComponent(r.ref);
+        }).catch(pickError);
+      },
       importPpt: function () {
         choose(['file'], ['pptx', 'odp'], 'PowerPoint oder ODP übernehmen').then(function (r) { if (r && r.ref) openTarget(r.ref, ''); }).catch(pickError);
       },

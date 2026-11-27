@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.48] - 2026-11-27
+
+### Changed
+- **Logos-Predigt mit dem FileForge-Picker** (Urs 27.11.: «Das Öffnen auch mit dem FF-Picker»): Der Knopf auf der Startseite öffnet den Picker (HTML), danach die Import-Seite mit der gewählten Datei und gleich den Import-Dialog (Vorschau/Optionen).
+
 ## [3.12.47] - 2026-11-27
 
 ### Changed
