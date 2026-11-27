@@ -31,10 +31,24 @@
       slideGhostOpacity: 25,
       notesMode: 'carry',
       notesCollapsed: false,
+      notesPos: 'bottom',
+      notesPlace: 'overlay',
+      notesCols: 0,
+      notesSizeBottom: 30,
+      notesSizeLeft: 30,
       mediaCollapsed: false,
       dockTab: 'notes',
     };
   }
+
+  /** Notiz-Anordnung: erlaubte Werte, sonst Vorgabe (wie Auth::normalizePresentLayout). */
+  function clampInt(v, min, max, def) {
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return def;
+    return Math.max(min, Math.min(max, n));
+  }
+  function normNotesPos(v, def) { return (v === 'bottom' || v === 'left') ? v : def; }
+  function normNotesPlace(v, def) { return (v === 'overlay' || v === 'column') ? v : def; }
 
   function isTimebarVisible(layout) {
     const src = layout || layoutState || defaultLayout();
@@ -89,6 +103,11 @@
         ? src.notesMode
         : base.notesMode,
       notesCollapsed: src.notesCollapsed != null ? !!src.notesCollapsed : base.notesCollapsed,
+      notesPos: normNotesPos(src.notesPos, base.notesPos),
+      notesPlace: normNotesPlace(src.notesPlace, base.notesPlace),
+      notesCols: clampInt(src.notesCols, 0, 4, base.notesCols),
+      notesSizeBottom: clampInt(src.notesSizeBottom, 15, 70, base.notesSizeBottom),
+      notesSizeLeft: clampInt(src.notesSizeLeft, 15, 60, base.notesSizeLeft),
       mediaCollapsed: src.mediaCollapsed != null ? !!src.mediaCollapsed : base.mediaCollapsed,
       dockTab: (src.dockTab === 'notes' || src.dockTab === 'media') ? src.dockTab : base.dockTab,
     };
@@ -505,6 +524,11 @@
         : 'carry';
     }
     if (partial.notesCollapsed != null) layoutState.notesCollapsed = !!partial.notesCollapsed;
+    if (partial.notesPos != null) layoutState.notesPos = normNotesPos(partial.notesPos, 'bottom');
+    if (partial.notesPlace != null) layoutState.notesPlace = normNotesPlace(partial.notesPlace, 'overlay');
+    if (partial.notesCols != null) layoutState.notesCols = clampInt(partial.notesCols, 0, 4, 0);
+    if (partial.notesSizeBottom != null) layoutState.notesSizeBottom = clampInt(partial.notesSizeBottom, 15, 70, 30);
+    if (partial.notesSizeLeft != null) layoutState.notesSizeLeft = clampInt(partial.notesSizeLeft, 15, 60, 30);
     if (partial.mediaCollapsed != null) layoutState.mediaCollapsed = !!partial.mediaCollapsed;
     if (partial.dockTab === 'notes' || partial.dockTab === 'media') layoutState.dockTab = partial.dockTab;
     if (P) P.presentLayout = cloneLayout(layoutState);

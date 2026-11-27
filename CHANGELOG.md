@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.42] - 2026-11-27
+
+### Added
+- **Referenten-Notizen anordnen** (Urs 27.11.): Im Notiz-Dialog der Referentenansicht neu «Position» (Unten | Seite links), «Darstellung» (Über der Folie wie bisher, ein-/ausblendbar | Eigene Spalte: die Folie wird kleiner statt überdeckt, Grösse mit Ziehgriff am Rand oder Pfeiltasten verstellbar) und — nur bei «Unten» — «Textspalten» (Automatisch ≈ 30em je Spalte oder 1–4). Spalte 1 füllt sich oben→unten, dann Spalte 2; der Umbruch fällt nach Möglichkeit vor eine Überschrift (Abschnitte bleiben zusammen, solange sie in eine Spalte passen); zu langer Text rollt seitwärts. Links immer einspaltig. Alles pro Person gespeichert und sofort wirksam.
 ## [3.12.41] - 2026-11-27
 
 ### Added

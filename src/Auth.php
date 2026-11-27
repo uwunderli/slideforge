@@ -294,6 +294,11 @@ class Auth
             'slideGhostOpacity' => 25,
             'notesMode' => 'carry',
             'notesCollapsed' => false,
+            'notesPos' => 'bottom',
+            'notesPlace' => 'overlay',
+            'notesCols' => 0,
+            'notesSizeBottom' => 30,
+            'notesSizeLeft' => 30,
             'mediaCollapsed' => false,
             'dockTab' => 'notes',
         ];
@@ -392,6 +397,15 @@ class Auth
             'notesCollapsed' => array_key_exists('notesCollapsed', $layout)
                 ? (bool)$layout['notesCollapsed']
                 : $defaults['notesCollapsed'],
+            'notesPos' => in_array(($layout['notesPos'] ?? null), ['bottom', 'left'], true)
+                ? $layout['notesPos']
+                : $defaults['notesPos'],
+            'notesPlace' => in_array(($layout['notesPlace'] ?? null), ['overlay', 'column'], true)
+                ? $layout['notesPlace']
+                : $defaults['notesPlace'],
+            'notesCols' => max(0, min(4, (int)($layout['notesCols'] ?? $defaults['notesCols']))),
+            'notesSizeBottom' => max(15, min(70, (int)($layout['notesSizeBottom'] ?? $defaults['notesSizeBottom']))),
+            'notesSizeLeft' => max(15, min(60, (int)($layout['notesSizeLeft'] ?? $defaults['notesSizeLeft']))),
             'mediaCollapsed' => array_key_exists('mediaCollapsed', $layout)
                 ? (bool)$layout['mediaCollapsed']
                 : $defaults['mediaCollapsed'],

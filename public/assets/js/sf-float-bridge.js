@@ -23,7 +23,7 @@
     presentTimebarSettingsModal: { width: 520, height: 480 },
     presentLaserSettingsModal: { width: 480, height: 520 },
     presentClockSettingsModal: { width: 480, height: 420 },
-    presentNotesSettingsModal: { width: 440, height: 380 },
+    presentNotesSettingsModal: { width: 480, height: 720 },
     // Hub-Vorgabe „Formular 2-Spalten / Editor" (DESIGN.md, Standardgrössen).
     // fitContent aus, sonst misst sich der Dialog nach dem Wiederherstellen neu
     // am Inhalt und wirkt beim zweiten Öffnen anders als beim ersten.

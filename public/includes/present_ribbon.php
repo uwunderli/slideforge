@@ -184,6 +184,53 @@
           </span>
         </label>
       </div>
+      <div class="present-config-section" role="radiogroup" aria-labelledby="presentNotesPosTitle">
+        <div class="present-config-section-title" id="presentNotesPosTitle"><?= h(t('present.notes_pos_label')) ?></div>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesPos" value="bottom" id="presentNotesPosBottom" checked>
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_pos_bottom')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_pos_bottom_desc')) ?></span>
+          </span>
+        </label>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesPos" value="left" id="presentNotesPosLeft">
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_pos_left')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_pos_left_desc')) ?></span>
+          </span>
+        </label>
+      </div>
+      <div class="present-config-section" role="radiogroup" aria-labelledby="presentNotesPlaceTitle">
+        <div class="present-config-section-title" id="presentNotesPlaceTitle"><?= h(t('present.notes_place_label')) ?></div>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesPlace" value="overlay" id="presentNotesPlaceOverlay" checked>
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_place_overlay')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_place_overlay_desc')) ?></span>
+          </span>
+        </label>
+        <label class="present-config-check present-config-check-block">
+          <input type="radio" name="presentNotesPlace" value="column" id="presentNotesPlaceColumn">
+          <span class="present-config-check-grow">
+            <strong><?= h(t('present.notes_place_column')) ?></strong>
+            <span class="present-notes-mode-desc"><?= h(t('present.notes_place_column_desc')) ?></span>
+          </span>
+        </label>
+      </div>
+      <div class="present-config-section sf-set" id="presentNotesColsSection">
+        <label class="hub-admin-field">
+          <span><?= h(t('present.notes_cols_label')) ?></span>
+          <select id="presentNotesCols" aria-describedby="presentNotesColsDesc">
+            <option value="0"><?= h(t('present.notes_cols_auto')) ?></option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <span class="present-notes-mode-desc" id="presentNotesColsDesc"><?= h(t('present.notes_cols_desc')) ?></span>
+      </div>
     </div>
     <div class="sf-dialog-actions modal-actions">
       <button type="button" class="button hub-btn hub-btn--primary" id="presentNotesSettingsModalOk"><?= h(t('common.close')) ?></button>

@@ -117,7 +117,8 @@ echo sf_app_ort_extra((string)$id);
 <div class="present-main-row present-main-grid" id="presentMainRow">
   <div class="present-current-panel">
     <iframe id="mainFrame" src="present_frame.php?id=<?= urlencode($id) ?>&mode=main&amp;start=<?= (int)$startSlide ?>" title="<?= h(t('present.current_slide')) ?>"></iframe>
-    <div class="present-slide-dock" id="presentSlideDock" hidden>
+    <div class="present-slide-dock" id="presentSlideDock" data-notes-pos="bottom" data-notes-place="overlay" hidden>
+      <div class="present-notes-col-resize" id="presentNotesColResize" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="<?= h(t('present.notes_resize')) ?>" title="<?= h(t('present.notes_resize')) ?>" hidden></div>
       <div class="present-slide-dock-sheet" id="presentSlideDockSheet">
         <div class="present-slide-dock-tabs" role="tablist" aria-label="<?= h(t('present.notes')) ?>">
           <button

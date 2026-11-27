@@ -1675,7 +1675,8 @@ body.present-mode .present-ribbon.editor-ribbon.is-peek {
   z-index: 2500;
 }
 .present-notes-settings-modal {
-  max-width: 440px;
+  max-width: 480px;
+  overflow-y: auto;
 }
 .present-notes-mode-desc {
   display: block;
@@ -2500,6 +2501,167 @@ body.present-panel-resizing {
 .present-slide-dock[data-notes-contrast="on-light"] .media-control-seek input[type="range"] {
   accent-color: var(--accent, #3a6c8d);
 }
+/* Notiz-Anordnung (3.12.42, Urs 27.11.): links statt unten, eigene Spalte statt über der Folie,
+   unten in Textspalten. Steuerung über data-notes-pos/-place/-cols am Dock (present.js). */
+.present-slide-dock[data-notes-pos="left"] {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: var(--present-notes-size, 30%);
+  min-width: 220px;
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-sheet {
+  flex-direction: row-reverse;
+  height: 100%;
+  max-height: none;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.22);
+}
+.present-slide-dock[data-notes-pos="left"].is-collapsed .present-slide-dock-sheet {
+  transform: translateX(calc(-100% + var(--present-dock-register-h)));
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-tabs {
+  flex: 0 0 var(--present-dock-register-h);
+  width: var(--present-dock-register-h);
+  height: auto;
+  min-height: 0;
+  flex-direction: column;
+  border-bottom: none;
+  border-left: 1px solid var(--present-dock-border);
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-tab {
+  flex: 0 1 auto;
+  writing-mode: vertical-rl;
+  padding: 14px 0;
+  border-right: none;
+  border-bottom: 1px solid var(--present-dock-border);
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-toggle {
+  flex: 0 0 52px;
+  margin-top: auto;
+  border-left: none;
+  border-top: 1px solid var(--present-dock-border);
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-panels {
+  min-width: 0;
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-grip {
+  width: 4px;
+  height: 36px;
+}
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-panel.present-notes-overlay-inner,
+.present-slide-dock[data-notes-pos="left"] .present-slide-dock-panel.present-media-overlay-inner {
+  padding: 12px 18px 16px;
+}
+/* Eigene Spalte: Folie wird kleiner statt überdeckt */
+.present-current-panel.present-notes-as-column {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.present-current-panel.present-notes-as-column[data-notes-pos="left"] {
+  flex-direction: row;
+}
+.present-current-panel.present-notes-as-column > iframe {
+  flex: 1 1 0;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+}
+.present-current-panel.present-notes-as-column > .present-slide-dock {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  flex: 0 0 var(--present-notes-size, 30%);
+  width: auto;
+  min-width: 0;
+  pointer-events: auto;
+}
+.present-current-panel.present-notes-as-column[data-notes-pos="left"] > .present-slide-dock {
+  order: -1;
+  min-width: 220px;
+}
+.present-current-panel.present-notes-as-column > .present-slide-dock.is-collapsed {
+  flex-basis: var(--present-dock-register-h);
+  min-width: 0;
+}
+.present-current-panel.present-notes-as-column > .present-slide-dock .present-slide-dock-sheet {
+  height: 100%;
+  max-height: none;
+  transform: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.present-current-panel.is-resizing-notes,
+.present-current-panel.is-resizing-notes iframe {
+  user-select: none;
+}
+.present-current-panel.is-resizing-notes iframe {
+  pointer-events: none;
+}
+.present-notes-col-resize {
+  position: absolute;
+  z-index: 3;
+  background: transparent;
+  touch-action: none;
+}
+.present-notes-col-resize[hidden],
+.present-slide-dock.is-collapsed .present-notes-col-resize {
+  display: none;
+}
+.present-slide-dock[data-notes-pos="bottom"] .present-notes-col-resize {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  cursor: row-resize;
+}
+.present-slide-dock[data-notes-pos="left"] .present-notes-col-resize {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  cursor: col-resize;
+}
+.present-notes-col-resize:hover,
+.present-notes-col-resize:focus-visible {
+  background: var(--accent, #3a6c8d);
+  outline: none;
+}
+/* Textspalten unten: Spalte 1 oben→unten, dann Spalte 2 …; zu lang → waagrecht rollen */
+.present-slide-dock[data-notes-cols="0"] .present-slide-dock-panel.present-notes-overlay-inner,
+.present-slide-dock[data-notes-cols="2"] .present-slide-dock-panel.present-notes-overlay-inner,
+.present-slide-dock[data-notes-cols="3"] .present-slide-dock-panel.present-notes-overlay-inner,
+.present-slide-dock[data-notes-cols="4"] .present-slide-dock-panel.present-notes-overlay-inner {
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+.present-slide-dock[data-notes-cols="0"] #notesPanel,
+.present-slide-dock[data-notes-cols="2"] #notesPanel,
+.present-slide-dock[data-notes-cols="3"] #notesPanel,
+.present-slide-dock[data-notes-cols="4"] #notesPanel {
+  max-height: var(--present-notes-col-h, 40vh);
+  column-gap: 2.5em;
+  column-rule: 1px solid var(--present-dock-border);
+  column-fill: balance;
+}
+.present-slide-dock[data-notes-place="column"][data-notes-cols="0"] #notesPanel,
+.present-slide-dock[data-notes-place="column"][data-notes-cols="2"] #notesPanel,
+.present-slide-dock[data-notes-place="column"][data-notes-cols="3"] #notesPanel,
+.present-slide-dock[data-notes-place="column"][data-notes-cols="4"] #notesPanel {
+  height: var(--present-notes-col-h, 40vh);
+  column-fill: auto;
+}
+.present-slide-dock[data-notes-cols="0"] #notesPanel { column-width: 30em; }
+.present-slide-dock[data-notes-cols="2"] #notesPanel { column-count: 2; }
+.present-slide-dock[data-notes-cols="3"] #notesPanel { column-count: 3; }
+.present-slide-dock[data-notes-cols="4"] #notesPanel { column-count: 4; }
+.present-notes-sec { break-inside: avoid; }
+.present-notes-sec.is-long { break-inside: auto; }
+#notesPanel h1, #notesPanel h2, #notesPanel h3,
+#notesPanel h4, #notesPanel h5, #notesPanel h6 { break-after: avoid; }
 .present-notes-overlay-inner strong { font-weight: 700; }
 .present-notes-overlay-inner code {
   font-family: var(--font-mono);

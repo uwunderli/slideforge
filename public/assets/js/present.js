@@ -603,10 +603,43 @@
       return next;
     }
 
+    const posRadios = [...modal.querySelectorAll('input[name="presentNotesPos"]')];
+    const placeRadios = [...modal.querySelectorAll('input[name="presentNotesPlace"]')];
+    const colsSelect = document.getElementById('presentNotesCols');
+    const colsSection = document.getElementById('presentNotesColsSection');
+
+    function syncArrangement() {
+      const NL = window.SlideForgePresentNotesLayout;
+      const p = NL?.prefs ? NL.prefs() : { pos: 'bottom', place: 'overlay', cols: 0 };
+      posRadios.forEach((r) => { r.checked = r.value === p.pos; });
+      placeRadios.forEach((r) => { r.checked = r.value === p.place; });
+      if (colsSelect) colsSelect.value = String(p.cols);
+      if (colsSection) colsSection.hidden = p.pos !== 'bottom';
+    }
+
     function syncRadios() {
       const mode = readMode();
       radios.forEach((r) => { r.checked = r.value === mode; });
+      syncArrangement();
     }
+
+    posRadios.forEach((r) => {
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        window.SlideForgePresentNotesLayout?.setPrefs?.({ notesPos: r.value === 'left' ? 'left' : 'bottom' });
+        syncArrangement();
+      });
+    });
+    placeRadios.forEach((r) => {
+      r.addEventListener('change', () => {
+        if (!r.checked) return;
+        window.SlideForgePresentNotesLayout?.setPrefs?.({ notesPlace: r.value === 'column' ? 'column' : 'overlay' });
+      });
+    });
+    colsSelect?.addEventListener('change', () => {
+      const n = parseInt(colsSelect.value, 10);
+      window.SlideForgePresentNotesLayout?.setPrefs?.({ notesCols: (n >= 0 && n <= 4) ? n : 0 });
+    });
 
     function isOpen() {
       return modal.classList.contains('open');
@@ -1142,6 +1175,7 @@
     if (hasNotes) {
       window.SlideForgePresentNotes?.onSlideChange?.();
     }
+    window.SlideForgePresentNotesLayout?.onContent?.();
   }
 
   (function initPresentSlideDock() {
@@ -1284,6 +1318,198 @@
       expand: (persist) => setCollapsed(false, persist !== false),
       showTab: () => setDockTab('media', true),
     };
+  })();
+
+  /**
+   * Notiz-Anordnung (Urs 27.11.): Position unten/links, über der Folie oder eigene Spalte,
+   * unten in n Textspalten (CSS columns). Werte pro Person in presentLayout.
+   */
+  (function initPresentNotesArrangement() {
+    const dock = document.getElementById('presentSlideDock');
+    const panel = dock?.closest('.present-current-panel');
+    const notesPanel = document.getElementById('notesPanel');
+    const wrap = document.getElementById('presentDockPanelNotes');
+    const handle = document.getElementById('presentNotesColResize');
+    if (!dock || !panel || !notesPanel || !wrap) return;
+
+    function clampInt(v, min, max, def) {
+      const n = parseInt(v, 10);
+      if (!Number.isFinite(n)) return def;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function prefs() {
+      const L = P.presentLayout || {};
+      return {
+        pos: L.notesPos === 'left' ? 'left' : 'bottom',
+        place: L.notesPlace === 'column' ? 'column' : 'overlay',
+        cols: clampInt(L.notesCols, 0, 4, 0),
+        sizeBottom: clampInt(L.notesSizeBottom, 15, 70, 30),
+        sizeLeft: clampInt(L.notesSizeLeft, 15, 60, 30),
+      };
+    }
+
+    function columnsActive(p) {
+      return p.pos === 'bottom' && p.cols !== 1;
+    }
+
+    /** Jede Überschrift beginnt einen Abschnitt — Spalten brechen bevorzugt davor. */
+    function sectionize() {
+      if (notesPanel.querySelector(':scope > .present-notes-sec')) return;
+      const nodes = [...notesPanel.childNodes];
+      if (!nodes.length) return;
+      const frag = document.createDocumentFragment();
+      let sec = null;
+      nodes.forEach((n) => {
+        if (n.nodeType === 1 && /^H[1-6]$/.test(n.tagName)) sec = null;
+        if (!sec) {
+          if (n.nodeType === 3 && !n.textContent.trim()) {
+            frag.appendChild(n);
+            return;
+          }
+          sec = document.createElement('div');
+          sec.className = 'present-notes-sec';
+          frag.appendChild(sec);
+        }
+        sec.appendChild(n);
+      });
+      notesPanel.appendChild(frag);
+    }
+
+    let lastColH = '';
+    function measure() {
+      const p = prefs();
+      if (!columnsActive(p) || wrap.hidden) return;
+      const tabs = dock.querySelector('.present-slide-dock-tabs');
+      const tabsH = tabs ? tabs.offsetHeight : 48;
+      const cs = getComputedStyle(wrap);
+      const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) + 14;
+      const total = p.place === 'column' ? dock.clientHeight : panel.clientHeight * 0.48;
+      const h = Math.max(80, Math.floor(total - tabsH - padV));
+      const val = h + 'px';
+      if (val !== lastColH) {
+        lastColH = val;
+        dock.style.setProperty('--present-notes-col-h', val);
+      }
+      // Abschnitte länger als eine Spalte normal umbrechen lassen
+      notesPanel.querySelectorAll(':scope > .present-notes-sec').forEach((sec) => {
+        sec.classList.remove('is-long');
+        let sum = 0;
+        [...sec.getClientRects()].forEach((r) => { sum += r.height; });
+        if (sum > h) sec.classList.add('is-long');
+      });
+    }
+
+    let rafId = 0;
+    function scheduleRelayout() {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        measure();
+        if (prefs().place === 'column') window.SlideForgePresentLayout?.relayoutMainReveal?.();
+      });
+    }
+
+    function apply() {
+      const p = prefs();
+      dock.dataset.notesPos = p.pos;
+      dock.dataset.notesPlace = p.place;
+      dock.dataset.notesCols = columnsActive(p) ? String(p.cols) : '1';
+      panel.classList.toggle('present-notes-as-column', p.place === 'column');
+      panel.dataset.notesPos = p.pos;
+      panel.style.setProperty('--present-notes-size', (p.pos === 'left' ? p.sizeLeft : p.sizeBottom) + '%');
+      if (handle) {
+        handle.hidden = p.place !== 'column';
+        handle.setAttribute('aria-orientation', p.pos === 'left' ? 'vertical' : 'horizontal');
+      }
+      if (columnsActive(p)) sectionize();
+      lastColH = '';
+      measure();
+      requestAnimationFrame(() => window.SlideForgePresentLayout?.relayoutMainReveal?.());
+    }
+
+    function setPrefs(partial) {
+      if (P.presentLayout) Object.assign(P.presentLayout, partial);
+      else P.presentLayout = { ...partial };
+      window.SlideForgePresentLayout?.patchUserPrefs?.(partial);
+      apply();
+    }
+
+    if (typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(scheduleRelayout);
+      ro.observe(panel);
+      ro.observe(dock);
+      ro.observe(wrap);
+    } else {
+      window.addEventListener('resize', scheduleRelayout);
+    }
+
+    // Ziehgriff: Höhe (unten) bzw. Breite (links) der eigenen Spalte, pro Person gemerkt
+    if (handle) {
+      let drag = null;
+      const sizeKey = () => (prefs().pos === 'left' ? 'notesSizeLeft' : 'notesSizeBottom');
+      const sizeMax = () => (prefs().pos === 'left' ? 60 : 70);
+      function setSizeLive(pct) {
+        const v = Math.max(15, Math.min(sizeMax(), pct));
+        panel.style.setProperty('--present-notes-size', v.toFixed(2) + '%');
+        return v;
+      }
+      handle.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        drag = { id: e.pointerId, rect: panel.getBoundingClientRect(), left: prefs().pos === 'left', val: null };
+        try { handle.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        panel.classList.add('is-resizing-notes');
+      });
+      handle.addEventListener('pointermove', (e) => {
+        if (!drag || drag.id !== e.pointerId) return;
+        const r = drag.rect;
+        const pct = drag.left
+          ? ((e.clientX - r.left) / Math.max(1, r.width)) * 100
+          : ((r.bottom - e.clientY) / Math.max(1, r.height)) * 100;
+        drag.val = setSizeLive(pct);
+      });
+      const endDrag = (e) => {
+        if (!drag || drag.id !== e.pointerId) return;
+        const val = drag.val;
+        drag = null;
+        panel.classList.remove('is-resizing-notes');
+        try { handle.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        if (val != null) setPrefs({ [sizeKey()]: Math.round(val) });
+      };
+      handle.addEventListener('pointerup', endDrag);
+      handle.addEventListener('pointercancel', endDrag);
+      handle.addEventListener('click', (e) => { e.stopPropagation(); });
+      handle.addEventListener('keydown', (e) => {
+        const p = prefs();
+        const cur = p.pos === 'left' ? p.sizeLeft : p.sizeBottom;
+        let delta = 0;
+        if (p.pos === 'left') {
+          if (e.key === 'ArrowRight') delta = 2;
+          if (e.key === 'ArrowLeft') delta = -2;
+        } else {
+          if (e.key === 'ArrowUp') delta = 2;
+          if (e.key === 'ArrowDown') delta = -2;
+        }
+        if (!delta) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setPrefs({ [sizeKey()]: Math.round(setSizeLive(cur + delta)) });
+      });
+    }
+
+    window.SlideForgePresentNotesLayout = {
+      apply,
+      setPrefs,
+      prefs,
+      onContent: () => {
+        if (columnsActive(prefs())) sectionize();
+        lastColH = '';
+        measure();
+      },
+    };
+    apply();
   })();
 
   syncNotesForSlide(currentIndex);
