@@ -67,6 +67,18 @@ switch ($action) {
         user_json_ok(['thumb_min' => $thumbMin]);
         break;
 
+    case 'set_hub_look':
+        $token = $body['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+            user_json_fail('Ungültiges CSRF-Token.', 403);
+        }
+        $look = Auth::setHubLook($me['id'], $body['look'] ?? null);
+        if ($look === null) {
+            user_json_fail('Ungültiger Wert.');
+        }
+        user_json_ok(['look' => $look]);
+        break;
+
     case 'clip_list':
         user_json_ok(['clipboard' => SlideClipboard::summary($me['id'])]);
         break;

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.8.1] - 2026-11-27
+
+- **Kein Sand-Flackern beim Neuladen** (Urs: «Wenn ich das neu lade, kommt immer zuerst die sandfarbene Oberfläche»): SlideForge merkt sich den vom Hub gemeldeten Fenster-Stil und Akzent (Hell und Dunkel, von cf-theme.js geprüft) je Person (`users.json` `hub_look`) und setzt ihn beim nächsten Laden schon serverseitig ins erste Bild (`<html>`-Attribute und `window.__cfDialogChromePrefs`), wie OfficeForge seit 16.10. Vorher galt bis zur Nachricht des Hubs nur der eine Wert der Rahmenadresse (bei «System» der Dunkel-Wert, ohne Akzent gar keiner) oder die Sitzung. ASSET 724.
+
 ## [3.8.0] - 2026-11-27
 
 - **Vorschau auf Gerät (Mitlaufen)** (Urs: «einen Player, der mir immer anzeigt, was ich gerade formatiere»): Ansicht › Vorschau hat neben «Vorschau» nur noch **«Auf Gerät»**; «Fenster» und «Lokal» sind weg. Der Knopf öffnet das Geräte-Raster im Modus Mitlaufen: Das gewählte Anzeige-Gerät zeigt laufend die Folie, die im Editor bearbeitet wird, und übernimmt jede gespeicherte Änderung, ohne die Seite neu zu laden (nur geänderte Folien werden ausgetauscht; Vollbild, Ton und Tipp-Freigabe bleiben). Die Kachel «Web» öffnet dieselbe Mitlauf-Ansicht in einem eigenen Fenster dieses Browsers. Leeren oder eine Präsentation senden beendet das Mitlaufen.

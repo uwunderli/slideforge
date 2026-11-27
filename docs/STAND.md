@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.8.1 gebaut** (`entwickler/slide-erstes-bild` auf 3.8.0 d190725, Worktree `_claude/entwickler/wt-slide-erstes-bild`, beim Gitwart nach 3.8.0): kein Sand-Flackern beim Laden — Hub-Look je Person in users.json `hub_look`, serverseitig im ersten Bild (sf_look_pair/sf_theme_after). Offen: einmal je Akzentwechsel im Hub kann es noch flackern; Hub unverändert.
+
 - **27.11. 3.8.0 gebaut** (`entwickler/slide-mitlaufen` auf 3.7.0 ce1894b, Worktree `_claude/entwickler/wt-slide-mitlaufen`, beim Gitwart nach 3.7.0): Ansicht › Vorschau «Auf Gerät» (Mitlaufen: Gerät/Web-Fenster folgt dem Editor über live.php Kanal «editor», tauscht geänderte Folien ohne Neuladen); «Fenster»/«Lokal» weg (Lokal = Zuschauerfenster auf 2. Bildschirm, bleibt im Presenter); «Folien löschen» einmalig in angepasste Menübänder nachgerüstet. ASSET 723.
 
 - **27.11. 3.7.0 gebaut** (`entwickler/slide-undo` auf 3.6.6 551bcbe, beim Gitwart): Rückgängig/Wiederholen für Folien-Aktionen (`restore_slides`, 30 Schritte) + Mehrfachauswahl/Mehrfachlöschen in der Folienleiste, Menüband «Folien löschen». Offen: Umschalt+Pfeil-Auswahl; ungeprüft im Browser.

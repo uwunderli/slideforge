@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '723');
+define('ASSET_VERSION', '724');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -508,18 +508,19 @@ unset($__lang, $__u);
 
 /**
  * Hub-Design schon serverseitig im <html> (1:1 wie FileForge ff_theme_attrs, 27.11.2026, Urs: «Design wird immer noch nicht recht
- * vom Hub übernommen»). Quelle: `hub_accent`/`hub_chrome` der Rahmenadresse (Hub app/embed.php), sonst der in der Sitzung gemerkte
- * Wert (`sf_look_capture`). Hell/Dunkel kommt wie bisher aus SharedAuth::themePref (Cookie des Hubs).
+ * vom Hub übernommen»). Quelle: sf_look_pair() — gemerkter Wert der Person, Rahmenadresse, Sitzung.
+ * Hell/Dunkel kommt wie bisher aus SharedAuth::themePref (Cookie des Hubs).
  */
 function sf_theme_attrs(string $pref, string $theme): string
 {
     $out = ' data-theme-pref="' . htmlspecialchars($pref, ENT_QUOTES) . '" data-theme="' . htmlspecialchars($theme, ENT_QUOTES) . '"';
-    $look = sf_look_url() ?? (is_array($_SESSION['sf_hub_look'] ?? null) ? $_SESSION['sf_hub_look'] : null);
-    if (!is_array($look)) {
+    $pair = sf_look_pair($theme);
+    if ($pair === null) {
         return $out;
     }
-    $a = (string)($look['accent'] ?? '');
-    if (($look['chrome'] ?? '') === 'flach') {
+    $mode = $theme === 'light' ? 'light' : 'dark';
+    $a = (string)$pair['accent'][$mode];
+    if ($pair['chrome'][$mode] === 'flach') {
         $out .= ' data-dialog-chrome="flach"';
     }
     if (preg_match('/^#[0-9a-f]{6}\z/', $a) === 1) {
@@ -529,6 +530,44 @@ function sf_theme_attrs(string $pref, string $theme): string
         $out .= ' data-dialog-accent="' . $a . '"';
     }
     return $out;
+}
+
+/**
+ * Hell/Dunkel-Paar für das erste Bild (Sand-Flackern beim Neuladen, Urs 27.11.2026; Ursache und Weg wie OF, Befund
+ * _berichte/officeforge/befund-sand-flackern-2026-10-16.md). Die Rahmenadresse trägt nur EINEN Wert (app/embed.php löst ihn für
+ * das Hell/Dunkel des Servers auf, «system» = dunkel; `hub_accent` fehlt ganz, wenn der Akzent leer ist), die Sitzung lebt nur so
+ * lange wie das Browserfenster. Darum merkt sich SlideForge das vollständige, von cf-theme.js geprüfte Paar aus der Nachricht des
+ * Hubs je Person (users.json `hub_look`, Auth::setHubLook über user_api.php). Vorrang:
+ *   1. Adresse vorhanden und passt zum gemerkten Paar → gemerktes Paar (stimmt auch für «system» und getrennte Hell/Dunkel-Werte);
+ *   2. Adresse vorhanden, passt nicht (im Hub geändert) → Wert der Adresse für beide;
+ *   3. keine Adresse → gemerktes Paar, sonst der Wert der Sitzung.
+ *
+ * @return array{chrome:array{light:string,dark:string},accent:array{light:string,dark:string}}|null
+ */
+function sf_look_pair(string $theme): ?array
+{
+    static $memo = [];
+    if (array_key_exists($theme, $memo)) {
+        return $memo[$theme];
+    }
+    $flat = static function (array $l): array {
+        $c = (string)($l['chrome'] ?? '') === 'flach' ? 'flach' : 'klassisch';
+        $a = (string)($l['accent'] ?? '');
+        return ['chrome' => ['light' => $c, 'dark' => $c], 'accent' => ['light' => $a, 'dark' => $a]];
+    };
+    $mode = $theme === 'light' ? 'light' : 'dark';
+    $stored = class_exists('Auth') ? Auth::hubLook() : null;
+    $url = sf_look_url();
+    if ($url !== null) {
+        $pair = ($stored !== null && $stored['chrome'][$mode] === $url['chrome'] && $stored['accent'][$mode] === $url['accent'])
+            ? $stored : $flat($url);
+    } elseif ($stored !== null) {
+        $pair = $stored;
+    } else {
+        $s = $_SESSION['sf_hub_look'] ?? null;
+        $pair = is_array($s) ? $flat($s) : null;
+    }
+    return $memo[$theme] = $pair;
 }
 
 /** @return array{chrome:string,accent:string}|null Fenster-Stil und Akzent aus der Rahmenadresse des Hubs, nur Listenwerte bzw. `#rrggbb`. */
@@ -575,9 +614,16 @@ function sf_accent_tone(string $hex): array
  * Frühstart des Hub-Designs (wie FileForge ff_theme_boot, 27.11.2026): setzt data-dialog-accent/--hub-base-hue im <head>,
  * bevor CSS greift — aus hub_accent/hub_chrome der Rahmenadresse bzw. sessionStorage; danach übernimmt shared/cf-theme.js.
  */
-function sf_theme_boot(): string
+function sf_theme_boot(string $theme = 'dark'): string
 {
-    return <<<'HTML'
+    $j = JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+    $logged = class_exists('Auth') && Auth::currentUser() !== null;
+    $save = [
+        'saved' => $logged ? Auth::hubLook() : null,
+        'csrf' => $logged ? csrf_token() : '',
+    ];
+    return '  <script>window.__sfLook = ' . json_encode(sf_look_pair($theme), $j) . '; window.__sfLookSave = ' . json_encode($save, $j) . ";</script>\n"
+        . <<<'HTML'
   <script>(function () {
     try {
       if (window.parent === window) return;
@@ -599,12 +645,27 @@ function sf_theme_boot(): string
         return !!v && typeof v === 'object' && !!v.chrome && !!v.accent && C.indexOf(String(v.chrome.light)) >= 0 && C.indexOf(String(v.chrome.dark)) >= 0
           && okA(v.accent.light) && okA(v.accent.dark);
       };
+      var canon = function (v) { return JSON.stringify({ chrome: { light: String(v.chrome.light), dark: String(v.chrome.dark) }, accent: { light: String(v.accent.light), dark: String(v.accent.dark) } }); };
       var keep = function (v) {
         if (!ok(v)) return;
-        try { sessionStorage.setItem(K, JSON.stringify({ chrome: { light: String(v.chrome.light), dark: String(v.chrome.dark) }, accent: { light: String(v.accent.light), dark: String(v.accent.dark) } })); } catch (e) {}
+        try { sessionStorage.setItem(K, canon(v)); } catch (e) {}
+      };
+      // Vom Hub geprüftes Paar je Person serverseitig merken (wie OF of-shell.js, Befund Sand-Flackern 16.10.): ab dem nächsten
+      // Laden setzt der Server es schon ins erste Bild (sf_look_pair). Nur nach einer Nachricht des direkten Parents.
+      var S = window.__sfLookSave || {}, known = S.saved && ok(S.saved) ? canon(S.saved) : '';
+      var save = function (v) {
+        if (!ok(v) || !S.csrf || canon(v) === known) return;
+        known = canon(v);
+        try {
+          fetch('user_api.php?action=set_hub_look', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csrf_token: S.csrf, look: JSON.parse(known) }) }).catch(function () { known = ''; });
+        } catch (e) {}
       };
       var q = new URLSearchParams(location.search), a = q.get('hub_accent'), c = q.get('hub_chrome'), v = null;
-      if (a !== null || c !== null) {
+      if (ok(window.__sfLook)) {
+        v = window.__sfLook; // Server: gemerktes Paar der Person bzw. Adresse (sf_look_pair)
+        keep(v);
+      } else if (a !== null || c !== null) {
         v = { chrome: { light: c || 'klassisch', dark: c || 'klassisch' }, accent: { light: (a || '').toLowerCase(), dark: (a || '').toLowerCase() } };
         keep(v);
       } else {
@@ -638,13 +699,28 @@ function sf_theme_boot(): string
         if (v.chrome[t] === 'flach') r.setAttribute('data-dialog-chrome', 'flach'); else r.removeAttribute('data-dialog-chrome');
         window.__cfDialogChromePrefs = v;
       }
-      window.addEventListener('message', function () {
-        setTimeout(function () { keep(window.__cfDialogChromePrefs); }, 0); // erst nach der Prüfung durch cf-theme.js
+      window.addEventListener('message', function (ev) {
+        var d = ev && ev.data, vomHub = !!d && ev.source === window.parent && d.source === 'churchforge' && d.type === 'cf-theme' && !!d.dialogChrome;
+        setTimeout(function () { // erst nach der Prüfung durch cf-theme.js
+          keep(window.__cfDialogChromePrefs);
+          if (vomHub) save(window.__cfDialogChromePrefs);
+        }, 0);
       });
     } catch (e) {}
   })();</script>
 
 HTML;
+}
+
+/**
+ * Nach shared/cf-theme.js: dessen Start übernimmt `hub_accent` der Adresse für Hell UND Dunkel (ein Wert) und malt damit. Steht das
+ * vollständige Paar vom Server bereit (sf_look_pair), gilt es — sonst zeigte z. B. «system» bei hellem Gerät den Dunkel-Wert der
+ * Adresse (bzw. ohne Akzent Sand), bis die Nachricht des Hubs kommt. Läuft vor dem ersten Bild (synchron im <head>).
+ */
+function sf_theme_after(): string
+{
+    return "  <script>(function () { try { var v = window.__sfLook, T = window.ChurchForgeTheme; if (window.parent === window || !v || typeof v !== 'object' || !T) return; "
+        . "window.__cfDialogChromePrefs = v; T.apply(T.pref()); } catch (e) {} })();</script>\n";
 }
 
 /**

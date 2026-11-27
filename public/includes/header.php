@@ -17,7 +17,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <html lang="<?= h($currentLang) ?>"<?= sf_theme_attrs($themePref, $theme) ?>>
 <head>
 <meta charset="UTF-8">
-<?= sf_theme_boot() ?>
+<?= sf_theme_boot($theme) ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="<?= $theme === 'light' ? '#f6f3ec' : '#171b1f' ?>">
 <title><?= h($pageTitle ?? $siteTitle) ?> · <?= h($siteTitle) ?></title>
@@ -57,7 +57,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <?php /* cf-theme.js vom Hub wie FileForge (3.5.1): sf_hub_asset() nahm früher die eigene, veraltete Kopie zuerst; deren Stand kannte
          Fenster-Stil/Akzent nicht, die Hub-Nachricht (auch freie Farbe #rrggbb) blieb wirkungslos → Sand. */ ?>
 <script src="<?= h(sf_hub_asset('shared/cf-theme.js')) ?>"></script>
-<script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
+<?= sf_theme_after() ?><script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-page-busy.js')) ?>"></script>
 <script>

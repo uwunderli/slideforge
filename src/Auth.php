@@ -555,6 +555,58 @@ class Auth
         }, []);
     }
 
+    /**
+     * Fenster-Stil und Akzent des Hubs, je Hell/Dunkel (Sand-Flackern beim Neuladen, Urs 27.11.2026, wie OF 16.10.):
+     * cf-theme.js prüft die Nachricht des Hub-Rahmens, SlideForge merkt sich das Paar hier, damit schon das erste Bild stimmt.
+     * Nur Listenwerte bzw. `#rrggbb`; sonst null.
+     *
+     * @return array{chrome:array{light:string,dark:string},accent:array{light:string,dark:string}}|null
+     */
+    public static function normalizeHubLook($look): ?array
+    {
+        if (!is_array($look) || !is_array($look['chrome'] ?? null) || !is_array($look['accent'] ?? null)) {
+            return null;
+        }
+        $out = ['chrome' => [], 'accent' => []];
+        foreach (['light', 'dark'] as $mode) {
+            $c = (string)($look['chrome'][$mode] ?? '');
+            $a = strtolower(trim((string)($look['accent'][$mode] ?? '')));
+            if (!in_array($c, ['klassisch', 'flach'], true)) {
+                return null;
+            }
+            if (!in_array($a, ['', 'blau', 'gruen', 'indigo', 'terracotta'], true) && preg_match('/^#[0-9a-f]{6}\z/', $a) !== 1) {
+                return null;
+            }
+            $out['chrome'][$mode] = $c;
+            $out['accent'][$mode] = $a;
+        }
+        return $out;
+    }
+
+    /** Gemerkter Hub-Look der Person (siehe normalizeHubLook), null wenn noch keiner. */
+    public static function hubLook(?array $user = null): ?array
+    {
+        $user = $user ?? self::currentUser();
+        return $user ? self::normalizeHubLook($user['hub_look'] ?? null) : null;
+    }
+
+    public static function setHubLook(string $userId, $look): ?array
+    {
+        $normalized = self::normalizeHubLook($look);
+        if ($normalized === null) {
+            return null;
+        }
+        Storage::update(USERS_FILE, function ($users) use ($userId, $normalized) {
+            foreach ($users as &$u) {
+                if ($u['id'] === $userId) {
+                    $u['hub_look'] = $normalized;
+                }
+            }
+            return $users;
+        }, []);
+        return $normalized;
+    }
+
     /** Mindestbreite der Raster-Miniaturen im Editor (px, pro Benutzer). */
     public static function editorGridThumbMin(?array $user = null): int
     {
