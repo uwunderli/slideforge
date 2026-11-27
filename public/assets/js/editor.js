@@ -5655,7 +5655,10 @@
       el.classList.toggle('active', active);
     });
     const fontEl = document.getElementById('rb_font');
-    if (fontEl) fontEl.value = obj.fontFamily || 'Open Sans';
+    if (fontEl) {
+      if (window.SfFontSelect) window.SfFontSelect.setValue(fontEl, obj.fontFamily || 'Open Sans');
+      else fontEl.value = obj.fontFamily || 'Open Sans';
+    }
     const sizeEl = document.getElementById('rb_fontsize');
     if (sizeEl) sizeEl.value = obj.fontSize || 32;
     const lhEl = document.getElementById('rb_lineheight');
@@ -5700,6 +5703,14 @@
     fontEl.innerHTML = FONT_OPTIONS.map((f) =>
       '<option value="' + escapeHtml(f) + '">' + escapeHtml(f) + '</option>'
     ).join('');
+    // 3.9.10: durchsuchbare Schriftwahl; das <select> bleibt versteckt die Quelle des Werts (change-Handler unten unverändert).
+    if (window.SfFontSelect) {
+      window.SfFontSelect.attach(fontEl, {
+        families: FONT_OPTIONS,
+        hub: Array.isArray(boot.fontHubFamilies) ? boot.fontHubFamilies : [],
+        user: boot.fontRecentUser || '',
+      });
+    }
 
     renderRibbonTemplateMenu();
     initRibbonTemplateGalleryObserver();

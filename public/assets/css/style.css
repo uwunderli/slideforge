@@ -11911,3 +11911,115 @@ html[data-theme="light"] .editor-ribbon .effect-icon-btn.active {
 /* 3.9.3: Im Hub-Rahmen ersetzt die Hub-Seitenleiste (Modul-Einstellungen › Unterpunkte) die eigene Reiterleiste der Einstellungen. */
 html.sf-im-hub .sf-set-tabs,
 html.sf-im-hub .sf-set-back { display: none; }
+
+/* 3.9.10: durchsuchbare Schriftwahl (sf-font-select.js). Feld wie input[type=text]/select, Liste als Pop-up an <body>. */
+select.sf-fsel-native { display: none !important; }
+.sf-fsel {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+.sf-fsel::after {
+  content: '';
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.sf-fsel.is-open::after { margin-top: -1px; transform: rotate(225deg); }
+.sf-fsel > input.sf-fsel-input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 26px;
+  text-overflow: ellipsis;
+}
+.sf-fsel > input.sf-fsel-input:focus { outline: none; border-color: var(--accent); }
+.sf-fsel > input.sf-fsel-input:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Menüband «Start»: gleiche Masse wie das bisherige <select> */
+.editor-ribbon .ribbon-wcell-font .sf-fsel { height: 100%; }
+.editor-ribbon .ribbon-wcell-font .sf-fsel > input.sf-fsel-input {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0 22px 0 6px;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.editor-ribbon .ribbon-wcell-font .sf-fsel::after { right: 7px; width: 5px; height: 5px; margin-top: -4px; }
+.editor-ribbon .ribbon-wcell-font .sf-fsel.is-open::after { margin-top: -1px; }
+.editor-ribbon .ribbon-wcell-font .sf-fsel > input.sf-fsel-input:disabled {
+  color: var(--ribbon-fg-disabled, var(--text-muted));
+  opacity: var(--ribbon-disabled-opacity, 0.42);
+}
+.sf-fsel-list {
+  position: fixed;
+  z-index: 10050;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-y: auto;
+  max-width: min(420px, calc(100vw - 8px));
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+}
+.sf-fsel-list[hidden] { display: none; }
+.sf-fsel-group {
+  padding: 8px 8px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sf-fsel-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+}
+.sf-fsel-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1rem;
+}
+.sf-fsel-tag {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.sf-fsel-opt:hover,
+.sf-fsel-opt.is-active { background: var(--ribbon-bg-active, var(--surface-2)); }
+.sf-fsel-opt[aria-selected="true"] .sf-fsel-name { color: var(--accent); font-weight: 600; }
+.sf-fsel-empty,
+.sf-fsel-more {
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

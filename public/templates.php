@@ -434,10 +434,9 @@ require __DIR__ . '/includes/header.php';
           </div>
           <div>
             <label style="margin-top:0;"><?= h(t('tpl.font')) ?></label>
-            <select name="fontFamily" <?= $isAdmin ? '' : 'disabled' ?>>
-              <?php foreach ($FONT_OPTIONS as $f): ?>
-                <option value="<?= h($f) ?>" <?= $t['fontFamily'] === $f ? 'selected' : '' ?>><?= h($f) ?></option>
-              <?php endforeach; ?>
+            <?php /* 3.9.10: durchsuchbare Schriftwahl (SfFontSelect); die Liste kommt einmal aus #sf-font-data, hier nur der Wert. */ ?>
+            <select name="fontFamily" data-sf-font-select title="<?= h(t('tpl.font')) ?>" <?= $isAdmin ? '' : 'disabled' ?>>
+              <option value="<?= h((string)$t['fontFamily']) ?>" selected><?= h((string)$t['fontFamily']) ?></option>
             </select>
           </div>
         </div>
@@ -742,6 +741,8 @@ require __DIR__ . '/includes/header.php';
 
 })();
 </script>
+<script type="application/json" id="sf-font-data"><?= json_encode(['families' => $FONT_OPTIONS, 'hub' => FontLibrary::hubFamilyNames(), 'user' => (string)($me['id'] ?? '')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?></script>
+<script src="assets/js/sf-font-select.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-settings.js?v=<?= ASSET_VERSION ?>"></script>
 <script>if (document.getElementById('sfTplDirLabel')) SfFf.templateSetting(<?= json_encode(['csrf' => csrf_token(), 'labelId' => 'sfTplDirLabel', 'pickId' => 'sfTplDirPick', 'clearId' => 'sfTplDirClear'], JSON_HEX_TAG) ?>);</script>
