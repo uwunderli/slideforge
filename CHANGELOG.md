@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.43] - 2026-11-27
+
+### Changed
+- **Notizen: Farbe mit einem Klick** (Urs 27.11.): «A» und «ab» in der Notiz-Leiste sind Knöpfe und wenden die zuletzt gewählte Schrift- bzw. Markerfarbe direkt auf die Markierung an (wie Office); das Farbfeld daneben öffnet die Farbwahl. Die Farbfelder übernehmen nicht mehr die Farbe an der Schreibmarke.
+
 ## [3.12.42] - 2026-11-27
 
 ### Added

@@ -405,6 +405,8 @@ return [
     'notes.hint' => 'Markdown &middot; mo visibel en modus da preschataziun',
     'notes.placeholder' => 'Notas per il preschatai…',
     'notes.format_bar' => 'Formatar las notas',
+    'notes.color_apply' => 'Applitgar la colur da scrittira tschernida',
+    'notes.mark_apply' => 'Applitgar la colur da marcader tschernida',
     'notes.color' => 'Colur dal text',
     'notes.mark' => 'Marcader',
     'notes.clear_format' => 'Allontanar la formataziun',

@@ -412,6 +412,8 @@ return [
     'notes.hint' => 'Markdown &middot; visible uniquement en mode présentateur',
     'notes.placeholder' => 'Notes pour le présentateur…',
     'notes.format_bar' => 'Mettre en forme les notes',
+    'notes.color_apply' => 'Appliquer la couleur de police choisie',
+    'notes.mark_apply' => 'Appliquer la couleur de surlignage choisie',
     'notes.color' => 'Couleur du texte',
     'notes.mark' => 'Surligneur',
     'notes.clear_format' => 'Effacer la mise en forme',

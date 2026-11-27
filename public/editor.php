@@ -993,11 +993,11 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
         <button type="button" class="hub-icon-btn notes-format-btn notes-format-u" id="notesUnderlineBtn" aria-pressed="false" aria-label="<?= h(t('props.underline')) ?>" title="<?= h(t('props.underline') . ' · ' . t('notes.format_sel_hint')) ?>">U</button>
         <span class="notes-format-sep" aria-hidden="true"></span>
         <span class="notes-format-color" title="<?= h(t('notes.color') . ' · ' . t('notes.format_sel_hint')) ?>">
-          <span class="notes-format-glyph" aria-hidden="true">A</span>
+          <button type="button" class="hub-icon-btn notes-format-btn notes-format-glyph" data-notes-apply="notesColorInput" aria-label="<?= h(t('notes.color_apply')) ?>" title="<?= h(t('notes.color_apply') . ' · ' . t('notes.format_sel_hint')) ?>">A</button>
           <input type="color" id="notesColorInput" value="#c0392b" aria-label="<?= h(t('notes.color')) ?>" title="<?= h(t('notes.color') . ' · ' . t('notes.format_sel_hint')) ?>">
         </span>
         <span class="notes-format-color" title="<?= h(t('notes.mark') . ' · ' . t('notes.format_sel_hint')) ?>">
-          <span class="notes-format-glyph notes-format-glyph--mark" aria-hidden="true">ab</span>
+          <button type="button" class="hub-icon-btn notes-format-btn notes-format-glyph notes-format-glyph--mark" data-notes-apply="notesMarkInput" aria-label="<?= h(t('notes.mark_apply')) ?>" title="<?= h(t('notes.mark_apply') . ' · ' . t('notes.format_sel_hint')) ?>">ab</button>
           <input type="color" id="notesMarkInput" value="#fff176" aria-label="<?= h(t('notes.mark')) ?>" title="<?= h(t('notes.mark') . ' · ' . t('notes.format_sel_hint')) ?>">
         </span>
         <span class="notes-format-sep" aria-hidden="true"></span>

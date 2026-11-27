@@ -482,6 +482,8 @@ return [
     'notes.hint' => 'Markdown &middot; nur im Präsentationsmodus sichtbar',
     'notes.placeholder' => 'Notizen für den Vortragenden…',
     'notes.format_bar' => 'Notizen formatieren',
+    'notes.color_apply' => 'Gewählte Schriftfarbe anwenden',
+    'notes.mark_apply' => 'Gewählte Markerfarbe anwenden',
     'notes.color' => 'Schriftfarbe',
     'notes.mark' => 'Marker',
     'notes.clear_format' => 'Formatierung entfernen',

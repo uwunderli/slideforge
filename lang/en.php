@@ -430,6 +430,8 @@ return [
     'notes.hint' => 'Markdown &middot; only visible in presenter mode',
     'notes.placeholder' => 'Notes for the presenter…',
     'notes.format_bar' => 'Format notes',
+    'notes.color_apply' => 'Apply selected font colour',
+    'notes.mark_apply' => 'Apply selected highlight colour',
     'notes.color' => 'Text colour',
     'notes.mark' => 'Highlighter',
     'notes.clear_format' => 'Clear formatting',

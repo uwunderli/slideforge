@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.43 gebaut** (`entwickler/slide-notizfarbe` ab 3.12.42): Notiz-Leiste «A»/«ab» wenden Farbe direkt an.
 - **27.11. 3.12.42 gebaut** (`entwickler/slide-referent-notizen` ab origin/main 3.12.40 f4426ad, Worktree `gemeinde/wt-slide-referent-notizen`, nach 3.12.41): Referenten-Notizen unten/links, über Folie/eigene Spalte (Ziehgriff), Textspalten Auto/1–4 mit Umbruch vor Überschriften. Nicht im Browser geprüft.
 - **27.11. 3.12.41 gebaut** (`entwickler/slide-notizen-editor` ab 3.12.40 f4426ad, Worktree `gemeinde/wt-slide-notizen-editor`): Notizen formatiert bearbeiten (contenteditable über SfMarkup/SfRichEdit, Leiste B/I/U/Farbe/Marker, Ctrl+B/I/U). Nicht im Browser geprüft.
 - **27.11. 3.12.40 gebaut** (`entwickler/slide-uebergang` ab 3.12.39): Folienübergang gehört der kommenden Folie (SlideRenderer transitionPairs/transitionCss). Bei Gitwart.

@@ -405,6 +405,8 @@ return [
     'notes.hint' => 'Markdown &middot; visibile solo in modalità presentatore',
     'notes.placeholder' => 'Note per il relatore…',
     'notes.format_bar' => 'Formatta le note',
+    'notes.color_apply' => 'Applica il colore del testo scelto',
+    'notes.mark_apply' => 'Applica il colore di evidenziazione scelto',
     'notes.color' => 'Colore del testo',
     'notes.mark' => 'Evidenziatore',
     'notes.clear_format' => 'Cancella formattazione',

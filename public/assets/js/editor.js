@@ -2443,11 +2443,7 @@
       if (!btn) return;
       btn.setAttribute('aria-pressed', r && r[NOTES_BTN_KEY[id]] ? 'true' : 'false');
     });
-    [['notesColorInput', r && r.color], ['notesMarkInput', r && r.mark]].forEach(([id, val]) => {
-      const inp = document.getElementById(id);
-      if (inp && val && document.activeElement !== inp && /^#[0-9a-f]{6}$/i.test(val)) inp.value = val;
-    });
-    syncNotesGlyphs();
+    /* Farbfelder behalten die zuletzt gewählte Farbe (wie Office), damit «A»/«ab» sie erneut anwenden. */
   }
   /* Die Zeichen «A»/«ab» vor den Farbfeldern zeigen die gewählte Farbe. */
   function syncNotesGlyphs() {
@@ -2539,6 +2535,15 @@
       inp?.addEventListener('input', () => {
         syncNotesGlyphs();
         if (/^#[0-9a-f]{6}$/i.test(inp.value)) notesSetValue(key, inp.value.toLowerCase());
+      });
+    });
+    /* «A»/«ab» wenden die gewählte Farbe direkt auf die Markierung an; das Farbfeld daneben öffnet die Wahl. */
+    document.querySelectorAll('#notesFormatBar [data-notes-apply]').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      btn.addEventListener('click', () => {
+        const inp = document.getElementById(btn.dataset.notesApply);
+        if (!inp || !/^#[0-9a-f]{6}$/i.test(inp.value)) return;
+        notesSetValue(btn.dataset.notesApply === 'notesMarkInput' ? 'mark' : 'color', inp.value.toLowerCase());
       });
     });
     syncNotesGlyphs();
