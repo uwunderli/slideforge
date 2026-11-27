@@ -113,12 +113,14 @@
     return out;
   }
 
-  function create(I) {
+  /* colors: Markenfarben des Hubs (#rrggbb); die ersten zwei färben die Beispiel-Kategorien. */
+  function create(I, colors) {
     var T = (I && I.tl) || {};
     var d = defaults();
+    var c = (colors || []).filter(function (x) { return HEX.test(String(x)); });
     d.cats = [
-      { id: 'c1', name: T.sampleCat1 || 'Ereignis', color: '#4a90d9' },
-      { id: 'c2', name: T.sampleCat2 || 'Person', color: '#87b42b' },
+      { id: 'c1', name: T.sampleCat1 || 'Ereignis', color: c[0] || '#4a90d9' },
+      { id: 'c2', name: T.sampleCat2 || 'Person', color: c[1] || c[0] || '#87b42b' },
     ];
     var title = T.sampleTitle || 'Titel', text = T.sampleText || 'Kurzer Text zum Ereignis';
     d.events = [
@@ -398,7 +400,7 @@
     if (!n) html += '<div class="props-empty">' + esc(T.empty || 'Noch keine Ereignisse.') + '</div>';
     html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm sf-tl-add" data-tl-act="add" title="' + esc(T.addHint || T.add || '') + '">' + esc(T.add || '+ Ereignis') + '</button>';
     html += '<div class="props-video-note">' + esc(T.hint || '') + '</div>';
-    if (opts && typeof opts.extraHtml === 'function') html += opts.extraHtml(d, esc);
+    html += lookHtml(d, T);
     html += '</div>';
     el.innerHTML = html;
 
@@ -463,10 +465,132 @@
         });
       });
     }
-    if (opts && typeof opts.wireExtra === 'function') opts.wireExtra(el, d, onChange);
+    wireLook(el, d, onChange, { colors: opts && opts.colors });
     if (opts && opts.focus !== undefined) {
       var f = el.querySelector('input[data-f="label"][data-i="' + opts.focus + '"]');
       if (f) f.focus();
+    }
+  }
+
+  /* ---------- Abschnitt «Aussehen» (3.12.49) ---------- */
+  function fid(path) {
+    return 'tla_' + path.replace(/[^a-z0-9]/gi, '_');
+  }
+  function getPath(d, path) {
+    return path.split('.').reduce(function (o, k) { return o ? o[k] : undefined; }, d);
+  }
+  function setPath(d, path, v) {
+    var keys = path.split('.');
+    var o = d;
+    for (var i = 0; i < keys.length - 1; i++) { if (!o[keys[i]] || typeof o[keys[i]] !== 'object') o[keys[i]] = {}; o = o[keys[i]]; }
+    o[keys[keys.length - 1]] = v;
+  }
+  function fNum(path, label, d, min, max, title) {
+    return '<div><label for="' + fid(path) + '">' + esc(label) + '</label><input type="number" id="' + fid(path) + '" data-a="' + path + '" min="' + min
+      + '" max="' + max + '" step="1" value="' + esc(getPath(d, path)) + '" data-hub-step' + (title ? ' title="' + esc(title) + '"' : '') + '></div>';
+  }
+  function fColor(path, label, d) {
+    return '<div><label for="' + fid(path) + '">' + esc(label) + '</label><input type="color" id="' + fid(path) + '" data-a="' + path
+      + '" value="' + esc(getPath(d, path)) + '" aria-label="' + esc(label) + '"></div>';
+  }
+  function fSelect(path, label, d, options) {
+    var cur = getPath(d, path);
+    return '<div><label for="' + fid(path) + '">' + esc(label) + '</label><select id="' + fid(path) + '" data-a="' + path + '">'
+      + options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+      + '</select></div>';
+  }
+  function fCheck(path, label, d) {
+    return '<label class="props-check-row"><input type="checkbox" id="' + fid(path) + '" data-a="' + path + '"' + (getPath(d, path) ? ' checked' : '') + '> ' + esc(label) + '</label>';
+  }
+
+  function lookHtml(d, T) {
+    var h = '<div class="options-subtitle sf-tl-look-head">' + esc(T.look || 'Aussehen') + '</div>';
+    h += '<div class="sf-tl-sub">' + esc(T.categories || 'Kategorien') + '</div>';
+    h += '<ul class="sf-tl-cats">';
+    d.cats.forEach(function (c, ci) {
+      var name = T.catName || 'Name der Kategorie';
+      h += '<li class="sf-tl-cat">'
+        + '<input type="color" data-cat-color="' + ci + '" value="' + esc(c.color) + '" aria-label="' + esc((T.catColor || 'Farbe') + ' ' + (ci + 1)) + '" title="' + esc(T.catColor || 'Farbe') + '">'
+        + '<input type="text" data-cat-name="' + ci + '" value="' + esc(c.name) + '" placeholder="' + esc(name) + '" aria-label="' + esc(name) + '">'
+        + iconBtn('catdel', ci, T.catRemove || 'Kategorie löschen', ICON.del, d.cats.length <= 1)
+        + '</li>';
+    });
+    h += '</ul>';
+    h += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm sf-tl-add" data-tl-look="catadd" title="' + esc(T.catAddHint || '') + '">' + esc(T.catAdd || '+ Kategorie') + '</button>';
+    h += fCheck('showLegend', T.legend || 'Legende unten zeigen', d);
+
+    h += '<div class="sf-tl-sub">' + esc(T.bubble || 'Blase') + '</div>';
+    h += fSelect('bubble.shape', T.shape || 'Form', d, [['rect', T.shapeRect || 'Rechteck'], ['round', T.shapeRound || 'Abgerundet'], ['pill', T.shapePill || 'Pille'], ['speech', T.shapeSpeech || 'Sprechblase']]);
+    h += '<div class="sf-tl-pair">' + fNum('bubble.borderWidth', T.borderWidth || 'Randdicke', d, 0, 30)
+      + fNum('bubble.radius', T.radius || 'Eckenradius', d, 0, 200, T.radiusHint) + '</div>';
+    h += fSelect('bubble.borderDash', T.borderDash || 'Strichart', d, [['solid', T.dashSolid || 'durchgezogen'], ['dashed', T.dashDashed || 'gestrichelt'], ['dotted', T.dashDotted || 'gepunktet']]);
+    var alpha = Math.round((d.bubble.fillAlpha || 0) * 100);
+    h += '<div><label for="' + fid('bubble.fillAlpha') + '">' + esc(T.fillAlpha || 'Füll-Deckkraft') + '</label><input type="range" id="' + fid('bubble.fillAlpha')
+      + '" data-a="bubble.fillAlpha" data-scale="0.01" min="0" max="100" step="1" value="' + alpha + '" data-hub-range data-hub-range-unit="%" aria-label="' + esc(T.fillAlpha || 'Füll-Deckkraft') + '"></div>';
+
+    h += '<div class="sf-tl-sub">' + esc(T.axis || 'Strahl') + '</div>';
+    h += '<div class="sf-tl-pair">' + fColor('axis.color', T.axisColor || 'Farbe', d) + fNum('axis.width', T.axisWidth || 'Dicke', d, 1, 40) + '</div>';
+    h += '<div class="sf-tl-pair">' + fNum('axis.dot', T.axisDot || 'Punktgrösse', d, 0, 120) + '<div></div></div>';
+    h += fCheck('axis.arrow', T.axisArrow || 'Pfeil am Ende', d);
+
+    h += '<div class="sf-tl-sub">' + esc(T.fonts || 'Schrift') + '</div>';
+    h += '<div class="sf-tl-pair sf-tl-three">' + fNum('font.label', T.fontLabel || 'Bezeichnung', d, 8, 200)
+      + fNum('font.title', T.fontTitle || 'Titel', d, 8, 200) + fNum('font.text', T.fontText || 'Text', d, 8, 200) + '</div>';
+    h += '<div class="sf-tl-pair">' + fColor('font.labelColor', T.labelColor || 'Farbe Bezeichnung', d) + fColor('font.color', T.textColor || 'Farbe Text', d) + '</div>';
+    return h;
+  }
+
+  function wireLook(el, d, onChange, look) {
+    look = look || {};
+    el.querySelectorAll('[data-a]').forEach(function (inp) {
+      var handler = function () {
+        var v;
+        if (inp.type === 'checkbox') v = inp.checked;
+        else if (inp.type === 'number' || inp.type === 'range') {
+          v = Number(inp.value);
+          if (!isFinite(v)) return;
+          if (inp.dataset.scale) v = v * Number(inp.dataset.scale);
+        } else v = inp.value;
+        setPath(d, inp.dataset.a, v);
+        onChange(false);
+      };
+      inp.addEventListener('input', handler);
+      inp.addEventListener('change', handler);
+    });
+    el.querySelectorAll('[data-cat-color]').forEach(function (inp) {
+      var handler = function () {
+        var c = d.cats[parseInt(inp.dataset.catColor, 10)];
+        if (!c || !HEX.test(inp.value)) return;
+        c.color = inp.value;
+        onChange(false);
+      };
+      inp.addEventListener('input', handler);
+      inp.addEventListener('change', handler);
+    });
+    el.querySelectorAll('[data-cat-name]').forEach(function (inp) {
+      var c = d.cats[parseInt(inp.dataset.catName, 10)];
+      inp.addEventListener('input', function () { if (c) { c.name = inp.value; onChange(false); } });
+      /* Auswahllisten der Ereignisse zeigen den Namen: nach dem Verlassen des Feldes neu aufbauen. */
+      inp.addEventListener('change', function () { if (c) onChange(true); });
+    });
+    el.querySelectorAll('[data-tl-act="catdel"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (d.cats.length <= 1) return;
+        d.cats.splice(parseInt(btn.dataset.i, 10), 1);
+        onChange(true);
+      });
+    });
+    var add = el.querySelector('[data-tl-look="catadd"]');
+    if (add) {
+      add.addEventListener('click', function () {
+        var max = 0;
+        d.cats.forEach(function (c) { var m = /^c(\d+)$/.exec(c.id); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+        /* Farbe: nächste Markenfarbe des Hubs, sonst die der letzten Kategorie (keine eigene Farbreihe). */
+        var marken = (look.colors || []).filter(function (x) { return HEX.test(String(x)); });
+        var farbe = marken.length ? marken[d.cats.length % marken.length] : d.cats[d.cats.length - 1].color;
+        d.cats.push({ id: 'c' + (max + 1), name: '', color: farbe });
+        onChange(true);
+      });
     }
   }
 

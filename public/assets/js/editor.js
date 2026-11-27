@@ -8334,6 +8334,7 @@
     tl.setAttr('tlData', daten);
     window.SfTimeline.panel(panel, daten, {
       I: I,
+      colors: (SF.brandColors || []).map((c) => c && c.hex),
       focus: opts && opts.focus,
       onChange: (rebuild, info) => {
         tl.setAttr('tlData', window.SfTimeline.normalize(daten));
@@ -9333,7 +9334,7 @@
       obj = Object.assign({
         id, type: 'timeline', rotation: 0, opacity: 1,
         x: Math.round((SF.meta.width - tw) / 2), y: Math.round((SF.meta.height - th) / 2), w: tw, h: th,
-      }, window.SfTimeline.create(I));
+      }, window.SfTimeline.create(I, (SF.brandColors || []).map((c) => c && c.hex)));
     } else if (type === 'ellipse') {
       obj = { id, type: 'ellipse', x: centerX, y: centerY, w: 200, h: 200, fillType: 'solid', fill: '#3a6c8d', stroke: 'transparent', strokeWidth: 0, rotation: 0, opacity: 1 };
     } else if (type === 'rect') {

@@ -6,10 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [3.12.48] - 2026-11-27
+## [3.12.50] - 2026-11-27
+
+### Added
+- **Zeitstrahl (Schritt 2), Abschnitt «Aussehen» im Reiter «Zeitstrahl»** (Urs 27.11.: «Ich kann die Form und Farben und Linien der Sprechblasen bestimmen.»): Kategorien mit Name und Farbe (Farbfeld mit Markenfarben des Hubs; neue Kategorie nimmt die nächste Markenfarbe), Legende unten ein/aus; Blasenform Rechteck/abgerundet/Pille/Sprechblase mit Spitze zum Strahl; Randdicke, Eckenradius, Strichart, Füll-Deckkraft (Regler mit Zahlenfeld); Strahl Farbe/Dicke/Punktgrösse/Pfeil; Schriftgrössen Bezeichnung/Titel/Text, Farben Bezeichnung und Text. Beispiel-Kategorien nehmen die ersten Markenfarben.
+
+## [3.12.49] - 2026-11-27
 
 ### Added
 - **Zeitstrahl (Schritt 1):** Einfügen › Zeitstrahl legt ein neues Objekt (type `timeline`) mit drei Beispiel-Ereignissen an (Urs 27.11.: «Bei Einfügen Zeitstrahl und dann gebe ich die Bezeichnung auf dem Zeitstrahl und dann den Text der Sprechblase ein. Dann wird das auf die Folienlinie verteilt.»). Reiter «Zeitstrahl» rechts, nur sichtbar, solange ein Zeitstrahl markiert ist; Doppelklick öffnet ihn. Ereignisliste mit Bezeichnung, Zusatz, Titel, Text, Kategorie, Seite; Zeilen anfügen, löschen, mit ↑/↓ oder Ziehen verschieben. Gleiche Abstände, abwechselnd oben/unten, Verbindungslinie, Punkt, Pfeil, Bezeichnung auf der anderen Seite des Strahls. Bühne (`sf-timeline.js`) und Präsentation/Vorschau (`src/TimelineRenderer.php`, SVG) rechnen gleich. Datenmodell sieht Aussehen und Animation (`anim`, `event.order`) schon vor.
+
+## [3.12.48] - 2026-11-27
+
 ### Changed
 - **Logos-Predigt mit dem FileForge-Picker** (Urs 27.11.: «Das Öffnen auch mit dem FF-Picker»): Der Knopf auf der Startseite öffnet den Picker (HTML), danach die Import-Seite mit der gewählten Datei und gleich den Import-Dialog (Vorschau/Optionen).
 

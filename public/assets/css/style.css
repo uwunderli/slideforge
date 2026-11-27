@@ -8474,6 +8474,17 @@ body.notes-resizing {
 .sf-tl-panel input[type=number] { width: 100%; }
 .sf-tl-panel .props-check-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 8px; font-size: 0.8rem; color: var(--text); }
 .sf-tl-panel .props-check-row input { width: auto; margin: 0; }
+/* Abschnitt «Aussehen» (3.12.49) */
+.sf-tl-panel .sf-tl-look-head { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--border); }
+.sf-tl-sub { font-size: 0.72rem; color: var(--text-muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.sf-tl-panel .sf-tl-pair > div { display: flex; flex-direction: column; margin-bottom: 6px; }
+.sf-tl-panel .sf-tl-pair label,
+.sf-tl-panel > div > label { display: block; font-size: 0.72rem; color: var(--text-muted); margin: 0 0 3px; }
+.sf-tl-cats { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.sf-tl-cat { display: flex; align-items: center; gap: 6px; }
+.sf-tl-cat input[type=text] { flex: 1; min-width: 0; }
+.sf-tl-cat .sf-color-field { flex: none; }
+.sf-tl-cat input[type=color] { width: 40px; }
 
 /* Liste der Effekte einer Folie (Urs, 24.10.2026): Nummer, Objekt, Animation,
    Papierkorb — Aufbau wie die Ebenen-Liste, damit sich beides gleich anfühlt. */

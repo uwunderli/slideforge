@@ -258,7 +258,10 @@ $bootstrap = [
         'tl' => (static function (): array {
             $o = [];
             foreach (['tab', 'open', 'open_hint', 'events', 'label', 'label_hint', 'sub', 'title', 'text', 'category', 'side', 'side_auto', 'side_top', 'side_bottom',
-                'move_up', 'move_down', 'remove', 'drag', 'add', 'add_hint', 'empty', 'hint', 'sample_title', 'sample_text', 'sample_cat1', 'sample_cat2'] as $k) {
+                'move_up', 'move_down', 'remove', 'drag', 'add', 'add_hint', 'empty', 'hint', 'sample_title', 'sample_text', 'sample_cat1', 'sample_cat2',
+                'look', 'categories', 'cat_name', 'cat_color', 'cat_remove', 'cat_add', 'cat_add_hint', 'legend', 'bubble', 'shape', 'shape_rect', 'shape_round',
+                'shape_pill', 'shape_speech', 'border_width', 'radius', 'radius_hint', 'border_dash', 'dash_solid', 'dash_dashed', 'dash_dotted', 'fill_alpha',
+                'axis', 'axis_color', 'axis_width', 'axis_dot', 'axis_arrow', 'fonts', 'font_label', 'font_title', 'font_text', 'label_color', 'text_color'] as $k) {
                 $o[lcfirst(str_replace('_', '', ucwords($k, '_')))] = t('timeline.' . $k);
             }
             return $o;
