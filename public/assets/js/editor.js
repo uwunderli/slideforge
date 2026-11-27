@@ -8475,10 +8475,10 @@
           ? '<img src="' + escapeHtml(item.url) + '" alt="" class="media-library-thumb">'
           : '<div class="media-library-thumb media-library-thumb--' + item.kind + '">' + escapeHtml(kindLabel(item.kind)) + '</div>';
         const deleteBtn = (SF.canEdit && unused)
-          ? '<button type="button" class="button button-danger button-sm media-library-delete hub-btn hub-btn--danger hub-btn--sm" data-file="' + escapeHtml(item.filename) + '">' + escapeHtml(cfg.delete) + '</button>'
+          ? '<button type="button" class="media-library-delete hub-btn hub-btn--danger hub-btn--sm" data-file="' + escapeHtml(item.filename) + '">' + escapeHtml(cfg.delete) + '</button>'
           : '';
         const bgBtn = (SF.canEdit && (item.kind === 'image' || item.kind === 'video'))
-          ? '<button type="button" class="button button-ghost button-sm media-library-bg-btn hub-btn hub-btn--ghost hub-btn--sm">' + escapeHtml(cfg.useBackground || 'Als Hintergrund') + '</button>'
+          ? '<button type="button" class="media-library-bg-btn hub-btn hub-btn--ghost hub-btn--sm">' + escapeHtml(cfg.useBackground || 'Als Hintergrund') + '</button>'
           : '';
         const insertable = SF.canEdit ? ' is-insertable' : '';
         return '<div class="media-library-item' + (unused ? ' is-unused' : '') + insertable + '" data-url="' + escapeHtml(item.url) + '" data-kind="' + escapeHtml(item.kind) + '"' + (SF.canEdit ? ' role="button" tabindex="0"' : '') + '>' +
@@ -8487,9 +8487,9 @@
             '<div class="media-library-name" title="' + escapeHtml(item.filename) + '">' + escapeHtml(item.filename) + '</div>' +
             '<div class="media-library-details">' + escapeHtml(kindLabel(item.kind)) + ' · ' + formatBytes(item.size) + '</div>' +
             usageHtml +
-            (bgBtn ? '<div class="media-library-actions">' + bgBtn + '</div>' : '') +
+            // Aktionen in eigener Zeile unter dem Text (3.3.7): «Löschen» lag neben dem Namen und überdeckte ihn in der schmalen Leiste.
+            ((bgBtn || deleteBtn) ? '<div class="media-library-actions">' + bgBtn + deleteBtn + '</div>' : '') +
           '</div>' +
-          deleteBtn +
         '</div>';
       }).join('');
 

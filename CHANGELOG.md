@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.6.1] - 2026-11-27
+
+- **Farben aus der Hub-Einstellung** (Urs 27.11.: «Farb Design vom SlideForge stimmt übrigens immer noch nicht»): `sf_hub_asset()` nimmt grundsätzlich die Datei des Hubs, die Kopie in `public/assets/` nur als Rückfall. Die veraltete eigene `cf-theme.js` hatte die Akzent-Nachricht des Hubs ignoriert, die Oberfläche blieb Sand. Feste Beigewerte (Schachbrett um die Folie, Scrim, Overlay, Schatten) auf Hub-Töne.
+- **Medienliste im Editor** (Urs: «Darstellung stimmt auch noch nicht»): Einträge werden nicht mehr zusammengedrückt, Vorschau 3:2, Name mit Auslassungspunkten, Aktionen in eigener Zeile, Knöpfe im Hub-Stil.
+
 ## [3.5.0] - 2026-11-27
 
 - **Medien über den FileForge-Dialog** (Urs 27.11.: «FF Piker verwenden, bei Bilder, Audio Video auch»): Einfügen › Bild/Audio/Video, Ersetzen in den Eigenschaften und Folienhintergrund Bild/Video wählen die Datei mit `HubFiles.choose` (Hochladen vom Rechner im Dialog). `upload.php` holt sie als die Person über AppCall (`FfFile::read`) und legt eine Kopie in `assets/` (steckt in der .cfs). Eigene Datei-Inputs und der direkte Upload-Weg entfernt; Grenzen Grösse/Dateityp bleiben.

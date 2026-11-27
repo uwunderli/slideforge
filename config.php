@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '715');
+define('ASSET_VERSION', '716');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -301,8 +301,9 @@ function h(string $s): string {
 }
 
 /**
- * Hub UI asset (V2.0a). Prefer local copies under public/assets/.
- * Paths: css/hub-confirm.css or shared/cf-status.js (no leading slash).
+ * Hub-Datei (V2.0a). Paths: css/hub-confirm.css or shared/cf-status.js (no leading slash).
+ * Grundsätzlich die Datei des Hubs (hub_asset), wie FileForge; die Kopie unter public/assets/ nur als Rückfall ohne
+ * Hub-Bibliothek (3.5.1). Vorher kam die Kopie zuerst — eine veraltete cf-theme.js hielt so die Hub-Farben fern.
  */
 function sf_hub_asset(string $hubPath, ?string $localPath = null): string
 {
@@ -315,10 +316,6 @@ function sf_hub_asset(string $hubPath, ?string $localPath = null): string
         }
     }
     $localPath = ltrim(str_replace('\\', '/', $localPath), '/');
-    $file = BASE_PATH . '/public/' . $localPath;
-    if (is_file($file)) {
-        return $localPath . '?v=' . rawurlencode((string)ASSET_VERSION);
-    }
     if (function_exists('hub_asset')) {
         return hub_asset($hubPath);
     }

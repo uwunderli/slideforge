@@ -54,7 +54,9 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <?php if (function_exists('hub_asset')): ?>
 <link rel="stylesheet" href="<?= h(hub_asset('shared/cf-fine.css')) ?>">
 <?php endif; ?>
-<script src="<?= h(sf_hub_asset('shared/cf-theme.js', 'assets/js/cf-theme.js')) ?>"></script>
+<?php /* cf-theme.js vom Hub wie FileForge (3.5.1): sf_hub_asset() nahm früher die eigene, veraltete Kopie zuerst; deren Stand kannte
+         Fenster-Stil/Akzent nicht, die Hub-Nachricht (auch freie Farbe #rrggbb) blieb wirkungslos → Sand. */ ?>
+<script src="<?= h(sf_hub_asset('shared/cf-theme.js')) ?>"></script>
 <script src="assets/js/mobile-detect.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-page-busy.js')) ?>"></script>

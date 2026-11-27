@@ -53,6 +53,11 @@
   function show(kind, message, detail, opts) {
     const host = ensureHost();
     clearTimer();
+    if (TIMERS[kind] == null && (message == null || TIMERS[message] != null)) {
+      const swapped = kind;
+      kind = TIMERS[message] != null ? message : 'info';
+      message = swapped;
+    }
     const k = TIMERS[kind] != null ? kind : 'info';
     const sticky = !!(opts && opts.sticky);
     const autoHideOpt = opts && Object.prototype.hasOwnProperty.call(opts, 'autoHide')

@@ -1112,16 +1112,16 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
                 <div class="props-media-body props-section-body">
                   <div class="media-library-header">
                     <div class="media-library-header-actions">
-                      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
+                      <button type="button" class="hub-btn hub-btn--sm" id="mediaLibraryRefresh"><?= h(t('media_lib.refresh')) ?></button>
                       <?php if ($canEdit): ?>
-                      <button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
+                      <button type="button" class="hub-btn hub-btn--sm" id="mediaLibraryCleanup" disabled><?= h(t('media_lib.cleanup')) ?></button>
                       <?php endif; ?>
                     </div>
                   </div>
                   <?php if ($canEdit): ?>
                   <p class="media-library-hint"><?= h(t('media_lib.insert_hint')) ?></p>
                   <?php endif; ?>
-                  <div class="media-library-status" id="mediaLibraryStatus"></div>
+                  <div class="media-library-status" id="mediaLibraryStatus" role="status" aria-live="polite"></div>
                   <div class="media-library-list" id="mediaLibraryList"></div>
                 </div>
               </div>

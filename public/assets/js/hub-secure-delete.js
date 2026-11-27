@@ -179,4 +179,30 @@
     randomWord: randomWord,
     WORDS: WORDS.slice()
   };
+
+  /*
+   * Deklarativ (Hub, Prüfliste Install Frage 9): form[data-hub-secure-word="<wort>"] fragt vor dem Absenden das Wort ab und
+   * schreibt es in das Feld name="wort" (der Server prüft es noch einmal). Optional data-hub-secure-title/-message/-ok.
+   */
+  if (typeof document !== 'undefined') {
+    document.addEventListener('submit', function (ev) {
+      var form = ev.target;
+      if (!form || !form.getAttribute || !form.hasAttribute('data-hub-secure-word')) return;
+      if (form.getAttribute('data-hub-secure-ok-done') === '1') { form.removeAttribute('data-hub-secure-ok-done'); return; }
+      ev.preventDefault();
+      var word = form.getAttribute('data-hub-secure-word') || '';
+      ask({
+        title: form.getAttribute('data-hub-secure-title') || undefined,
+        message: form.getAttribute('data-hub-secure-message') || undefined,
+        okLabel: form.getAttribute('data-hub-secure-ok') || undefined,
+        word: word
+      }).then(function (ja) {
+        if (!ja) return;
+        var feld = form.querySelector('input[name="wort"]');
+        if (feld) feld.value = word;
+        form.setAttribute('data-hub-secure-ok-done', '1');
+        if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.submit();
+      });
+    }, true);
+  }
 })(typeof window !== 'undefined' ? window : this);

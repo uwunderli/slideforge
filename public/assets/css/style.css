@@ -63,8 +63,8 @@ html[data-theme="light"] {
   --accent-dim: #8fb8d6;
   --accent-view: var(--brand-gruen);
   --surface-2: rgba(34, 40, 44, 0.05);
-  --overlay-bg: rgba(34, 40, 44, 0.45);
-  --scrim: rgba(253, 252, 249, 0.88);
+  --overlay-bg: color-mix(in oklch, var(--text) 45%, transparent);
+  --scrim: color-mix(in oklch, var(--surface) 88%, transparent);
   --stage-fallback: linear-gradient(160deg, #f0ece3, #e6e1d6);
   --ribbon-bg-active: rgba(66, 139, 190, 0.16);
   color-scheme: light;
@@ -98,16 +98,17 @@ html[data-theme="light"] .dashboard-section-header {
   background: var(--surface-raised);
 }
 
+/* Schachbrett um die Folie aus den Hub-Tönen statt fester Beigewerte (3.3.7, Urs: «Farb Design … stimmt immer noch nicht»). */
 html[data-theme="light"] .stage-wrap {
-  box-shadow: 0 0 0 1px var(--border), 0 12px 32px rgba(92, 26, 26, 0.12);
+  box-shadow: 0 0 0 1px var(--border), 0 12px 32px color-mix(in oklch, var(--text) 12%, transparent);
   background:
-    linear-gradient(45deg, #e0d5c6 25%, transparent 25%),
-    linear-gradient(-45deg, #e0d5c6 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e0d5c6 75%),
-    linear-gradient(-45deg, transparent 75%, #e0d5c6 75%);
+    linear-gradient(45deg, var(--border) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--border) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--border) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--border) 75%);
   background-size: 14px 14px;
   background-position: 0 0, 0 7px, 7px -7px, -7px 0px;
-  background-color: #efe6d8;
+  background-color: var(--surface-raised);
 }
 
 html[data-theme="light"] .props-asset-preview {
@@ -8198,13 +8199,13 @@ body.editor-grid-dragging .editor-slide-grid-item {
   position: relative;
   box-shadow: 0 0 0 1px var(--border), 0 12px 32px rgba(0,0,0,0.35);
   background:
-    linear-gradient(45deg, #23262c 25%, transparent 25%),
-    linear-gradient(-45deg, #23262c 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #23262c 75%),
-    linear-gradient(-45deg, transparent 75%, #23262c 75%);
+    linear-gradient(45deg, var(--surface-raised) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--surface-raised) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--surface-raised) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--surface-raised) 75%);
   background-size: 14px 14px;
   background-position: 0 0, 0 7px, 7px -7px, -7px 0px;
-  background-color: #17191d;
+  background-color: var(--bg);
   flex-shrink: 0;
 }
 .stage-bg-layer {
@@ -10305,20 +10306,20 @@ body:has(.editor-layout) > .editor-layout {
   flex-shrink: 1;
   min-width: 0;
 }
-.media-library-header-actions .button {
-  width: 100%;
-  justify-content: center;
-}
 .media-library-status {
   font-size: 0.8rem;
   color: var(--text-muted);
   min-height: 1.2em;
   margin-bottom: 8px;
 }
+/* Medienliste (3.3.7, Urs: «Darstellung stimmt auch noch nicht»): Die Liste ist eine Flex-Spalte mit fester Höhe, die Einträge
+   hatten overflow:hidden und damit keine Mindesthöhe — sie wurden auf wenige Pixel zusammengedrückt (Vorschau, Name, Knopf
+   übereinander). Jetzt: Einträge schrumpfen nie, Raster Vorschau | Text, Vorschau mit festem Seitenverhältnis, Name mit
+   Auslassungspunkten, Aktionen in eigener Zeile unter dem Text. Farben nur aus Hub-Tönen. */
 .media-library-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .media-library-empty {
   font-size: 0.85rem;
@@ -10326,25 +10327,30 @@ body:has(.editor-layout) > .editor-layout {
   margin: 8px 0;
 }
 .media-library-item {
-  display: flex;
-  align-items: flex-start;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
   gap: 10px;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-raised);
+  background: var(--surface);
   width: 100%;
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  overflow: hidden;
 }
 .media-library-item.is-insertable {
   cursor: pointer;
 }
 .media-library-item.is-insertable:hover {
   border-color: var(--accent);
-  background: var(--surface-hover, rgba(58, 108, 141, 0.08));
+  background: color-mix(in oklch, var(--accent) 8%, var(--surface));
+}
+.media-library-item.is-insertable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 .media-library-hint {
   font-size: 0.78rem;
@@ -10356,12 +10362,15 @@ body:has(.editor-layout) > .editor-layout {
   opacity: 0.85;
 }
 .media-library-thumb {
+  display: block;
   width: 72px;
-  height: 48px;
+  height: auto;
+  aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: 4px;
-  background: #222;
-  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-sizing: border-box;
 }
 .media-library-thumb--video,
 .media-library-thumb--audio {
@@ -10372,36 +10381,44 @@ body:has(.editor-layout) > .editor-layout {
   color: var(--text-muted);
 }
 .media-library-meta {
-  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .media-library-name {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 .media-library-details {
   font-size: 0.72rem;
   color: var(--text-muted);
-  margin-top: 2px;
 }
 .media-library-used,
 .media-library-unused {
   display: block;
   font-size: 0.72rem;
-  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 .media-library-unused {
   color: var(--text-muted);
   font-style: italic;
 }
 .media-library-actions {
-  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
-.media-library-actions .button {
-  width: 100%;
+.media-library-actions .hub-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 .media-library-slide-link {
   background: none;
@@ -10411,10 +10428,6 @@ body:has(.editor-layout) > .editor-layout {
   cursor: pointer;
   font-size: inherit;
   text-decoration: underline;
-}
-.media-library-delete {
-  flex-shrink: 0;
-  align-self: center;
 }
 
 .media-source-divider {

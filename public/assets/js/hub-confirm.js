@@ -7,7 +7,8 @@
  *                    rememberKey?, rememberLabel?, isRemembered?, setRemembered? }) → Promise<boolean>
  *   HubConfirm.choose({ title?, message?, buttons, cancelLabel?,
  *                       rememberKey?, rememberLabel?, isRemembered?, setRemembered? }) → Promise<string|null>
- *   HubConfirm.prompt({ title?, message?, value?, placeholder?, okLabel?, cancelLabel? }) → Promise<string|null>
+ *   HubConfirm.prompt({ title?, message?, value?, placeholder?, okLabel?, cancelLabel?, type? }) → Promise<string|null>
+ *     type: 'password' zeigt ein Passwortfeld (Wert nie vorbelegt).
  *   Declarative: form[data-hub-confirm] / data-hub-confirm-message
  *
  * Klassen: .hub-confirm-overlay / __dialog / __body / __actions / __extra / __remember
@@ -271,7 +272,7 @@
 
   /**
    * Text-Eingabe statt window.prompt.
-   * @param {{title?:string,message?:string,value?:string,placeholder?:string,okLabel?:string,cancelLabel?:string}} opts
+   * @param {{title?:string,message?:string,value?:string,placeholder?:string,okLabel?:string,cancelLabel?:string,type?:string}} opts
    * @returns {Promise<string|null>}
    */
   function prompt(opts) {
@@ -299,8 +300,9 @@
       extra.hidden = false;
       extra.innerHTML =
         '<label class="hub-admin-field hub-confirm-prompt">' +
-        '<input type="text" data-hub-confirm-input autocomplete="off" ' +
-        'value="' + esc(opts.value || '') + '" ' +
+        (opts.type === 'password'
+          ? '<input type="password" data-hub-confirm-input autocomplete="current-password" value="" '
+          : '<input type="text" data-hub-confirm-input autocomplete="off" value="' + esc(opts.value || '') + '" ') +
         'placeholder="' + esc(opts.placeholder || '') + '">' +
         '</label>';
     }
