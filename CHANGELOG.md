@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.44] - 2026-11-27
+
+### Changed
+- **Referentenansicht, Notizen links:** Der ganze senkrechte Streifen ist tippbar und klappt die Notizen auf/zu (Urs 27.11.: «mach den ganzen Streifen tippbar»).
+
 ## [3.12.43] - 2026-11-27
 
 ### Changed

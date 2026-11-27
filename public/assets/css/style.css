@@ -2537,9 +2537,15 @@ body.present-panel-resizing {
   border-right: none;
   border-bottom: 1px solid var(--present-dock-border);
 }
+/* Der Knopf füllt den ganzen freien Streifen: überall tippen klappt auf/zu (Urs 27.11.). Griff bleibt unten. */
 .present-slide-dock[data-notes-pos="left"] .present-slide-dock-toggle {
-  flex: 0 0 52px;
-  margin-top: auto;
+  flex: 1 1 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20px;
+  cursor: pointer;
   border-left: none;
   border-top: 1px solid var(--present-dock-border);
 }
