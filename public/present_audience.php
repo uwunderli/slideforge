@@ -67,7 +67,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
   </div>
 </div>
 <?php if ($geraetModus): ?>
-<div id="sfGeraetStart" role="button" tabindex="0" style="position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);color:#fff;font:600 min(4.5vh,7vw)/1.3 system-ui,sans-serif;text-align:center;padding:4vh;cursor:pointer"><?= h(t('present.device_start')) ?></div>
+<div id="sfGeraetStart" role="button" tabindex="0" style="position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);color:#fff;font:600 min(4.5vh,7vw)/1.3 'Open Sans','Segoe UI',sans-serif;text-align:center;padding:4vh;cursor:pointer;outline-offset:-6px"><?= h(t('present.device_start')) ?></div>
 <?php endif; ?>
 <div id="sfPresentOverlay" hidden>
   <p><?= h(t('present.fullscreen_hint')) ?></p>

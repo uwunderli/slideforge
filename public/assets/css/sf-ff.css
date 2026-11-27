@@ -16,3 +16,4 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-statusbar__file { max-width: 50vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); text-align: center; }
 .sf-statusbar__ver { justify-self: end; padding-right: .9rem; font-size: .72rem; opacity: .75; white-space: nowrap; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .sf-statusbar__ver { display: none; } }
+.sf-dev__act { text-align: right; white-space: nowrap; }

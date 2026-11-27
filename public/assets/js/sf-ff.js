@@ -26,7 +26,7 @@
   function toast(kind, text) {
     var inBar = say(text, kind === 'error' ? 'error' : '');
     if (kind === 'error' || !inBar) {
-      if (global.CfStatus && global.CfStatus.show) { global.CfStatus.show(kind, text); } else if (!inBar) { global.alert(text); }
+      if (global.CfStatus && global.CfStatus.show) { global.CfStatus.show(kind, text); }
     }
   }
   function post(data) {
@@ -48,14 +48,14 @@
       if (!j || !j.ok) { toast('error', (j && j.message) || 'Geräte nicht lesbar.'); return; }
       var list = j.geraete || [];
       var anmelden = location.origin + (j.anmelden || '/admin/settings.php?tab=geraete');
+      // Hub-Liste = Tabelle mit Spaltenköpfen (hub-list.css, Lab › Listen; Liste UI 2).
       var html = '<div class="sf-dev">' + (list.length
-        ? '<ul class="hub-list sf-dev__list">' + list.map(function (g, i) {
-            var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '';
-            return '<li class="hub-list__row"><span class="hub-list__label">' + esc(g.name) +
-              (zeigt ? ' <small class="muted">zeigt: ' + esc(zeigt) + '</small>' : '') + '</span>' +
-              '<span class="hub-list__actions"><button type="button" class="hub-btn hub-btn--sm hub-btn--primary sf-dev__show" data-i="' + i + '">Zeigen</button> ' +
-              (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</span></li>';
-          }).join('') + '</ul>'
+        ? '<table class="hub-list sf-dev__list"><thead><tr><th>Gerät</th><th>Zeigt</th><th></th></tr></thead><tbody>' + list.map(function (g, i) {
+            var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '–';
+            return '<tr><td>' + esc(g.name) + '</td><td class="muted small">' + esc(zeigt) + '</td>' +
+              '<td class="sf-dev__act"><button type="button" class="hub-btn hub-btn--sm hub-btn--primary sf-dev__show" data-i="' + i + '">Zeigen</button> ' +
+              (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</td></tr>';
+          }).join('') + '</tbody></table>'
         : '<p class="muted small">Noch kein Gerät angemeldet.</p>') +
         '<p class="muted small">Neues Gerät: dort <code>' + esc(location.origin) + '/device.php</code> öffnen, QR abknipsen oder den Code im Hub eingeben.</p>' +
         '<p><a class="hub-btn" href="' + esc(anmelden) + '" target="_blank" rel="noopener">Gerät anmelden …</a></p></div>';
@@ -65,7 +65,10 @@
           var s = e.target.closest('.sf-dev__show'), c = e.target.closest('.sf-dev__clear');
           var g = (s || c) ? list[+(s || c).getAttribute('data-i')] : null;
           if (!g) return;
+          var btn = s || c; btn.disabled = true;
+          say(c ? 'Leert ' + g.name + ' …' : 'Schickt an ' + g.name + ' …', 'busy');
           send(c ? { action: 'leeren', geraet: g.id } : { action: 'zeigen', geraet: g.id, id: id }).then(function (r) {
+            btn.disabled = false;
             if (r.ok) { toast('success', c ? 'Gerät ' + g.name + ' geleert.' : 'Läuft auf ' + g.name + '.'); global.HubFloatDialog.close('sfDevices'); }
             else toast('error', r.message || 'Das ging nicht.');
           });
@@ -93,9 +96,18 @@
       return global.HubFiles.choose({ app: 'slideforge', kinds: kinds, accept: accept || [], title: title });
     });
   }
+  // Eingaben und Rückfragen über die Hub-Bausteine (HubConfirm, Lab › Dialoge), nie die nackten Browser-Dialoge (Liste UI 3).
   function ask(label, value) {
+    if (global.HubConfirm && global.HubConfirm.prompt) return global.HubConfirm.prompt({ title: label, value: value || '' });
     if (global.SFDialog && global.SFDialog.prompt) return global.SFDialog.prompt(label, value || '');
-    return Promise.resolve(global.prompt(label, value || ''));
+    toast('error', 'Eingabedialog fehlt.');
+    return Promise.resolve(null);
+  }
+  function confirmAsk(title, message, okLabel) {
+    if (global.HubConfirm && global.HubConfirm.ask) return global.HubConfirm.ask({ title: title, message: message, okLabel: okLabel });
+    if (global.SFDialog && global.SFDialog.confirm) return global.SFDialog.confirm(message);
+    toast('error', 'Bestätigungsdialog fehlt.');
+    return Promise.resolve(false);
   }
   function stem(name) { return String(name || '').replace(/\.(cfs|pptx?|odp)$/i, ''); }
 
@@ -134,8 +146,7 @@
           blocked = j.error;
           idle();
           if (manual || j.error !== 'need_copy') {
-            var ok = global.SFDialog && global.SFDialog.confirm ? global.SFDialog.confirm(j.message + ' Jetzt als Kopie speichern?') : Promise.resolve(global.confirm(j.message));
-            Promise.resolve(ok).then(function (yes) { if (yes) saveCopy(); });
+            confirmAsk('Nicht gespeichert', (j.message || '') + ' Jetzt als Kopie speichern?', 'Als Kopie speichern').then(function (yes) { if (yes) saveCopy(); });
           }
         } else {
           idle();
@@ -251,8 +262,9 @@
     }
     function reload() {
       fetch(API + '?action=home', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
-        if (j.ok) draw(j); else recentEl.innerHTML = '<p class="muted small">FileForge ist nicht erreichbar.</p>';
-      }).catch(function () { recentEl.innerHTML = '<p class="muted small">Keine Verbindung.</p>'; });
+        if (j.ok) { draw(j); return; }
+        recentEl.innerHTML = formeEl.innerHTML = '<p class="muted small" role="alert">FileForge ist nicht erreichbar.</p>';
+      }).catch(function () { recentEl.innerHTML = formeEl.innerHTML = '<p class="muted small" role="alert">Keine Verbindung zum Hub.</p>'; });
     }
     document.addEventListener('click', function (e) {
       var f = e.target.closest('.sf-home__forget');
@@ -273,15 +285,15 @@
           var list = j && j.ok ? (j.items || []) : [];
           if (!j || !j.ok) toast('error', (j && j.message) || 'Vorlagen nicht lesbar.');
           var html = '<div class="sf-tpl">' + (list.length
-            ? '<ul class="hub-list sf-tpl__list">' + list.map(function (it, i) {
-                return '<li><button type="button" class="hub-list__sprung sf-tpl__pick" data-i="' + i + '">' + esc(stem(it.name)) + '</button></li>';
-              }).join('') + '</ul>'
+            ? '<table class="hub-list sf-tpl__list"><thead><tr><th>Vorlage</th></tr></thead><tbody>' + list.map(function (it, i) {
+                return '<tr><td class="hub-list__zelle"><a href="#" class="hub-list__sprung sf-tpl__pick" data-i="' + i + '">' + esc(stem(it.name)) + '</a></td></tr>';
+              }).join('') + '</tbody></table>'
             : '<p class="muted small">Im Vorlagen-Ordner «' + esc(state.templateDir.label || '') + '» liegen keine Vorlagen (.cfs).</p>') +
             '<p><button type="button" class="hub-btn sf-tpl__other">Andere Vorlage aus FileForge …</button></p></div>';
           global.HubFloatDialog.open('Neu aus Vorlage', html, { id: 'sfTemplates', width: 420, bind: function (body) {
             body.addEventListener('click', function (e) {
               var b = e.target.closest('.sf-tpl__pick');
-              if (b) { var it = list[+b.getAttribute('data-i')]; global.HubFloatDialog.close('sfTemplates'); if (it) create(it.ref, stem(it.name)); return; }
+              if (b) { e.preventDefault(); var it = list[+b.getAttribute('data-i')]; global.HubFloatDialog.close('sfTemplates'); if (it) create(it.ref, stem(it.name)); return; }
               if (e.target.closest('.sf-tpl__other')) { global.HubFloatDialog.close('sfTemplates'); other(); }
             });
           } });
@@ -337,7 +349,7 @@
       fetch(API + '?action=home', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var t = j && j.templateDir; label.textContent = t ? (t.label || 'gewählt') : 'kein Ordner gewählt';
         if (clear) clear.hidden = !t;
-      }).catch(function () { label.textContent = '—'; });
+      }).catch(function () { label.textContent = 'nicht lesbar (keine Verbindung)'; });
     }
     function save(ref, lbl) {
       return post({ action: 'template_dir', ref: ref, label: lbl }).then(function (j) {
