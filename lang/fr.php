@@ -1861,4 +1861,9 @@ return [
     'props.grad_add' => '+ Couleur',
     'props.grad_remove' => 'Supprimer la couleur',
     'props.grad_color_n' => 'Couleur {n}',
+    'shortcut.stage_layer_up' => 'Surface : avancer d’un plan',
+    'shortcut.stage_layer_down' => 'Surface : reculer d’un plan',
+    'shortcut.stage_layer_front' => 'Surface : mettre au premier plan',
+    'shortcut.stage_layer_back' => 'Surface : mettre à l’arrière-plan',
+    'shortcut.stage_layer_hint' => 'Déplacer les objets sélectionnés dans l’ordre des plans.',
 ];

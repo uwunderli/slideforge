@@ -1857,4 +1857,9 @@ return [
     'props.grad_add' => '+ Colur',
     'props.grad_remove' => 'Allontanar la colur',
     'props.grad_color_n' => 'Colur {n}',
+    'shortcut.stage_layer_up' => 'Surfatscha: in plaun enavant',
+    'shortcut.stage_layer_down' => 'Surfatscha: in plaun enavos',
+    'shortcut.stage_layer_front' => 'Surfatscha: cumplettamain enavant',
+    'shortcut.stage_layer_back' => 'Surfatscha: cumplettamain enavos',
+    'shortcut.stage_layer_hint' => 'Spustar ils objects selecziunads en la successiun dals plauns.',
 ];

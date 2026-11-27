@@ -1857,4 +1857,9 @@ return [
     'props.grad_add' => '+ Colore',
     'props.grad_remove' => 'Rimuovi colore',
     'props.grad_color_n' => 'Colore {n}',
+    'shortcut.stage_layer_up' => 'Area diapositiva: porta avanti',
+    'shortcut.stage_layer_down' => 'Area diapositiva: porta indietro',
+    'shortcut.stage_layer_front' => 'Area diapositiva: porta in primo piano',
+    'shortcut.stage_layer_back' => 'Area diapositiva: porta in fondo',
+    'shortcut.stage_layer_hint' => 'Sposta gli oggetti selezionati nell’ordine dei livelli.',
 ];

@@ -1851,4 +1851,9 @@ return [
     'props.grad_add' => '+ Color',
     'props.grad_remove' => 'Remove color',
     'props.grad_color_n' => 'Color {n}',
+    'shortcut.stage_layer_up' => 'Slide area: bring forward',
+    'shortcut.stage_layer_down' => 'Slide area: send backward',
+    'shortcut.stage_layer_front' => 'Slide area: bring to front',
+    'shortcut.stage_layer_back' => 'Slide area: send to back',
+    'shortcut.stage_layer_hint' => 'Move the selected objects in the layer order.',
 ];

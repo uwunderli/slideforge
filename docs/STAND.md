@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.31 gebaut** (`entwickler/slide-ebenen-kuerzel` ab 3.12.30 1d3668a): Ebenen-Kürzel Ctrl(+Umschalt)+↑/↓. Bei Gitwart. Texteditor T1/T2 kommt als 3.12.32/3.12.33.
 - **27.11. 3.12.30 gebaut** (`entwickler/slide-farbfeld-links` ab 3.12.29 25cdb95): Farbfeld der Verlaufspunkte links. Bei Gitwart. Parallel: Unter-Agent baut Texteditor T1/T2 als 3.12.31/3.12.32 (Zweig entwickler/slide-texteditor-t1t2).
 - **27.11. 3.12.29 gebaut** (`entwickler/slide-verlauf-position` ab 3.12.28 00b4a7a): Verlauf mit Farbpunkten (Farbe/Deckkraft/Position, + Farbe). Bei Gitwart.
 - **27.11. 3.12.28 gebaut** (`entwickler/slide-texte` ab 3.12.27): Übersetzungen en/fr/it/rm vollständig. Offen: rm-Durchsicht. Bei Gitwart.

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.31] - 2026-11-27
+
+### Added
+- **Kürzel für die Ebenen** (Urs 27.11.): Ctrl+↑ / Ctrl+↓ eine Ebene nach vorne/hinten, Ctrl+Umschalt+↑ / Ctrl+Umschalt+↓ ganz nach vorne/hinten, für alle markierten Objekte auf der Folienfläche (wie Google Slides). Änderbar unter Weitere Befehle; im Filmstreifen bleibt Ctrl+Umschalt+↑/↓ «Folie verschieben».
+
 ## [3.12.30] - 2026-11-27
 
 ### Fixed

@@ -10439,6 +10439,21 @@
         if (alle.length) selectNodes(alle);
         return;
       }
+      /* Ebenen per Kürzel (3.12.31, Urs 27.11.: «Gibt es für die Ebenen hoch und runter auch ein ShortCut?»): Vorgaben wie
+         Google Slides Ctrl+↑/↓ eine Ebene, Ctrl+Umschalt+↑/↓ ganz nach vorne/hinten; vor dem Pfeil-Verschieben geprüft. */
+      if (SF.selectedNodes.length && stagePlayContext()) {
+        const lc = scopeCmd(e, 'stage');
+        const ebene = { stage_layer_up: 'up', stage_layer_down: 'down', stage_layer_front: 'front', stage_layer_back: 'back' }[lc];
+        if (ebene) {
+          e.preventDefault();
+          const liste = SF.selectedNodes.filter((n) => n.getParent() === SF.layer).slice().sort((a, b) => a.zIndex() - b.zIndex());
+          /* Nach oben/vorne von oben her, nach unten/hinten von unten her, damit sich die Auswahl nicht gegenseitig überholt. */
+          (ebene === 'up' || ebene === 'back' ? liste.reverse() : liste).forEach((n) => nudgeContentLayer(n, ebene));
+          if (SF.transformer) SF.transformer.moveToTop();
+          refreshCanvas(); scheduleSave(); renderLayersPanel();
+          return;
+        }
+      }
       /* Folienfläche (scope 'stage'): markierte Objekte löschen (Vorgabe Entf, Rücktaste). */
       if (SF.selectedNodes.length && scopeCmd(e, 'stage') === 'delete_objects') {
         e.preventDefault();
