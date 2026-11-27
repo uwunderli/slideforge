@@ -1609,4 +1609,7 @@ return [
     'shortcut.play_prev' => 'Reproducir: enavos',
     'shortcut.play_close' => 'Serrar la reproducziun',
     'shortcut.play_hint' => 'En la fanestra «Reproducir» (effects da la folia).',
+    'shortcut.stage_play_next' => 'Surfatscha: reproducir, enavant',
+    'shortcut.stage_play_prev' => 'Surfatscha: reproducir, enavos',
+    'shortcut.stage_play_hint' => 'Senza object tschernì: reproducir effects e transiziuns sco en la preschentaziun. In clic u in\'autra tasta terminescha.',
 ];

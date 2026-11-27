@@ -1702,4 +1702,7 @@ return [
     'shortcut.play_prev' => 'Play: back',
     'shortcut.play_close' => 'Close play',
     'shortcut.play_hint' => 'In the «Play» window (slide effects).',
+    'shortcut.stage_play_next' => 'Slide area: play, next',
+    'shortcut.stage_play_prev' => 'Slide area: play, back',
+    'shortcut.stage_play_hint' => 'With no object selected: play effects and transitions as in the presentation. Click or any other key ends it.',
 ];

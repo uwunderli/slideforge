@@ -1620,4 +1620,7 @@ return [
     'shortcut.play_prev' => 'Lecture : précédent',
     'shortcut.play_close' => 'Fermer la lecture',
     'shortcut.play_hint' => 'Dans la fenêtre « Lire » (effets de la diapositive).',
+    'shortcut.stage_play_next' => 'Surface : lire, suivant',
+    'shortcut.stage_play_prev' => 'Surface : lire, précédent',
+    'shortcut.stage_play_hint' => 'Sans objet sélectionné : lire effets et transitions comme en présentation. Un clic ou une autre touche arrête.',
 ];

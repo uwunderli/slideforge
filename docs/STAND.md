@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.3 gebaut** (`entwickler/slide-pfeil-abspielen` ab 3.12.2 7ca9131, Worktree `_claude/entwickler/wt-slide-pfeil-abspielen`): ←/→ auf der Folienfläche spielt Effekte + Übergänge über Foliengrenzen (preview.php play = ganze Präsentation ab Start), Abspielen ohne Fenster (Klick/Taste beendet, Esc), Weitere Befehle stage_play_next/prev; Fix ↑↓ im Filmstreifen (SF.keyArea). Beim Gitwart.
+
 - **27.11. 3.12.2 gebaut** (`entwickler/slide-fx-zeilen` ab 3.12.0 8ba6ecf, nach 3.12.1, Worktree `_claude/entwickler/wt-slide-ausblenden`): Effekte-Paare je in einer Zeile mit Hub-Symbolen, Schritt-Abzeichen als Pillen «5 → 6».
 - **27.11. SF 3.12.1 gebaut (Zweig `entwickler/slide-weitere-befehle`, Worktree `_claude/entwickler/wt-slide-hub-ribbon`, auf 3.12.0 8ba6ecf), braucht Hub 2.36.3:** feste Editor-Tasten als «Weitere Befehle» im Katalog (umstellbar), scope grid/play/stage; fest nur Objekt-Pfeile. Bei Gitwart nach 3.12.0. Details docs/RIBBON_MENU.md.
 - **27.11. SF 3.12.0 gebaut (Zweig `entwickler/slide-hub-ribbon`, Worktree `_claude/entwickler/wt-slide-hub-ribbon`, auf 3.11.4 3f8b5b9), braucht Hub 2.36.1:** Menüband Editor+Präsentation auf HubRibbon/HubRibbonCustomize/HubShortcuts; eigener Anpassen-Dialog raus, Renderer nur noch Inhalt; Kürzel über SFShortcuts; Layout-Felder `known`/`shortcuts`, alte Nachrüstungen nur noch einmal. Einzelheiten `docs/RIBBON_MENU.md`, `docs/PRUEFUNGEN.md`. Offen: nicht im Browser gesehen.

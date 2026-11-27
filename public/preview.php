@@ -16,12 +16,11 @@ $startSlide = 0;
 if (isset($_GET['slide'])) {
     $startSlide = max(0, min(max(0, $slideCount - 1), (int)$_GET['slide']));
 }
-/* Abspielen im Editor (3.11.0): nur diese eine Folie, Effekte Schritt für Schritt ab Schritt 0.
-   Der Editor steuert von aussen (gleiche Herkunft) über window.sfPlay; kein Folienwechsel möglich. */
+/* Abspielen im Editor (3.11.0, ab 3.12.3 ganze Präsentation ab Start-Index): Effekte Schritt für Schritt, nach dem letzten
+   Schritt mit dem Folienübergang zur nächsten Folie, am Folienanfang zurück auf die vorige (Endzustand) — wie die Präsentation.
+   Der Editor steuert von aussen (gleiche Herkunft) über window.sfPlay. go=prev: Start im Endzustand, dann einen Schritt zurück. */
 $playMode = ($_GET['play'] ?? '') === '1' && isset($_GET['slide']);
-if ($playMode) {
-    $slidesData['slides'] = array_slice($slidesData['slides'] ?? [], $startSlide, 1);
-}
+$playGoPrev = $playMode && ($_GET['go'] ?? '') === 'prev';
 $sections = SlideRenderer::renderSections($slidesData);
 ?>
 <!DOCTYPE html>
@@ -33,7 +32,7 @@ $sections = SlideRenderer::renderSections($slidesData);
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
-<style>html,body{margin:0;height:100%;background:#000;}<?php if ($playMode): ?>body{cursor:pointer;}<?php endif; ?></style>
+<style>html,body{margin:0;height:100%;background:#000;}</style>
 <?= Exporter::mediaStatusMarkup() ?>
 </head>
 <body>
@@ -69,12 +68,12 @@ $sections = SlideRenderer::renderSections($slidesData);
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
 <?php if ($playMode): ?>
-  /* Abspielen (3.11.0): Schritt 0 = Folie vor dem ersten Klick. Weiter/zurück nur innerhalb der Folie;
-     am Ende bleibt sie stehen. Jeder Schrittwechsel geht als Nachricht an den Editor (Anzeige «Schritt x von y»,
+  /* Abspielen (3.11.0/3.12.3): Schritt 0 = Folie vor dem ersten Klick. Weiter/zurück über Schritte und Folien;
+     am Ende der letzten Folie bleibt sie stehen. Jeder Schrittwechsel geht als Nachricht an den Editor (Anzeige «Schritt x von y»,
      Mitlaufen). Tasten und Klicks hier gehen ebenfalls an den Editor, damit nur eine Stelle steuert. */
   (function () {
-    function total() {
-      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+    function total(target) {
+      var slide = target || (Reveal.getCurrentSlide && Reveal.getCurrentSlide());
       if (!slide) return 0;
       var seen = {};
       slide.querySelectorAll('.fragment[data-fragment-index]').forEach(function (el) { seen[el.getAttribute('data-fragment-index')] = 1; });
@@ -84,21 +83,33 @@ $sections = SlideRenderer::renderSections($slidesData);
       var f = Reveal.getIndices().f;
       return typeof f === 'number' ? f + 1 : 0;
     }
-    function melden() {
-      try { window.parent.postMessage({ type: 'sf-play-step', step: step(), total: total() }, window.location.origin); } catch (e) {}
-    }
+    /* Reveal.next/prev: erst die Schritte der Folie, dann Folienwechsel mit dem eingestellten Übergang;
+       rückwärts steht die vorige Folie im Endzustand (reveal.js zeigt Fragmente vergangener Folien). */
     window.sfPlay = {
-      next: function () { if (Reveal.availableFragments().next) Reveal.nextFragment(); },
-      prev: function () { if (Reveal.availableFragments().prev) Reveal.prevFragment(); },
-      state: function () { return { step: step(), total: total() }; }
+      next: function () { Reveal.next(); },
+      prev: function () { Reveal.prev(); },
+      state: function () { return { slide: Reveal.getIndices().h, step: step(), total: total() }; }
     };
+    function melden() {
+      try { window.parent.postMessage({ type: 'sf-play-step', slide: Reveal.getIndices().h, step: step(), total: total() }, window.location.origin); } catch (e) {}
+    }
     Reveal.on('ready', function () {
       window.SlideForgeRevealAutoSlide?.install(Reveal);
-      Reveal.slide(0, 0, -1);
+      /* Sprung zur Startfolie ohne sichtbaren Übergang (reveal.css: .no-transition). */
+      var slidesEl = document.querySelector('.reveal .slides');
+      if (slidesEl) slidesEl.classList.add('no-transition');
+<?php if ($playGoPrev): ?>
+      Reveal.slide(<?= (int)$startSlide ?>, 0, total(Reveal.getSlide(<?= (int)$startSlide ?>)) - 1);
+      Reveal.prev();
+<?php else: ?>
+      Reveal.slide(<?= (int)$startSlide ?>, 0, -1);
+<?php endif; ?>
+      if (slidesEl) setTimeout(function () { slidesEl.classList.remove('no-transition'); }, 60);
       melden();
     });
     Reveal.on('fragmentshown', melden);
     Reveal.on('fragmenthidden', melden);
+    Reveal.on('slidechanged', melden);
     /* 3.12.1: jede Taste an den Editor; welche Taste was tut, bestimmt dort der Katalog (Weitere Befehle, scope «play»). */
     document.addEventListener('keydown', function (e) {
       if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].indexOf(e.key) !== -1) return;
@@ -110,10 +121,7 @@ $sections = SlideRenderer::renderSections($slidesData);
         window.parent.postMessage({ type: 'sf-play-key', key: e.key, code: e.code, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, shiftKey: e.shiftKey }, window.location.origin);
       } catch (err) {}
     });
-    document.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('video, audio, a')) return;
-      try { window.parent.postMessage({ type: 'sf-play-key', click: true }, window.location.origin); } catch (err) {}
-    });
+    /* 3.12.3: Das Abspiel-Bild lässt Klicks zur Bühne durch (pointer-events: none im Editor); ein Klick beendet dort das Abspielen. */
   })();
 <?php else: ?>
   /* In der Vorschau alle Einblendungen sofort zeigen.

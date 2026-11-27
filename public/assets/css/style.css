@@ -12109,46 +12109,51 @@ select.sf-fsel-native { display: none !important; }
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
-.sf-play-overlay {
+/* Abspielen (3.12.3): Bild genau über der Folie, klick-durchlässig; kleiner Hinweis oben, nur ✕ ist anklickbar. */
+.sf-play-frame {
   position: absolute;
   inset: 0;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg, #000);
+  z-index: 30;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+  pointer-events: none;
+  opacity: 0;
 }
-.sf-play-bar {
-  display: flex;
+.sf-play-frame.is-ready {
+  opacity: 1;
+}
+.sf-play-hint {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  min-height: 40px;
-  padding: 4px 8px 4px 14px;
+  gap: 4px;
+  max-width: calc(100% - 32px);
+  padding: 2px 2px 2px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   background: var(--surface-raised);
-  border-bottom: 1px solid var(--border);
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+.sf-play-hint .sf-play-close {
+  pointer-events: auto;
 }
 .sf-play-step {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sf-play-step.is-error {
   color: var(--danger, currentColor);
-}
-.sf-play-help {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-}
-.sf-play-frame {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  border: 0;
-  background: #000;
 }
 
 /* Mehrere Folien ziehen (3.11.1): gezogene Kachel = Einfügemarke mit Anzahl, übrige markierte halbtransparent. */

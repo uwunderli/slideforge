@@ -3,6 +3,7 @@
 
   const boot = window.SF_BOOTSTRAP;
   const SF = {
+    keyArea: 'stage', // zuletzt angeklickter Bereich für Pfeiltasten (3.12.3): stage | film | grid | other
     id: boot.id,
     meta: boot.meta,
     canEdit: boot.canEdit,
@@ -2438,9 +2439,9 @@
     await commitSlideOrder(newOrderIds);
   }
 
-  async function switchToSlide(index) {
+  async function switchToSlide(index, opts) {
     if (index === SF.currentIndex) return;
-    if (play.el) closePlayOverlay();
+    if (play.el && !(opts && opts.keepPlay)) closePlayOverlay(false);
     SF.skipPreviewReload = true;
     await saveCurrentSlide(true);
     SF.skipPreviewReload = false;
@@ -6993,10 +6994,14 @@
   }
 
   /* ---- Abspielen (3.11.0, Urs 27.11.: «… dass ich die Animation gleich im Editor und im Vorschaufenster testen kann») ----
-     «▶ Abspielen» zeigt die aktuelle Folie in einer Überlagerung über der Bühne: iframe auf preview.php?play=1 (derselbe
-     Renderer wie die Präsentation, nur diese Folie, ab Schritt 0). Steuerung hier, die Seite im iframe meldet ihren Schritt
-     per postMessage. Mitlaufen folgt Schritt für Schritt (frag im Live-Kanal «editor»). */
-  const play = { el: null, frame: null, step: 0, total: 0, prevFocus: null };
+     3.12.3 (Urs 27.11.: «←→ im Editor die Animationen weiter klickt … und wenn die Effekte auf der Folie fertig sind springt er
+     auf die nächste Folie» / «Braucht es Esc?»): Das Abspiel-Bild (iframe preview.php?play=1, derselbe Renderer wie die
+     Präsentation, ganze Präsentation ab der aktuellen Folie) liegt genau über der Folie (#stageWrap) und lässt Klicks durch.
+     Jede Bearbeitungsabsicht beendet das Abspielen und wirkt sofort: Klick irgendwo (auf der Bühne wird wie sonst ausgewählt),
+     jede Taste ausser den Abspiel-Tasten (Katalog scope «play»); Esc beendet zusätzlich. Der Editor folgt der Folie im
+     Hintergrund (switchToSlide), Mitlaufen folgt Folie und Schritt (frag im Live-Kanal «editor»). Kleiner Hinweis oben:
+     «Abspielen · Folie x · Schritt y/z». */
+  const play = { el: null, frame: null, slide: 0, step: 0, total: 0, ready: false, prevFocus: null, sync: null };
 
   function playBarHtml() {
     const label = I.animPlay || 'Abspielen';
@@ -7017,60 +7022,74 @@
     });
   }
 
-  async function openPlayOverlay() {
-    if (play.el || SF.masterSlideEditing) return;
+  /* go: 'next' (Vorgabe, auch ▶ und →) = aktuelle Folie ab Schritt 0; 'prev' (←) = Endzustand, dann einen Schritt zurück. */
+  async function openPlayOverlay(go) {
+    if (play.el || SF.masterSlideEditing || SF.editorViewMode === 'grid') return;
     const host = document.getElementById('canvasArea');
-    if (!host || !SF.slides[SF.currentIndex]) return;
+    const wrap = document.getElementById('stageWrap');
+    if (!host || !wrap || !SF.slides[SF.currentIndex]) return;
     play.prevFocus = document.activeElement;
+    play.slide = SF.currentIndex;
     play.step = 0;
     play.total = 0;
+    play.ready = false;
+    play.sync = null;
     const el = document.createElement('div');
-    el.className = 'sf-play-overlay';
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', I.animPlay || 'Abspielen');
-    const closeTip = I.animPlayClose || 'Abspielen schliessen';
-    el.innerHTML = '<div class="sf-play-bar">'
-      + '<span class="sf-play-step" role="status" aria-live="polite">' + escapeHtml(I.animPlayLoading || 'Folie wird geladen…') + '</span>'
-      + '<span class="sf-play-help">' + escapeHtml(I.animPlayHelp || '') + '</span>'
-      + '<button type="button" class="hub-icon-btn sf-play-close" title="' + escapeHtml(closeTip) + '" aria-label="' + escapeHtml(closeTip) + '">'
-      + '<span aria-hidden="true">✕</span></button>'
-      + '</div>'
-      + '<iframe class="sf-play-frame" title="' + escapeHtml(I.animPlay || 'Abspielen') + '"></iframe>';
+    el.className = 'sf-play-hint';
+    const closeTip = I.animPlayClose || 'Abspielen beenden (Esc)';
+    const helpTip = I.animPlayHelp || '';
+    el.innerHTML = '<span class="sf-play-step" role="status" aria-live="polite">' + escapeHtml(I.animPlayLoading || 'Folie wird geladen…') + '</span>'
+      + '<button type="button" class="hub-icon-btn sf-play-close" title="' + escapeHtml(closeTip + (helpTip ? ' · ' + helpTip : '')) + '" aria-label="' + escapeHtml(closeTip) + '">'
+      + '<span aria-hidden="true">✕</span></button>';
     host.appendChild(el);
+    const frame = document.createElement('iframe');
+    frame.className = 'sf-play-frame';
+    frame.title = I.animPlay || 'Abspielen';
+    frame.setAttribute('tabindex', '-1');
+    frame.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(frame);
     play.el = el;
-    play.frame = el.querySelector('.sf-play-frame');
-    el.querySelector('.sf-play-close').addEventListener('click', closePlayOverlay);
-    el.querySelector('.sf-play-close').focus();
+    play.frame = frame;
+    el.querySelector('.sf-play-close').addEventListener('click', () => closePlayOverlay(true));
+    /* Fokus aus Knöpfen/Panels nehmen: sonst löste Leertaste/Eingabe den Knopf nochmals aus. */
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && typeof ae.blur === 'function' && !(ae.closest && ae.closest('#canvasArea'))) ae.blur();
     document.addEventListener('keydown', playKeydown, true);
+    document.addEventListener('pointerdown', playPointerdown, true);
     try {
       if (SF.canEdit && window.SFEditor) await window.SFEditor.flush();
     } catch (e) { /* Speichern meldet selbst */ }
     if (!play.el || play.el !== el) return;
-    play.frame.addEventListener('load', () => {
+    frame.addEventListener('load', () => {
       let ok = false;
-      try { ok = !!(play.frame && play.frame.contentWindow && play.frame.contentWindow.sfPlay); } catch (e) { ok = false; }
+      try { ok = !!(frame.contentWindow && frame.contentWindow.sfPlay); } catch (e) { ok = false; }
       if (!ok && play.el === el) {
         const st = el.querySelector('.sf-play-step');
         if (st) { st.textContent = I.animPlayError || 'Folie konnte nicht geladen werden.'; st.classList.add('is-error'); }
       }
     });
-    play.frame.src = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex + '&play=1&_=' + Date.now();
+    frame.src = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex + '&play=1'
+      + (go === 'prev' ? '&go=prev' : '') + '&_=' + Date.now();
   }
 
-  function closePlayOverlay() {
+  /* restoreFocus nur bei Esc/✕; bei Klick oder anderer Taste geht die Eingabe dorthin, wo sie hingehört. */
+  function closePlayOverlay(restoreFocus) {
     if (!play.el) return;
     document.removeEventListener('keydown', playKeydown, true);
+    document.removeEventListener('pointerdown', playPointerdown, true);
     play.el.remove();
+    if (play.frame) play.frame.remove();
     play.el = null;
     play.frame = null;
+    play.ready = false;
+    play.sync = null;
     if (SF.playFrag !== null) {
       SF.playFrag = null;
       mitlaufMelden(false);
     }
     const back = play.prevFocus;
     play.prevFocus = null;
-    if (back && document.contains(back) && back.focus) back.focus({ preventScroll: true });
+    if (restoreFocus === true && back && back !== document.body && document.contains(back) && back.focus) back.focus({ preventScroll: true });
   }
 
   function playControl(dir) {
@@ -7080,52 +7099,71 @@
     } catch (e) { /* Seite im iframe noch nicht bereit */ }
   }
 
-  /* Tasten im Abspielen-Fenster (3.12.1): Befehle aus dem Katalog, scope 'play' (Vorgaben Leertaste/Eingabe/→/↓/Bild↓ weiter,
-     ←/↑/Bild↑ zurück, Esc schliessen), umstellbar unter «Weitere Befehle». Fest: Tab hält den Fokus auf ✕, Eingabe auf ✕ schliesst. */
+  /* Klick irgendwo ausser auf ✕: Abspielen endet, der Klick wirkt weiter (Bühne wählt aus, Filmstreifen wechselt …). */
+  function playPointerdown(e) {
+    if (!play.el) return;
+    if (e.target && e.target.closest && e.target.closest('.sf-play-close')) return;
+    closePlayOverlay(false);
+  }
+
+  /* Tasten beim Abspielen (3.12.1/3.12.3): Befehle aus dem Katalog, scope «play» (Vorgaben Leertaste/Eingabe/→/↓/Bild↓ weiter,
+     ←/↑/Bild↑ zurück, Esc beenden), umstellbar unter «Weitere Befehle». Jede andere Taste beendet das Abspielen und wirkt wie sonst. */
+  const PLAY_MOD_KEYS = ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsLock'];
+  function playKeyCommand(e) {
+    if (PLAY_MOD_KEYS.includes(e.key)) return 'ignore';
+    return window.SFScopeCmd ? window.SFScopeCmd(e, 'play') : '';
+  }
+  function runPlayCommand(cmd) {
+    if (cmd === 'play_close') closePlayOverlay(true);
+    else if (cmd === 'play_next') playControl('next');
+    else if (cmd === 'play_prev') playControl('prev');
+    else if (cmd !== 'ignore') closePlayOverlay(false);
+  }
   function playKeydown(e) {
     if (!play.el) return;
     const closeBtn = play.el.querySelector('.sf-play-close');
     const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
-    if (plain && e.key === 'Tab') { e.preventDefault(); closeBtn?.focus(); return; }
-    if (plain && e.key === 'Enter' && document.activeElement === closeBtn) return; // Eingabe auf ✕ schliesst
-    const cmd = window.SFScopeCmd ? window.SFScopeCmd(e, 'play') : '';
-    if (cmd) {
+    if (plain && e.key === 'Enter' && document.activeElement === closeBtn) return; // Eingabe auf ✕ beendet
+    const cmd = playKeyCommand(e);
+    if (cmd && cmd !== 'ignore') {
       e.preventDefault();
       e.stopPropagation();
-      if (cmd === 'play_close') closePlayOverlay();
-      else if (cmd === 'play_next') playControl('next');
-      else if (cmd === 'play_prev') playControl('prev');
-      return;
     }
-    if (!plain) return;
-    /* Andere Tasten (Entf, Buchstaben …) nicht an die Bühne darunter weitergeben. */
-    e.stopPropagation();
+    runPlayCommand(cmd);
   }
 
   function renderPlayStep() {
     const st = play.el && play.el.querySelector('.sf-play-step');
     if (!st) return;
     st.classList.remove('is-error');
-    st.textContent = (I.animPlayStep || 'Schritt {x} von {y}').replace('{x}', String(play.step)).replace('{y}', String(play.total));
+    st.textContent = (I.animPlayStatus || 'Abspielen · Folie {s} · Schritt {x}/{y}')
+      .replace('{s}', String(play.slide + 1)).replace('{x}', String(play.step)).replace('{y}', String(play.total));
+  }
+
+  /* Editor folgt der abgespielten Folie im Hintergrund; nacheinander, damit schnelles Weiterklicken nicht überholt. */
+  function playFollowSlide() {
+    play.sync = (play.sync || Promise.resolve()).then(async () => {
+      if (!play.el || play.slide === SF.currentIndex || !SF.slides[play.slide]) return;
+      await switchToSlide(play.slide, { keepPlay: true });
+    }).catch(() => {}).then(() => { if (play.el) mitlaufMelden(false); });
   }
 
   window.addEventListener('message', (e) => {
     if (!play.el || !play.frame || e.origin !== window.location.origin || e.source !== play.frame.contentWindow) return;
     const d = e.data || {};
     if (d.type === 'sf-play-step') {
+      const last = Math.max(0, SF.slides.length - 1);
+      play.slide = Math.max(0, Math.min(last, parseInt(d.slide, 10) || 0));
       play.step = Math.max(0, parseInt(d.step, 10) || 0);
       play.total = Math.max(0, parseInt(d.total, 10) || 0);
+      if (!play.ready) { play.ready = true; play.frame.classList.add('is-ready'); }
       renderPlayStep();
       SF.playFrag = play.step - 1;
-      mitlaufMelden(false);
+      playFollowSlide();
     } else if (d.type === 'sf-play-key') {
-      /* Taste aus dem Abspiel-iframe (Fokus dort): gleiche Katalog-Befehle wie playKeydown; Klick = weiter. */
-      if (d.click) { playControl('next'); return; }
+      /* Taste aus dem Abspiel-iframe (falls es doch den Fokus hat): gleiche Regeln wie playKeydown. */
       const ev = { key: String(d.key || ''), code: String(d.code || ''), ctrlKey: !!d.ctrlKey, metaKey: !!d.metaKey, altKey: !!d.altKey, shiftKey: !!d.shiftKey };
-      const cmd = window.SFScopeCmd ? window.SFScopeCmd(ev, 'play') : '';
-      if (cmd === 'play_close') closePlayOverlay();
-      else if (cmd === 'play_next') playControl('next');
-      else if (cmd === 'play_prev') playControl('prev');
+      runPlayCommand(playKeyCommand(ev));
     }
   });
 
@@ -9970,6 +10008,22 @@
     };
     window.SFScopeCmd = scopeCmd;
 
+    /* Zuletzt angeklickter Bereich (3.12.3, Urs 27.11.: «↓↑ … scrollt der Filmstreifen, springt nicht von Folie zu Folie»):
+       Nach Klick/Ziehen im Filmstreifen geht der Fokus oft verloren (Einträge werden neu gezeichnet), activeElement = body.
+       Die Pfeiltasten wirken deshalb dort, wo zuletzt geklickt oder fokussiert wurde: Filmstreifen (Folienwechsel),
+       Folienfläche (Abspielen bzw. Objekte verschieben), Rasteransicht. */
+    const keyAreaOf = (t) => {
+      if (!t || !t.closest) return 'other';
+      if (t.closest('#slideFilmstrip')) return 'film';
+      if (t.closest('#slideGridPanel')) return 'grid';
+      if (t.closest('#canvasArea')) return 'stage';
+      return 'other';
+    };
+    document.addEventListener('pointerdown', (e) => { SF.keyArea = keyAreaOf(e.target); }, true);
+    document.addEventListener('focusin', (e) => {
+      if (e.target && e.target !== document.body && e.target !== document.documentElement) SF.keyArea = keyAreaOf(e.target);
+    }, true);
+
     document.addEventListener('keydown', (e) => {
       if (e.defaultPrevented) return;   // vom Menüband (HubRibbon) schon erledigt
       const tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -9994,6 +10048,16 @@
         refreshCanvas();
         scheduleSave();
         return;
+      }
+      /* Folienfläche ohne Markierung (3.12.3, scope 'stage'): Vorgaben →/Leertaste/Bild↓ spielen die Folie ab (Schritt 0, dann weiter
+         über Effekte und Folienübergänge), ←/Bild↑ ab Endzustand einen Schritt zurück. Nicht mit Fokus im Filmstreifen, Menüband oder Panels. */
+      if (!SF.selectedNodes.length && !play.el && stagePlayContext()) {
+        const sc = scopeCmd(e, 'stage');
+        if (sc === 'stage_play_next' || sc === 'stage_play_prev') {
+          e.preventDefault();
+          openPlayOverlay(sc === 'stage_play_prev' ? 'prev' : 'next');
+          return;
+        }
       }
       /* Fest (Bühnen-Standard, DESIGN.md Hub § Tastenkürzel 8): Pfeiltasten verschieben markierte Objekte, mit Umschalt um 10 px. */
       if (SF.selectedNodes.length && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -10630,10 +10694,23 @@
     cards[to].scrollIntoView({ block: 'nearest' });
   }
 
+  /* Fokus auf der Folienfläche (oder nirgends), Folienansicht, kein Masterfolien-Bearbeiten, kein offener Dialog. */
+  function stagePlayContext() {
+    if (!SF.canEdit || SF.editorViewMode === 'grid' || SF.masterSlideEditing) return false;
+    const ae = document.activeElement;
+    if (ae && ae.isContentEditable) return false;
+    const noFocus = !ae || ae === document.body || ae === document.documentElement;
+    if (noFocus ? SF.keyArea !== 'stage' : !(ae.closest && ae.closest('#canvasArea'))) return false;
+    if (document.querySelector('[aria-modal="true"]:not([hidden])')) return false;
+    return !!SF.slides[SF.currentIndex];
+  }
+
   function slideShortcutContext() {
     if (SF.editorViewMode === 'grid') return true;
     const ae = document.activeElement;
-    return !!(ae && ae.closest && ae.closest('#slideFilmstrip'));
+    if (ae && ae.closest && ae.closest('#slideFilmstrip')) return true;
+    /* Fokus verloren (body), zuletzt im Filmstreifen geklickt: Folien-Kürzel wirken dort (3.12.3). */
+    return SF.keyArea === 'film' && (!ae || ae === document.body || ae === document.documentElement);
   }
 
   /** Folien, auf die sich ein Folien-Tastenkürzel bezieht. */

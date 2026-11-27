@@ -405,6 +405,7 @@ $bootstrap = [
         'animPlayHint' => t('props.anim_play_hint'),
         'animPlayOne' => t('props.anim_play_one'),
         'animPlayStep' => t('props.anim_play_step'),
+        'animPlayStatus' => t('props.anim_play_status'),
         'animPlayHelp' => t('props.anim_play_help'),
         'animPlayClose' => t('props.anim_play_close'),
         'animPlayLoading' => t('props.anim_play_loading'),

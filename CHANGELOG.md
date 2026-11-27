@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.3] - 2026-11-27
+
+### Added
+- Editor: →/Leertaste/Bild↓ auf der Folienfläche (ohne markiertes Objekt) spielen die aktuelle Folie ab und gehen Schritt für Schritt weiter; nach dem letzten Effekt mit dem eingestellten Folienübergang zur nächsten Folie. ←/Bild↑ geht zurück, am Folienanfang auf die vorige Folie im Endzustand. Neue «Weitere Befehle» «Folienfläche: abspielen, weiter/zurück» (änderbar).
+
+### Changed
+- Abspielen ist kein Fenster mehr: das Bild liegt genau über der Folie, oben ein kleiner Hinweis «Abspielen · Folie x · Schritt y/z». Jeder Klick (auf der Bühne wird wie sonst ausgewählt) und jede andere Taste beenden es sofort und wirken gleich; Esc beendet ebenfalls. Der Editor folgt der abgespielten Folie (Filmstreifen, Mitlaufen mit Schritt).
+
+### Fixed
+- ↑/↓/←/→ nach Klick oder Ziehen im Filmstreifen wechseln die Folie wieder, statt den Filmstreifen zu scrollen: die Pfeiltasten wirken im zuletzt angeklickten Bereich (Filmstreifen, Folienfläche, Raster), auch wenn der Fokus verloren ging.
+
 ## [3.12.2] - 2026-11-27
 
 ### Changed
