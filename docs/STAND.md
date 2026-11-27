@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.39 gebaut** (`entwickler/slide-ebenen-fix` ab 3.12.38): Ebenen-Kürzel auch mit Fokus in der Seitenleiste. Bei Gitwart.
 - **27.11. 3.12.38 gebaut** (`entwickler/slide-keytip-seite` ab 3.12.35 bf5d1ec, Worktree `_claude/entwickler/wt-slide-keytip`, Version nicht angehoben): Tastentipps Seitenleiste/Filmstreifen (Ctrl wechselt, Foliennummern), neue Datei sf-keytips-side.js. Braucht Hub 2.37.4 (`entwickler/hub-keytip-bereiche`). Nicht im Browser gesehen.
 - **27.11. 3.12.37 gebaut** (gleicher Zweig nach 3.12.36): Texteditor T4 — Menüband/Format-Spalte wirken beim Bearbeiten auf die Markierung (SfRichEdit.toggle/setValue), Zustand an der Schreibmarke, Kürzel text_bold/italic/underline im Katalog. Nicht im Browser geprüft. Offen: T5 Tabellenzellen/Exporte.
 - **27.11. 3.12.36 gebaut** (`entwickler/slide-texteditor-t3t4` ab 3.12.35 bf5d1ec, Worktree `_claude/entwickler/wt-slide-texteditor2`): Texteditor T3 — Bearbeiten an Ort als contenteditable mit Formatierung (editTextInline, neu sf-richedit.js, sf-markup.js readLines/linesToHtml). Nicht im Browser geprüft. T4 (Menüband auf Markierung) folgt als 3.12.37.

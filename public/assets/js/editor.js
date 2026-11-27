@@ -10899,7 +10899,9 @@
       }
       /* Ebenen per Kürzel (3.12.31, Urs 27.11.: «Gibt es für die Ebenen hoch und runter auch ein ShortCut?»): Vorgaben wie
          Google Slides Ctrl+↑/↓ eine Ebene, Ctrl+Umschalt+↑/↓ ganz nach vorne/hinten; vor dem Pfeil-Verschieben geprüft. */
-      if (SF.selectedNodes.length && stagePlayContext()) {
+      /* 3.12.39 (Urs 27.11.: «verschiebt einfach, da geht nix nach hinten und nach vorne»): nicht an stagePlayContext binden — stand
+         der Fokus noch in der Seitenleiste, griff das Pfeil-Verschieben darunter. Gleiche Bedingung wie das Verschieben. */
+      if (SF.selectedNodes.length && SF.canEdit && SF.editorViewMode !== 'grid' && !slideShortcutContext()) {
         const lc = scopeCmd(e, 'stage');
         const ebene = { stage_layer_up: 'up', stage_layer_down: 'down', stage_layer_front: 'front', stage_layer_back: 'back' }[lc];
         if (ebene) {
