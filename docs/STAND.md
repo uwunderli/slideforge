@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.8.3 gebaut** (`entwickler/slide-einstellungen`, nach 3.8.2): Einstellungen vollständig (Reiter Folienvorlagen/Textvorlagen/Vorlageelemente/Schriftarten/Farben + Admin Allgemein/Rechtschreibung/Medien; Modul-Einstellungen + Startseite «Einstellungen»), Autosave, SMTP raus, `migrate-to-ff.php --settings` (Biel: ha-bkb nach Lieferung). Offen: Farben-Reiter → Hub-Palette (Entscheid), Schriftarten → Hub (Entscheid Urs).
 - **27.11. 3.8.2 gebaut** (`entwickler/slide-schrift`, nach 3.8.1): Editor-Bühne zeigte Serif, weil die Übernahme die hochgeladenen Schriften (Biel: Myriad Pro) nicht mitbrachte; `Migration::fonts` holt sie nach — in Biel nach Lieferung und Go: `migrate-to-ff.php --source=/data/slideforge/data --ablage="BK - Office" --run` (holt nur Fehlendes). Bühne fällt bei fehlender Schrift auf sans-serif.
 - **27.11. 3.8.1 gebaut** (`entwickler/slide-erstes-bild` auf 3.8.0 d190725, Worktree `_claude/entwickler/wt-slide-erstes-bild`, beim Gitwart nach 3.8.0): kein Sand-Flackern beim Laden — Hub-Look je Person in users.json `hub_look`, serverseitig im ersten Bild (sf_look_pair/sf_theme_after). Offen: einmal je Akzentwechsel im Hub kann es noch flackern; Hub unverändert.
 

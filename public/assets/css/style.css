@@ -234,12 +234,6 @@ a:hover { text-decoration: underline; }
   opacity: 0.55;
   pointer-events: none;
 }
-.demo-smtp-notice {
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  margin: 0 0 10px;
-}
-
 /* ---------- Topbar ---------- */
 .topbar {
   display: flex;

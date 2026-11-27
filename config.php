@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '725');
+define('ASSET_VERSION', '726');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -125,41 +125,11 @@ if (!file_exists(SITE_CONFIG_FILE)) {
     file_put_contents(SITE_CONFIG_FILE, json_encode([
         'site_title' => APP_NAME,
         'logo' => '',
-        'smtp' => [
-            'host' => '', 'port' => 587, 'encryption' => 'tls',
-            'username' => '', 'password' => '', 'from_email' => '', 'from_name' => APP_NAME,
-        ],
-        'brand_colors' => [
-            ['name' => 'Weiss', 'hex' => '#ffffff'],
-            ['name' => 'Grau', 'hex' => '#808080'],
-            ['name' => 'Schwarz', 'hex' => '#000000'],
-            ['name' => 'Brilliant Blau', 'hex' => '#3a6c8d'],
-            ['name' => 'Blümchen Grün', 'hex' => '#87b42b'],
-            ['name' => 'Gold', 'hex' => '#d1b633'],
-            ['name' => 'Braun', 'hex' => '#85612d'],
-            ['name' => 'Hellblau', 'hex' => '#94c2dc'],
-            ['name' => 'Graublau', 'hex' => '#6a8aa1'],
-            ['name' => 'Terracotta', 'hex' => '#d67d5d'],
-            ['name' => 'Beere', 'hex' => '#862b6e'],
-            ['name' => 'Taupe', 'hex' => '#917158'],
-            ['name' => 'Himmelblau', 'hex' => '#61a8e0'],
-            ['name' => 'Limette', 'hex' => '#97c764'],
-            ['name' => 'Dunkelgrün', 'hex' => '#252e1b'],
-            ['name' => 'Rostrot', 'hex' => '#64180b'],
-            ['name' => 'Hellgrün', 'hex' => '#b7de45'],
-            ['name' => 'Indigo', 'hex' => '#4449a5'],
-        ],
+        'brand_colors' => Config::defaultBrandColors(),
     ], JSON_PRETTY_PRINT));
 }
 if (!file_exists(TEXT_TEMPLATES_FILE)) {
-    file_put_contents(TEXT_TEMPLATES_FILE, json_encode([
-        ['id' => 'title', 'name' => 'Titel', 'fontFamily' => 'Open Sans', 'fontSize' => 120, 'fontWeight' => 'bold', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'center', 'w' => 1270, 'h' => 90],
-        ['id' => 'subtitle', 'name' => 'Untertitel', 'fontFamily' => 'PT Sans', 'fontSize' => 68, 'fontWeight' => 'normal', 'italic' => true, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#94c2dc', 'align' => 'center', 'w' => 1270, 'h' => 80],
-        ['id' => '0b3aec509d2e', 'name' => 'Überschrift 1', 'fontFamily' => 'Open Sans', 'fontSize' => 86, 'fontWeight' => 'bold', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 100],
-        ['id' => '6ccca4e48029', 'name' => 'Überschrift 2', 'fontFamily' => 'Open Sans', 'fontSize' => 74, 'fontWeight' => 'normal', 'italic' => true, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 60],
-        ['id' => '982874cf3eb0', 'name' => 'Überschrift 3', 'fontFamily' => 'Open Sans', 'fontSize' => 68, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => true, 'color' => '#ffffff', 'align' => 'left', 'w' => 1720, 'h' => 60],
-        ['id' => 'standard', 'name' => 'Text', 'fontFamily' => 'Open Sans', 'fontSize' => 65, 'fontWeight' => 'normal', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'left', 'w' => 599, 'h' => 70],
-    ], JSON_PRETTY_PRINT));
+    file_put_contents(TEXT_TEMPLATES_FILE, json_encode(TextTemplate::seedDefaults(), JSON_PRETTY_PRINT));
 }
 if (!is_dir(PUBLIC_UPLOADS_PATH)) {
     mkdir(PUBLIC_UPLOADS_PATH, 0770, true);
@@ -171,30 +141,7 @@ if (!is_dir(EXPORT_CACHE_PATH)) {
     mkdir(EXPORT_CACHE_PATH, 0770, true);
 }
 
-// Migration: User aus einer Version vor der Rollenverwaltung bekommen role/theme nachgetragen.
-// Der zuerst angelegte User wird dabei automatisch Administrator.
-$__existingUsers = Storage::read(USERS_FILE, []);
-$__needsMigration = false;
-foreach ($__existingUsers as $__u) {
-    if (!isset($__u['role']) || !isset($__u['theme'])) {
-        $__needsMigration = true;
-        break;
-    }
-}
-if ($__needsMigration) {
-    Storage::update(USERS_FILE, function ($users) {
-        foreach ($users as $i => &$u) {
-            if (!isset($u['role'])) {
-                $u['role'] = $i === 0 ? 'admin' : 'editor';
-            }
-            if (!isset($u['theme'])) {
-                $u['theme'] = 'dark';
-            }
-        }
-        return $users;
-    }, []);
-}
-unset($__existingUsers, $__needsMigration, $__u);
+// (3.8.3) Rollen-Nachtrag «erster Benutzer wird Admin» entfernt: Admin-Recht kommt nur vom Hub (Auth::payloadIsAdmin).
 
 
 // Migration: bestehende config.json (aus einer Version vor den Vorlagen) um
@@ -202,26 +149,7 @@ unset($__existingUsers, $__needsMigration, $__u);
 $__cfg = Storage::read(SITE_CONFIG_FILE, []);
 if (!isset($__cfg['brand_colors'])) {
     Storage::update(SITE_CONFIG_FILE, function ($cfg) {
-        $cfg['brand_colors'] = [
-            ['name' => 'Weiss', 'hex' => '#ffffff'],
-            ['name' => 'Grau', 'hex' => '#808080'],
-            ['name' => 'Schwarz', 'hex' => '#000000'],
-            ['name' => 'Brilliant Blau', 'hex' => '#3a6c8d'],
-            ['name' => 'Blümchen Grün', 'hex' => '#87b42b'],
-            ['name' => 'Gold', 'hex' => '#d1b633'],
-            ['name' => 'Braun', 'hex' => '#85612d'],
-            ['name' => 'Hellblau', 'hex' => '#94c2dc'],
-            ['name' => 'Graublau', 'hex' => '#6a8aa1'],
-            ['name' => 'Terracotta', 'hex' => '#d67d5d'],
-            ['name' => 'Beere', 'hex' => '#862b6e'],
-            ['name' => 'Taupe', 'hex' => '#917158'],
-            ['name' => 'Himmelblau', 'hex' => '#61a8e0'],
-            ['name' => 'Limette', 'hex' => '#97c764'],
-            ['name' => 'Dunkelgrün', 'hex' => '#252e1b'],
-            ['name' => 'Rostrot', 'hex' => '#64180b'],
-            ['name' => 'Hellgrün', 'hex' => '#b7de45'],
-            ['name' => 'Indigo', 'hex' => '#4449a5'],
-        ];
+        $cfg['brand_colors'] = Config::defaultBrandColors();
         return $cfg;
     }, []);
 }

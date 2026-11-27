@@ -1,6 +1,6 @@
 <?php
 /**
- * Demo-Instanz: feste Testkonten, 12h-Reset, SMTP gesperrt.
+ * Demo-Instanz: feste Testkonten, 12h-Reset.
  */
 class Demo
 {
@@ -23,11 +23,6 @@ class Demo
     public static function isActive(): bool
     {
         return defined('DEMO_MODE') && DEMO_MODE;
-    }
-
-    public static function smtpLocked(): bool
-    {
-        return self::isActive();
     }
 
     /** @return array{next_reset_at:int} */
@@ -108,8 +103,6 @@ class Demo
             self::seedShowcasePresentation($adminId);
             self::seedFeatureTour($adminId);
         }
-
-        self::applyDemoSiteConfig();
 
         self::writeState(['next_reset_at' => time() + self::RESET_INTERVAL_SECONDS]);
     }
@@ -242,24 +235,6 @@ class Demo
                 Presentation::importSeedPresentation($adminId, $seedDir);
             }
         }
-    }
-
-    private static function applyDemoSiteConfig(): void
-    {
-        Storage::update(SITE_CONFIG_FILE, function ($cfg) {
-            $cfg['registration_enabled'] = false;
-            $cfg['smtp'] = [
-                'host' => '',
-                'port' => 587,
-                'encryption' => 'tls',
-                'username' => '',
-                'password' => '',
-                'from_email' => '',
-                'from_name' => APP_NAME,
-            ];
-            return $cfg;
-        }, []);
-        Config::clearCache();
     }
 
     /** @return list<array{username:string,email:string,password:string,role:string,role_label:string}> */

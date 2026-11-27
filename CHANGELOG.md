@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.8.3] - 2026-11-27
+
+- **Einstellungen wieder vollständig** (Urs: «Bei den Einstellungen müsste ich nun aber auch die Einstellungen machen können, die ich zuvor gemacht habe» / «Also Vorlagen definieren. Schriftvorlagen, Dann Schriftarten etc.»): Hub › FolienSchmiede › Modul-Einstellungen und neu der Knopf «Einstellungen» auf der Startseite führen zu einer Reiterleiste (Hub-Stil `hub-list-tabs`): Folienvorlagen (mit Vorlagen-Ordner, jetzt für alle), Textvorlagen, Vorlageelemente, Schriftarten, Farben; für Admins dazu Allgemein (Seitentitel, Logo), Rechtschreibung (LanguageTool), Medien (Pixabay, Iconify, Openclipart). Vorher zeigte Modul-Einstellungen nur admin_settings.php (Vorlagen-Ordner + Admin-Abschnitte), die Vorlagen-Seite war von nirgends verlinkt.
+- Felder im Lab-Stil (`hub-admin-field`/`hub-admin-check`), automatisches Speichern mit «speichert …/gespeichert» statt Speichern-Knöpfen (Allgemein, Rechtschreibung, Medien, Textvorlagen, Vorlageelemente, Farben); Logo lädt nach der Wahl im FileForge-Dialog sofort hoch. LanguageTool-Adresse mit HubUrl (Browser `hub-url.js`, Server `src/HubUrl.php`, Kopie aus dem Hub).
+- Weg (Altes raus): SMTP-Abschnitt, Testmail (`admin_api.php`), `SmtpMailer`, SMTP-/Registrierungs-Vorgaben in Config/Demo, Rollen-Nachtrag «erster Benutzer wird Admin» in config.php. Die FolienSchmiede verschickt keine Mails mehr.
+- Übernahme: `php scripts/migrate-to-ff.php --source=<alt> --settings [--run]` holt Seitentitel, Logo, LanguageTool, Pixabay, Iconify, Openclipart, Markenfarben, Textvorlagen, Vorlageelemente und Logos-Importvorlagen aus der alten Installation, nur wo neu leer oder ab Werk; Sicherung `*.vor-settings-*`; Ausgabe nur Schlüsselnamen.
 ## [3.8.2] - 2026-11-27
 
 - **Folienschrift im Editor** (Urs: «Schrift stimmt irgend wie auch noch nicht»): Die Übernahme aus der alten FolienSchmiede brachte die hochgeladenen Schriften nicht mit (`custom_fonts` in config.json und Dateien in `public_html/uploads/fonts`; Biel: «Myriad Pro»). Die Editor-Bühne (Canvas) fiel deshalb auf die Serif-Vorgabe des Browsers, Miniaturen/Präsentation (HTML, `font-family:X,sans-serif`) auf eine serifenlose Ersatzschrift. `Migration` holt die Schriften jetzt nach (nur fehlende, Datei nie ersetzt, im Protokoll gezählt); ein erneuter `migrate-to-ff.php … --run` holt nur das Fehlende.

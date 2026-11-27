@@ -1,6 +1,7 @@
 <?php
 /**
- * Site-weite Konfiguration (Titel, Logo, SMTP, Registrierung), gespeichert in data/config.json.
+ * Site-weite Konfiguration (Titel, Logo, Rechtschreibung, Medienquellen), gespeichert in data/config.json. SMTP entfällt (3.8.3):
+ * die FolienSchmiede verschickt keine Mails mehr.
  * Nur für Administratoren änderbar (siehe admin_settings.php).
  */
 class Config
@@ -13,8 +14,6 @@ class Config
             self::$cache = Storage::read(SITE_CONFIG_FILE, [
                 'site_title' => APP_NAME,
                 'logo' => '',
-                'registration_enabled' => true,
-                'smtp' => ['host' => '', 'port' => 587, 'encryption' => 'tls', 'username' => '', 'password' => '', 'from_email' => '', 'from_name' => APP_NAME],
                 'languagetool' => [
                     'enabled' => true,
                     'api_url' => 'https://api.languagetool.org/v2/check',
@@ -68,19 +67,34 @@ class Config
         return 'uploads/' . $logo;
     }
 
-    public static function registrationEnabled(): bool
-    {
-        return (bool)self::get('registration_enabled', true);
-    }
-
     public static function demoMode(): bool
     {
         return Demo::isActive();
     }
 
-    public static function smtp(): array
+    /** Markenfarben einer frischen Installation (config.php; Übernahme erkennt daran «noch nie geändert»). @return list<array{name:string,hex:string}> */
+    public static function defaultBrandColors(): array
     {
-        return self::get('smtp', []);
+        return [
+            ['name' => 'Weiss', 'hex' => '#ffffff'],
+            ['name' => 'Grau', 'hex' => '#808080'],
+            ['name' => 'Schwarz', 'hex' => '#000000'],
+            ['name' => 'Brilliant Blau', 'hex' => '#3a6c8d'],
+            ['name' => 'Blümchen Grün', 'hex' => '#87b42b'],
+            ['name' => 'Gold', 'hex' => '#d1b633'],
+            ['name' => 'Braun', 'hex' => '#85612d'],
+            ['name' => 'Hellblau', 'hex' => '#94c2dc'],
+            ['name' => 'Graublau', 'hex' => '#6a8aa1'],
+            ['name' => 'Terracotta', 'hex' => '#d67d5d'],
+            ['name' => 'Beere', 'hex' => '#862b6e'],
+            ['name' => 'Taupe', 'hex' => '#917158'],
+            ['name' => 'Himmelblau', 'hex' => '#61a8e0'],
+            ['name' => 'Limette', 'hex' => '#97c764'],
+            ['name' => 'Dunkelgrün', 'hex' => '#252e1b'],
+            ['name' => 'Rostrot', 'hex' => '#64180b'],
+            ['name' => 'Hellgrün', 'hex' => '#b7de45'],
+            ['name' => 'Indigo', 'hex' => '#4449a5'],
+        ];
     }
 
     public static function brandColors(): array

@@ -20,17 +20,17 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
    lab-fields-stack lab.css:744, Fusszeile hub-dialog-actions). Feldregeln 1:1 aus Hub admin.css (hub-admin-field 525–604,
    hub-admin-field-hint 1001, hub-admin-check 196–225), weil SlideForge admin.css nicht lädt; nur Hub-Variablen (hell/dunkel). */
 .sf-dev label { margin: 0; }
-.sf-dev .hub-admin-field { display: grid; gap: .25rem; min-width: 0; max-width: none; }
-.sf-dev .hub-admin-field > span { font-size: .8rem; color: var(--text-muted); font-weight: 600; line-height: 1.3; text-transform: none; letter-spacing: normal; }
-.sf-dev .hub-admin-field input:not([type="checkbox"]):not([type="radio"]), .sf-dev .hub-admin-field select {
+:is(.sf-dev, .sf-set) .hub-admin-field { display: grid; gap: .25rem; min-width: 0; max-width: none; }
+:is(.sf-dev, .sf-set) .hub-admin-field > span { font-size: .8rem; color: var(--text-muted); font-weight: 600; line-height: 1.3; text-transform: none; letter-spacing: normal; }
+:is(.sf-dev, .sf-set) .hub-admin-field input:not([type="checkbox"]):not([type="radio"]), :is(.sf-dev, .sf-set) .hub-admin-field select {
   box-sizing: border-box; width: 100%; height: 38px; min-height: 38px; margin: 0; padding: .4rem .65rem; border-radius: 8px;
   border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font: inherit; line-height: 1.3; box-shadow: none; }
-.sf-dev .hub-admin-field input:focus-visible, .sf-dev .hub-admin-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.sf-dev .hub-admin-field.is-error input, .sf-dev .hub-admin-field input[aria-invalid="true"] { border-color: var(--danger, #c44); }
-.sf-dev .hub-admin-field input:disabled, .sf-dev .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
-.sf-dev .hub-admin-field-hint { display: block; margin-top: .1rem; color: var(--text-muted); font-size: .8rem; line-height: 1.35; }
-.sf-dev .hub-admin-check { display: flex; align-items: center; gap: .55rem; margin: 0; cursor: pointer; }
-.sf-dev .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
+:is(.sf-dev, .sf-set) .hub-admin-field input:focus-visible, :is(.sf-dev, .sf-set) .hub-admin-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+:is(.sf-dev, .sf-set) .hub-admin-field.is-error input, :is(.sf-dev, .sf-set) .hub-admin-field input[aria-invalid="true"] { border-color: var(--danger, #c44); }
+:is(.sf-dev, .sf-set) .hub-admin-field input:disabled, :is(.sf-dev, .sf-set) .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
+:is(.sf-dev, .sf-set) .hub-admin-field-hint { display: block; margin-top: .1rem; color: var(--text-muted); font-size: .8rem; line-height: 1.35; }
+:is(.sf-dev, .sf-set) .hub-admin-check { display: flex; align-items: center; gap: .55rem; margin: 0; cursor: pointer; }
+:is(.sf-dev, .sf-set) .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
 /* Registrieren: Kamera oben, Hinweis, Felder untereinander in voller Breite, Code gross und gut lesbar. */
 .sf-dev--reg { display: grid; gap: .75rem; }
 .sf-dev__stack { display: grid; gap: .75rem; }
@@ -64,3 +64,20 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-ff-field { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; margin-top: 4px; }
 .sf-ff-field-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--text); }
 .sf-ff-field-name.is-empty { color: var(--text-muted); }
+
+/* Einstellungen (3.8.3, templates.php + admin_settings.php): Felder wie Lab (Feldregeln oben, Hub admin.css hub-admin-field), auch die
+   alten Formulare der Vorlagen-Seite ohne hub-admin-field-Hülle; Reiter hub-list-tabs (hub-kit.css); Speicherstand je Formular. */
+.sf-set .hub-admin-check { margin: .35rem 0 .75rem; }
+.sf-set :is(input[type="text"], input[type="number"], input[type="url"], input[type="password"], input[type="email"], select):not([hidden]) {
+  box-sizing: border-box; height: 38px; min-height: 38px; padding: .4rem .65rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font: inherit; line-height: 1.3; box-shadow: none; }
+.sf-set :is(input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sf-set :is(input, select):disabled { opacity: .55; cursor: not-allowed; }
+.sf-set .hub-admin-field { margin: 0 0 .75rem; max-width: 34rem; }
+.sf-set__form { display: grid; gap: .25rem; }
+.sf-set__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1rem; max-width: 34rem; }
+.sf-set__row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.sf-set__logo { display: block; max-height: 50px; max-width: 220px; margin-bottom: 12px; padding: 8px; border-radius: 8px; background: var(--surface-raised); }
+.sf-set__state { min-height: 1.2em; font-size: .8rem; color: var(--text-muted); }
+.sf-set__state[data-state="error"] { color: var(--danger, #d9483a); }
+.sf-set-tabs { margin-top: .6rem; }

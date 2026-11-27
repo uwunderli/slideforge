@@ -327,6 +327,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = t('tpl.no_permission');
         }
     }
+
+    // Automatisches Speichern (3.8.3, sf-settings.js): Antwort als JSON statt Seite.
+    if (($_POST['ajax'] ?? '') === '1') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => $error === '', 'error' => $error, 'message' => $msg], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 $logosImporterEnabled = Auth::logosImporterEnabled($me);
@@ -350,17 +357,9 @@ $FONT_OPTIONS = $fontFamilies;
 $pageTitle = t('tpl.heading');
 require __DIR__ . '/includes/header.php';
 ?>
-<div class="container" style="max-width: 860px;">
-  <a href="index.php" class="back-link">&larr; <?= h(t('profile.back_to_dashboard')) ?></a>
-  <h1 style="margin-top:14px;"><?= h(t('tpl.heading')) ?></h1>
-
-  <div class="page-tabs">
-    <a href="?tab=slides" class="page-tab-btn<?= $activeTab === 'slides' ? ' active' : '' ?>"><?= h(t('tpl.tab_slides')) ?></a>
-    <a href="?tab=texts" class="page-tab-btn<?= $activeTab === 'texts' ? ' active' : '' ?>"><?= h(t('tpl.tab_texts')) ?></a>
-    <a href="?tab=vorlageelemente" class="page-tab-btn<?= $activeTab === 'vorlageelemente' ? ' active' : '' ?>"><?= h(t('tpl.tab_vorlageelemente')) ?></a>
-    <a href="?tab=fonts" class="page-tab-btn<?= $activeTab === 'fonts' ? ' active' : '' ?>"><?= h(t('tpl.tab_fonts')) ?></a>
-    <a href="?tab=colors" class="page-tab-btn<?= $activeTab === 'colors' ? ' active' : '' ?>"><?= h(t('tpl.tab_colors')) ?></a>
-  </div>
+<div class="container sf-set" style="max-width: 860px;">
+  <?php /* Reiter für alle Einstellungen (3.8.3): Vorlagen hier, Allgemein/Rechtschreibung/Medien in admin_settings.php (nur Admin). */ ?>
+  <?php $sfSetActive = $activeTab; $sfSetIsAdmin = $isAdmin; require __DIR__ . '/includes/settings_nav.php'; ?>
 
   <?php if ($error): ?><div class="alert alert-error"><?= nl2br(h($error)) ?></div><?php endif; ?>
   <?php if ($msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
@@ -385,7 +384,7 @@ require __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
       </div>
 
-      <form method="post" id="colorsForm">
+      <form method="post" id="colorsForm" data-sf-autosave>
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="save_colors">
         <?php foreach ($brandColors as $i => $c): ?>
@@ -398,7 +397,7 @@ require __DIR__ . '/includes/header.php';
             <button type="submit" form="deleteColorForm<?= (int)$i ?>" class="icon-btn-danger" title="<?= h(t('tpl.delete_color')) ?>">🗑</button>
           </div>
         <?php endforeach; ?>
-        <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:10px;"><?= h(t('tpl.save_all')) ?></button>
+        <span class="sf-set__state" data-sf-save-state aria-live="polite"></span>
       </form>
       <?php foreach ($brandColors as $i => $c): ?>
         <form method="post" id="deleteColorForm<?= (int)$i ?>">
@@ -496,7 +495,7 @@ require __DIR__ . '/includes/header.php';
       <div class="alert alert-success"><?= h(t('tpl.admin_only_vorlageelemente')) ?></div>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post"<?= $isAdmin ? ' data-sf-autosave' : '' ?>>
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <input type="hidden" name="action" value="save_element_links">
       <input type="hidden" name="tab" value="vorlageelemente">
@@ -542,9 +541,7 @@ require __DIR__ . '/includes/header.php';
           </tbody>
         </table>
       </div>
-      <?php if ($isAdmin): ?>
-      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('tpl.save')) ?></button>
-      <?php endif; ?>
+      <?php if ($isAdmin): ?><span class="sf-set__state" data-sf-save-state aria-live="polite"></span><?php endif; ?>
     </form>
 
   <?php elseif ($activeTab === 'texts'): ?>
@@ -571,7 +568,7 @@ require __DIR__ . '/includes/header.php';
         <?php if ($isFallbackTpl): ?>
           <p class="text-template-fallback-hint"><?= h(t('tpl.text_fallback_desc')) ?></p>
         <?php endif; ?>
-        <form method="post" style="margin-top:14px;">
+        <form method="post" style="margin-top:14px;"<?= $isAdmin ? ' data-sf-autosave' : '' ?>>
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="action" value="update_text_template">
         <input type="hidden" name="id" value="<?= h($t['id']) ?>">
@@ -610,7 +607,7 @@ require __DIR__ . '/includes/header.php';
             <?php if ($isAdmin): ?>
               <div class="brand-palette mini" style="margin-top:6px;">
                 <?php foreach ($brandColors as $c): ?>
-                  <button type="button" class="brand-swatch" style="background:<?= h($c['hex']) ?>" title="<?= h($c['name']) ?>" onclick="document.getElementById('color_<?= h($t['id']) ?>').value='<?= h($c['hex']) ?>'"></button>
+                  <button type="button" class="brand-swatch" style="background:<?= h($c['hex']) ?>" title="<?= h($c['name']) ?>" onclick="var i=document.getElementById('color_<?= h($t['id']) ?>');i.value='<?= h($c['hex']) ?>';i.dispatchEvent(new Event('change',{bubbles:true}))"></button>
                 <?php endforeach; ?>
               </div>
             <?php endif; ?>
@@ -634,12 +631,12 @@ require __DIR__ . '/includes/header.php';
           <label class="format-toggle-btn" style="font-variant:small-caps;" title="<?= h(t('props.smallcaps')) ?>"><input type="checkbox" name="smallCaps" hidden <?= !empty($t['smallCaps']) ? 'checked' : '' ?> <?= $isAdmin ? '' : 'disabled' ?>>Aa</label>
         </div>
         <?php if ($isAdmin): ?>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('tpl.save')) ?></button>
+        <div style="display:flex; gap:8px; margin-top:12px; align-items:center;">
           <?php if (!$isFallbackTpl): ?>
           <button type="submit" name="action" value="duplicate_text_template" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('tpl.duplicate')) ?></button>
           <button type="submit" name="action" value="delete_text_template" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" data-sf-confirm="<?= h(t('tpl.delete_text_confirm', ['name' => $t['name']])) ?>" data-sf-confirm-danger><?= h(t('tpl.delete')) ?></button>
           <?php endif; ?>
+          <span class="sf-set__state" data-sf-save-state aria-live="polite"></span>
         </div>
         <?php endif; ?>
         </form>
@@ -656,6 +653,13 @@ require __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
   <?php elseif ($activeTab === 'slides'): ?>
+
+    <?php /* Je Person (Urs 27.11.: aus dem Menüband der Startseite in die Modul-Einstellungen; 3.8.3 für alle, nicht nur Admin). */ ?>
+    <div class="section-header" style="margin-top:8px;"><h2>Vorlagen-Ordner</h2></div>
+    <p class="muted small">Ordner in FileForge, aus dem «Aus Vorlage …» deine Vorlagen (.cfs) anbietet.</p>
+    <p class="sf-set__row">Gewählt: <strong id="sfTplDirLabel" aria-live="polite">…</strong>
+      <button type="button" id="sfTplDirPick" class="hub-btn hub-btn--sm">Ordner wählen …</button>
+      <button type="button" id="sfTplDirClear" class="hub-btn hub-btn--ghost hub-btn--sm" hidden>Entfernen</button></p>
 
     <div class="section-header" style="margin-top:28px;"><h2><?= h(t('tpl.layout_sets_heading')) ?></h2></div>
     <p style="color:var(--text-muted); font-size:0.9rem;"><?= h(t('tpl.layout_sets_desc')) ?></p>
@@ -926,4 +930,6 @@ require __DIR__ . '/includes/header.php';
 })();
 </script>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-settings.js?v=<?= ASSET_VERSION ?>"></script>
+<script>if (document.getElementById('sfTplDirLabel')) SfFf.templateSetting(<?= json_encode(['csrf' => csrf_token(), 'labelId' => 'sfTplDirLabel', 'pickId' => 'sfTplDirPick', 'clearId' => 'sfTplDirClear'], JSON_HEX_TAG) ?>);</script>
 <?php require __DIR__ . '/includes/footer.php'; ?>
