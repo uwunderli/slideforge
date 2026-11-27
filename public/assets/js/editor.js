@@ -6846,7 +6846,8 @@
     } else {
       body += '<ul class="props-effects-list">';
       eintraege.forEach((e) => {
-        body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '">'
+        body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '" tabindex="0" title="'
+          + escapeHtml(I.effectsRowOpen || 'Doppelklick: Objekt wählen und Effekt bearbeiten') + '">'
           + '<span class="props-layer-drag-handle" draggable="true" title="'
           + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
           + animBadgeHtml(e.node)
@@ -6910,6 +6911,28 @@
     });
 
     bindEffectsListDrag(panel.querySelector('.props-effects-list'));
+
+    /* Doppelklick (oder Eingabe) auf einen Eintrag wählt das Objekt auf der Folie und zeigt seine Effekte
+       Einblenden/Ausblenden zum Bearbeiten (Urs 27.11.: «doppelklick springt gleich auf das Objekt und öffnet die Effekte»). */
+    const oeffneEffekt = (li) => {
+      const node = li && findeAnimKnoten(li.dataset.effectId);
+      if (!node) return;
+      selectNode(node);
+      const p = document.getElementById('propsEffectsPanel');
+      p?.querySelector('.props-fx-fold')?.scrollIntoView({ block: 'nearest' });
+    };
+    panel.querySelectorAll('.props-effects-list > li[data-effect-id]').forEach((li) => {
+      li.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.props-effect-del, .props-layer-drag-handle')) return;
+        e.preventDefault();
+        oeffneEffekt(li);
+      });
+      li.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.target !== li) return;
+        e.preventDefault();
+        oeffneEffekt(li);
+      });
+    });
 
     const btn = document.getElementById('clearSlideEffectsBtn');
     if (!btn) return;
