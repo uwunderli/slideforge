@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '703');
+define('ASSET_VERSION', '704');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -507,3 +507,67 @@ if (Demo::isActive()) {
 }
 
 unset($__lang, $__u);
+
+/**
+ * Frühstart des Hub-Designs (wie FileForge ff_theme_boot, 27.11.2026): setzt data-dialog-accent/--hub-base-hue im <head>,
+ * bevor CSS greift — aus hub_accent/hub_chrome der Rahmenadresse bzw. sessionStorage; danach übernimmt shared/cf-theme.js.
+ */
+function sf_theme_boot(): string
+{
+    return <<<'HTML'
+  <script>(function () {
+    try {
+      if (window.parent === window) return;
+      var K = 'sf_dialog_chrome', A = ['', 'blau', 'gruen', 'indigo', 'terracotta'], C = ['klassisch', 'flach'];
+      // Freie Akzentfarbe `#rrggbb` (Hub 2.2.4, Markenfarben): wie cf-theme.js zulassen, sonst fiel jede Seite ohne
+      // hub_accent in der Adresse bis zur Nachricht des Rahmens auf Sand zurück (Urs 10.11.).
+      var okA = function (x) { x = String(x); return A.indexOf(x) >= 0 || /^#[0-9a-f]{6}$/.test(x); };
+      // Farbton/Sättigung einer freien Farbe: dieselbe Rechnung wie accentTone() in cf-theme.js (OKLCH).
+      var tone = function (hex) {
+        var n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (x) { x /= 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+        var l = Math.cbrt(0.4122214708 * c[0] + 0.5363325363 * c[1] + 0.0514459929 * c[2]);
+        var m = Math.cbrt(0.2119034982 * c[0] + 0.6806995451 * c[1] + 0.1073969566 * c[2]);
+        var s = Math.cbrt(0.0883024619 * c[0] + 0.2817188376 * c[1] + 0.6299787005 * c[2]);
+        var a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, b = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+        var h = Math.atan2(b, a) * 180 / Math.PI;
+        return [Math.round((h < 0 ? h + 360 : h) * 10) / 10, Math.round(Math.min(1, Math.sqrt(a * a + b * b) / 0.08) * 1000) / 1000];
+      };
+      var ok = function (v) {
+        return !!v && typeof v === 'object' && !!v.chrome && !!v.accent && C.indexOf(String(v.chrome.light)) >= 0 && C.indexOf(String(v.chrome.dark)) >= 0
+          && okA(v.accent.light) && okA(v.accent.dark);
+      };
+      var keep = function (v) {
+        if (!ok(v)) return;
+        try { sessionStorage.setItem(K, JSON.stringify({ chrome: { light: String(v.chrome.light), dark: String(v.chrome.dark) }, accent: { light: String(v.accent.light), dark: String(v.accent.dark) } })); } catch (e) {}
+      };
+      var q = new URLSearchParams(location.search), a = q.get('hub_accent'), c = q.get('hub_chrome'), v = null;
+      if (a !== null || c !== null) {
+        v = { chrome: { light: c || 'klassisch', dark: c || 'klassisch' }, accent: { light: (a || '').toLowerCase(), dark: (a || '').toLowerCase() } };
+        keep(v);
+      } else {
+        v = JSON.parse(sessionStorage.getItem(K) || 'null');
+      }
+      if (ok(v)) {
+        var r = document.documentElement, m = (document.cookie.match(/(?:^|;\s*)cf_appearance=([a-z]+)/) || [])[1] || 'dark';
+        var t = m === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : (m === 'light' ? 'light' : 'dark');
+        if (/^#/.test(v.accent[t])) {
+          var h = tone(v.accent[t]);
+          r.setAttribute('data-dialog-accent', 'custom');
+          r.style.setProperty('--hub-base-hue', String(h[0]));
+          r.style.setProperty('--hub-chroma', String(h[1]));
+          r.style.setProperty('--hub-dialog-accent', v.accent[t]);
+        } else {
+          ['--hub-base-hue', '--hub-chroma', '--hub-dialog-accent'].forEach(function (k) { r.style.removeProperty(k); });
+          if (v.accent[t]) r.setAttribute('data-dialog-accent', v.accent[t]); else r.removeAttribute('data-dialog-accent');
+        }
+        if (v.chrome[t] === 'flach') r.setAttribute('data-dialog-chrome', 'flach'); else r.removeAttribute('data-dialog-chrome');
+        window.__cfDialogChromePrefs = v;
+      }
+      window.addEventListener('message', function () {
+        setTimeout(function () { keep(window.__cfDialogChromePrefs); }, 0); // erst nach der Prüfung durch cf-theme.js
+      });
+    } catch (e) {}
+  })();</script>
+
+HTML;
+}

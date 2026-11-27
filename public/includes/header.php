@@ -17,6 +17,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <html lang="<?= h($currentLang) ?>" data-theme-pref="<?= h($themePref) ?>" data-theme="<?= h($theme) ?>">
 <head>
 <meta charset="UTF-8">
+<?= sf_theme_boot() ?>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="<?= $theme === 'light' ? '#f6f3ec' : '#171b1f' ?>">
 <title><?= h($pageTitle ?? $siteTitle) ?> · <?= h($siteTitle) ?></title>
