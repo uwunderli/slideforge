@@ -1214,6 +1214,7 @@
       const activeItem = filmstrip?.querySelector('.filmstrip-item.active');
       if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
     }
+    initCtrlWheelZoom();
     bindGlobalUI();
     initRibbonEditorHooks();
     initRibbonObjectColor();
@@ -2952,6 +2953,20 @@
     } catch (e) {
       console.error(e);
     }
+  }
+
+  /* Ctrl/Cmd + Mausrad (auch Zwei-Finger-Zoom am Trackpad) zoomt die Folie bzw. die Miniaturen
+     der Rasteransicht statt der ganzen Seite (Urs 27.11.2026). */
+  function initCtrlWheelZoom() {
+    const onWheel = (ev, grid) => {
+      if (!(ev.ctrlKey || ev.metaKey) || !ev.deltaY) return;
+      ev.preventDefault();
+      const dir = ev.deltaY < 0 ? 1 : -1;
+      if (grid) applyGridThumbMin(gridThumbMinPx() + dir * 16, { save: true });
+      else zoomBy(dir * 10);
+    };
+    document.getElementById('stageWrap')?.addEventListener('wheel', (ev) => onWheel(ev, false), { passive: false });
+    document.getElementById('slideGrid')?.addEventListener('wheel', (ev) => onWheel(ev, true), { passive: false });
   }
 
   function initGridThumbSlider() {

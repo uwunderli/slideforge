@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.9.6] - 2026-11-27
+
+### Added
+- Ctrl/Cmd + Mausrad zoomt die Folie im Editor bzw. die Miniaturen der Rasteransicht.
+
 ## [3.9.5] - 2026-11-27
 
 - **«Neue Folie» ohne «Bitte warten»** (Urs 27.11.): Der Menüband-Knopf löste «Neue Folie» doppelt aus (ribbon.js-Trigger und Editor-Dispatcher), die zweite Auslösung lief in die Sperre. Doppelung entfernt; Folien-Schritte laufen jetzt nacheinander in einer Warteschlange: gleiche Aktion während sie läuft wird still verworfen, andere warten und laufen danach. Rückgängig/Wiederholen reihen sich ein, kein Schritt fehlt mehr im Verlauf. ASSET 732.
