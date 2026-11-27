@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.29 gebaut** (`entwickler/slide-verlauf-position` ab 3.12.28 00b4a7a): Verlauf mit Farbpunkten (Farbe/Deckkraft/Position, + Farbe). Bei Gitwart.
 - **27.11. 3.12.28 gebaut** (`entwickler/slide-texte` ab 3.12.27): Übersetzungen en/fr/it/rm vollständig. Offen: rm-Durchsicht. Bei Gitwart.
 - **27.11. 3.12.27 gebaut** (`entwickler/slide-kleine-schritte` ab 3.12.26 cf62d70): Umschalt+Pfeil erweitert die Folienauswahl (Filmstreifen/Raster). Nachgesehen: Schriften laden nur benutzte Familien (usedFontFamilies) und kommen aus dem Hub (3.9.0); Farben-Reiter zeigt die Hub-Palette (3.9.2) — die alten «Offen»-Vermerke dazu sind erledigt. Bei Gitwart.
 - **27.11. 3.12.26 gebaut** (`entwickler/slide-rahmen-oben` ab 3.12.25 9882ab3): Auswahlrahmen bei jeder Auswahl zuoberst (Ziehpunkte). Ursache unbelegt. Bei Gitwart.

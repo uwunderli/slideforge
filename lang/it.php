@@ -1852,4 +1852,9 @@ return [
     'shortcut.slides_extend_prev' => 'Estendi la selezione delle slide in alto/a sinistra',
     'shortcut.slides_extend_next' => 'Estendi la selezione delle slide in basso/a destra',
     'shortcut.slides_extend_hint' => 'Nella barra o nella griglia estendi la selezione dalla slide cliccata (come Maiusc+clic); nella griglia ↑/↓ di una riga.',
+    'props.grad_pos' => 'Posizione',
+    'props.grad_pos_hint' => 'Dove si trova questo colore nella sfumatura: 0 % = inizio, 100 % = fine. Prima e dopo il colore resta puro.',
+    'props.grad_add' => '+ Colore',
+    'props.grad_remove' => 'Rimuovi colore',
+    'props.grad_color_n' => 'Colore {n}',
 ];

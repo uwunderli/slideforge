@@ -32,25 +32,10 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
     </div>
 
     <div class="ribbon-object-farbe-gradient" id="ribbonObjectFillGradientEditor" hidden>
-      <div class="ribbon-object-grad-row">
-        <div class="ribbon-object-grad-field">
-          <span><?= h(t('props.color1')) ?></span>
-          <label class="ribbon-color-picker-wrap ribbon-object-grad-picker">
-            <span class="sr-only"><?= h(t('props.color1')) ?></span>
-            <input type="color" id="objGradColor1" value="#3a6c8d" disabled title="<?= h(t('props.color1')) ?>">
-          </label>
-          <?php /* Deckkraft je Verlaufsfarbe (3.12.23, Urs 27.11.: «Alpha Kanal wählen»): 0 % = durchsichtig, weicher Auslauf. */ ?>
-          <input type="range" id="objGradAlpha1" min="0" max="100" step="1" value="100" disabled data-hub-range data-hub-range-unit="%" aria-label="<?= h(t('props.color1')) ?>: <?= h(t('props.grad_alpha')) ?>" title="<?= h(t('props.grad_alpha')) ?>">
-        </div>
-        <div class="ribbon-object-grad-field">
-          <span><?= h(t('props.color2')) ?></span>
-          <label class="ribbon-color-picker-wrap ribbon-object-grad-picker">
-            <span class="sr-only"><?= h(t('props.color2')) ?></span>
-            <input type="color" id="objGradColor2" value="#87b42b" disabled title="<?= h(t('props.color2')) ?>">
-          </label>
-          <input type="range" id="objGradAlpha2" min="0" max="100" step="1" value="100" disabled data-hub-range data-hub-range-unit="%" aria-label="<?= h(t('props.color2')) ?>: <?= h(t('props.grad_alpha')) ?>" title="<?= h(t('props.grad_alpha')) ?>">
-        </div>
-      </div>
+      <?php /* Verlauf als Liste von Farbpunkten (3.12.29, Urs 27.11.: «ab wann die neue Farbe beginnt» / «weitere Farben dazu fügen»):
+               je Punkt Farbe, Deckkraft, Position; gebaut von editor.js renderGradStops. */ ?>
+      <div class="sf-grad-stops" id="objGradStops"></div>
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm sf-grad-add" id="objGradAddStop" disabled><?= h(t('props.grad_add')) ?></button>
       <div class="ribbon-object-grad-angle">
         <label for="objGradAngle" id="objGradAngleLabel"><?= h(t('props.angle')) ?> (90°)</label>
         <input type="range" id="objGradAngle" min="0" max="360" value="90" disabled data-hub-range data-hub-range-unit="°">

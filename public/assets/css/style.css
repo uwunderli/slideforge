@@ -10881,6 +10881,17 @@ body:has(.editor-layout) > .editor-layout {
   font-size: 0.72rem;
   color: var(--text-muted);
 }
+/* Verlauf: Farbpunkte (3.12.29) — je Punkt Kopfzeile (Name, Farbe, Entfernen), Deckkraft, Position. */
+.props-object-widgets .sf-grad-stops { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.props-object-widgets .sf-grad-stop {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 0.72rem; color: var(--text-muted);
+}
+.props-object-widgets .sf-grad-stop-head { display: flex; align-items: center; gap: 8px; }
+.props-object-widgets .sf-grad-stop-head > span { flex: 1 1 auto; font-weight: 600; color: var(--text); }
+.props-object-widgets .sf-grad-sub { font-size: 0.7rem; color: var(--text-muted); }
+.props-object-widgets .sf-grad-add { align-self: flex-start; margin: 6px 0 4px; }
 .props-object-widgets .ribbon-object-grad-angle {
   display: flex;
   flex-direction: column;

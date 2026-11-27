@@ -1852,4 +1852,9 @@ return [
     'shortcut.slides_extend_prev' => 'Engrondir la selecziun da folias ensi/a sanestra',
     'shortcut.slides_extend_next' => 'Engrondir la selecziun da folias engiu/a dretga',
     'shortcut.slides_extend_hint' => 'En la bindera u en la rasterisaziun engrondir la selecziun a partir da la folia cliccada (sco Shift+clic); en la rasterisaziun ↑/↓ per ina lingia.',
+    'props.grad_pos' => 'Posiziun',
+    'props.grad_pos_hint' => 'Nua che questa colur stat en il gradient: 0 % = entschatta, 100 % = fin. Avant e suenter resta la colur pura.',
+    'props.grad_add' => '+ Colur',
+    'props.grad_remove' => 'Allontanar la colur',
+    'props.grad_color_n' => 'Colur {n}',
 ];

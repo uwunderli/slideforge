@@ -3639,6 +3639,40 @@
     const n = parseInt(m[1], 16);
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
   }
+  /* Farbpunkte des Verlaufs (3.12.29): [{c:'#hex', a:0–100, p:0–100}], mindestens zwei. Ältere Objekte haben nur
+     gradColor1/2 (+ gradAlpha1/2) → zwei Punkte bei 0 % und 100 %. gradColor1/2 und gradAlpha1/2 bleiben als erster/letzter
+     Punkt gespeichert (PPTX/ODP-Export). Gleiche Regeln in SlideRenderer::gradStopsOf. */
+  function normGradStops(list) {
+    if (!Array.isArray(list)) return null;
+    const out = list.map((s) => ({
+      c: /^#[0-9a-f]{6}$/i.test(String(s && s.c || '')) ? String(s.c) : '#3a6c8d',
+      a: Number.isFinite(parseInt(s && s.a, 10)) ? Math.max(0, Math.min(100, parseInt(s.a, 10))) : 100,
+      p: Number.isFinite(parseInt(s && s.p, 10)) ? Math.max(0, Math.min(100, parseInt(s.p, 10))) : 0,
+    })).slice(0, 12);
+    return out.length >= 2 ? out : null;
+  }
+  function getGradStops(node) {
+    const own = normGradStops(node.getAttr('gradStops'));
+    if (own) return own;
+    return [
+      { c: node.getAttr('gradColor1') || '#3a6c8d', a: gradAlpha(node, 1), p: 0 },
+      { c: node.getAttr('gradColor2') || '#87b42b', a: gradAlpha(node, 2), p: 100 },
+    ];
+  }
+  function setGradStops(node, stops) {
+    const list = normGradStops(stops) || getGradStops(node);
+    node.setAttr('gradStops', list);
+    const sorted = list.slice().sort((x, y) => x.p - y.p);
+    node.setAttr('gradColor1', sorted[0].c);
+    node.setAttr('gradColor2', sorted[sorted.length - 1].c);
+    node.setAttr('gradAlpha1', sorted[0].a);
+    node.setAttr('gradAlpha2', sorted[sorted.length - 1].a);
+  }
+  function gradCss(stops, angle) {
+    const sorted = stops.slice().sort((x, y) => x.p - y.p);
+    return 'linear-gradient(' + angle + 'deg, ' + sorted.map((s) => gradRgba(s.c, s.a) + ' ' + s.p + '%').join(', ') + ')';
+  }
+
   function gradAlpha(node, i) {
     const v = node.getAttr('gradAlpha' + i);
     return v === undefined || v === null ? 100 : Math.max(0, Math.min(100, parseInt(v, 10)));
@@ -3664,7 +3698,9 @@
     const cx = ox + w / 2, cy = oy + h / 2;
     node.fillLinearGradientStartPoint({ x: cx - dx * half, y: cy - dy * half });
     node.fillLinearGradientEndPoint({ x: cx + dx * half, y: cy + dy * half });
-    node.fillLinearGradientColorStops([0, c1, 1, c2]);
+    const flat = [];
+    getGradStops(node).slice().sort((x, y) => x.p - y.p).forEach((s) => flat.push(s.p / 100, gradRgba(s.c, s.a)));
+    node.fillLinearGradientColorStops(flat.length >= 4 ? flat : [0, c1, 1, c2]);
     node.fillPriority('linear-gradient');
   }
 
@@ -3676,6 +3712,7 @@
       node.setAttr('gradAngle', obj.gradAngle !== undefined ? obj.gradAngle : 90);
       node.setAttr('gradAlpha1', obj.gradAlpha1 !== undefined ? obj.gradAlpha1 : 100);
       node.setAttr('gradAlpha2', obj.gradAlpha2 !== undefined ? obj.gradAlpha2 : 100);
+      if (normGradStops(obj.gradStops)) node.setAttr('gradStops', normGradStops(obj.gradStops));
       node.fillEnabled(true);
       applyShapeGradientVisual(node);
     } else if (obj.fillType === 'none') {
@@ -4090,6 +4127,7 @@
         gradAngle: node.getAttr('gradAngle') || 90,
         gradAlpha1: gradAlpha(node, 1),
         gradAlpha2: gradAlpha(node, 2),
+        gradStops: getGradStops(node),
       };
     }
     if (fillType === 'none') {
@@ -6233,15 +6271,96 @@
     syncRibbonObjectColor();
   }
 
-  function updateObjectGradientPreview() {
-    const c1 = gradRgba(document.getElementById('objGradColor1')?.value || '#3a6c8d', document.getElementById('objGradAlpha1')?.value);
-    const c2 = gradRgba(document.getElementById('objGradColor2')?.value || '#87b42b', document.getElementById('objGradAlpha2')?.value);
+  function updateObjectGradientPreview(node) {
     const angle = parseInt(document.getElementById('objGradAngle')?.value, 10) || 0;
     const preview = document.getElementById('objectGradientPreview');
     const label = document.getElementById('objGradAngleLabel');
-    if (preview) preview.style.background = 'linear-gradient(' + angle + 'deg, ' + c1 + ', ' + c2 + ')';
+    const n = node || ribbonObjectColorNode();
+    if (preview && n && (n.getAttr('fillType') === 'gradient')) preview.style.background = gradCss(getGradStops(n), angle);
     if (label) label.textContent = (I.angle || 'Winkel') + ' (' + angle + '°)';
   }
+
+  /* Liste der Farbpunkte zeichnen (nur bei Objektwechsel, Hinzufügen, Entfernen — nicht bei jeder Eingabe, sonst springt der Regler). */
+  function renderGradStops(node, enabled) {
+    const box = document.getElementById('objGradStops');
+    const add = document.getElementById('objGradAddStop');
+    if (add) add.disabled = !enabled || !node || getGradStops(node).length >= 12;
+    if (!box) return;
+    if (!node || !enabled) { box.innerHTML = ''; return; }
+    const stops = getGradStops(node);
+    const tAlpha = escapeHtml(I.gradAlpha || 'Deckkraft');
+    const tPos = escapeHtml(I.gradPos || 'Position');
+    box.innerHTML = stops.map((s, i) => {
+      const name = escapeHtml((I.gradColorN || 'Farbe {n}').replace('{n}', String(i + 1)));
+      return '<div class="sf-grad-stop" data-i="' + i + '">'
+        + '<div class="sf-grad-stop-head"><span>' + name + '</span>'
+        + '<label class="ribbon-color-picker-wrap ribbon-object-grad-picker"><span class="sr-only">' + name + '</span>'
+        + '<input type="color" data-k="c" value="' + escapeHtml(s.c) + '" title="' + name + '"></label>'
+        + (stops.length > 2 ? '<button type="button" class="hub-icon-btn sf-grad-del" data-del="' + i + '" title="' + escapeHtml(I.gradRemove || 'Farbe entfernen')
+          + '" aria-label="' + escapeHtml(I.gradRemove || 'Farbe entfernen') + '">' + ICON_TRASH + '</button>' : '')
+        + '</div>'
+        + '<span class="sf-grad-sub">' + tAlpha + '</span>'
+        + '<input type="range" data-k="a" min="0" max="100" step="1" value="' + s.a + '" data-hub-range data-hub-range-unit="%" aria-label="' + name + ': ' + tAlpha + '">'
+        + '<span class="sf-grad-sub" title="' + escapeHtml(I.gradPosHint || '') + '">' + tPos + '</span>'
+        + '<input type="range" data-k="p" min="0" max="100" step="1" value="' + s.p + '" data-hub-range data-hub-range-unit="%" aria-label="' + name + ': ' + tPos + '" title="' + escapeHtml(I.gradPosHint || '') + '">'
+        + '</div>';
+    }).join('');
+  }
+
+  function gradStopsChanged(node) {
+    applyShapeGradientVisual(node);
+    updateObjectGradientPreview(node);
+    refreshCanvas();
+    scheduleSave();
+  }
+
+  (function bindGradStops() {
+    const box = document.getElementById('objGradStops');
+    const add = document.getElementById('objGradAddStop');
+    if (box) {
+      box.addEventListener('input', (e) => {
+        const el = e.target;
+        const row = el.closest && el.closest('.sf-grad-stop');
+        const node = ribbonObjectColorNode();
+        if (!row || !el.dataset.k || !node || !shapeSupportsRibbonFill(node)) return;
+        const stops = getGradStops(node);
+        const s = stops[parseInt(row.dataset.i, 10)];
+        if (!s) return;
+        if (el.dataset.k === 'c') s.c = el.value;
+        else s[el.dataset.k] = Math.max(0, Math.min(100, parseInt(el.value, 10) || 0));
+        setGradStops(node, stops);
+        gradStopsChanged(node);
+      });
+      box.addEventListener('click', (e) => {
+        const del = e.target.closest && e.target.closest('[data-del]');
+        const node = ribbonObjectColorNode();
+        if (!del || !node) return;
+        const stops = getGradStops(node);
+        if (stops.length <= 2) return;
+        stops.splice(parseInt(del.dataset.del, 10), 1);
+        setGradStops(node, stops);
+        gradStopsChanged(node);
+        renderGradStops(node, true);
+      });
+    }
+    add?.addEventListener('click', () => {
+      const node = ribbonObjectColorNode();
+      if (!node || !shapeSupportsRibbonFill(node)) return;
+      const stops = getGradStops(node);
+      if (stops.length >= 12) return;
+      /* Neuer Punkt in der Mitte der grössten Lücke, mit der Farbe des Punkts davor. */
+      const sorted = stops.slice().sort((x, y) => x.p - y.p);
+      let best = 0, at = 50, col = sorted[0].c;
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const gap = sorted[i + 1].p - sorted[i].p;
+        if (gap > best) { best = gap; at = Math.round((sorted[i].p + sorted[i + 1].p) / 2); col = sorted[i].c; }
+      }
+      stops.push({ c: col, a: 100, p: at });
+      setGradStops(node, stops);
+      gradStopsChanged(node);
+      renderGradStops(node, true);
+    });
+  })();
 
   function syncObjectFillModePanels(node, fillSupported) {
     const solid = document.getElementById('ribbonObjectFillSolid');
@@ -6262,36 +6381,25 @@
     document.getElementById('rb_objFillSolid')?.classList.toggle('active', isSolid);
     document.getElementById('rb_objFillGradient')?.classList.toggle('active', fillSupported && isGrad);
 
-    const c1 = document.getElementById('objGradColor1');
-    const c2 = document.getElementById('objGradColor2');
     const angle = document.getElementById('objGradAngle');
-    const a1 = document.getElementById('objGradAlpha1');
-    const a2 = document.getElementById('objGradAlpha2');
-    [c1, c2, angle, a1, a2].forEach((el) => {
-      if (el) el.disabled = !isGrad;
-    });
-
-    if (isGrad && node) {
-      if (a1) a1.value = String(gradAlpha(node, 1));
-      if (a2) a2.value = String(gradAlpha(node, 2));
-      if (c1) c1.value = node.getAttr('gradColor1') || '#3a6c8d';
-      if (c2) c2.value = node.getAttr('gradColor2') || '#87b42b';
-      if (angle) angle.value = String(node.getAttr('gradAngle') !== undefined ? node.getAttr('gradAngle') : 90);
-    }
+    if (angle) angle.disabled = !isGrad;
+    if (isGrad && node && angle) angle.value = String(node.getAttr('gradAngle') !== undefined ? node.getAttr('gradAngle') : 90);
+    /* Liste nur neu zeichnen, wenn ein anderes Objekt gewählt ist oder der Modus wechselt (sonst springt der Regler beim Ziehen). */
+    const schluessel = isGrad && node ? node.id() + ':' + getGradStops(node).length : '';
+    const box = document.getElementById('objGradStops');
+    if (box && box.dataset.for !== schluessel) { renderGradStops(node, isGrad); box.dataset.for = schluessel; }
+    else { const add = document.getElementById('objGradAddStop'); if (add) add.disabled = !isGrad || getGradStops(node).length >= 12; }
     updateObjectGradientPreview();
   }
 
   function applyObjectGradientFromEditor(node) {
     if (!node) return;
-    const c1 = document.getElementById('objGradColor1')?.value || '#3a6c8d';
-    const c2 = document.getElementById('objGradColor2')?.value || '#87b42b';
     const angle = parseInt(document.getElementById('objGradAngle')?.value, 10) || 0;
-    ['objGradAlpha1', 'objGradAlpha2'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) node.setAttr('gradAlpha' + (i + 1), Math.max(0, Math.min(100, parseInt(el.value, 10) || 0)));
-    });
-    updateObjectGradientPreview();
-    applyObjectFillGradient(node, c1, c2, angle);
+    node.setAttr('gradAngle', angle);
+    applyShapeGradientVisual(node);
+    updateObjectGradientPreview(node);
+    refreshCanvas();
+    scheduleSave();
   }
 
   function syncRibbonObjectColor() {
@@ -6354,11 +6462,7 @@
       const c1 = node.getAttr('gradColor1') || node.fill() || '#3a6c8d';
       const c2 = node.getAttr('gradColor2') || '#87b42b';
       const angle = node.getAttr('gradAngle') !== undefined ? node.getAttr('gradAngle') : 90;
-      const c1El = document.getElementById('objGradColor1');
-      const c2El = document.getElementById('objGradColor2');
       const angleEl = document.getElementById('objGradAngle');
-      if (c1El) c1El.value = c1;
-      if (c2El) c2El.value = c2;
       if (angleEl) angleEl.value = String(angle);
       applyObjectFillGradient(node, c1, c2, angle);
     });
@@ -6391,7 +6495,7 @@
       scheduleSave();
     });
 
-    ['objGradColor1', 'objGradColor2', 'objGradAngle', 'objGradAlpha1', 'objGradAlpha2'].forEach((id) => {
+    ['objGradAngle'].forEach((id) => {
       document.getElementById(id)?.addEventListener('input', () => {
         const node = ribbonObjectColorNode();
         if (!node || !shapeSupportsRibbonFill(node)) {

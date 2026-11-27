@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.29] - 2026-11-27
+
+### Added
+- **Verlauf mit beliebig vielen Farben** (Urs 27.11.: «ab wann die neue Farbe beginnt», «weitere Farben dazu fügen»): Der Verlauf ist eine Liste von Farbpunkten, je mit Farbe, Deckkraft und Position (0 % = Anfang, 100 % = Ende). «+ Farbe» setzt einen Punkt in die grösste Lücke, der Papierkorb entfernt einen (mindestens zwei bleiben, höchstens zwölf). Editor, Vorschau und Präsentation gleich; bestehende Verläufe bleiben wie sie sind.
+
 ## [3.12.28] - 2026-11-27
 
 ### Changed

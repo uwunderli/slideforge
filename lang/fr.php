@@ -1856,4 +1856,9 @@ return [
     'shortcut.slides_extend_prev' => 'Étendre la sélection de diapositives vers le haut/la gauche',
     'shortcut.slides_extend_next' => 'Étendre la sélection de diapositives vers le bas/la droite',
     'shortcut.slides_extend_hint' => 'Dans la bande ou la grille, étendre la sélection depuis la diapositive cliquée (comme Maj+clic) ; dans la grille ↑/↓ d’une rangée.',
+    'props.grad_pos' => 'Position',
+    'props.grad_pos_hint' => 'Emplacement de cette couleur dans le dégradé : 0 % = début, 100 % = fin. Avant et après, la couleur reste pure.',
+    'props.grad_add' => '+ Couleur',
+    'props.grad_remove' => 'Supprimer la couleur',
+    'props.grad_color_n' => 'Couleur {n}',
 ];

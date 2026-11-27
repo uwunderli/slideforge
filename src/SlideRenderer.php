@@ -62,6 +62,45 @@ class SlideRenderer
 
     /** Spitze (Länge %, Vorgabe 40) und Schaft (Dicke %, Vorgabe 30) einstellbar (3.12.10); gleiche Rechnung wie editor.js arrowPoints. */
     /** Verlaufsfarbe mit Deckkraft 0–100 als rgba() (3.12.23); gleiche Rechnung wie editor.js gradRgba. */
+    /**
+     * Farbpunkte des Verlaufs (3.12.29), aufsteigend nach Position: [['c'=>'#hex','a'=>0–100,'p'=>0–100], …].
+     * Ohne gradStops: zwei Punkte aus gradColor1/2 und gradAlpha1/2 bei 0 % und 100 %. Gleiche Regeln wie editor.js normGradStops.
+     */
+    private static function gradStopsOf(array $obj): array
+    {
+        $out = [];
+        if (is_array($obj['gradStops'] ?? null)) {
+            foreach (array_slice($obj['gradStops'], 0, 12) as $s) {
+                if (!is_array($s)) continue;
+                $c = (string)($s['c'] ?? '');
+                $out[] = [
+                    'c' => preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? $c : '#3a6c8d',
+                    'a' => is_numeric($s['a'] ?? null) ? (int)max(0, min(100, (float)$s['a'])) : 100,
+                    'p' => is_numeric($s['p'] ?? null) ? (int)max(0, min(100, (float)$s['p'])) : 0,
+                ];
+            }
+        }
+        if (count($out) < 2) {
+            $c1 = (string)($obj['gradColor1'] ?? '#3a6c8d');
+            $c2 = (string)($obj['gradColor2'] ?? '#87b42b');
+            $out = [
+                ['c' => preg_match('/^#[0-9a-fA-F]{6}$/', $c1) ? $c1 : '#3a6c8d', 'a' => (int)max(0, min(100, (float)($obj['gradAlpha1'] ?? 100))), 'p' => 0],
+                ['c' => preg_match('/^#[0-9a-fA-F]{6}$/', $c2) ? $c2 : '#87b42b', 'a' => (int)max(0, min(100, (float)($obj['gradAlpha2'] ?? 100))), 'p' => 100],
+            ];
+        }
+        usort($out, fn($x, $y) => $x['p'] <=> $y['p']);
+        return $out;
+    }
+
+    private static function gradSvgStops(array $obj): string
+    {
+        $html = '';
+        foreach (self::gradStopsOf($obj) as $s) {
+            $html .= '<stop offset="' . ($s['p'] / 100) . '" stop-color="' . $s['c'] . '" stop-opacity="' . self::gradOpacity($s['a']) . '"/>';
+        }
+        return $html;
+    }
+
     private static function gradOpacity($alpha): string
     {
         $a = max(0, min(100, $alpha === null || $alpha === '' ? 100 : (float)$alpha)) / 100;
@@ -760,8 +799,11 @@ class SlideRenderer
                 $c1 = $obj['gradColor1'] ?? '#3a6c8d';
                 $c2 = $obj['gradColor2'] ?? '#87b42b';
                 $angle = $obj['gradAngle'] ?? 90;
-                $fillCss = sprintf('linear-gradient(%sdeg, %s, %s)', h((string)$angle),
-                    self::gradRgba((string)$c1, $obj['gradAlpha1'] ?? 100), self::gradRgba((string)$c2, $obj['gradAlpha2'] ?? 100));
+                $teile = [];
+                foreach (self::gradStopsOf($obj) as $st) {
+                    $teile[] = self::gradRgba($st['c'], $st['a']) . ' ' . $st['p'] . '%';
+                }
+                $fillCss = sprintf('linear-gradient(%sdeg, %s)', h((string)$angle), implode(', ', $teile));
             } elseif ($fillType === 'none') {
                 $fillCss = 'transparent';
             } else {
@@ -969,8 +1011,7 @@ class SlideRenderer
             $x1 = 0.5 - $dx * 0.5; $y1 = 0.5 - $dy * 0.5;
             $x2 = 0.5 + $dx * 0.5; $y2 = 0.5 + $dy * 0.5;
             $defs = '<defs><linearGradient id="' . $gradId . '" x1="' . $x1 . '" y1="' . $y1 . '" x2="' . $x2 . '" y2="' . $y2 . '">'
-                . '<stop offset="0" stop-color="' . $c1 . '" stop-opacity="' . self::gradOpacity($obj['gradAlpha1'] ?? 100) . '"/>'
-                . '<stop offset="1" stop-color="' . $c2 . '" stop-opacity="' . self::gradOpacity($obj['gradAlpha2'] ?? 100) . '"/></linearGradient></defs>';
+                . self::gradSvgStops($obj) . '</linearGradient></defs>';
             $fillAttr = 'url(#' . $gradId . ')';
         } elseif ($fillType === 'none') {
             $fillAttr = 'none';

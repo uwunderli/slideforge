@@ -1846,4 +1846,9 @@ return [
     'shortcut.slides_extend_prev' => 'Extend slide selection up/left',
     'shortcut.slides_extend_next' => 'Extend slide selection down/right',
     'shortcut.slides_extend_hint' => 'In the filmstrip or grid, extend the selection from the clicked slide (like Shift+click); in the grid ↑/↓ by one row.',
+    'props.grad_pos' => 'Position',
+    'props.grad_pos_hint' => 'Where this color sits in the gradient: 0 % = start, 100 % = end. Before/after it the color stays pure.',
+    'props.grad_add' => '+ Color',
+    'props.grad_remove' => 'Remove color',
+    'props.grad_color_n' => 'Color {n}',
 ];
