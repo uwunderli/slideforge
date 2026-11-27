@@ -12084,13 +12084,17 @@ select.sf-fsel-native { display: none !important; }
 }
 
 /* Abspielen (3.11.0): Knopfzeile oben im Effekte-Reiter, Überlagerung über der Bühne */
-.props-fx-playbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+/* Abspielen über der Folie (3.12.7): oben in der Mitte der Bühne, an derselben Stelle wie der Hinweis beim Abspielen. */
+.sf-stage-play {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+.canvas-area:has(> .sf-play-hint) .sf-stage-play { visibility: hidden; }
 /* Abspielen (3.12.3): Bild genau über der Folie, klick-durchlässig; kleiner Hinweis oben, nur ✕ ist anklickbar. */
 .sf-play-frame {
   position: absolute;

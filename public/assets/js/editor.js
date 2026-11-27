@@ -7045,17 +7045,10 @@
      «Abspielen · Folie x · Schritt y/z». */
   const play = { el: null, frame: null, slide: 0, step: 0, total: 0, ready: false, prevFocus: null, sync: null };
 
-  function playBarHtml() {
-    const label = I.animPlay || 'Abspielen';
-    const tip = I.animPlayHint || 'Folie mit allen Effekten Schritt für Schritt abspielen';
-    return '<div class="props-fx-playbar">'
-      + '<button type="button" class="button button-sm hub-btn hub-btn--sm" data-fx-play-slide title="' + escapeHtml(tip) + '">'
-      + '<span aria-hidden="true">▶</span> ' + escapeHtml(label) + '</button>'
-      + '</div>';
-  }
+  /* Abspielen-Knopf über der Folie (3.12.7, vorher im Effekte-Bereich). */
+  document.getElementById('stagePlayBtn')?.addEventListener('click', () => openPlayOverlay());
 
   function wirePlayBar(panel, node) {
-    panel.querySelector('[data-fx-play-slide]')?.addEventListener('click', () => openPlayOverlay());
     panel.querySelectorAll('[data-fx-play-one]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -7299,7 +7292,7 @@
       ex = nodeExit(node);
       inhalt = fxPlayOneHtml('out', I.animOut || 'Ausblenden', !!ex) + buildExitPropsHtml(node);
     }
-    panel.innerHTML = playBarHtml() + fxTabsHtml(aktiv, einzeln)
+    panel.innerHTML = fxTabsHtml(aktiv, einzeln)
       + '<div class="props-fx-tabpanel" id="fxTabPanel" role="tabpanel" aria-labelledby="fxTab_' + aktiv + '">'
       + '<div class="props-fx-body">' + inhalt + '</div></div>';
     if (aktiv === 'order' && SF.canEdit) {

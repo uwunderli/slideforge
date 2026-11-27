@@ -950,6 +950,9 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
 
   <main class="canvas-area" id="canvasArea">
     <div class="canvas-slide-view" id="canvasSlideView">
+    <?php if ($canEdit): /* Abspielen immer sichtbar über der Folie (Urs 27.11.: «Irgend wohin wo es immer sichtbar ist»); während des Abspielens steht dort der Hinweis. */ ?>
+    <button type="button" class="hub-btn hub-btn--sm sf-stage-play" id="stagePlayBtn" title="<?= h(t('props.anim_play_hint')) ?>"><span aria-hidden="true">▶</span> <?= h(t('props.anim_play')) ?></button>
+    <?php endif; ?>
     <div class="canvas-scroll">
       <div id="stageWrap" class="stage-wrap">
         <div id="stageBgLayer" class="stage-bg-layer"></div>

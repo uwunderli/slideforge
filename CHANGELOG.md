@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.7] - 2026-11-27
+
+### Changed
+- **Abspielen über der Folie** (Urs 27.11.): Der Knopf «▶ Abspielen» steht oben in der Mitte der Bühne und ist in jedem Reiter sichtbar (vorher nur im Effekte-Bereich). Beim Abspielen steht an derselben Stelle der Hinweis mit Schritt und ✕.
+
 ## [3.12.6] - 2026-11-27
 
 ### Changed
