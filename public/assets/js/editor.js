@@ -10192,7 +10192,8 @@
         scheduleSave();
         return;
       }
-      /* Folienfläche ohne Markierung (3.12.3, scope 'stage'): Vorgaben →/Leertaste/Bild↓ spielen die Folie ab (Schritt 0, dann weiter
+      /* Folienfläche ohne Markierung (3.12.3, scope 'stage'; 3.12.12 gleiche Vorgaben wie beim Vorführen: Leertaste/Eingabe/→/↓/Bild↓ weiter,
+         ←/↑/Bild↑ zurück): Vorgaben spielen die Folie ab (Schritt 0, dann weiter
          über Effekte und Folienübergänge), ←/Bild↑ ab Endzustand einen Schritt zurück. Nicht mit Fokus im Filmstreifen, Menüband oder Panels. */
       if (!SF.selectedNodes.length && !play.el && stagePlayContext()) {
         const sc = scopeCmd(e, 'stage');

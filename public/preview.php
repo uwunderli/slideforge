@@ -104,7 +104,13 @@ $sections = SlideRenderer::renderSections($slidesData);
 <?php else: ?>
       Reveal.slide(<?= (int)$startSlide ?>, 0, -1);
 <?php endif; ?>
-      if (slidesEl) setTimeout(function () { slidesEl.classList.remove('no-transition'); }, 60);
+      /* 3.12.12 (Urs 27.11.: «Automatische Animationen laufen auch»): Abspielen ist schon ein Start von Hand,
+         darum Zeitsteuerung (Automatisch starten nach, Folie automatisch weiter) nach dem Sprung zur Startfolie freischalten. */
+      if (slidesEl) setTimeout(function () {
+        slidesEl.classList.remove('no-transition');
+        window.SlideForgeRevealAutoSlide?.enableAutoAdvance();
+      }, 60);
+      else setTimeout(function () { window.SlideForgeRevealAutoSlide?.enableAutoAdvance(); }, 60);
       melden();
     });
     Reveal.on('fragmentshown', melden);
