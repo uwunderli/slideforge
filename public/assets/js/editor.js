@@ -6857,8 +6857,14 @@
       body += '<div class="props-video-note">' + escapeHtml(I.effectsClearNone || 'Kein Objekt dieser Folie hat einen Effekt.') + '</div>';
     } else {
       body += '<ul class="props-effects-list">';
+      /* Auf der Folie gewählte Objekte (auch Teile einer gewählten Gruppe) sind in der Liste markiert (Urs 27.11.: «Wenn angewählt, markier das hier auch»). */
+      const gewaehlt = (n) => {
+        for (let p = n; p && p.getParent; p = p.getParent()) if (SF.selectedNodes.includes(p)) return true;
+        return false;
+      };
       eintraege.forEach((e) => {
-        body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '" tabindex="0" title="'
+        const an = gewaehlt(e.node);
+        body += '<li' + (an ? ' class="active" aria-current="true"' : '') + ' data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '" tabindex="0" title="'
           + escapeHtml(I.effectsRowOpen || 'Doppelklick: Objekt wählen und Effekt bearbeiten') + '">'
           + '<span class="props-layer-drag-handle" draggable="true" title="'
           + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
@@ -7296,7 +7302,11 @@
     panel.innerHTML = playBarHtml() + fxTabsHtml(aktiv, einzeln)
       + '<div class="props-fx-tabpanel" id="fxTabPanel" role="tabpanel" aria-labelledby="fxTab_' + aktiv + '">'
       + '<div class="props-fx-body">' + inhalt + '</div></div>';
-    if (aktiv === 'order' && SF.canEdit) wireSlideEffectsPanel();
+    if (aktiv === 'order' && SF.canEdit) {
+      wireSlideEffectsPanel();
+      const an = panel.querySelector('.props-effects-list > li.active');
+      if (an) an.scrollIntoView({ block: 'nearest' });
+    }
     wireFxTabs(panel);
     wirePlayBar(panel, einzeln ? node : null);
   }

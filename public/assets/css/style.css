@@ -8240,6 +8240,10 @@ body.notes-resizing {
   border-color: var(--border);
   background: var(--surface);
 }
+.props-effects-list > li.active {
+  border-color: var(--accent);
+  background: rgba(58, 108, 141, 0.12);
+}
 .props-effects-list > li.dragging {
   opacity: 0.55;
 }
