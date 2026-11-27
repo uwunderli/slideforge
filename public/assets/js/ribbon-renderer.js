@@ -239,7 +239,7 @@
     const entry = ICONS[name];
     if (!entry) return '';
     const paths = typeof entry === 'string' ? entry : entry.paths;
-    const strokeWidth = typeof entry === 'object' && entry.strokeWidth != null ? entry.strokeWidth : 2;
+    const strokeWidth = typeof entry === 'object' && entry.strokeWidth != null ? entry.strokeWidth : 1.5;  /* Hub-Standard (hub-ribbon): Strich 1.5 */
     if (!paths) return '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + strokeWidth + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
   }

@@ -279,6 +279,11 @@ class RibbonLayout
                             'rows' => max(1, min(2, (int)($item['gridSpan']['rows'] ?? 1))),
                         ];
                     }
+                    // Datei-Gruppe (FileForge, 3.1.0): feste Grösse wie in der Vorgabe. Gespeicherte Layouts aus 3.1.0–3.3.0
+                    // trugen «Als Kopie»/«Als Vorlage» noch 2×1 → abgeschnittene Beschriftung (Urs 27.11.).
+                    if (in_array($itemId, ['ff_save', 'ff_save_copy', 'ff_save_template'], true)) {
+                        $itemEntry['gridSpan'] = ['cols' => 2, 'rows' => 2];
+                    }
                     if ($itemId === 'widget:settings_title') {
                         $cols = (int)($itemEntry['gridSpan']['cols'] ?? 6);
                         if ($cols < 6) {

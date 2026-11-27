@@ -234,7 +234,7 @@
       return '<tr><td class="hub-list__zelle"><a href="#" class="hub-list__sprung sf-home__open"' + data + '><span>' + name + '</span></a></td>' +
         '<td class="muted small">' + sub + '</td>' +
         '<td class="sf-home__act">' + (kind === 'recent' ? '<button type="button" class="hub-icon-btn sf-home__forget" title="Aus der Liste nehmen" aria-label="Aus der Liste nehmen"' + data + '>' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : '') + '</td></tr>';
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : '') + '</td></tr>';
     }
     function table(list, kind, head) {
       return '<table class="hub-list"><thead><tr><th>Name</th><th>' + head + '</th><th></th></tr></thead><tbody>' +

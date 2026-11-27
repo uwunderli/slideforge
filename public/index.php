@@ -33,7 +33,7 @@ require __DIR__ . '/includes/header.php';
 (function () {
   var act = SfFf.home(<?= json_encode(['csrf' => csrf_token()], JSON_HEX_TAG) ?>);
   if (!window.HubRibbon) return;
-  var ic = function (p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; };
+  var ic = function (p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; };
   var commands = {
     newBlank: { id: 'newBlank', elId: 'sfNewBlank', label: 'Neu', title: 'Neue leere Präsentation in FileForge anlegen', icon: ic('<rect x="4" y="5" width="16" height="12" rx="1.5"/><path d="M12 8v6M9 11h6"/>') },
     newFromTemplate: { id: 'newFromTemplate', elId: 'sfNewTpl', label: 'Aus Vorlage …', title: 'Neue Präsentation aus einer Vorlage (.cfs)', icon: ic('<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 9v9"/>') },

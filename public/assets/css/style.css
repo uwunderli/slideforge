@@ -12045,3 +12045,43 @@ html[data-theme="light"] .editor-ribbon .effect-icon-btn.active {
 }
 #pixabayModal .pixabay-switch svg { display: block; }
 .editor-topbar-context { flex: 1 1 auto; }
+
+/* ── Menüband nach Hub-Standard (Urs 27.11.2026: «Die Icons im Ribbon dünken mich ein wenig klobig … vorallem die grossen»).
+   Wie hub-ribbon.css: Strich 1.5, grosses Symbol ≈ 0.55 × Zelle (Hub mittel 36 px → 20 px), kleines ≈ 0.4–0.45 × Zelle. ── */
+.editor-ribbon .ribbon-btn > svg,
+.editor-ribbon .ribbon-btn-tall > svg,
+.editor-ribbon .ribbon-settings-btn > svg,
+.editor-ribbon .ribbon-icon-btn > svg,
+.editor-ribbon .ribbon-grid-btn > svg,
+.editor-ribbon .present-config-btn > svg {
+  stroke-width: 1.5;
+}
+.ribbon-grid-cell[data-grid-cols="2"][data-grid-rows="2"] > .ribbon-btn > svg,
+.ribbon-grid-cell[data-grid-cols="2"][data-grid-rows="2"] > .present-config-btn.ribbon-grid-btn > svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  margin: auto 0;
+}
+.ribbon-grid-cell[data-grid-rows="2"] > .ribbon-btn-tall > svg,
+.ribbon-grid-cell[data-grid-rows="2"] > .ribbon-settings-btn > svg {
+  max-width: 22px;
+  max-height: 22px;
+}
+.ribbon-grid-cell.ribbon-grid-cell--no-label[data-grid-cols="2"][data-grid-rows="2"] > .ribbon-btn > svg,
+.ribbon-grid-cell.ribbon-grid-cell--no-label[data-grid-cols="2"][data-grid-rows="2"] > .present-config-btn > svg {
+  width: 26px !important;
+  height: 26px !important;
+  max-width: 26px !important;
+  max-height: 26px !important;
+}
+.ribbon-grid-cell[data-grid-cols="1"][data-grid-rows="1"] .ribbon-btn svg,
+.ribbon-grid-cell[data-grid-cols="1"][data-grid-rows="1"] .ribbon-grid-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.ribbon-grid-cell[data-grid-rows="2"] > .ribbon-btn-tall .ribbon-btn-label,
+.ribbon-grid-cell[data-grid-rows="2"] > .ribbon-settings-btn .ribbon-btn-label,
+.ribbon-grid-cell[data-grid-cols="2"][data-grid-rows="2"] > .ribbon-btn .ribbon-btn-label {
+  font-size: 0.66rem;
+}
