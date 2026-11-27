@@ -6389,8 +6389,11 @@
         html += fieldRibbonStarPoints('p_starPoints', obj.starPoints || 5);
       } else if (st === 'arrow') {
         html += fieldRibbonShapePicker('p_arrowStyle', ARROW_STYLE_OPTIONS, obj.arrowStyle || 'right');
-        html += fieldArrowRange('p_arrowHead', I.arrowHead || 'Spitze', 5, 95, obj.arrowHead || 40);
-        html += fieldArrowRange('p_arrowShaft', I.arrowShaft || 'Schaft', 5, 80, obj.arrowShaft || 30);
+        /* Spitze und Schaft in einer Zeile über die volle Breite (3.12.13, Urs 27.11.: «Mach die Regler in einer Zeile»). */
+        html += '<div class="sf-arrow-sliders">'
+          + fieldArrowRange('p_arrowHead', I.arrowHead || 'Spitze', 5, 95, obj.arrowHead || 40)
+          + fieldArrowRange('p_arrowShaft', I.arrowShaft || 'Schaft', 5, 80, obj.arrowShaft || 30)
+          + '</div>';
       } else if (st === 'speech-bubble') {
         html += fieldRibbonShapePicker('p_bubbleStyle', BUBBLE_STYLE_OPTIONS, obj.bubbleStyle || 'rect-left');
       }
@@ -7641,11 +7644,15 @@
 
   /* Regler für Pfeil-Spitze/-Schaft (3.12.10), Aufbau wie der Deckkraft-Regler im Positionsbereich. */
   function fieldArrowRange(id, label, min, max, value) {
-    return '<label class="ribbon-position-field ribbon-position-field-range" for="' + id + '" title="' + escapeHtml(label) + '">'
-      + '<span class="ribbon-position-field-label">' + escapeHtml(label) + '</span>'
-      + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + (parseInt(value, 10) || min) + '" aria-label="' + escapeHtml(label) + '">'
+    const v = parseInt(value, 10) || min;
+    /* Regler + Zahlenfeld (3.12.13, Urs 27.11.: «mit Werten damit man den Wert kopieren kann»); beide bleiben gleich. */
+    return '<label class="sf-arrow-slider" for="' + id + '" title="' + escapeHtml(label) + '">'
+      + '<span class="sf-arrow-slider-label">' + escapeHtml(label) + '</span>'
+      + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" aria-label="' + escapeHtml(label) + '">'
+      + '<input type="number" class="sf-arrow-num" id="' + id + '_num" min="' + min + '" max="' + max + '" step="1" value="' + v + '" aria-label="' + escapeHtml(label) + ' (%)">'
       + '</label>';
   }
+
 
   function fieldRibbonStarPoints(id, value) {
     const fullLabel = I.starPoints || 'Anzahl Zacken';
@@ -8025,14 +8032,21 @@
         });
       }
       bindIconPicker('p_arrowStyle', 'arrowStyle');
-      on('p_arrowHead', 'input', (e) => {
-        node.setAttr('arrowHead', Math.max(5, Math.min(95, parseInt(e.target.value, 10) || 40)));
-        recomputeShapePoints(); refreshCanvas(); scheduleSave();
-      });
-      on('p_arrowShaft', 'input', (e) => {
-        node.setAttr('arrowShaft', Math.max(5, Math.min(80, parseInt(e.target.value, 10) || 30)));
-        recomputeShapePoints(); refreshCanvas(); scheduleSave();
-      });
+      /* Regler und Zahlenfeld je Wert: beide setzen das Attribut und gleichen das andere an. */
+      const pfeilWert = (id, attr, min, max, vorgabe) => {
+        const setze = (roh, quelle) => {
+          const v = Math.max(min, Math.min(max, parseInt(roh, 10) || vorgabe));
+          node.setAttr(attr, v);
+          const r = document.getElementById(id), z = document.getElementById(id + '_num');
+          if (r && r !== quelle) r.value = String(v);
+          if (z && z !== quelle) z.value = String(v);
+          recomputeShapePoints(); refreshCanvas(); scheduleSave();
+        };
+        on(id, 'input', (e) => setze(e.target.value, e.target));
+        on(id + '_num', 'change', (e) => { setze(e.target.value, null); });
+      };
+      pfeilWert('p_arrowHead', 'arrowHead', 5, 95, 40);
+      pfeilWert('p_arrowShaft', 'arrowShaft', 5, 80, 30);
       bindIconPicker('p_bracketStyle', 'bracketStyle');
       bindIconPicker('p_bubbleStyle', 'bubbleStyle');
     } else if (type === 'table') {

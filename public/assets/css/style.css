@@ -9147,6 +9147,48 @@ body.notes-resizing {
   flex: 1;
   margin: 0;
 }
+/* Pfeil: Spitze und Schaft nebeneinander, volle Breite (3.12.13). */
+.sf-arrow-sliders {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  grid-column: 1 / -1;
+}
+.sf-arrow-slider {
+  flex: 1 1 150px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.sf-arrow-slider-label {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.sf-arrow-slider .sf-arrow-num {
+  flex: 0 0 auto;
+  width: 3.4rem;
+  min-height: 30px;
+  margin: 0;
+  padding: 2px 4px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+.sf-arrow-slider input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 /* Schritt-Feld ‹ Nummer › (3.12.11): grosse Knöpfe links/rechts, Zahl in der Mitte, ohne Browser-Pfeilchen. */
 .sf-step-field {
   display: flex;

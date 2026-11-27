@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.13] - 2026-11-27
+
+### Changed
+- **Pfeil-Regler in einer Zeile mit Wert** (Urs 27.11.): «Spitze» und «Schaft» stehen nebeneinander über die volle Breite, je mit Zahlenfeld (%), das man kopieren und eintippen kann; Regler und Zahl bleiben gleich.
+
 ## [3.12.12] - 2026-11-27
 
 ### Changed
