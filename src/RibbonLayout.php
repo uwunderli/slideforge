@@ -1296,6 +1296,15 @@ class RibbonLayout
             if (!empty($cmd['allowInInput'])) {
                 $entry['allowInInput'] = true;
             }
+            /* Weitere Befehle (3.12.1, Hub 2.36.3): nur Kürzel, Überschrift/Beschreibung im Dialog, eigener Zusammenhang */
+            if (!empty($cmd['kuerzelOnly'])) {
+                $entry['kuerzelOnly'] = true;
+                $entry['group'] = !empty($cmd['groupKey']) ? t($cmd['groupKey']) : '';
+                $entry['title'] = !empty($cmd['titleKey']) ? t($cmd['titleKey']) : '';
+            }
+            if (!empty($cmd['scope']) && is_string($cmd['scope'])) {
+                $entry['scope'] = $cmd['scope'];
+            }
             if (!empty($cmd['tileable'])) {
                 $entry['tileable'] = true;
             }

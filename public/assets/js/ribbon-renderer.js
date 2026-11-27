@@ -625,7 +625,8 @@
       state.usedDomIds.add(cmd.domId);
     }
     if (cmd.disabled) btn.disabled = true;
-    const title = cmd.shortcut ? cmd.label + ' (' + cmd.shortcut + ')' : cmd.label;
+    const sc0 = Array.isArray(cmd.shortcut) ? cmd.shortcut[0] : cmd.shortcut;   // Hub legt Zweitkürzel als eigene Einträge an
+    const title = sc0 ? cmd.label + ' (' + sc0 + ')' : cmd.label;
     btn.title = title;
     btn.innerHTML = (cmd.icon ? svgIcon(cmd.icon) : '') + '<span class="ribbon-btn-label">' + escapeHtml(cmd.label) + '</span>';
     if (cmd.id === 'show_progress' || cmd.id === 'show_controls') {

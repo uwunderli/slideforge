@@ -36,12 +36,13 @@
     if (def.kind === 'separator' || def.kind === 'row_separator' || def.id === 'separator' || def.id === 'row_separator') return;
     if (def.id === 'ribbon_customize') return;   // Anpassen liegt in der Reiter-Leiste
     const cat = catalogById[def.id] || {};
-    const iconName = def.icon || cat.icon || (def.kind === 'widget' ? 'widget' : '');
+    /* Weitere Befehle (3.12.1): kuerzelOnly ohne Icon → im Hub-Dialog nur Kürzelfeld, nicht ins Menüband ziehbar. */
+    const iconName = def.kuerzelOnly ? '' : (def.icon || cat.icon || (def.kind === 'widget' ? 'widget' : ''));
     commands[def.id] = Object.assign({}, def, {
       label: def.label || cat.label || def.id,
       category: cat.category || def.category || '',
       iconName: iconName,
-      icon: R ? R.svgIcon(iconName) : '',
+      icon: R && iconName ? R.svgIcon(iconName) : '',
       tileable: !!(def.tileable || cat.tileable),
     });
   });

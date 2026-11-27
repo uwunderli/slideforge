@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.1] - 2026-11-27
+
+### Changed
+- «Ribbon anpassen» › «Weitere Befehle» (braucht Hub 2.36.3, Urs 27.11.): alle bisher fest abgefragten Tasten stehen mit ihrer Vorgabe im Katalog und sind umstellbar — Folien im Filmstreifen (vorige/nächste/erste/letzte), Präsentieren ab aktueller Folie (Umschalt+F5, Strg+P), Zoom +/−/einpassen und Notizen (Vorgabe leer), markierte Objekte löschen, Rasteransicht (Pfeile, Esc), Abspielen (weiter/zurück/schliessen), Zweitkürzel für Wiederholen, Folien löschen und Folien verschieben. Fest bleiben die Pfeiltasten zum Verschieben von Objekten auf der Folie.
+
 ## [3.12.0] - 2026-11-27
 
 ### Changed

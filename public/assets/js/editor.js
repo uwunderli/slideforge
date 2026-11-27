@@ -7064,23 +7064,26 @@
     } catch (e) { /* Seite im iframe noch nicht bereit */ }
   }
 
-  function playKey(key) {
-    if (key === 'Escape') { closePlayOverlay(); return; }
-    if ([' ', 'Enter', 'ArrowRight', 'ArrowDown', 'PageDown'].includes(key)) playControl('next');
-    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(key)) playControl('prev');
-  }
-
+  /* Tasten im Abspielen-Fenster (3.12.1): Befehle aus dem Katalog, scope 'play' (Vorgaben Leertaste/Eingabe/→/↓/Bild↓ weiter,
+     ←/↑/Bild↑ zurück, Esc schliessen), umstellbar unter «Weitere Befehle». Fest: Tab hält den Fokus auf ✕, Eingabe auf ✕ schliesst. */
   function playKeydown(e) {
     if (!play.el) return;
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
     const closeBtn = play.el.querySelector('.sf-play-close');
-    if (e.key === 'Tab') { e.preventDefault(); closeBtn?.focus(); return; }
-    if (e.key === 'Enter' && document.activeElement === closeBtn) return; // Enter auf ✕ schliesst
+    const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+    if (plain && e.key === 'Tab') { e.preventDefault(); closeBtn?.focus(); return; }
+    if (plain && e.key === 'Enter' && document.activeElement === closeBtn) return; // Eingabe auf ✕ schliesst
+    const cmd = window.SFScopeCmd ? window.SFScopeCmd(e, 'play') : '';
+    if (cmd) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (cmd === 'play_close') closePlayOverlay();
+      else if (cmd === 'play_next') playControl('next');
+      else if (cmd === 'play_prev') playControl('prev');
+      return;
+    }
+    if (!plain) return;
     /* Andere Tasten (Entf, Buchstaben …) nicht an die Bühne darunter weitergeben. */
-    if (![' ', 'Enter', 'Escape', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(e.key)) { e.stopPropagation(); return; }
-    e.preventDefault();
     e.stopPropagation();
-    playKey(e.key);
   }
 
   function renderPlayStep() {
@@ -7100,7 +7103,13 @@
       SF.playFrag = play.step - 1;
       mitlaufMelden(false);
     } else if (d.type === 'sf-play-key') {
-      playKey(String(d.key || ''));
+      /* Taste aus dem Abspiel-iframe (Fokus dort): gleiche Katalog-Befehle wie playKeydown; Klick = weiter. */
+      if (d.click) { playControl('next'); return; }
+      const ev = { key: String(d.key || ''), code: String(d.code || ''), ctrlKey: !!d.ctrlKey, metaKey: !!d.metaKey, altKey: !!d.altKey, shiftKey: !!d.shiftKey };
+      const cmd = window.SFScopeCmd ? window.SFScopeCmd(ev, 'play') : '';
+      if (cmd === 'play_close') closePlayOverlay();
+      else if (cmd === 'play_next') playControl('next');
+      else if (cmd === 'play_prev') playControl('prev');
     }
   });
 
@@ -9866,73 +9875,85 @@
     };
     SFS.register('slide_move_up', moveSlidesKey(-1));
     SFS.register('slide_move_down', moveSlidesKey(1));
-    /* F5 startet die Präsentation ab der ersten Folie (Umschalt+F5 ab der aktuellen, fest unten). */
+    /* F5 startet die Präsentation ab der ersten Folie; «Ab aktueller Folie» (Umschalt+F5, Strg+P) ist ein Weiterer Befehl. */
     SFS.register('present_mode', (e) => {
       if (inField(e) || !presentLinkAvailable()) return 'native';
       startPresentation(0);
       return true;
     });
 
+    /*
+     * Weitere Befehle (3.12.1, Hub 2.36.3, Urs 27.11.): bisher fest abgefragte Tasten stehen im Katalog (config/ribbon_commands.php,
+     * kuerzelOnly) und sind im Dialog «Ribbon anpassen» › «Weitere Befehle» umstellbar. Der Zusammenhang (nur im Filmstreifen, nicht
+     * in Eingabefeldern …) wird hier geprüft; passt er nicht, 'native' = Taste weiterreichen. Fest bleiben nur die Pfeiltasten
+     * (auch mit Umschalt) zum Verschieben markierter Objekte auf der Folienfläche (Bühnen-Standard) und Tab/Eingabe im Abspielen-Fenster.
+     */
+    const slideNav = (fn) => (e) => {
+      if (inField(e) || SF.editorViewMode === 'grid' || !slideShortcutContext()) return 'native';
+      const last = SF.slides.length - 1;
+      const next = Math.max(0, Math.min(last, fn(SF.currentIndex, last)));
+      if (next !== SF.currentIndex) {
+        switchToSlide(next).then(() => {
+          document.querySelector('#slideFilmstrip .filmstrip-item.active')?.focus({ preventScroll: true });
+        });
+      }
+      return true;
+    };
+    SFS.register('slide_prev', slideNav((i) => i - 1));
+    SFS.register('slide_next', slideNav((i) => i + 1));
+    SFS.register('slide_first', slideNav(() => 0));
+    SFS.register('slide_last', slideNav((i, last) => last));
+    /* Umschalt+F5 / Strg+P: ab der aktuellen Folie. Lässt sich hier nicht präsentieren, bleibt Strg+P beim Browser (Drucken). */
+    SFS.register('present_current', (e) => {
+      if (inField(e) || !presentLinkAvailable()) return 'native';
+      startPresentation(SF.currentIndex);
+      return true;
+    });
+    /* Zoom der Folie (Vorgabe ohne Kürzel; Strg+Mausrad bleibt). In der Rasteransicht die Grösse der Miniaturen. */
+    SFS.register('zoom_in', () => {
+      if (SF.editorViewMode === 'grid') applyGridThumbMin(gridThumbMinPx() + 16, { save: true });
+      else zoomBy(10);
+      return true;
+    });
+    SFS.register('zoom_out', () => {
+      if (SF.editorViewMode === 'grid') applyGridThumbMin(gridThumbMinPx() - 16, { save: true });
+      else zoomBy(-10);
+      return true;
+    });
+    SFS.register('zoom_fit', () => {
+      if (SF.editorViewMode === 'grid') applyGridThumbMin(168, { save: true });
+      else zoomFit();
+      return true;
+    });
+    SFS.register('notes_focus', () => {
+      const n = document.getElementById('slideNotesInput');
+      if (!n || !n.getClientRects().length) return 'native';
+      n.focus();
+      return true;
+    });
+
+    /* Befehl eines eigenen Zusammenhangs (scope) aus dem Katalog: Rasteransicht, Folienfläche, Abspielen. */
+    const scopeCmd = (e, scope) => {
+      const h = window.SFRibbon && typeof window.SFRibbon.hub === 'function' ? window.SFRibbon.hub() : null;
+      return h && typeof h.commandForEvent === 'function' ? h.commandForEvent(e, scope) : '';
+    };
+    window.SFScopeCmd = scopeCmd;
+
     document.addEventListener('keydown', (e) => {
       if (e.defaultPrevented) return;   // vom Menüband (HubRibbon) schon erledigt
-      if (e.key === 'Escape') {
-        if (SF.editorViewMode === 'grid') {
-          e.preventDefault();
-          closeSlideGridView();
-          return;
-        }
-      }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-      /* Strg+Umschalt+←/→ (3.11.1): markierte Folien um eine Stelle verschieben (fest, wie die Pfeile der Bühne);
-         ↑/↓ laufen über die Menüband-Befehle «Folie nach oben/unten» (Kürzel umstellbar). Nur ausserhalb von Eingabefeldern. */
-      if (SF.canEdit && (e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && slideShortcutContext()
-          && !(document.activeElement && document.activeElement.isContentEditable)
-          && ['ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        moveSelectedSlides(e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1);
-        return;
+      const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+      /* Rasteransicht (3.11.0, Kürzel seit 3.12.1 im Katalog, scope 'grid'): Esc schliesst (auch aus einem Feld),
+         ←/→ eine Folie, ↑/↓ eine Zeile; wählt die Folie wie ein Klick ohne Zusatztaste. */
+      if (SF.editorViewMode === 'grid') {
+        const g = scopeCmd(e, 'grid');
+        if (g === 'grid_close') { e.preventDefault(); closeSlideGridView(); return; }
+        const dir = { grid_left: 'ArrowLeft', grid_right: 'ArrowRight', grid_up: 'ArrowUp', grid_down: 'ArrowDown' }[g];
+        if (dir && !inInput) { e.preventDefault(); gridArrowMove(dir); return; }
       }
-      /* Pfeil hoch/runter/links/rechts (auch Bild hoch/runter, Pos1/Ende) im Filmstreifen: vorige/nächste Folie öffnen
-         (Urs 27.11.; ←/→ seit 3.11.0). */
-      if (SF.editorViewMode !== 'grid' && slideShortcutContext() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
-          && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
-        e.preventDefault();
-        const last = SF.slides.length - 1;
-        let next = SF.currentIndex;
-        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') next -= 1;
-        else if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown') next += 1;
-        else if (e.key === 'Home') next = 0;
-        else next = last;
-        next = Math.max(0, Math.min(last, next));
-        if (next !== SF.currentIndex) {
-          switchToSlide(next).then(() => {
-            document.querySelector('#slideFilmstrip .filmstrip-item.active')?.focus({ preventScroll: true });
-          });
-        }
-        return;
-      }
-      /* Rasteransicht (3.11.0): ←/→ eine Folie, ↑/↓ eine Zeile; wählt die Folie wie ein Klick ohne Zusatztaste. */
-      if (SF.editorViewMode === 'grid' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
-          && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault();
-        gridArrowMove(e.key);
-        return;
-      }
-      /* Umschalt+F5 startet ab der aktuellen Folie (fest; F5 selbst ist der Menüband-Befehl «Präsentieren»). */
-      if (e.key === 'F5' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && presentLinkAvailable()) {
-        e.preventDefault();
-        startPresentation(SF.currentIndex);
-        return;
-      }
-      /* Rücktaste wie Entf (fest); Entf selbst ist der Menüband-Befehl «Folien löschen». */
-      if (e.key === 'Backspace' && SF.canEdit && slideShortcutContext()
-        && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        deleteSlides(shortcutSlideIndices());
-        return;
-      }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && SF.selectedNodes.length) {
+      if (inInput) return;
+      /* Folienfläche (scope 'stage'): markierte Objekte löschen (Vorgabe Entf, Rücktaste). */
+      if (SF.selectedNodes.length && scopeCmd(e, 'stage') === 'delete_objects') {
         e.preventDefault();
         SF.selectedNodes.slice().forEach((node) => {
           removeAnimationBadge(node);
@@ -9943,6 +9964,7 @@
         scheduleSave();
         return;
       }
+      /* Fest (Bühnen-Standard, DESIGN.md Hub § Tastenkürzel 8): Pfeiltasten verschieben markierte Objekte, mit Umschalt um 10 px. */
       if (SF.selectedNodes.length && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
@@ -9958,19 +9980,6 @@
         scheduleSave();
         refreshPropsPanel();
         return;
-      }
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-      /* Strg+C/X/V/D/Z/Y/G/H laufen seit 3.12.0 über die Menüband-Kürzel (SFShortcuts oben). Fest bleiben nur Zweitbelegungen:
-         Strg+Umschalt+Z = Wiederholen (neben Strg+Y). */
-      if (key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
-      /* Strg+P startet die Präsentation ab der aktuellen Folie — wie der Knopf im
-         Menüband. F5 beginnt dagegen vorn. Lässt sich hier nicht präsentieren,
-         bleibt die Taste beim Browser und öffnet wie gewohnt den Druckdialog. */
-      else if (key === 'p' && !e.shiftKey && presentLinkAvailable()) {
-        e.preventDefault();
-        startPresentation(SF.currentIndex);
       }
     });
   }

@@ -99,15 +99,20 @@ $sections = SlideRenderer::renderSections($slidesData);
     });
     Reveal.on('fragmentshown', melden);
     Reveal.on('fragmenthidden', melden);
+    /* 3.12.1: jede Taste an den Editor; welche Taste was tut, bestimmt dort der Katalog (Weitere Befehle, scope «play»). */
     document.addEventListener('keydown', function (e) {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if ([' ', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Escape', 'Enter'].indexOf(e.key) === -1) return;
-      e.preventDefault();
-      try { window.parent.postMessage({ type: 'sf-play-key', key: e.key }, window.location.origin); } catch (err) {}
+      if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].indexOf(e.key) !== -1) return;
+      if (!e.ctrlKey && !e.metaKey && !e.altKey
+          && [' ', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Escape', 'Enter', 'Home', 'End'].indexOf(e.key) !== -1) {
+        e.preventDefault();
+      }
+      try {
+        window.parent.postMessage({ type: 'sf-play-key', key: e.key, code: e.code, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, shiftKey: e.shiftKey }, window.location.origin);
+      } catch (err) {}
     });
     document.addEventListener('click', function (e) {
       if (e.target.closest && e.target.closest('video, audio, a')) return;
-      try { window.parent.postMessage({ type: 'sf-play-key', key: ' ' }, window.location.origin); } catch (err) {}
+      try { window.parent.postMessage({ type: 'sf-play-key', click: true }, window.location.origin); } catch (err) {}
     });
   })();
 <?php else: ?>

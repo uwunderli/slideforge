@@ -17,7 +17,7 @@ function ribbon_command_catalog(): array
         ['id' => 'ff_save_copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_copy', 'icon' => 'save_copy', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'ff_save_template', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_template', 'icon' => 'save_template', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'undo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.undo', 'icon' => 'undo', 'domId' => 'undoBtn', 'shortcut' => 'Ctrl+Z', 'visibleWhen' => ['canEdit']],
-        ['id' => 'redo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.redo', 'icon' => 'redo', 'domId' => 'redoBtn', 'shortcut' => 'Ctrl+Y', 'visibleWhen' => ['canEdit']],
+        ['id' => 'redo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.redo', 'icon' => 'redo', 'domId' => 'redoBtn', 'shortcut' => ['Ctrl+Y', 'Ctrl+Shift+Z'], 'visibleWhen' => ['canEdit']],
         ['id' => 'copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'props.copy', 'icon' => 'copy', 'domId' => 'copyObjBtn', 'shortcut' => 'Ctrl+C', 'visibleWhen' => ['canEdit'], 'disabled' => true],
         ['id' => 'cut', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'props.cut', 'icon' => 'cut', 'domId' => 'cutObjBtn', 'shortcut' => 'Ctrl+X', 'visibleWhen' => ['canEdit'], 'disabled' => true],
         ['id' => 'paste', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.paste', 'icon' => 'paste', 'domId' => 'pasteBtn', 'shortcut' => 'Ctrl+V', 'visibleWhen' => ['canEdit'], 'disabled' => true, 'gridSpan' => ['cols' => 2, 'rows' => 2]],
@@ -35,10 +35,10 @@ function ribbon_command_catalog(): array
 
         // --- Einfügen ---
         ['id' => 'add_slide', 'kind' => 'trigger', 'category' => 'insert', 'labelKey' => 'editor.new_slide', 'icon' => 'add_slide', 'domId' => 'addSlideBtnRibbon', 'triggerId' => 'addSlideBtn', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
-        ['id' => 'delete_slides', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.delete_slides', 'icon' => 'delete_slides', 'shortcut' => 'Entf', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
+        ['id' => 'delete_slides', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.delete_slides', 'icon' => 'delete_slides', 'shortcut' => ['Entf', 'Backspace'], 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         /* 3.12.0: Folien verschieben (Strg+Umschalt+↑/↓, 3.11.1) als Befehle im Katalog — Kürzel umstellbar; ←/→ bleiben feste Bühnen-Kürzel. */
-        ['id' => 'slide_move_up', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_up', 'icon' => 'slide_move_up', 'shortcut' => 'Ctrl+Shift+Up', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
-        ['id' => 'slide_move_down', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_down', 'icon' => 'slide_move_down', 'shortcut' => 'Ctrl+Shift+Down', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
+        ['id' => 'slide_move_up', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_up', 'icon' => 'slide_move_up', 'shortcut' => ['Ctrl+Shift+Up', 'Ctrl+Shift+Left'], 'visibleWhen' => ['canEdit', 'showInsertSlides']],
+        ['id' => 'slide_move_down', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_down', 'icon' => 'slide_move_down', 'shortcut' => ['Ctrl+Shift+Down', 'Ctrl+Shift+Right'], 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'tool:markdown-text', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.text_field', 'icon' => 'text_field', 'tool' => 'markdown-text', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:table', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.table', 'icon' => 'table', 'tool' => 'table', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:line', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.line', 'icon' => 'line', 'tool' => 'line', 'visibleWhen' => ['canEdit']],
@@ -92,6 +92,27 @@ function ribbon_command_catalog(): array
         ['id' => 'play_slide', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'ribbon.play_slide_short', 'icon' => 'play_slide', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         // 3.8.0 (Urs 27.11.): «Auf Gerät» ersetzt «Fenster» und «Lokal» — Gerät (oder «Web»-Fenster) zeigt laufend die bearbeitete Folie.
         ['id' => 'preview_device', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'ribbon.preview_device_short', 'icon' => 'device', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+        // --- Weitere Befehle (3.12.1, Urs 27.11.): nur Tastenkürzel, kein Knopf; im Dialog «Ribbon anpassen» › «Weitere Befehle».
+        //     Handler in editor.js (SFShortcuts bzw. scope-Abfrage). shortcut als Liste = mehrere Vorgaben (Hub legt «Kürzel 2 …» an).
+        //     scope: eigener Zusammenhang, doppelt nur dort geprüft (grid = Rasteransicht, play = Abspielen, stage = Folienfläche).
+        ['id' => 'slide_prev', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_slides', 'labelKey' => 'shortcut.slide_prev', 'titleKey' => 'shortcut.slide_prev_hint', 'shortcut' => ['Up', 'Left', 'PageUp']],
+        ['id' => 'slide_next', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_slides', 'labelKey' => 'shortcut.slide_next', 'titleKey' => 'shortcut.slide_next_hint', 'shortcut' => ['Down', 'Right', 'PageDown']],
+        ['id' => 'slide_first', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_slides', 'labelKey' => 'shortcut.slide_first', 'titleKey' => 'shortcut.slide_nav_hint', 'shortcut' => 'Home'],
+        ['id' => 'slide_last', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_slides', 'labelKey' => 'shortcut.slide_last', 'titleKey' => 'shortcut.slide_nav_hint', 'shortcut' => 'End'],
+        ['id' => 'present_current', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_present', 'labelKey' => 'shortcut.present_current', 'titleKey' => 'shortcut.present_current_hint', 'shortcut' => ['Shift+F5', 'Ctrl+P'], 'visibleWhen' => ['showPresentTab']],
+        ['id' => 'zoom_in', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_in', 'titleKey' => 'shortcut.zoom_hint'],
+        ['id' => 'zoom_out', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_out', 'titleKey' => 'shortcut.zoom_hint'],
+        ['id' => 'zoom_fit', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.zoom_fit', 'titleKey' => 'shortcut.zoom_fit_hint'],
+        ['id' => 'notes_focus', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'groupKey' => 'shortcut.group_view', 'labelKey' => 'shortcut.notes_focus', 'titleKey' => 'shortcut.notes_focus_hint'],
+        ['id' => 'delete_objects', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'stage', 'groupKey' => 'shortcut.group_stage', 'labelKey' => 'shortcut.delete_objects', 'titleKey' => 'shortcut.delete_objects_hint', 'shortcut' => ['Entf', 'Backspace'], 'visibleWhen' => ['canEdit']],
+        ['id' => 'grid_left', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'grid', 'groupKey' => 'shortcut.group_grid', 'labelKey' => 'shortcut.grid_left', 'titleKey' => 'shortcut.grid_hint', 'shortcut' => 'Left'],
+        ['id' => 'grid_right', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'grid', 'groupKey' => 'shortcut.group_grid', 'labelKey' => 'shortcut.grid_right', 'titleKey' => 'shortcut.grid_hint', 'shortcut' => 'Right'],
+        ['id' => 'grid_up', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'grid', 'groupKey' => 'shortcut.group_grid', 'labelKey' => 'shortcut.grid_up', 'titleKey' => 'shortcut.grid_hint', 'shortcut' => 'Up'],
+        ['id' => 'grid_down', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'grid', 'groupKey' => 'shortcut.group_grid', 'labelKey' => 'shortcut.grid_down', 'titleKey' => 'shortcut.grid_hint', 'shortcut' => 'Down'],
+        ['id' => 'grid_close', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'grid', 'groupKey' => 'shortcut.group_grid', 'labelKey' => 'shortcut.grid_close', 'titleKey' => 'shortcut.grid_close_hint', 'shortcut' => 'Escape'],
+        ['id' => 'play_next', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'play', 'groupKey' => 'shortcut.group_play', 'labelKey' => 'shortcut.play_next', 'titleKey' => 'shortcut.play_hint', 'shortcut' => ['Space', 'Enter', 'Right', 'Down', 'PageDown'], 'visibleWhen' => ['canEdit', 'showPresentTab']],
+        ['id' => 'play_prev', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'play', 'groupKey' => 'shortcut.group_play', 'labelKey' => 'shortcut.play_prev', 'titleKey' => 'shortcut.play_hint', 'shortcut' => ['Left', 'Up', 'PageUp'], 'visibleWhen' => ['canEdit', 'showPresentTab']],
+        ['id' => 'play_close', 'kind' => 'shortcut', 'kuerzelOnly' => true, 'category' => '', 'scope' => 'play', 'groupKey' => 'shortcut.group_play', 'labelKey' => 'shortcut.play_close', 'titleKey' => 'shortcut.play_hint', 'shortcut' => 'Escape', 'visibleWhen' => ['canEdit', 'showPresentTab']],
         ['id' => 'widget:zoom', 'kind' => 'widget', 'category' => 'view', 'labelKey' => 'ribbon.group_zoom', 'templateId' => 'widget-zoom', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
     ];
 }

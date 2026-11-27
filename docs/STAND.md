@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. SF 3.12.1 gebaut (Zweig `entwickler/slide-weitere-befehle`, Worktree `_claude/entwickler/wt-slide-hub-ribbon`, auf 3.12.0 8ba6ecf), braucht Hub 2.36.3:** feste Editor-Tasten als «Weitere Befehle» im Katalog (umstellbar), scope grid/play/stage; fest nur Objekt-Pfeile. Bei Gitwart nach 3.12.0. Details docs/RIBBON_MENU.md.
 - **27.11. SF 3.12.0 gebaut (Zweig `entwickler/slide-hub-ribbon`, Worktree `_claude/entwickler/wt-slide-hub-ribbon`, auf 3.11.4 3f8b5b9), braucht Hub 2.36.1:** Menüband Editor+Präsentation auf HubRibbon/HubRibbonCustomize/HubShortcuts; eigener Anpassen-Dialog raus, Renderer nur noch Inhalt; Kürzel über SFShortcuts; Layout-Felder `known`/`shortcuts`, alte Nachrüstungen nur noch einmal. Einzelheiten `docs/RIBBON_MENU.md`, `docs/PRUEFUNGEN.md`. Offen: nicht im Browser gesehen.
 - **27.11. 3.11.1 gebaut** (`entwickler/slide-mehrfach-ziehen` auf 3.11.0 225a452, Worktree `_claude/entwickler/wt-slide-mehrfach-ziehen`, beim Gitwart): mehrere markierte Folien als Block ziehen (Raster + Folienleiste, Plakette mit Anzahl), Strg+Umschalt+Pfeil verschiebt die Auswahl. 3.12.0 (Menüband auf Hub) rebased darauf.
 
