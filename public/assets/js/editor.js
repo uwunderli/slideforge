@@ -6594,16 +6594,17 @@
   }
 
   /** Schritt-Nummer mit «Mit vorherigem» / «Nach vorherigem». */
-  function effektSchrittHtml(id, wert) {
-    const mitTitel = I.animWithPrevHint || 'Gleichzeitig mit dem letzten Schritt dieser Folie';
-    const nachTitel = I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
+  function effektSchrittHtml(id, wert, texte) {
+    const t = texte || {};
+    const mitTitel = t.mitTitel || I.animWithPrevHint || 'Gleichzeitig mit dem letzten Schritt dieser Folie';
+    const nachTitel = t.nachTitel || I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
     return '<div><label for="' + id + '">' + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '</label>'
       + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '"></div>'
       + '<div class="props-transfer-row">'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_mit" title="'
-      + escapeHtml(mitTitel) + '">' + escapeHtml(I.animWithPrev || 'Mit vorherigem') + '</button>'
+      + escapeHtml(mitTitel) + '">' + escapeHtml(t.mit || I.animWithPrev || 'Mit vorherigem') + '</button>'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_nach" title="'
-      + escapeHtml(nachTitel) + '">' + escapeHtml(I.animAfterPrev || 'Nach vorherigem') + '</button>'
+      + escapeHtml(nachTitel) + '">' + escapeHtml(t.nach || I.animAfterPrev || 'Nach vorherigem') + '</button>'
       + '</div>';
   }
 
@@ -6612,7 +6613,14 @@
     const ex = nodeExit(node);
     let html = fieldIconPicker('p_exit', escapeHtml(I.exitEffect || 'Effekt'), EXIT_ANIMATIONS, ex ? ex.type : 'none', 'effect-icon-grid anim-icon-grid');
     if (ex) {
-      html += effektSchrittHtml('p_exitOrder', ex.order);
+      /* Ausblenden (Urs 27.11.: «müsste das hier nicht ‹mit nächstem› sein?»): «Mit nächstem» = zusammen mit dem nächsten
+         Einblenden eines anderen Objekts (tauscht beide mit einem Klick), «Beim nächsten Klick» = ein Klick nach dem eigenen Einblenden. */
+      html += effektSchrittHtml('p_exitOrder', ex.order, {
+        mit: 'Mit nächstem',
+        mitTitel: 'Gleichzeitig mit dem nächsten Objekt, das danach eingeblendet wird',
+        nach: 'Beim nächsten Klick',
+        nachTitel: 'Ein Klick nach dem eigenen Einblenden',
+      });
       html += fieldSelectKV('p_exitDuration', I.animDuration, ANIM_DURATION_OPTIONS, ex.duration);
       html += fieldSelectKV('p_exitAuto', I.animAutostart, ANIM_AUTOSTART_OPTIONS, ex.auto);
       html += '<div class="props-video-note">' + escapeHtml(I.exitHint
@@ -6734,6 +6742,23 @@
       if (ex && n !== node) max = Math.max(max, ex.order);
     });
     return max;
+  }
+
+  /** Schritt des eigenen Einblendens (ohne Einblenden: höchster Schritt der übrigen Objekte). */
+  function eigenerEinSchritt(node) {
+    return hatEinblenden(node) ? (parseInt(node.getAttr('animOrder'), 10) || 1) : hoechsterSchritt(node, 'exit');
+  }
+
+  /** Kleinster Einblende-Schritt eines anderen Objekts nach dem eigenen Einblenden; sonst eigener Schritt + 1. */
+  function naechsterEinSchritt(node) {
+    const eigen = eigenerEinSchritt(node);
+    let best = 0;
+    animierbareKnoten().forEach((n) => {
+      if (n === node || !hatEinblenden(n)) return;
+      const o = parseInt(n.getAttr('animOrder'), 10) || 1;
+      if (o > eigen && (!best || o < best)) best = o;
+    });
+    return best || eigen + 1;
   }
 
   /** Ausblenden kommt nach dem eigenen Einblenden (mind. ein Schritt später). */
@@ -8097,8 +8122,8 @@
       refreshCanvas(); scheduleSave(); refreshPropsPanel();
     });
     on('p_exitOrder', 'change', (e) => { setzeExit({ order: Math.max(1, parseInt(e.target.value, 10) || 1) }); refreshPropsPanel(); });
-    on('p_exitOrder_mit', 'click', () => { setzeExit({ order: Math.max(1, hoechsterSchritt(node, 'exit')) }); refreshPropsPanel(); });
-    on('p_exitOrder_nach', 'click', () => { setzeExit({ order: hoechsterSchritt(node, 'exit') + 1 }); refreshPropsPanel(); });
+    on('p_exitOrder_mit', 'click', () => { setzeExit({ order: naechsterEinSchritt(node) }); refreshPropsPanel(); });
+    on('p_exitOrder_nach', 'click', () => { setzeExit({ order: eigenerEinSchritt(node) + 1 }); refreshPropsPanel(); });
     on('p_exitDuration', 'change', (e) => setzeExit({ duration: parseInt(e.target.value, 10) || 0 }));
     on('p_exitAuto', 'change', (e) => setzeExit({ auto: parseInt(e.target.value, 10) || 0 }));
     on('p_animAuto', 'change', (e) => {
