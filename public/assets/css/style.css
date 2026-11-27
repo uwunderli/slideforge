@@ -2552,9 +2552,9 @@ body.present-panel-resizing {
 .present-slide-dock[data-notes-pos="left"] .present-slide-dock-panels {
   min-width: 0;
 }
+/* Links ist der ganze Streifen der Knopf; der Griff-Strich braucht es nicht (Urs 27.11.). */
 .present-slide-dock[data-notes-pos="left"] .present-slide-dock-grip {
-  width: 4px;
-  height: 36px;
+  display: none;
 }
 .present-slide-dock[data-notes-pos="left"] .present-slide-dock-panel.present-notes-overlay-inner,
 .present-slide-dock[data-notes-pos="left"] .present-slide-dock-panel.present-media-overlay-inner {
