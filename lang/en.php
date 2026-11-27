@@ -543,6 +543,7 @@ return [
     'present.local_reopen' => 'Focus window',
     'present.fullscreen_toggle' => 'Fullscreen (F)',
     'present.fullscreen_label' => 'Fullscreen',
+    'present.device_start' => 'Tap or press a key to start (fullscreen and sound)',
     'present.fullscreen_start' => 'Enter fullscreen',
     'present.fullscreen_hint' => 'Click once to present in fullscreen on the selected display.',
     'present.clock_studio' => 'Studio clock',

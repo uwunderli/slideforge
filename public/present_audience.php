@@ -21,6 +21,17 @@ $meta = Presentation::getMeta($id);
 $slidesData = Storage::read(Presentation::dir($id) . '/slides.json', ['slides' => []]);
 $sections = SlideRenderer::renderSections($slidesData, null);
 $screenIndex = isset($_GET['screen']) ? max(0, (int)$_GET['screen']) : 0;
+// Anzeige-Gerät: nächste Präsentation als JSON (Folien tauschen ohne Neuladen, `player.php?json=1` hat das Ticket eingelöst).
+if ($alsGeraet && ($_GET['teil'] ?? '') === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'ok' => true, 'id' => $id, 'title' => (string)($meta['title'] ?? ''),
+        'width' => (int)$meta['width'], 'height' => (int)$meta['height'], 'sections' => $sections,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+$geraetModus = $alsGeraet && isset($_GET['geraet']);
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -55,6 +66,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     <?= $sections ?>
   </div>
 </div>
+<?php if ($geraetModus): ?>
+<div id="sfGeraetStart" role="button" tabindex="0" style="position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);color:#fff;font:600 min(4.5vh,7vw)/1.3 system-ui,sans-serif;text-align:center;padding:4vh;cursor:pointer"><?= h(t('present.device_start')) ?></div>
+<?php endif; ?>
 <div id="sfPresentOverlay" hidden>
   <p><?= h(t('present.fullscreen_hint')) ?></p>
   <button type="button" id="sfPresentFsBtn"><?= h(t('present.fullscreen_start')) ?></button>
@@ -81,12 +95,14 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 <?= Exporter::mediaRuntimeJs(false) ?>
 <?= Exporter::mediaSlideBootJs(false) ?>
 
+  window.sfLiveId = <?= json_encode($id) ?>;
   (function () {
     var targetScreenIndex = <?= (int)$screenIndex ?>;
     var overlay = document.getElementById('sfPresentOverlay');
     var fsBtn = document.getElementById('sfPresentFsBtn');
 
     function showOverlay() {
+      if (<?= $geraetModus ? 'true' : 'false' ?>) return; // Anzeige-Gerät: eigener Tipp-Hinweis (sfGeraetStart)
       if (overlay) overlay.hidden = false;
     }
     function hideOverlay() {
@@ -186,7 +202,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     var lastFrag = undefined;
     var lastMediaCmdTs = null;
     setInterval(function () {
-      fetch('live.php?id=<?= urlencode($id) ?>&channel=present')
+      fetch('live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=present')
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data.ok || !data.live) return;
@@ -224,10 +240,97 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 
     Reveal.on('ready', function () {
       SlideForgePresentLaserAudience?.init({
-        pollUrl: 'live.php?id=<?= urlencode($id) ?>&channel=present',
+        pollUrl: function () { return 'live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=present'; },
       });
     });
   })();
+<?php if ($geraetModus): ?>
+  // Anzeige-Gerät (Urs 27.11.: «und das tippen setzt dann gleich auch den Ton frei?» — «Das war auch immer ein Problem»).
+  // Safari wertet eine Geste nur im Dokument, in dem sie passiert. Darum: EIN Tippen hier gibt Vollbild und Ton frei, und diese Seite
+  // bleibt stehen — die nächste Präsentation kommt per postMessage vom Hub-Rahmen und wird hier ausgetauscht, ohne Neuladen.
+  (function () {
+    var start = document.getElementById('sfGeraetStart');
+    var frei = false;
+    var ctx = null;
+    var STILL = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    function vollbild() {
+      try { if (window.top.document.fullscreenElement || window.top.document.webkitFullscreenElement) return; } catch (e) {}
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      var el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!req) return;
+      try { var p = req.call(el); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+    function tonFrei() {
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          ctx = ctx || new AC();
+          if (ctx.resume) ctx.resume();
+          var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+          s.buffer = b; s.connect(ctx.destination); (s.start || s.noteOn).call(s, 0);
+        }
+      } catch (e) {}
+      try { var a = new Audio(STILL); a.play().catch(function () {}); } catch (e) {}
+      document.querySelectorAll('video, audio').forEach(function (el) {
+        try {
+          var war = el.paused;
+          el.muted = false;
+          var p = el.play();
+          if (p && p.then) p.then(function () { if (war) el.pause(); }).catch(function () {});
+        } catch (e) {}
+      });
+      window.__sfMediaUnlocked = true;
+      if (typeof sfFlushPendingMedia === 'function') sfFlushPendingMedia();
+    }
+    function freigeben() {
+      vollbild();
+      tonFrei();
+      frei = true;
+      if (start) start.hidden = true;
+    }
+    if (start) {
+      start.addEventListener('click', freigeben);
+      start.addEventListener('keydown', function () { freigeben(); });
+    }
+    document.addEventListener('keydown', function () { if (!frei) freigeben(); }, true);
+    document.addEventListener('pointerdown', function () { if (!frei) freigeben(); else vollbild(); }, true);
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+      document.addEventListener(ev, function () { /* Ton bleibt frei; Vollbild holt der nächste Tipp zurück */ });
+    });
+
+    async function zeige(url) {
+      var r = null;
+      try {
+        var u = url + (url.indexOf('?') < 0 ? '?' : '&') + 'json=1';
+        r = await fetch(u, { credentials: 'same-origin', cache: 'no-store' }).then(function (x) { return x.json(); });
+      } catch (e) { r = null; }
+      if (!r || !r.ok) { location.href = url; return; }
+      var d = null;
+      try {
+        d = await fetch('present_audience.php?id=' + encodeURIComponent(r.id) + '&geraet=1&teil=1', { credentials: 'same-origin', cache: 'no-store' })
+          .then(function (x) { return x.json(); });
+      } catch (e) { d = null; }
+      if (!d || !d.ok) { location.href = url; return; }
+      document.querySelectorAll('video, audio').forEach(function (el) { try { el.pause(); } catch (e) {} });
+      document.querySelector('.reveal .slides').innerHTML = d.sections;
+      window.sfLiveId = d.id;
+      document.title = d.title || document.title;
+      try { Reveal.configure({ width: d.width, height: d.height }); } catch (e) {}
+      Reveal.sync();
+      Reveal.slide(0, 0);
+      if (frei) {
+        document.querySelectorAll('video, audio').forEach(function (el) { try { el.muted = false; } catch (e) {} });
+      }
+      if (typeof sfMediaStatusTrackSlide === 'function') { try { sfMediaStatusTrackSlide(Reveal.getCurrentSlide()); } catch (e) {} }
+    }
+    window.addEventListener('message', function (e) {
+      if (e.origin !== window.location.origin || !e.data || e.data.type !== 'hub-geraet-zeigen' || typeof e.data.url !== 'string') return;
+      zeige(e.data.url);
+    });
+    // Dem Hub-Rahmen sagen: diese Seite tauscht selbst aus und zeigt den Tipp-Hinweis selbst.
+    try { window.parent.postMessage({ type: 'hub-geraet-bereit', inplace: true }, window.location.origin); } catch (e) {}
+  })();
+<?php endif; ?>
 </script>
 </body>
 </html>

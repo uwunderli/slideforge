@@ -10,6 +10,13 @@ header('Cache-Control: no-store');
 $id = (string)($_GET['p'] ?? '');
 $ok = Geraete::darf($id)
     || Geraete::einloesen((string)($_GET['hub_geraet'] ?? ''), (string)($_GET['hub_gt'] ?? ''), $id);
+// Wechsel ohne Neuladen (Urs 27.11.: ein Tippen gibt Vollbild und Ton frei, auch in Safari): die laufende Zuschauer-Ansicht
+// löst das Ticket per fetch ein (`json=1`) und tauscht die Folien selbst aus — die Geste im Dokument bleibt gültig.
+if (($_GET['json'] ?? '') === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($ok ? ['ok' => true, 'id' => $id] : ['ok' => false, 'error' => 'nicht_freigegeben']);
+    exit;
+}
 if (!$ok) {
     http_response_code(403);
     header('Content-Type: text/html; charset=utf-8');

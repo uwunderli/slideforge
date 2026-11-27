@@ -194,7 +194,7 @@
     global.addEventListener('resize', repaintLast);
 
     global.setInterval(function () {
-      global.fetch(pollUrl)
+      global.fetch(typeof pollUrl === 'function' ? pollUrl() : pollUrl)
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (data.ok && data.live && data.live.laser) {
