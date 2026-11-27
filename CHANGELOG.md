@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.5.0] - 2026-11-27
+
+- **Medien über den FileForge-Dialog** (Urs 27.11.: «FF Piker verwenden, bei Bilder, Audio Video auch»): Einfügen › Bild/Audio/Video, Ersetzen in den Eigenschaften und Folienhintergrund Bild/Video wählen die Datei mit `HubFiles.choose` (Hochladen vom Rechner im Dialog). `upload.php` holt sie als die Person über AppCall (`FfFile::read`) und legt eine Kopie in `assets/` (steckt in der .cfs). Eigene Datei-Inputs und der direkte Upload-Weg entfernt; Grenzen Grösse/Dateityp bleiben.
+
 ## [3.2.0] - 2026-11-27
 
 - **Übernahme des Altbestands** (H6, Entscheid Urs: in «Meine Ablage», ohne Freigaben): `php scripts/migrate-to-ff.php --source=<alt> [--run]`, Probelauf ohne `--run`, Protokoll in `data/migration/`, sichtbar im Task Manager des Hubs.

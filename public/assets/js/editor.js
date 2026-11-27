@@ -589,9 +589,7 @@
       const mediaBtn = e.target.closest('[data-media-action]');
       if (mediaBtn && ribbonEl.contains(mediaBtn)) {
         const action = mediaBtn.dataset.mediaAction;
-        if (action === 'image') document.getElementById('objImageInput')?.click();
-        else if (action === 'audio') document.getElementById('objAudioInput')?.click();
-        else if (action === 'video') document.getElementById('objVideoInput')?.click();
+        if (action === 'image' || action === 'audio' || action === 'video') pickObjectMedia(action);
         else if (action === 'pixabay') document.getElementById('pixabayOpenBtn')?.click();
         else if (action === 'iconify') document.getElementById('iconifyOpenBtn')?.click();
         else if (action === 'openclipart') document.getElementById('openclipartOpenBtn')?.click();
@@ -2332,18 +2330,11 @@
     scheduleSave();
   }
 
-  async function uploadAsset(kind, file) {
-    if (!file) return;
-    setSaveStatus('Lade ' + (kind === 'video' ? 'Video' : 'Bild') + ' hoch…');
-    const formData = new FormData();
-    formData.append('id', SF.id);
-    formData.append('kind', kind);
-    formData.append('csrf_token', SF.csrfToken);
-    formData.append('file', file);
+  async function uploadAsset(kind, src) {
+    if (!src) return;
+    setSaveStatus('Übernimmt ' + (kind === 'video' ? 'Video' : 'Bild') + ' aus FileForge…');
     try {
-      const res = await fetch('upload.php', { method: 'POST', body: formData });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || 'Upload fehlgeschlagen');
+      const json = await storeMediaAsset(kind, src);
       SF.currentBackground = { type: kind, value: json.url };
       applyBackgroundVisual(SF.currentBackground);
       populateBackgroundControls(SF.currentBackground);
@@ -2351,7 +2342,7 @@
       scheduleSave();
       closeSlideBgMediaModal();
     } catch (e) {
-      setSaveStatus('Fehler beim Hochladen', true);
+      setSaveStatus(e.message || 'Die Datei liess sich nicht übernehmen.', true);
       console.error(e);
     }
   }
@@ -2555,11 +2546,6 @@
     SF.slideBgMediaModalKind = mediaKind;
     const title = document.getElementById('slideBgMediaModalTitle');
     if (title) title.textContent = mediaKind === 'video' ? (I.bgVideo || 'Video') : (I.bgImage || 'Bild');
-    const fileInput = document.getElementById('slideBgMediaModalFile');
-    if (fileInput) {
-      fileInput.accept = mediaKind === 'video' ? 'video/mp4,video/webm' : 'image/jpeg,image/png,image/gif,image/webp';
-      fileInput.value = '';
-    }
     const pixabayBtn = document.getElementById('slideBgMediaModalPixabay');
     if (pixabayBtn) {
       pixabayBtn.dataset.pixabayOpen = mediaKind === 'video' ? 'background-video' : 'background-image';
@@ -2589,16 +2575,11 @@
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeSlideBgMediaModal();
     });
-    document.getElementById('slideBgMediaModalBrowse')?.addEventListener('click', () => {
-      document.getElementById('slideBgMediaModalFile')?.click();
-    });
-    document.getElementById('slideBgMediaModalFile')?.addEventListener('change', async (e) => {
+    document.getElementById('slideBgMediaModalBrowse')?.addEventListener('click', async () => {
       const kind = SF.slideBgMediaModalKind === 'video' ? 'video' : 'image';
-      const file = e.target.files[0];
-      e.target.value = '';
-      if (!file) return;
-      await uploadAsset(kind, file);
-      closeSlideBgMediaModal();
+      const src = await pickMediaSource(kind);
+      if (!src) return;
+      await uploadAsset(kind, src);
     });
     document.getElementById('slideBgMediaModalRemove')?.addEventListener('click', () => {
       const kind = SF.slideBgMediaModalKind;
@@ -7319,8 +7300,7 @@
     } else if (type === 'image') {
       const replaceBtn = document.getElementById('replaceAssetBtn');
       if (replaceBtn) replaceBtn.addEventListener('click', () => {
-        replaceTargetNode = node;
-        document.getElementById('objImageInput').click();
+        pickObjectMedia('image', node);
       });
       const removeBgBtn = document.getElementById('removeBgBtn');
       if (removeBgBtn) removeBgBtn.addEventListener('click', async () => {
@@ -7361,9 +7341,7 @@
     } else if (type === 'video' || type === 'audio') {
       const replaceBtn = document.getElementById('replaceAssetBtn');
       if (replaceBtn) replaceBtn.addEventListener('click', () => {
-        replaceTargetNode = node;
-        const inputId = type === 'audio' ? 'objAudioInput' : 'objVideoInput';
-        document.getElementById(inputId).click();
+        pickObjectMedia(type === 'audio' ? 'audio' : 'video', node);
       });
       on('p_playTrigger', 'change', (e) => {
         node.setAttr('playTrigger', e.target.value);
@@ -7505,9 +7483,7 @@
 
   // ---------- Toolbar ----------
   function addShape(type) {
-    if (type === 'image') { document.getElementById('objImageInput').click(); return; }
-    if (type === 'video') { document.getElementById('objVideoInput').click(); return; }
-    if (type === 'audio') { document.getElementById('objAudioInput').click(); return; }
+    if (type === 'image' || type === 'video' || type === 'audio') { pickObjectMedia(type); return; }
 
     const centerX = Math.round(SF.meta.width / 2) - 100;
     const centerY = Math.round(SF.meta.height / 2) - 60;
@@ -8207,19 +8183,47 @@
 
   let replaceTargetNode = null;
 
-  async function uploadObjectAsset(kind, file) {
-    if (!file) return;
-    const kindLabel = { video: 'Video', audio: 'Audio', image: 'Bild' }[kind] || kind;
-    setSaveStatus('Lade ' + kindLabel + ' hoch…');
+  /* Medien wählt man im FileForge-Dialog des Hubs (Urs 27.11.: «FF Piker verwenden, bei Bilder, Audio Video auch»);
+     Hochladen vom Rechner bietet der Dialog selbst an. upload.php holt die Datei als die Person über AppCall und legt sie
+     als Kopie in assets/ ab, damit sie in der .cfs steckt. Dateitypen hier nur als Filter; geprüft wird in upload.php. */
+  const MEDIA_ACCEPT = { image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], video: ['mp4', 'webm'], audio: ['mp3', 'wav', 'ogg', 'm4a'] };
+  const MEDIA_LABEL = { video: 'Video', audio: 'Audio', image: 'Bild' };
+
+  async function pickMediaSource(kind) {
+    if (!SF.canEdit) return null;
+    if (!window.SfFf || !window.SfFf.pickMedia) {
+      setSaveStatus('Der Dateidialog von FileForge ist nicht erreichbar.', true);
+      return null;
+    }
+    return window.SfFf.pickMedia(MEDIA_ACCEPT[kind] || MEDIA_ACCEPT.image, (MEDIA_LABEL[kind] || 'Datei') + ' wählen');
+  }
+
+  /** {ref} aus dem FileForge-Dialog an upload.php → {ok, url, filename} */
+  async function storeMediaAsset(kind, src) {
     const formData = new FormData();
     formData.append('id', SF.id);
     formData.append('kind', kind);
     formData.append('csrf_token', SF.csrfToken);
-    formData.append('file', file);
+    formData.append('ref', src.ref);
+    const res = await fetch('upload.php', { method: 'POST', body: formData });
+    const json = await res.json().catch(() => ({ ok: false }));
+    if (!json.ok) throw new Error(json.error || 'Die Datei liess sich nicht übernehmen.');
+    return json;
+  }
+
+  /** Menüband «Einfügen» und «Ersetzen» in den Eigenschaften: Datei wählen, übernehmen, einfügen bzw. ersetzen. */
+  async function pickObjectMedia(kind, targetNode) {
+    replaceTargetNode = targetNode || null;
+    const src = await pickMediaSource(kind);
+    if (!src) { replaceTargetNode = null; return; }
+    await uploadObjectAsset(kind, src);
+  }
+
+  async function uploadObjectAsset(kind, src) {
+    if (!src) return;
+    setSaveStatus('Übernimmt ' + (MEDIA_LABEL[kind] || kind) + ' aus FileForge…');
     try {
-      const res = await fetch('upload.php', { method: 'POST', body: formData });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || 'Upload fehlgeschlagen');
+      const json = await storeMediaAsset(kind, src);
 
       if (replaceTargetNode) {
         const node = replaceTargetNode;
@@ -8243,7 +8247,8 @@
       const obj = { id, type: kind, x: centerX, y: centerY, w: defaultSize.w, h: defaultSize.h, rotation: 0, opacity: 1, src: json.url };
       insertNode(createNode(obj));
     } catch (e) {
-      setSaveStatus('Fehler beim Hochladen', true);
+      replaceTargetNode = null;
+      setSaveStatus(e.message || 'Die Datei liess sich nicht übernehmen.', true);
       console.error(e);
     }
   }
@@ -9030,19 +9035,6 @@
 
     document.getElementById('previewWindowBtn')?.addEventListener('click', () => {
       openPreviewWindow();
-    });
-
-    document.getElementById('objImageInput').addEventListener('change', (e) => {
-      const f = e.target.files[0]; e.target.value = '';
-      uploadObjectAsset('image', f);
-    });
-    document.getElementById('objVideoInput').addEventListener('change', (e) => {
-      const f = e.target.files[0]; e.target.value = '';
-      uploadObjectAsset('video', f);
-    });
-    document.getElementById('objAudioInput').addEventListener('change', (e) => {
-      const f = e.target.files[0]; e.target.value = '';
-      uploadObjectAsset('audio', f);
     });
 
     /* bg-type-btn + apply_transition_all: Delegation in initRibbonCommandDelegation */

@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.5.0 gebaut** (`entwickler/slide-ff-medien`, Worktree `_claude/entwickler/wt-slide-ff-medien`): Bild/Audio/Video/Hintergrund/Ersetzen über FF-Picker (HubFiles), upload.php nur `ref` via AppCall; beim Gitwart.
+
 - **27.11.: 3.3.2 gebaut** (Zweig `entwickler/slide-statusleiste`, auf 3.3.1): Statusleiste unten (links Aktionen mit Uhrzeit, Mitte Datei, rechts Version), schwebender Speicher-Knopf weg. Beim Gitwart, nach 3.3.1, nur Biel.
 - **27.11. 3.3.0 «Auf Gerät zeigen»** (Zweig `entwickler/slide-auf-geraet`, Worktree `_claude/entwickler/wt-slide-geraet`, auf 3.2.6; braucht Hub 2.33.0): Menüband Präsentieren › Auf Gerät zeigen, `player.php` (Einmal-Ticket des Hubs → Gerätesitzung nur für diese Präsentation → Zuschauer-Ansicht folgt Presenter/Tablet), `geraet_api.php`, `src/Geraete.php`. Nicht gelaufen.
 

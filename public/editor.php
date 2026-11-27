@@ -498,7 +498,6 @@ $bootstrap = [
         'bgGradient' => t('bg.gradient'),
         'bgNonePreview' => t('bg.none_preview'),
         'slideBgPreview' => t('ribbon.slide_bg_preview'),
-        'slideUpload' => t('ribbon.slide_upload'),
         'slideMediaChange' => t('ribbon.slide_media_change'),
         'slideMediaHint' => t('ribbon.slide_media_hint'),
         'slideMediaExisting' => t('ribbon.slide_media_existing'),
@@ -1169,9 +1168,8 @@ $viewNotesHtml = array_map(fn($s) => Markdown::render($s['notes'] ?? ''), $viewS
     <p class="sf-dialog-hint modal-dialog-hint slide-bg-media-modal-hint"><?= h(t('ribbon.slide_media_hint')) ?></p>
     <div class="modal-dialog-body">
     <div class="slide-bg-media-modal-preview" id="slideBgMediaModalPreview" hidden></div>
-    <input type="file" id="slideBgMediaModalFile" class="sr-only" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml">
     <div class="slide-bg-media-modal-actions">
-      <button type="button" class="button hub-btn hub-btn--primary" id="slideBgMediaModalBrowse"><?= h(t('ribbon.slide_upload')) ?></button>
+      <button type="button" class="button hub-btn hub-btn--primary" id="slideBgMediaModalBrowse"><?= h(t('ribbon.slide_pick_file')) ?></button>
       <?php if ($canEdit && Config::pixabayEnabled()): ?>
       <button type="button" class="button button-ghost pixabay-open-btn hub-btn hub-btn--ghost" id="slideBgMediaModalPixabay" data-pixabay-open="background-image"><?= h(t('pixabay.open_from_bg')) ?></button>
       <?php endif; ?>

@@ -363,5 +363,11 @@
     show();
   }
 
-  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting };
+  /** Medien im Editor (Bild, Audio, Video): Datei im FileForge-Dialog wählen, Hochladen vom Rechner bietet der Dialog selbst an.
+   *  → {ref, name} oder null (Abbruch/Fehler, Fehler schon gemeldet). Urs 27.11.: «FF Piker verwenden, bei Bilder, Audio Video auch». */
+  function pickMedia(accept, title) {
+    return choose(['file'], accept, title).then(function (r) { return r && r.ref ? r : null; }).catch(function (e) { pickError(e); return null; });
+  }
+
+  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting, pickMedia: pickMedia };
 })(window);

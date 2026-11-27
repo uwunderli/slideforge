@@ -33,21 +33,38 @@ if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
     upload_fail('Ungültiges CSRF-Token.', 403);
 }
 
-if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-    $err = $_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE;
-    $map = [
-        UPLOAD_ERR_INI_SIZE => 'Datei ist grösser als vom Server erlaubt.',
-        UPLOAD_ERR_FORM_SIZE => 'Datei ist zu gross.',
-        UPLOAD_ERR_PARTIAL => 'Datei wurde nur teilweise hochgeladen.',
-        UPLOAD_ERR_NO_FILE => 'Keine Datei ausgewählt.',
-    ];
-    upload_fail($map[$err] ?? 'Upload fehlgeschlagen.');
+$kind = $_POST['kind'] ?? 'image'; // 'image', 'video' oder 'audio'
+$maxSize = $kind === 'video' ? MAX_VIDEO_SIZE : ($kind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE);
+$assetsDir = Presentation::dir($id) . '/assets';
+if (!is_dir($assetsDir)) {
+    mkdir($assetsDir, 0770, true);
 }
 
-$kind = $_POST['kind'] ?? 'image'; // 'image', 'video' oder 'audio'
-$file = $_FILES['file'];
+/* Medien kommen aus dem FileForge-Dialog des Hubs (27.11.2026, Urs: «FF Piker verwenden, bei Bilder, Audio Video auch»;
+   Hochladen vom Rechner bietet der Dialog selbst an). `ref` wird als die angemeldete Person über AppCall gelesen, das
+   Recht prüft FileForge. Die Kopie landet in assets/ der Arbeitskopie und damit in der .cfs. */
+$ffRef = (string)($_POST['ref'] ?? '');
+if (FfFile::parseRef($ffRef) === null) {
+    upload_fail('Keine Datei gewählt.');
+}
+$tmpFf = (string)tempnam(sys_get_temp_dir(), 'sf-ff-');   // nicht in assets/: sonst sähe die Medienliste die halbe Datei
+register_shutdown_function(static function () use (&$tmpFf): void {
+    if ($tmpFf !== '' && is_file($tmpFf)) {
+        @unlink($tmpFf);
+    }
+});
+$r = FfFile::read((string)$me['id'], $ffRef, '', $tmpFf);
+if (!$r['ok']) {
+    $ffMsg = [
+        'too_large' => 'Datei ist zu gross (max. ' . round($maxSize / 1024 / 1024) . ' MB).',
+        'no_access' => 'Kein Zugriff auf diese Datei.',
+        'no_person' => 'Kein Zugriff auf diese Datei.',
+        'busy' => 'FileForge ist gerade beschäftigt. Bitte gleich nochmals versuchen.',
+    ];
+    upload_fail($ffMsg[$r['error']] ?? 'Die Datei liess sich aus FileForge nicht holen.', $r['error'] === 'too_large' ? 400 : 502);
+}
+$file = ['tmp_name' => $tmpFf, 'size' => (int)@filesize($tmpFf)];
 
-$maxSize = $kind === 'video' ? MAX_VIDEO_SIZE : ($kind === 'audio' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE);
 if ($file['size'] > $maxSize) {
     upload_fail('Datei ist zu gross (max. ' . round($maxSize / 1024 / 1024) . ' MB).');
 }
@@ -79,10 +96,6 @@ if ($mime === false || !isset($allowed[$mime])) {
 
 $ext = $allowed[$mime];
 $filename = Storage::generateId(8) . '.' . $ext;
-$assetsDir = Presentation::dir($id) . '/assets';
-if (!is_dir($assetsDir)) {
-    mkdir($assetsDir, 0770, true);
-}
 $destination = $assetsDir . '/' . $filename;
 
 /* SVG kann Skripte enthalten und wird von asset.php als image/svg+xml auf
@@ -104,11 +117,13 @@ if ($mime === 'image/svg+xml') {
     exit;
 }
 
-if (!@move_uploaded_file($file['tmp_name'], $destination)) {
+if (!@rename($tmpFf, $destination) && !(@copy($tmpFf, $destination) && @unlink($tmpFf))) {
     $err = error_get_last();
-    error_log('SlideForge upload.php: move_uploaded_file fehlgeschlagen: ' . ($err['message'] ?? 'unbekannt') . ' (Ziel: ' . $destination . ')');
+    error_log('SlideForge upload.php: Ablegen fehlgeschlagen: ' . ($err['message'] ?? 'unbekannt') . ' (Ziel: ' . $destination . ')');
     upload_fail('Datei konnte nicht gespeichert werden (Berechtigungsproblem im assets/-Ordner?).', 500);
 }
+$tmpFf = '';
+@chmod($destination, 0640);
 
 echo json_encode([
     'ok' => true,
