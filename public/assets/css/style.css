@@ -8438,6 +8438,43 @@ body.notes-resizing {
   margin: 6px 0 10px;
 }
 
+/* Zeitstrahl-Reiter (3.12.48): Ereignisliste, Felder über die ganze Breite, Farben/Abstände aus den Hub-Tokens. */
+.sf-tl-panel { display: block; width: 100%; text-align: left; }
+.sf-tl-panel .options-subtitle { margin: 12px 0 6px; font-weight: 600; color: var(--text); }
+.sf-tl-panel label { margin-top: 0; font-size: 0.72rem; }
+.sf-tl-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sf-tl-row {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.sf-tl-row.is-dragging { opacity: 0.5; }
+.sf-tl-row.is-drop { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.sf-tl-row-head { display: flex; align-items: center; gap: 4px; }
+.sf-tl-row-head input { flex: 1; min-width: 0; }
+.sf-tl-grip { display: inline-flex; width: 16px; height: 22px; color: var(--text-muted); cursor: grab; flex: none; }
+.sf-tl-grip svg { width: 16px; height: 16px; margin: auto; }
+.sf-tl-num { font-size: 0.72rem; color: var(--text-muted); min-width: 1.2em; text-align: center; flex: none; }
+.sf-tl-icon-btn { flex: none; }
+.sf-tl-icon-btn svg { width: 16px; height: 16px; }
+.sf-tl-panel input[type=text],
+.sf-tl-panel select,
+.sf-tl-panel textarea { padding: 6px 8px; font-size: 0.85rem; }
+.sf-tl-panel textarea {
+  width: 100%; resize: vertical; min-height: 48px;
+  background: var(--surface-raised); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius-sm); font-family: var(--font-body);
+}
+.sf-tl-panel textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.sf-tl-pair { display: flex; gap: 6px; }
+.sf-tl-pair > * { flex: 1; min-width: 0; }
+.sf-tl-add { width: 100%; }
+.sf-tl-panel input[type=color],
+.sf-tl-panel input[type=range],
+.sf-tl-panel input[type=number] { width: 100%; }
+.sf-tl-panel .props-check-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 8px; font-size: 0.8rem; color: var(--text); }
+.sf-tl-panel .props-check-row input { width: auto; margin: 0; }
+
 /* Liste der Effekte einer Folie (Urs, 24.10.2026): Nummer, Objekt, Animation,
    Papierkorb — Aufbau wie die Ebenen-Liste, damit sich beides gleich anfühlt. */
 .props-effects-list {

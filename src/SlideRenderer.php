@@ -853,6 +853,9 @@ class SlideRenderer
             $content = self::renderShapeSvg($obj);
         } elseif ($type === 'table') {
             $content = self::renderTable($obj, (float)$w, (float)$h);
+        } elseif ($type === 'timeline') {
+            /* Zeitstrahl (3.12.48): SVG aus TimelineRenderer, gleiche Berechnung wie die Bühne (sf-timeline.js). */
+            $content = TimelineRenderer::render($obj, (float)$w, (float)$h);
         } else {
             $fillType = $obj['fillType'] ?? 'solid';
             if ($fillType === 'gradient') {
@@ -1196,6 +1199,13 @@ class SlideRenderer
                     '<div style="' . $lineStyle . '"></div></div>';
             }
             return '<div style="' . $box . $rectStyle . '"></div>';
+        }
+        if ($type === 'timeline') {
+            /* Zeitstrahl schematisch: Strich in der Mitte mit drei Punkten. */
+            $dot = 'position:absolute;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:rgba(220,235,248,0.96);';
+            return '<div style="' . $box . 'display:flex;align-items:center;padding:0 1px;">'
+                . '<div style="' . $lineStyle . '"></div>'
+                . '<div style="' . $dot . 'left:20%;"></div><div style="' . $dot . 'left:50%;"></div><div style="' . $dot . 'left:80%;"></div></div>';
         }
         if ($type === 'shape') {
             $shapeType = $obj['shapeType'] ?? 'triangle';

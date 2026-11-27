@@ -41,6 +41,8 @@ function ribbon_command_catalog(): array
         ['id' => 'slide_move_down', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_down', 'icon' => 'slide_move_down', 'shortcut' => ['Ctrl+Shift+Down', 'Ctrl+Shift+Right'], 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'tool:markdown-text', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.text_field', 'icon' => 'text_field', 'tool' => 'markdown-text', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:table', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.table', 'icon' => 'table', 'tool' => 'table', 'visibleWhen' => ['canEdit']],
+        /* 3.12.48: Zeitstrahl (Ereignisse auf einem Strahl, Reiter «Zeitstrahl» rechts). */
+        ['id' => 'tool:timeline', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.timeline', 'icon' => 'timeline', 'tool' => 'timeline', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:line', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.line', 'icon' => 'line', 'tool' => 'line', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:rect', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.rect', 'icon' => 'rect', 'tool' => 'rect', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:triangle', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.triangle', 'icon' => 'triangle', 'tool' => 'triangle', 'visibleWhen' => ['canEdit']],

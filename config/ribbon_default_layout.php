@@ -63,6 +63,7 @@ function ribbon_default_layout(): array
                     ['id' => 'g_text', 'labelKey' => 'ribbon.group_text', 'items' => [
                         ['id' => 'tool:markdown-text', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'tool:table', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'tool:timeline', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     ['id' => 'g_shapes', 'labelKey' => 'ribbon.group_shapes', 'items' => [
                         ['id' => 'tool:line', 'gridSpan' => ['cols' => 2, 'rows' => 2]],

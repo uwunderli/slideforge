@@ -4332,6 +4332,11 @@
     return gesamtH;
   }
 
+  /** Zeitstrahl neu zeichnen (nach jeder Änderung am Modell oder an der Grösse). */
+  function drawTimeline(group) {
+    window.SfTimeline.draw(group, group.getAttr('tlData'), group.getAttr('tlW') || 1600, group.getAttr('tlH') || 700);
+  }
+
   function createNode(obj) {
     const common = {
       id: obj.id,
@@ -4488,6 +4493,18 @@
       drawTable(group);
       return group;
     }
+    if (obj.type === 'timeline') {
+      /* Zeitstrahl (3.12.48): Modell in `tlData`, Zeichnen und Berechnung in sf-timeline.js. */
+      const group = new Konva.Group(Object.assign({}, common, {
+        x: obj.x || 0, y: obj.y || 0,
+      }));
+      group.setAttr('objType', 'timeline');
+      group.setAttr('tlData', window.SfTimeline.normalize(obj));
+      group.setAttr('tlW', Math.max(40, obj.w || 1600));
+      group.setAttr('tlH', Math.max(40, obj.h || 700));
+      drawTimeline(group);
+      return group;
+    }
     if (obj.type === 'group') {
       const group = new Konva.Group(Object.assign({}, common, {
         x: obj.x || 0, y: obj.y || 0,
@@ -4588,6 +4605,14 @@
         tabelle[k] = tableAttr(node, k);
       });
       return tabelle;
+    }
+    if (type === 'timeline') {
+      const daten = JSON.parse(JSON.stringify(window.SfTimeline.normalize(node.getAttr('tlData'))));
+      return Object.assign(base, {
+        x: Math.round(node.x()), y: Math.round(node.y()),
+        w: Math.round((node.getAttr('tlW') || 1600) * (node.scaleX() || 1)),
+        h: Math.round((node.getAttr('tlH') || 700) * (node.scaleY() || 1)),
+      }, daten);
     }
     if (type === 'ellipse') {
       const rx = node.radiusX() * node.scaleX(), ry = node.radiusY() * node.scaleY();
@@ -4702,6 +4727,11 @@
       node.setAttr('tableW', Math.max(60, (node.getAttr('tableW') || 800) * node.scaleX()));
       node.scaleX(1); node.scaleY(1);
       drawTable(node);
+    } else if (type === 'timeline') {
+      node.setAttr('tlW', Math.max(40, (node.getAttr('tlW') || 1600) * node.scaleX()));
+      node.setAttr('tlH', Math.max(40, (node.getAttr('tlH') || 700) * node.scaleY()));
+      node.scaleX(1); node.scaleY(1);
+      drawTimeline(node);
     } else if (type === 'shape') {
       const newW = Math.max(10, (node.getAttr('baseW') || 100) * node.scaleX());
       const newH = Math.max(10, (node.getAttr('baseH') || 100) * node.scaleY());
@@ -4750,6 +4780,11 @@
       if (rect) { rect.width(child.getAttr('baseW')); rect.height(child.getAttr('baseH')); }
       if (label) { label.width(child.getAttr('baseW')); label.height(child.getAttr('baseH')); }
       child.scaleX(1); child.scaleY(1);
+    } else if (type === 'timeline') {
+      child.setAttr('tlW', Math.max(40, (child.getAttr('tlW') || 1600) * sx));
+      child.setAttr('tlH', Math.max(40, (child.getAttr('tlH') || 700) * sy));
+      child.scaleX(1); child.scaleY(1);
+      drawTimeline(child);
     } else if (type === 'objectGroup') {
       child.getChildren().forEach((grand) => {
         grand.x(grand.x() * sx);
@@ -5315,6 +5350,9 @@
     if (node.getAttr('objType') === 'table') {
       node.on('dblclick dbltap', () => editTableCell(node));
     }
+    if (node.getAttr('objType') === 'timeline') {
+      node.on('dblclick dbltap', () => openTimelineTab(node));
+    }
   }
 
   /**
@@ -5715,6 +5753,7 @@
     text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
     table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 10h16"/><path d="M4 14.5h16"/><path d="M9.5 10v9"/><path d="M15 10v9"/></svg>',
     rect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1.5"/></svg>',
+    timeline: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h16"/><path d="M17 9l3 3-3 3"/><circle cx="7" cy="12" r="1.6"/><circle cx="13" cy="12" r="1.6"/><path d="M7 10V5"/><path d="M13 14v5"/></svg>',
     ellipse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="8" ry="6"/></svg>',
     shape: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l8 15H4z"/></svg>',
     image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 15l-5-5-9 9"/></svg>',
@@ -5918,6 +5957,7 @@
       video: I.typeVideo,
       audio: I.typeAudio,
       table: I.typeTable,
+      timeline: I.typeTimeline,
     }[obj.type] || obj.type);
   }
 
@@ -5974,7 +6014,7 @@
   function syncLayersPropsLayout() {
     const wrap = document.getElementById('propsPanelWrap');
     if (!wrap) return;
-    wrap.classList.remove('side-tab-templates', 'side-tab-format', 'side-tab-position', 'side-tab-effects', 'side-tab-spell', 'side-tab-media');
+    wrap.classList.remove('side-tab-templates', 'side-tab-format', 'side-tab-position', 'side-tab-effects', 'side-tab-spell', 'side-tab-media', 'side-tab-timeline');
     wrap.classList.add('side-tab-' + (SF.activeSideTab || 'templates'));
     requestAnimationFrame(updatePropsSidebarOverflow);
   }
@@ -5983,7 +6023,8 @@
     const tabs = document.querySelectorAll('#propsSideTabs [data-side-tab]');
     const panels = document.querySelectorAll('#propsSidePanels [data-side-panel]');
     if (!tabs.length) return;
-    const available = [...tabs].map((t) => t.dataset.sideTab);
+    /* Ausgeblendete Reiter (Zeitstrahl ohne markierten Zeitstrahl) sind nicht wählbar. */
+    const available = [...tabs].filter((t) => !t.hidden).map((t) => t.dataset.sideTab);
     let next = tabId;
     if (!available.includes(next)) next = available[0] || 'templates';
     SF.activeSideTab = next;
@@ -7158,6 +7199,7 @@
       const panel = document.getElementById('propsObjectPanel');
       if (textPanel) textPanel.innerHTML = propsPanelEmptyHtml();
       if (templatesPanel) templatesPanel.innerHTML = '';
+      renderTimelinePanel(null);
       if (positionPanel) {
         const label = (I.multiSelect || '{n} selected').replace('{n}', String(SF.selectedNodes.length));
         positionPanel.innerHTML = '<div class="props-empty">' + escapeHtml(label) + '</div>';
@@ -7291,6 +7333,12 @@
       /* Eine eigene Hülle: in der schmalen Seitenleiste stünden Beschriftungen sonst
          mittig und die Felder halb so breit wie der Platz. */
       return '<div class="props-table-fields">' + html + '</div>';
+    }
+
+    if (obj.type === 'timeline') {
+      html += '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="tlOpenTabBtn" style="width:100%;" title="'
+        + escapeHtml((I.tl && I.tl.openHint) || '') + '">' + escapeHtml((I.tl && I.tl.open) || 'Zeitstrahl bearbeiten') + '</button>';
+      return html;
     }
 
     if (obj.type === 'video' || obj.type === 'audio') {
@@ -8259,12 +8307,58 @@
       + '</div>';
   }
 
+  /* ---------- Reiter «Zeitstrahl» (3.12.48) ----------
+     Der Reiter ist nur sichtbar, solange genau ein Zeitstrahl markiert ist (Urs 27.11.). Eingaben ändern das Modell
+     im Knoten, zeichnen die Bühne neu und laufen über scheduleSave() (Speichern und Rückgängig wie jede Änderung). */
+  function isTimelineNode(node) {
+    return !!(node && node.getAttr && node.getAttr('objType') === 'timeline');
+  }
+
+  function renderTimelinePanel(node, opts) {
+    const tab = document.getElementById('propsSideTabTimeline');
+    const panel = document.getElementById('propsTimelinePanel');
+    const tl = (isTimelineNode(node) && SF.selectedNodes.length === 1) ? node : null;
+    if (tab) tab.hidden = !tl;
+    if (!tl) {
+      SF.tlPanelNode = null;
+      if (panel) panel.innerHTML = '';
+      if (SF.activeSideTab === 'timeline') setSideTab('format', { persist: false });
+      return;
+    }
+    if (!panel) return;
+    /* Während des Tippens nicht neu aufbauen (sonst springt die Schreibmarke weg). */
+    const force = !!(opts && opts.force);
+    if (!force && SF.tlPanelNode === tl && panel.contains(document.activeElement)) return;
+    SF.tlPanelNode = tl;
+    const daten = window.SfTimeline.normalize(tl.getAttr('tlData'));
+    tl.setAttr('tlData', daten);
+    window.SfTimeline.panel(panel, daten, {
+      I: I,
+      focus: opts && opts.focus,
+      onChange: (rebuild, info) => {
+        tl.setAttr('tlData', window.SfTimeline.normalize(daten));
+        drawTimeline(tl);
+        refreshCanvas();
+        scheduleSave();
+        if (rebuild) renderTimelinePanel(tl, { force: true, focus: info && info.focus });
+      },
+    });
+  }
+
+  function openTimelineTab(node) {
+    if (!isTimelineNode(node)) return;
+    if (SF.selectedNode !== node || SF.selectedNodes.length !== 1) selectNode(node);
+    renderTimelinePanel(node, { force: true });
+    setSideTab('timeline');
+  }
+
   function renderPropsPanel(node) {
     const textPanel = document.getElementById('propsTextPanel');
     const templatesPanel = document.getElementById('propsTextTemplatesPanel');
     const objectPanel = document.getElementById('propsObjectPanel');
     if (!textPanel && !objectPanel && !document.getElementById('propsEffectsPanel')) return;
 
+    renderTimelinePanel(node);
     if (!node) {
       if (textPanel) textPanel.innerHTML = '';
       if (templatesPanel) templatesPanel.innerHTML = '';
@@ -8563,6 +8657,9 @@
       /* Die Tabelle rechnet mit `tableW`, nicht mit der Breite der Gruppe. */
       node.setAttr('tableW', Math.max(60, w));
       drawTable(node);
+    } else if (type === 'timeline') {
+      node.setAttr('tlW', Math.max(40, w));
+      drawTimeline(node);
     } else { node.width(w); }
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }
@@ -8576,6 +8673,9 @@
     } else if (type === 'table') {
       /* Nichts: die Höhe einer Tabelle wächst mit ihrem Inhalt — von Hand gesetzt
          wäre der Wert beim nächsten Zeichnen wieder weg. */
+    } else if (type === 'timeline') {
+      node.setAttr('tlH', Math.max(40, h));
+      drawTimeline(node);
     } else { node.height(h); }
     if (node.getAttr('fillType') === 'gradient') applyShapeGradientVisual(node);
   }
@@ -8875,6 +8975,8 @@
       });
       bindIconPicker('p_bracketStyle', 'bracketStyle');
       bindIconPicker('p_bubbleStyle', 'bubbleStyle');
+    } else if (type === 'timeline') {
+      on('tlOpenTabBtn', 'click', () => openTimelineTab(node));
     } else if (type === 'table') {
       function tabelleNeu() {
         drawTable(node);
@@ -9225,6 +9327,13 @@
         rows: [[kopf, kopf, kopf], ['', '', ''], ['', '', '']],
         colWidths: [1, 1, 1],
       }, TABLE_DEFAULTS);
+    } else if (type === 'timeline') {
+      /* Zeitstrahl mit drei Beispiel-Ereignissen über die Folienbreite (3.12.48). */
+      const tw = Math.round(SF.meta.width * 0.84), th = Math.round(SF.meta.height * 0.64);
+      obj = Object.assign({
+        id, type: 'timeline', rotation: 0, opacity: 1,
+        x: Math.round((SF.meta.width - tw) / 2), y: Math.round((SF.meta.height - th) / 2), w: tw, h: th,
+      }, window.SfTimeline.create(I));
     } else if (type === 'ellipse') {
       obj = { id, type: 'ellipse', x: centerX, y: centerY, w: 200, h: 200, fillType: 'solid', fill: '#3a6c8d', stroke: 'transparent', strokeWidth: 0, rotation: 0, opacity: 1 };
     } else if (type === 'rect') {
@@ -10904,6 +11013,7 @@
     };
     const inField = (e) => !!(window.HubShortcuts && window.HubShortcuts.isEditable(e.target));
     SFS.register('undo', () => { undo(); return true; });
+    SFS.register('tool:timeline', () => { if (!SF.canEdit) return 'native'; addShape('timeline'); return true; });
     SFS.register('redo', () => { redo(); return true; });
     /* Im Filmstreifen und im Raster beziehen sich Kopieren/Ausschneiden/Einfügen/Duplizieren auf ganze Folien. */
     SFS.register('copy', () => {

@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.49 gebaut** (`entwickler/slide-zeitstrahl` ab 3.12.45 28ccc9d, Worktree `gemeinde/wt-slide-zeitstrahl`): Zeitstrahl Schritt 1 — Objekt `timeline`, Reiter «Zeitstrahl» (nur bei markiertem Zeitstrahl), Ereignisliste, Verteilen; sf-timeline.js + src/TimelineRenderer.php rechnen gleich. Plan `_berichte/slideforge/plan-zeitstrahl-2026-11-27.md`. Nicht im Browser geprüft.
 - **27.11. 3.12.48 gebaut** (`entwickler/slide-logos-knopf` ab 3.12.47): Logos-Knopf öffnet FF-Picker, dann Import-Dialog.
 - **27.11. 3.12.47 gebaut** (`entwickler/slide-einstellungen-reiter` ab 3.12.45 28ccc9d, Worktree `gemeinde/wt-slide-einstellungen-reiter`): Einstellungen als Reiter auch im Hub-Rahmen, Symbole wie Hub-Seitenleiste, weiches Laden. Nicht im Browser geprüft.
 - **27.11. 3.12.46 gebaut** (`entwickler/slide-logos-knopf` ab 3.12.45): Startseite Knopf «Logos-Predigt …» → import.php.

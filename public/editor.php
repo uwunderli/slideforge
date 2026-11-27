@@ -253,7 +253,16 @@ $bootstrap = [
         'typeText' => t('props.type_text'),
         'typeEllipse' => t('props.type_ellipse'),
         'typeRect' => t('props.type_rect'),
-        'typeTable' => t('props.type_table'),        'typeImage' => t('props.type_image'),
+        'typeTable' => t('props.type_table'),
+        'typeTimeline' => t('timeline.type'),
+        'tl' => (static function (): array {
+            $o = [];
+            foreach (['tab', 'open', 'open_hint', 'events', 'label', 'label_hint', 'sub', 'title', 'text', 'category', 'side', 'side_auto', 'side_top', 'side_bottom',
+                'move_up', 'move_down', 'remove', 'drag', 'add', 'add_hint', 'empty', 'hint', 'sample_title', 'sample_text', 'sample_cat1', 'sample_cat2'] as $k) {
+                $o[lcfirst(str_replace('_', '', ucwords($k, '_')))] = t('timeline.' . $k);
+            }
+            return $o;
+        })(),        'typeImage' => t('props.type_image'),
         'typeVideo' => t('props.type_video'),
         'typeAudio' => t('props.type_audio'),
         'text' => t('props.text'),
@@ -1039,6 +1048,7 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
           'position' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M3 12h18"/><path d="M12 3l3 3M12 3L9 6"/><path d="M12 21l3-3M12 21l-3-3"/><path d="M3 12l3-3M3 12l3 3"/><path d="M21 12l-3-3M21 12l-3 3"/></svg>',
           'effects' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/><path d="M18.5 15.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z"/></svg>',
           'spell' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V6.5A1.5 1.5 0 0 1 5.5 5H14"/><path d="M8 19h12.5A1.5 1.5 0 0 0 22 17.5V9"/><path d="M8 9h7"/><path d="M8 13h5"/><path d="M15 17l2 2 4-5"/></svg>',
+          'timeline' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h16"/><path d="M17 9l3 3-3 3"/><circle cx="7" cy="12" r="1.6"/><circle cx="13" cy="12" r="1.6"/><path d="M7 10V5"/><path d="M13 14v5"/></svg>',
           'media' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.2"/><path d="M13 15l2.2-2.5a1 1 0 0 1 1.5 0L21 17"/></svg>',
       ];
       return $icons[$name] ?? '';
@@ -1059,6 +1069,11 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
         <button type="button" class="props-side-tab" role="tab" id="propsSideTabPosition" data-side-tab="position" aria-selected="false" aria-controls="propsSidePanelPosition" title="<?= h(t('props.side_tab_position')) ?>">
           <?= $sideTabIcon('position') ?>
           <span class="sr-only"><?= h(t('props.side_tab_position')) ?></span>
+        </button>
+        <?php /* Zeitstrahl (3.12.48): nur sichtbar, solange ein Zeitstrahl markiert ist (editor.js renderTimelinePanel). */ ?>
+        <button type="button" class="props-side-tab" role="tab" id="propsSideTabTimeline" data-side-tab="timeline" aria-selected="false" aria-controls="propsSidePanelTimeline" title="<?= h(t('timeline.tab')) ?>" hidden>
+          <?= $sideTabIcon('timeline') ?>
+          <span class="sr-only"><?= h(t('timeline.tab')) ?></span>
         </button>
         <button type="button" class="props-side-tab" role="tab" id="propsSideTabEffects" data-side-tab="effects" aria-selected="false" aria-controls="propsSidePanelEffects" title="<?= h(t('props.side_tab_effects')) ?>">
           <?= $sideTabIcon('effects') ?>
@@ -1140,6 +1155,15 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
             <div class="props-pos-subpanel" data-pos-panel="layers" hidden>
               <div class="props-layers-section" id="propsLayersPanel"></div>
             </div>
+          </div>
+        </section>
+
+        <section class="props-side-panel" id="propsSidePanelTimeline" data-side-panel="timeline" role="tabpanel" aria-labelledby="propsSideTabTimeline" hidden>
+          <header class="props-side-panel-head">
+            <h2 class="props-side-panel-title"><?= h(t('timeline.tab')) ?></h2>
+          </header>
+          <div class="props-side-panel-body">
+            <div class="props-timeline-panel" id="propsTimelinePanel"></div>
           </div>
         </section>
 
@@ -1660,6 +1684,7 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script src="assets/js/sf-font-select.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-markup.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-richedit.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-timeline.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-keytips-side.js?v=<?= ASSET_VERSION ?>"></script>
 <?php $ffStatus = Workspace::status($id, (string)$me['id']); if ($ffStatus !== null): ?>

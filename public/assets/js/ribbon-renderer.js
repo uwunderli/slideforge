@@ -75,6 +75,7 @@
     text_field: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 12h8"/><path d="M8 15h5"/>',
     line: '<path d="M5 19L19 5"/>',
     table: '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M4 10h16"/><path d="M4 14.5h16"/><path d="M9.5 10v9"/><path d="M15 10v9"/>',
+    timeline: '<path d="M3 12h16"/><path d="M17 9l3 3-3 3"/><circle cx="7" cy="12" r="1.6"/><circle cx="13" cy="12" r="1.6"/><path d="M7 10V5"/><path d="M13 14v5"/>',
     rect: '<rect x="5" y="6" width="14" height="12" rx="1.5"/>',
     triangle: '<path d="M12 5L20 19H4L12 5z"/>',
     ellipse: '<ellipse cx="12" cy="12" rx="8" ry="6"/>',
