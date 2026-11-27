@@ -358,7 +358,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
       vollbild();
       tonFrei();
       frei = true;
-      if (start) start.hidden = true;
+      if (start) { start.hidden = true; start.style.display = 'none'; }  // Inline display:flex schlägt [hidden]: Hinweis blieb stehen (Urs 27.11.)
     }
     if (start) {
       start.addEventListener('click', freigeben);
