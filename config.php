@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '707');
+define('ASSET_VERSION', '708');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -77,6 +77,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
     unset($__secure);
 }
+sf_look_capture(); // Akzent/Fenster-Stil des Hubs aus der Rahmenadresse für spätere Seiten merken (wie FileForge ff_look_capture)
 
 // Autoloading der eigenen Klassen in src/
 spl_autoload_register(function ($class) {
@@ -507,6 +508,71 @@ if (Demo::isActive()) {
 }
 
 unset($__lang, $__u);
+
+/**
+ * Hub-Design schon serverseitig im <html> (1:1 wie FileForge ff_theme_attrs, 27.11.2026, Urs: «Design wird immer noch nicht recht
+ * vom Hub übernommen»). Quelle: `hub_accent`/`hub_chrome` der Rahmenadresse (Hub app/embed.php), sonst der in der Sitzung gemerkte
+ * Wert (`sf_look_capture`). Hell/Dunkel kommt wie bisher aus SharedAuth::themePref (Cookie des Hubs).
+ */
+function sf_theme_attrs(string $pref, string $theme): string
+{
+    $out = ' data-theme-pref="' . htmlspecialchars($pref, ENT_QUOTES) . '" data-theme="' . htmlspecialchars($theme, ENT_QUOTES) . '"';
+    $look = sf_look_url() ?? (is_array($_SESSION['sf_hub_look'] ?? null) ? $_SESSION['sf_hub_look'] : null);
+    if (!is_array($look)) {
+        return $out;
+    }
+    $a = (string)($look['accent'] ?? '');
+    if (($look['chrome'] ?? '') === 'flach') {
+        $out .= ' data-dialog-chrome="flach"';
+    }
+    if (preg_match('/^#[0-9a-f]{6}\z/', $a) === 1) {
+        [$hue, $chroma] = sf_accent_tone($a);
+        $out .= ' data-dialog-accent="custom" style="--hub-base-hue: ' . $hue . '; --hub-chroma: ' . $chroma . '; --hub-dialog-accent: ' . $a . ';"';
+    } elseif ($a !== '') {
+        $out .= ' data-dialog-accent="' . $a . '"';
+    }
+    return $out;
+}
+
+/** @return array{chrome:string,accent:string}|null Fenster-Stil und Akzent aus der Rahmenadresse des Hubs, nur Listenwerte bzw. `#rrggbb`. */
+function sf_look_url(): ?array
+{
+    if (!isset($_GET['hub_chrome']) && !isset($_GET['hub_accent'])) {
+        return null;
+    }
+    $a = strtolower(trim((string)($_GET['hub_accent'] ?? '')));
+    if (!in_array($a, ['', 'blau', 'gruen', 'indigo', 'terracotta'], true) && preg_match('/^#[0-9a-f]{6}\z/', $a) !== 1) {
+        $a = '';
+    }
+    return ['chrome' => (string)($_GET['hub_chrome'] ?? '') === 'flach' ? 'flach' : 'klassisch', 'accent' => $a];
+}
+
+/** Merkt den Wert der Rahmenadresse in der Sitzung, damit Seitenwechsel ohne `hub_accent` (Editor, Einstellungen) ihn im ersten Bild haben. */
+function sf_look_capture(): void
+{
+    $look = sf_look_url();
+    if ($look !== null && session_status() === PHP_SESSION_ACTIVE && ($_SESSION['sf_hub_look'] ?? null) !== $look) {
+        $_SESSION['sf_hub_look'] = $look;
+    }
+}
+
+/** @return array{0:float,1:float} Farbton und Sättigungsfaktor (OKLCH) wie UserPrefs::accentTone() im Hub und cf-theme.js. */
+function sf_accent_tone(string $hex): array
+{
+    $n = hexdec(substr($hex, 1, 6));
+    $c = [];
+    foreach ([($n >> 16) & 255, ($n >> 8) & 255, $n & 255] as $v) {
+        $v /= 255;
+        $c[] = $v <= 0.04045 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
+    }
+    $l = (0.4122214708 * $c[0] + 0.5363325363 * $c[1] + 0.0514459929 * $c[2]) ** (1 / 3);
+    $m = (0.2119034982 * $c[0] + 0.6806995451 * $c[1] + 0.1073969566 * $c[2]) ** (1 / 3);
+    $s = (0.0883024619 * $c[0] + 0.2817188376 * $c[1] + 0.6299787005 * $c[2]) ** (1 / 3);
+    $a = 1.9779984951 * $l - 2.4285922050 * $m + 0.4505937099 * $s;
+    $b = 0.0259040371 * $l + 0.7827717662 * $m - 0.8086757660 * $s;
+    $h = rad2deg(atan2($b, $a));
+    return [round($h < 0 ? $h + 360 : $h, 1), round(min(1.0, sqrt($a * $a + $b * $b) / 0.08), 3)];
+}
 
 /**
  * Frühstart des Hub-Designs (wie FileForge ff_theme_boot, 27.11.2026): setzt data-dialog-accent/--hub-base-hue im <head>,

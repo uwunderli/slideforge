@@ -453,6 +453,10 @@ switch ($action) {
 
     case 'list_layout_set_layouts':
         $setId = $body['layout_set_id'] ?? ($_GET['layout_set_id'] ?? '');
+        if (!Presentation::exists((string)$setId)) {
+            // Folien-Set gibt es in dieser FolienSchmiede nicht (z. B. aus einer anderen Installation übernommen): keine Fehlermeldung, Hinweis.
+            json_ok(['layouts' => [], 'layout_set_id' => $setId, 'missing' => true]);
+        }
         if (!LayoutSet::isLayoutSet($setId) || !Presentation::canUseTemplate($setId, $me['id'])) {
             json_fail('Keine Berechtigung für dieses Folien-Set.', 403);
         }

@@ -2,7 +2,7 @@
 /**
  * Startseite der FolienSchmiede im Hub (27.11.2026): Die Präsentationen liegen als .cfs in FileForge.
  * Zuletzt geöffnet (je Person, 20) · Für mich freigegeben (FileForge-Freigaben) · Neu / Öffnen / PowerPoint/ODP übernehmen ·
- * Vorlagen-Ordner (Einstellung je Person, FileForge-Dialog).
+ * Vorlagen-Ordner: Hub › FolienSchmiede › Modul-Einstellungen (admin_settings.php).
  */
 require __DIR__ . '/../config.php';
 Auth::requireLogin();
@@ -25,7 +25,6 @@ require __DIR__ . '/includes/header.php';
     <h2 id="sfForMeTitle">Für mich freigegeben</h2>
     <div id="sfForMe"><p class="muted small">Lädt …</p></div>
   </section>
-  <p class="muted small sf-home__hint">Vorlagen-Ordner: <span id="sfTemplateDir">…</span></p>
 </main>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
@@ -39,16 +38,14 @@ require __DIR__ . '/includes/header.php';
     newBlank: { id: 'newBlank', elId: 'sfNewBlank', label: 'Neu', title: 'Neue leere Präsentation in FileForge anlegen', icon: ic('<rect x="4" y="5" width="16" height="12" rx="1.5"/><path d="M12 8v6M9 11h6"/>') },
     newFromTemplate: { id: 'newFromTemplate', elId: 'sfNewTpl', label: 'Aus Vorlage …', title: 'Neue Präsentation aus einer Vorlage (.cfs)', icon: ic('<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 9v9"/>') },
     open: { id: 'open', elId: 'sfOpen', label: 'Öffnen …', title: 'Präsentation (.cfs) aus FileForge öffnen', icon: ic('<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>') },
-    importPpt: { id: 'importPpt', elId: 'sfImport', label: 'PowerPoint/ODP übernehmen …', title: 'PowerPoint (.pptx) oder ODP übernehmen; gespeichert wird als .cfs daneben', icon: ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 13h4a2 2 0 0 1 0 4H9v-4zM9 17v2"/>') },
-    templateDir: { id: 'templateDir', elId: 'sfTplDir', label: 'Vorlagen-Ordner …', title: 'Ordner in FileForge, in dem deine Vorlagen liegen', icon: ic('<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>') }
+    importPpt: { id: 'importPpt', elId: 'sfImport', label: 'PowerPoint/ODP übernehmen …', title: 'PowerPoint (.pptx) oder ODP übernehmen; gespeichert wird als .cfs daneben', icon: ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 13h4a2 2 0 0 1 0 4H9v-4zM9 17v2"/>') }
   };
   HubRibbon.create({ root: document.getElementById('sfRibbon'), body: document.getElementById('sfRibbonBody'), commands: commands,
     defaultLayout: { iconSize: 'small', hideLabels: false, groups: [
       { id: 'neu', label: 'Neu', items: ['newBlank', 'newFromTemplate'] },
-      { id: 'datei', label: 'Datei', items: ['open', 'importPpt'] },
-      { id: 'einst', label: 'Einstellungen', items: ['templateDir'] }
+      { id: 'datei', label: 'Datei', items: ['open', 'importPpt'] }
     ] }, storageKey: 'sf_home_ribbon_v1', dialog: window.HubFloatDialog });
-  var map = { sfNewBlank: 'newBlank', sfNewTpl: 'newFromTemplate', sfOpen: 'open', sfImport: 'importPpt', sfTplDir: 'templateDir' };
+  var map = { sfNewBlank: 'newBlank', sfNewTpl: 'newFromTemplate', sfOpen: 'open', sfImport: 'importPpt' };
   document.getElementById('sfRibbonBody').addEventListener('click', function (e) {
     var b = e.target.closest('button[id]');
     if (!b || b.disabled || !map[b.id]) return;

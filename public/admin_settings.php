@@ -153,6 +153,13 @@ require __DIR__ . '/includes/header.php';
     <?php if ($activeTab === 'general' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
     <?php if ($activeTab === 'general' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
 
+    <div class="section-header" style="margin-top:8px;"><h2>Vorlagen-Ordner</h2></div>
+    <?php /* Je Person (Urs 27.11.: aus dem Menüband der Startseite hierher, Hub › FolienSchmiede › Modul-Einstellungen). */ ?>
+    <p class="muted small">Ordner in FileForge, aus dem «Aus Vorlage …» deine Vorlagen (.cfs) anbietet.</p>
+    <p>Gewählt: <strong id="sfTplDirLabel">…</strong></p>
+    <button type="button" id="sfTplDirPick" class="button button-sm hub-btn hub-btn--sm">Ordner wählen …</button>
+    <button type="button" id="sfTplDirClear" class="button button-sm hub-btn hub-btn--sm" hidden>Entfernen</button>
+
     <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.general_heading')) ?></h2></div>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
@@ -395,4 +402,6 @@ if (testMailBtn) {
 }
 </script>
 
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
+<script>SfFf.templateSetting(<?= json_encode(['csrf' => csrf_token(), 'labelId' => 'sfTplDirLabel', 'pickId' => 'sfTplDirPick', 'clearId' => 'sfTplDirClear'], JSON_HEX_TAG) ?>);</script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

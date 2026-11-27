@@ -187,6 +187,7 @@ $bootstrap = [
         'exportFailed' => t('export.job_failed'),
         'logosInsertEmpty' => t('elements.logos_insert_empty'),
         'error' => t('template_modal.error'),
+        'layoutSetMissing' => t('template_modal.layout_set_missing'),
         'empty' => t('template_modal.empty'),
         'own' => t('template_modal.own'),
         'shared' => t('template_modal.shared'),

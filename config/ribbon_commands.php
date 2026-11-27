@@ -14,8 +14,8 @@ function ribbon_command_catalog(): array
 
         // --- Start ---
         ['id' => 'ff_save', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save', 'icon' => 'save', 'shortcut' => 'Ctrl+S', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-        ['id' => 'ff_save_copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_copy', 'icon' => 'save_copy', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 1]],
-        ['id' => 'ff_save_template', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_template', 'icon' => 'save_template', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 1]],
+        ['id' => 'ff_save_copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_copy', 'icon' => 'save_copy', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'ff_save_template', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_template', 'icon' => 'save_template', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'undo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.undo', 'icon' => 'undo', 'domId' => 'undoBtn', 'shortcut' => 'Ctrl+Z', 'visibleWhen' => ['canEdit']],
         ['id' => 'redo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.redo', 'icon' => 'redo', 'domId' => 'redoBtn', 'shortcut' => 'Ctrl+Y', 'visibleWhen' => ['canEdit']],
         ['id' => 'copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'props.copy', 'icon' => 'copy', 'domId' => 'copyObjBtn', 'shortcut' => 'Ctrl+C', 'visibleWhen' => ['canEdit'], 'disabled' => true],

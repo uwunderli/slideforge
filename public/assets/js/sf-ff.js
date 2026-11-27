@@ -239,7 +239,7 @@
       formeEl.innerHTML = fm.length ? table(fm, 'forme', 'Von')
         : '<p class="muted small">Niemand hat dir eine Präsentation freigegeben.</p>';
       state.templateDir = j.templateDir || null;
-      tplEl.textContent = state.templateDir ? (state.templateDir.label || 'gewählt') : 'kein Ordner gewählt';
+      if (tplEl) tplEl.textContent = state.templateDir ? (state.templateDir.label || 'gewählt') : 'kein Ordner gewählt';
     }
     function reload() {
       fetch(API + '?action=home', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
@@ -321,5 +321,27 @@
     return actions;
   }
 
-  global.SfFf = { editor: editor, home: home };
+  /** Vorlagen-Ordner der Person in den Modul-Einstellungen (Urs 27.11.: gehört in die Hub-Einstellungen, nicht ins Menüband). */
+  function templateSetting(cfg) {
+    csrf = cfg.csrf;
+    var label = document.getElementById(cfg.labelId), pick = document.getElementById(cfg.pickId), clear = document.getElementById(cfg.clearId);
+    function show() {
+      fetch(API + '?action=home', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+        var t = j && j.templateDir; label.textContent = t ? (t.label || 'gewählt') : 'kein Ordner gewählt';
+        if (clear) clear.hidden = !t;
+      }).catch(function () { label.textContent = '—'; });
+    }
+    function save(ref, lbl) {
+      return post({ action: 'template_dir', ref: ref, label: lbl }).then(function (j) {
+        j.ok ? (toast('success', ref ? 'Vorlagen-Ordner gespeichert.' : 'Vorlagen-Ordner entfernt.'), show()) : toast('error', j.message || 'Nicht gespeichert.');
+      });
+    }
+    if (pick) pick.addEventListener('click', function () {
+      choose(['dir'], [], 'Ordner für Vorlagen wählen').then(function (r) { if (r && r.ref) return save(r.ref, r.label || r.name || ''); }).catch(pickError);
+    });
+    if (clear) clear.addEventListener('click', function () { save('', ''); });
+    show();
+  }
+
+  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting };
 })(window);

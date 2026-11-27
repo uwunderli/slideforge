@@ -57,6 +57,34 @@ final class Migration
         }
         sort($ids);
         $counts = ['total' => count($ids), 'done' => 0, 'skipped' => 0, 'failed' => 0, 'unassigned' => 0, 'templates' => 0, 'sharesDropped' => 0];
+        // Folien-Sets (Layout-Sets) bleiben App-intern: Präsentationen verweisen per `layout_set_id` darauf (Vorlagen-Leiste, Layout
+        // anwenden). Sie kommen deshalb zusätzlich mit gleicher ID nach data/presentations, Besitz = Personenschlüssel; nie ersetzen.
+        $counts['layoutSets'] = 0;
+        $counts['layoutSetsPresent'] = 0;
+        foreach ($ids as $pid) {
+            $m = self::json($source . '/presentations/' . $pid . '/meta.json');
+            if (!is_array($m) || empty($m['is_template']) || empty($m['is_layout_set'])) {
+                continue;
+            }
+            if (Presentation::exists($pid)) {
+                $counts['layoutSetsPresent']++;
+                continue;
+            }
+            $u = $byId[(string)($m['owner_id'] ?? '')] ?? null;
+            $pk = is_array($u) ? self::personKey($u) : '';
+            if ($pk === '' || $dryRun) {
+                $counts['layoutSets'] += $pk === '' ? 0 : 1;
+                continue;
+            }
+            self::copyDir($source . '/presentations/' . $pid, Presentation::dir($pid));
+            Storage::update(Presentation::dir($pid) . '/meta.json', static function ($meta) use ($pk) {
+                $meta = is_array($meta) ? $meta : [];
+                $meta['owner_id'] = $pk;
+                return $meta;
+            });
+            $counts['layoutSets']++;
+            $echo('Folien-Set übernommen: ' . (string)($m['title'] ?? $pid));
+        }
         $rows = [];
         $perPerson = [];
         $title = 'FolienSchmiede: Übernahme nach FileForge' . ($dryRun ? ' (Probelauf)' : '');
@@ -243,6 +271,8 @@ final class Migration
             . 'Ziel: ' . (self::$ablage !== '' ? 'Ablage «' . self::$ablage . '»' : 'eigene Ablage der Person') . "\n\n";
         $o .= sprintf("Präsentationen %d · übernommen %d · schon übernommen %d · nicht zuordenbar %d · Fehler %d · davon Vorlagen (nach Präsentationen/Vorlagen) %d · Freigaben weggelassen %d\n\n",
             $counts['total'], $counts['done'], $counts['skipped'], $counts['unassigned'], $counts['failed'], $counts['templates'], $counts['sharesDropped']);
+        $o .= sprintf("Folien-Sets nach data/presentations: %s %d · schon vorhanden %d\n\n", $dryRun ? 'würden übernommen' : 'übernommen',
+            (int)($counts['layoutSets'] ?? 0), (int)($counts['layoutSetsPresent'] ?? 0));
         $o .= "## Je Person\n\n";
         ksort($perPerson);
         foreach ($perPerson as $p => $c) {

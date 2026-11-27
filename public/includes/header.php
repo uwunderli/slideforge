@@ -14,7 +14,7 @@ $webPrefix = $webBase === '' ? '' : $webBase;
 $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 ?>
 <!DOCTYPE html>
-<html lang="<?= h($currentLang) ?>" data-theme-pref="<?= h($themePref) ?>" data-theme="<?= h($theme) ?>">
+<html lang="<?= h($currentLang) ?>"<?= sf_theme_attrs($themePref, $theme) ?>>
 <head>
 <meta charset="UTF-8">
 <?= sf_theme_boot() ?>

@@ -951,6 +951,10 @@
         '&layout_set_id=' + encodeURIComponent(setId)
       ).then((r) => r.json());
       if (!res.ok) throw new Error(res.error || 'Fehler');
+      if (res.missing) {
+        listEl.innerHTML = '<p class="props-video-note">' + escapeHtml(SF.i18n.layoutSetMissing || SF.i18n.empty) + '</p>';
+        return;
+      }
       renderLayoutPickerInSettings(res.layouts || [], setId);
     } catch (e) {
       listEl.innerHTML = '<p class="props-video-note" style="color:var(--danger);">' + escapeHtml(SF.i18n.error) + '</p>';
