@@ -8,6 +8,7 @@ $rbIconNumber = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" s
 $rbIconAlignLeft = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h14"/></svg>';
 $rbIconAlignCenter = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M5 18h14"/></svg>';
 $rbIconAlignRight = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M10 12h10M6 18h14"/></svg>';
+$rbIconMarkClear = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19h7"/><path d="M8 15l8-10 3 3-10 8z"/><path d="M15 15l5 5M20 15l-5 5"/></svg>';
 $rbTemplateSample = h(t('ribbon.template_style_sample'));
 ?>
 <div class="ribbon-widget-grid ribbon-widget-grid--zeichen" data-widget-id="widget-zeichen" id="ribbonStartZeichen">
@@ -91,6 +92,16 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
       <span class="sr-only"><?= h(t('props.color')) ?></span>
       <input type="color" id="rb_color" value="#ffffff" disabled title="<?= h(t('props.color')) ?>">
     </label>
+  </div>
+  <?php /* Markerfarbe (3.12.49, Urs 27.11.): wie die Schriftfarbe, [mark=#hex] auf Markierung bzw. ganzen Text; daneben «Kein Marker». */ ?>
+  <div class="ribbon-wcell ribbon-wcell-color ribbon-wcell-mark">
+    <label class="ribbon-color-picker-wrap">
+      <span class="sr-only"><?= h(t('ribbon.mark_color')) ?></span>
+      <input type="color" id="rb_mark" value="#fff176" disabled aria-label="<?= h(t('ribbon.mark_color')) ?>" title="<?= h(t('ribbon.mark_color')) ?>">
+    </label>
+  </div>
+  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markclear">
+    <button type="button" class="ribbon-icon-btn ribbon-icon-btn-svg" id="rb_mark_clear" disabled aria-label="<?= h(t('ribbon.mark_clear')) ?>" title="<?= h(t('ribbon.mark_clear')) ?>"><?= $rbIconMarkClear ?></button>
   </div>
   <div class="ribbon-wcell ribbon-wcell-opacity">
     <div class="ribbon-field-inline ribbon-field-opacity">

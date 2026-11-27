@@ -2359,8 +2359,12 @@
      Inhalt SfMarkup.toHtml(notes), zurück mit SfMarkup.fromHtml() (gleiche Regeln wie Markdown.php); Enter, Einfügen
      (nur reiner Text) und Formatieren der Markierung über das Zeilenmodell (SfRichEdit), kein execCommand.
      Geladene Notizen gehen unverändert zurück, solange niemand im Feld schreibt (notesEd.raw). */
-  const NOTES_BTN_KEY = { notesBoldBtn: 'b', notesItalicBtn: 'i', notesUnderlineBtn: 'u' };
-  const notesEd = { raw: '', saved: null };
+  /* 3.12.49 (Urs 27.11.: Leiste «etwas zu klotzig», «über die Schaltflächen im Ribbon lösen»): formatiert wird über
+     Menüband «Start» › Zeichen/Schriftfarbe, wie beim Bearbeiten an Ort (T4). active = Notizfeld hat den Fokus oder
+     zuletzt gehabt und seither nur ins Menüband geklickt; dann wirken die Knöpfe auf notesEd.saved. */
+  const notesEd = { raw: '', saved: null, active: false };
+  const NOTES_RIBBON_BTN_SEL = '#rb_bold, #rb_italic, #rb_underline, #rb_strikethrough, #rb_uppercase, #rb_smallcaps, #rb_mark_clear';
+  const NOTES_RIBBON_ZONE_SEL = NOTES_RIBBON_BTN_SEL + ', #ribbonStartZeichen, #ribbonStartColors';
   function notesField() { return document.getElementById('slideNotesInput'); }
   function notesRich() { return !!(window.SfMarkup && window.SfRichEdit); }
   /* Grundfarbe des Felds: vom Browser beim Zusammenfügen kopierte Farben fallen weg (wie base() beim Bearbeiten an Ort). */
@@ -2396,7 +2400,7 @@
     }
     scheduleSave();
   }
-  /* Markierung im Feld; liegt der Fokus in einem Farbfeld der Leiste, gilt die zuletzt gemerkte. */
+  /* Markierung im Feld; liegt der Fokus im Menüband (Farbfeld), gilt die zuletzt gemerkte. */
   function notesSelection() {
     const el = notesField();
     if (!el || !notesRich()) return null;
@@ -2434,25 +2438,42 @@
     notesChanged();
     return true;
   }
-  /* Knöpfe zeigen den Zustand an der Schreibmarke (bzw. am Anfang der Markierung). */
+  /* Menüband zeigt im Notizfeld den Zustand an der Schreibmarke (bzw. am Anfang der Markierung); nur Zeichen und
+     Schriftfarbe sind aktiv, Schriftart/Grösse/Absatz bleiben grau. */
   function syncNotesFormatState(cur) {
+    if (!notesEd.active) return;
     const R = window.SfRichEdit;
-    const r = (cur && R) ? R.propsAt(cur.lines, cur.a, R.cmp(cur.a, cur.b) !== 0) : null;
-    Object.keys(NOTES_BTN_KEY).forEach((id) => {
+    const r = (cur && R) ? R.propsAt(cur.lines, cur.a, R.cmp(cur.a, cur.b) !== 0) : {};
+    Object.keys(RB_INLINE_KEY).forEach((id) => {
       const btn = document.getElementById(id);
       if (!btn) return;
-      btn.setAttribute('aria-pressed', r && r[NOTES_BTN_KEY[id]] ? 'true' : 'false');
+      const on = !!r[RB_INLINE_KEY[id]];
+      btn.disabled = false;
+      btn.dataset.checked = on ? '1' : '0';
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    /* Farbfelder behalten die zuletzt gewählte Farbe (wie Office), damit «A»/«ab» sie erneut anwenden. */
+    [['rb_color', r.color], ['rb_mark', r.mark]].forEach(([id, val]) => {
+      const inp = document.getElementById(id);
+      if (!inp) return;
+      inp.disabled = false;
+      if (document.activeElement !== inp && /^#[0-9a-f]{6}$/i.test(val || '')) inp.value = val;
+    });
+    const markClear = document.getElementById('rb_mark_clear');
+    if (markClear) markClear.disabled = false;
   }
-  /* Die Zeichen «A»/«ab» vor den Farbfeldern zeigen die gewählte Farbe. */
-  function syncNotesGlyphs() {
-    const c = document.getElementById('notesColorInput');
-    const m = document.getElementById('notesMarkInput');
-    const gc = c?.closest('.notes-format-color')?.querySelector('.notes-format-glyph');
-    const gm = m?.closest('.notes-format-color')?.querySelector('.notes-format-glyph');
-    if (gc && c) gc.style.color = c.value;
-    if (gm && m) gm.style.backgroundColor = m.value;
+  function notesRibbonOn() {
+    if (notesEd.active || !notesRich()) return;
+    notesEd.active = true;
+    setRibbonStartEnabled(false);   // nur beim Einschalten: ein fokussiertes Farbfeld nicht kurz sperren (Fokus ginge verloren)
+    syncNotesFormatState(notesSelection());
+  }
+  /* Fokus weg von Notizfeld und Menüband (z. B. Klick auf die Bühne): Menüband wieder fürs gewählte Objekt. */
+  function notesRibbonOff() {
+    if (!notesEd.active) return;
+    notesEd.active = false;
+    Object.keys(RB_INLINE_KEY).forEach((id) => document.getElementById(id)?.removeAttribute('aria-pressed'));
+    syncRibbonStartTab();
   }
   function initNotesEditor() {
     const el = notesField();
@@ -2506,47 +2527,24 @@
       syncNotesFormatState(cur);
     });
 
-    const bar = document.getElementById('notesFormatBar');
-    if (!bar) return;
-    if (!notesRich()) { bar.hidden = true; return; }
-    Object.keys(NOTES_BTN_KEY).forEach((id) => {
-      const btn = document.getElementById(id);
-      if (!btn) return;
-      btn.addEventListener('mousedown', (e) => e.preventDefault());   // Fokus und Markierung bleiben im Feld
-      btn.addEventListener('click', () => {
-        if (!notesToggle(NOTES_BTN_KEY[id])) el.focus();
-      });
+    /* Menüband auf die Notizen umleiten (3.12.49): Knöpfe «Zeichen» nehmen beim mousedown den Fokus nicht,
+       damit Markierung und Fokus im Feld bleiben; Felder (Schriftfarbe) bekommen den Fokus, es gilt notesEd.saved. */
+    el.addEventListener('focusin', notesRibbonOn);
+    document.addEventListener('mousedown', (e) => {
+      if (!notesEd.active) return;
+      const t = e.target;
+      if (el.contains(t)) return;
+      if (t && t.closest && t.closest(NOTES_RIBBON_ZONE_SEL)) {
+        if (t.closest(NOTES_RIBBON_BTN_SEL)) e.preventDefault();
+        return;
+      }
+      notesRibbonOff();
+    }, true);
+    document.addEventListener('focusin', (e) => {
+      const t = e.target;
+      if (!notesEd.active || el.contains(t) || (t && t.closest && t.closest(NOTES_RIBBON_ZONE_SEL))) return;
+      notesRibbonOff();
     });
-    const clearBtn = document.getElementById('notesClearFormatBtn');
-    clearBtn?.addEventListener('mousedown', (e) => e.preventDefault());
-    clearBtn?.addEventListener('click', () => {
-      const R = window.SfRichEdit;
-      const done = notesApply((lines, a, b) => {
-        let out = lines;
-        ['b', 'i', 'u', 's', 'upper', 'sc'].forEach((k) => { out = R.setValue(out, a, b, k, false, false); });
-        ['color', 'mark', 'size'].forEach((k) => { out = R.setValue(out, a, b, k, null, false); });
-        return out;
-      });
-      if (!done) el.focus();
-    });
-    /* Farbfelder (HubColorPicker über sf-color.js): jede Wahl wirkt auf die gemerkte Markierung. */
-    [['notesColorInput', 'color'], ['notesMarkInput', 'mark']].forEach(([id, key]) => {
-      const inp = document.getElementById(id);
-      inp?.addEventListener('input', () => {
-        syncNotesGlyphs();
-        if (/^#[0-9a-f]{6}$/i.test(inp.value)) notesSetValue(key, inp.value.toLowerCase());
-      });
-    });
-    /* «A»/«ab» wenden die gewählte Farbe direkt auf die Markierung an; das Farbfeld daneben öffnet die Wahl. */
-    document.querySelectorAll('#notesFormatBar [data-notes-apply]').forEach((btn) => {
-      btn.addEventListener('mousedown', (e) => e.preventDefault());
-      btn.addEventListener('click', () => {
-        const inp = document.getElementById(btn.dataset.notesApply);
-        if (!inp || !/^#[0-9a-f]{6}$/i.test(inp.value)) return;
-        notesSetValue(btn.dataset.notesApply === 'notesMarkInput' ? 'mark' : 'color', inp.value.toLowerCase());
-      });
-    });
-    syncNotesGlyphs();
   }
 
   /* Notizen ein-/ausklappen (3.12.19, Urs 27.11.: «wie die Seitenleiste … bleibt der Play Button unten im Bild»).
@@ -5665,7 +5663,7 @@
      Menüband «Zeichen»/«Farben» und die Format-Knöpfe der Format-Spalte. Bei den Knöpfen verhindert
      mousedown den Fokuswechsel, damit Fokus und Markierung im Feld bleiben; Felder (Grösse, Farbe)
      bekommen den Fokus, die Markierung merkt sich das Feld (saved). */
-  const INLINE_EDIT_BTN_SEL = '#rb_bold, #rb_italic, #rb_underline, #rb_strikethrough, #rb_uppercase, #rb_smallcaps, ' +
+  const INLINE_EDIT_BTN_SEL = '#rb_bold, #rb_italic, #rb_underline, #rb_strikethrough, #rb_uppercase, #rb_smallcaps, #rb_mark_clear, ' +
     '.format-toggle-btn[data-wrap], .format-toggle-btn[data-wraptag], #markSelectionBtn, #colorSelectionBtn';
   const INLINE_EDIT_ZONE_SEL = INLINE_EDIT_BTN_SEL + ', #ribbonStartZeichen, #ribbonStartColors, ' +
     '#markSelectionPalette, #colorSelectionPalette';
@@ -6584,6 +6582,22 @@
     scheduleSave();
   }
 
+  /* Auszeichnung (z. B. mark) auf den ganzen Text eines Textobjekts; null entfernt sie (3.12.49). */
+  function setTextObjectRunValue(node, key, val) {
+    const M = window.SfMarkup, R = window.SfRichEdit;
+    if (!M || !R || !M.readLines || !R.lineLen) return false;
+    const lines = M.readLines(M.toHtml(String(node.text() || '')), { base: { color: node.fill(), size: node.fontSize() } });
+    if (!lines.length) return false;
+    const a = { l: 0, ch: 0 };
+    const b = { l: lines.length - 1, ch: R.lineLen(lines[lines.length - 1]) };
+    if (R.isEmptyRange(lines, a, b)) return false;
+    node.text(M.linesToMarkup(R.setValue(lines, a, b, key, val, false)));
+    refreshCanvas();
+    scheduleSave();
+    refreshPropsPanel();
+    return true;
+  }
+
   function ribbonStartTextNode() {
     if (SF.selectedNodes.length !== 1 || !SF.selectedNode) return null;
     const type = SF.selectedNode.getAttr('objType');
@@ -6592,7 +6606,7 @@
 
   function setRibbonStartEnabled(enabled) {
     const ids = ['rb_bold', 'rb_italic', 'rb_underline', 'rb_strikethrough', 'rb_uppercase', 'rb_smallcaps',
-      'rb_font', 'rb_fontsize', 'rb_lineheight', 'rb_letterspacing', 'rb_color', 'rb_opacity',
+      'rb_font', 'rb_fontsize', 'rb_lineheight', 'rb_letterspacing', 'rb_color', 'rb_mark', 'rb_mark_clear', 'rb_opacity',
       'rb_bullet', 'rb_number', 'rb_align_left', 'rb_align_center', 'rb_align_right'];
     ids.forEach((id) => {
       const el = document.getElementById(id);
@@ -6605,6 +6619,7 @@
   }
 
   function syncRibbonStartTab() {
+    if (notesEd.active) { syncNotesFormatState(notesSelection()); return; }   // 3.12.49: Menüband gehört den Notizen
     const node = ribbonStartTextNode();
     if (!node) {
       setRibbonStartEnabled(false);
@@ -6707,6 +6722,11 @@
       const el = document.getElementById(id);
       if (!el) return;
       el.addEventListener('click', () => {
+        /* 3.12.49: Notizfeld aktiv → auf die Markierung der Notizen (ohne Markierung zurück ins Feld). */
+        if (notesEd.active && RB_INLINE_KEY[id]) {
+          if (!notesToggle(RB_INLINE_KEY[id])) notesField()?.focus();
+          return;
+        }
         const node = ribbonStartTextNode();
         if (!node) return;
         /* T4: Bearbeiten an Ort mit Markierung → nur die Markierung; sonst wie bisher das ganze Objekt. */
@@ -6813,6 +6833,10 @@
       scheduleSave();
     });
     document.getElementById('rb_color')?.addEventListener('input', (e) => {
+      if (notesEd.active) {   // 3.12.49: Schriftfarbe auf die gemerkte Markierung der Notizen
+        if (/^#[0-9a-f]{6}$/i.test(e.target.value)) notesSetValue('color', e.target.value.toLowerCase());
+        return;
+      }
       const node = ribbonStartTextNode();
       if (!node) return;
       const ie = SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null;
@@ -6821,6 +6845,23 @@
       refreshCanvas();
       scheduleSave();
     });
+    /* Markerfarbe (3.12.49): Notizfeld bzw. Bearbeiten an Ort → Markierung; nur Objekt gewählt → ganzer Text.
+       Beim Bearbeiten an Ort ohne Markierung bleibt es still (der offene Editor würde den ganzen Text überschreiben). */
+    const applyRbMark = (val) => {
+      if (notesEd.active) {
+        if (!notesSetValue('mark', val)) notesField()?.focus();
+        return;
+      }
+      const node = ribbonStartTextNode();
+      if (!node) return;
+      const ie = SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null;
+      if (ie) { ie.applyValue('mark', val); return; }
+      setTextObjectRunValue(node, 'mark', val);
+    };
+    document.getElementById('rb_mark')?.addEventListener('input', (e) => {
+      if (/^#[0-9a-f]{6}$/i.test(e.target.value)) applyRbMark(e.target.value.toLowerCase());
+    });
+    document.getElementById('rb_mark_clear')?.addEventListener('click', () => applyRbMark(null));
     document.getElementById('rb_opacity')?.addEventListener('input', (e) => {
       const node = ribbonStartTextNode();
       if (!node) return;
@@ -11060,6 +11101,21 @@
     SFS.register('text_bold', textFormatKey('rb_bold'));
     SFS.register('text_italic', textFormatKey('rb_italic'));
     SFS.register('text_underline', textFormatKey('rb_underline'));
+    /* 3.12.49: Markerfarbe anwenden / Kein Marker (Kürzel frei wählbar) — gleicher Weg wie die Knöpfe im Menüband. */
+    const markKey = (clear) => (e) => {
+      const notesEl = notesField();
+      const inNotes = !!(notesEl && notesRich() && e && e.target && notesEl.contains(e.target));
+      const ie = SF.inlineEdit;
+      const inInline = !!(ie && e && e.target && ie.el.contains(e.target));
+      if (!inNotes && !inInline && (inField(e) || !ribbonStartTextNode() || !stagePlayContext())) return 'native';
+      const ctl = document.getElementById(clear ? 'rb_mark_clear' : 'rb_mark');
+      if (!ctl || ctl.disabled) return 'native';
+      if (clear) ctl.click();
+      else ctl.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    };
+    SFS.register('text_mark', markKey(false));
+    SFS.register('text_mark_clear', markKey(true));
     /* Entf: im Filmstreifen/Raster Folien löschen, sonst weiter an die Bühne (markierte Objekte löschen). */
     SFS.register('delete_slides', () => {
       if (SF.canEdit && slideShortcutContext()) { deleteSlides(shortcutSlideIndices()); return true; }

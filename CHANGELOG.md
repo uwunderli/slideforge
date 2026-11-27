@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.51] - 2026-11-27
+
+### Changed
+- **Notizen über das Menüband formatieren** (Urs 27.11.: Leiste «etwas zu klotzig», «über die Schaltflächen im Ribbon lösen»): Die kleine Formatleiste über dem Notizfeld entfällt. Solange das Notizfeld den Fokus hat (auch beim Klick ins Menüband), wirken «Start» › Zeichen (Fett, Kursiv, Unterstrichen, Durchgestrichen, Grossbuchstaben, Kapitälchen) und Schriftfarbe auf die Markierung der Notizen und zeigen den Zustand an der Schreibmarke; Schriftart/Grösse/Absatz bleiben grau. Klick auf die Bühne o. ä. gibt das Menüband wieder dem gewählten Objekt.
+
+### Added
+- **Markerfarbe im Menüband** (Gruppe «Schriftfarbe»): Farbfeld mit HubColorPicker neben der Schriftfarbe und Knopf «Kein Marker». Wirkt im Notizfeld und beim Bearbeiten an Ort auf die Markierung, bei gewähltem Textobjekt auf den ganzen Text ([mark=#hex]). Kürzel «Markerfarbe anwenden»/«Kein Marker» (ohne Vorgabe) im Anpassen-Dialog.
+
 ## [3.12.50] - 2026-11-27
 
 ### Added

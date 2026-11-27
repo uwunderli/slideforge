@@ -997,24 +997,8 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
         <button type="button" class="hub-btn hub-btn--sm sf-stage-play" id="stagePlayBtn" title="<?= h(t('props.anim_play_hint')) ?>"><span aria-hidden="true">▶</span> <?= h(t('props.anim_play')) ?></button>
         <span><?= t('notes.hint') ?></span>
       </div>
-      <?php /* Notizen formatiert bearbeiten (3.12.41, Urs 27.11.): kleine Leiste auf die Markierung, Feld zeigt formatiert;
-               gespeichert wird weiter die Auszeichnung (SfMarkup). Farbfelder umhüllt sf-color.js mit HubColorPicker. */ ?>
-      <div class="notes-format-bar" id="notesFormatBar" role="toolbar" aria-label="<?= h(t('notes.format_bar')) ?>" aria-controls="slideNotesInput">
-        <button type="button" class="hub-icon-btn notes-format-btn notes-format-b" id="notesBoldBtn" aria-pressed="false" aria-label="<?= h(t('props.bold')) ?>" title="<?= h(t('props.bold') . ' · ' . t('notes.format_sel_hint')) ?>">B</button>
-        <button type="button" class="hub-icon-btn notes-format-btn notes-format-i" id="notesItalicBtn" aria-pressed="false" aria-label="<?= h(t('props.italic')) ?>" title="<?= h(t('props.italic') . ' · ' . t('notes.format_sel_hint')) ?>">I</button>
-        <button type="button" class="hub-icon-btn notes-format-btn notes-format-u" id="notesUnderlineBtn" aria-pressed="false" aria-label="<?= h(t('props.underline')) ?>" title="<?= h(t('props.underline') . ' · ' . t('notes.format_sel_hint')) ?>">U</button>
-        <span class="notes-format-sep" aria-hidden="true"></span>
-        <span class="notes-format-color" title="<?= h(t('notes.color') . ' · ' . t('notes.format_sel_hint')) ?>">
-          <button type="button" class="hub-icon-btn notes-format-btn notes-format-glyph" data-notes-apply="notesColorInput" aria-label="<?= h(t('notes.color_apply')) ?>" title="<?= h(t('notes.color_apply') . ' · ' . t('notes.format_sel_hint')) ?>">A</button>
-          <input type="color" id="notesColorInput" value="#c0392b" aria-label="<?= h(t('notes.color')) ?>" title="<?= h(t('notes.color') . ' · ' . t('notes.format_sel_hint')) ?>">
-        </span>
-        <span class="notes-format-color" title="<?= h(t('notes.mark') . ' · ' . t('notes.format_sel_hint')) ?>">
-          <button type="button" class="hub-icon-btn notes-format-btn notes-format-glyph notes-format-glyph--mark" data-notes-apply="notesMarkInput" aria-label="<?= h(t('notes.mark_apply')) ?>" title="<?= h(t('notes.mark_apply') . ' · ' . t('notes.format_sel_hint')) ?>">ab</button>
-          <input type="color" id="notesMarkInput" value="#fff176" aria-label="<?= h(t('notes.mark')) ?>" title="<?= h(t('notes.mark') . ' · ' . t('notes.format_sel_hint')) ?>">
-        </span>
-        <span class="notes-format-sep" aria-hidden="true"></span>
-        <button type="button" class="hub-icon-btn notes-format-btn" id="notesClearFormatBtn" aria-label="<?= h(t('notes.clear_format')) ?>" title="<?= h(t('notes.clear_format') . ' · ' . t('notes.format_sel_hint')) ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h12v2"/><path d="M10 5l-3 14"/><path d="M15 15l5 5M20 15l-5 5"/></svg></button>
-      </div>
+      <?php /* Notizen formatiert bearbeiten (3.12.41): Feld zeigt formatiert, gespeichert wird die Auszeichnung (SfMarkup).
+               Formatiert wird seit 3.12.49 über das Menüband «Start» › Zeichen/Schriftfarbe (Urs 27.11.: Leiste «etwas zu klotzig»). */ ?>
       <div id="slideNotesInput" class="notes-rich-input is-empty" contenteditable="true" role="textbox" aria-multiline="true" aria-label="<?= h(t('notes.title')) ?>" data-placeholder="<?= h(t('notes.placeholder')) ?>"></div>
     </div>
     <?php endif; ?>
