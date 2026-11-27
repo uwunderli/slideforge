@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.9 gebaut** (`entwickler/slide-fx-klick` ab 3.12.8 58d0bd2): Klick in der Effektliste wählt das Objekt, Doppelklick öffnet Einblenden. Bei Gitwart.
 - **27.11. 3.12.8 gebaut** (gleicher Zweig nach 3.12.7): Kürzel «Abspielen» im Katalog, Vorgabe Ctrl+Enter. Bei Gitwart.
 - **27.11. 3.12.7 gebaut** (`entwickler/slide-abspielen-oben` ab 3.12.6 66eb8b5): «▶ Abspielen» oben mittig über der Folie statt im Effekte-Bereich. Bei Gitwart.
 - **27.11. 3.12.6 gebaut** (`entwickler/slide-fx-auswahl` ab 3.12.5 782435a, Worktree `_claude/entwickler/wt-slide-fx-auswahl`): Effektliste (Reihenfolge) markiert die auf der Folie gewählten Objekte. Bei Gitwart.

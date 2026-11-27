@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.9] - 2026-11-27
+
+### Changed
+- **Effektliste: ein Klick wählt das Objekt** (Urs 27.11.): Klick auf eine Zeile unter Effekte › Reihenfolge wählt das Objekt auf der Folie, die Liste bleibt offen und markiert es. Doppelklick (oder Eingabe) öffnet wie bisher Einblenden zum Bearbeiten.
+
 ## [3.12.8] - 2026-11-27
 
 ### Added

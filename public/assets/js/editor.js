@@ -6865,7 +6865,7 @@
       eintraege.forEach((e) => {
         const an = gewaehlt(e.node);
         body += '<li' + (an ? ' class="active" aria-current="true"' : '') + ' data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '" tabindex="0" title="'
-          + escapeHtml(I.effectsRowOpen || 'Doppelklick: Objekt wählen und Effekt bearbeiten') + '">'
+          + escapeHtml(I.effectsRowOpen || 'Klick: Objekt wählen · Doppelklick: Effekt bearbeiten') + '">'
           + '<span class="props-layer-drag-handle" draggable="true" title="'
           + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
           + animBadgeHtml(e.node)
@@ -6940,11 +6940,32 @@
       selectNode(node);
       document.getElementById('fxTab_in')?.focus();
     };
+    /* Ein Klick wählt das Objekt auf der Folie, die Liste bleibt stehen und markiert es (Urs 27.11.: «Bei einem Klick schon auf das
+       Objekt springen und es im Fenster markieren»). Zweiter Klick auf dieselbe Zeile kurz danach = Doppelklick → Effekt bearbeiten;
+       von Hand gezählt, weil die Liste nach dem ersten Klick neu gezeichnet wird und der Browser dann kein dblclick meldet. */
+    const waehleObjekt = (li) => {
+      const node = li && findeAnimKnoten(li.dataset.effectId);
+      if (!node) return;
+      const id = li.dataset.effectId;
+      SF.activeFxSubtab = 'order';
+      persistEditorUi({});
+      selectNode(node);
+      const neu = [...panel.querySelectorAll('.props-effects-list > li[data-effect-id]')].find((x) => x.dataset.effectId === id);
+      if (neu) neu.focus({ preventScroll: true });
+    };
     panel.querySelectorAll('.props-effects-list > li[data-effect-id]').forEach((li) => {
-      li.addEventListener('dblclick', (e) => {
+      li.addEventListener('click', (e) => {
         if (e.target.closest('.props-effect-del, .props-layer-drag-handle')) return;
         e.preventDefault();
-        oeffneEffekt(li);
+        const jetzt = Date.now();
+        const vorher = SF.fxListClick;
+        SF.fxListClick = { id: li.dataset.effectId, t: jetzt };
+        if (vorher && vorher.id === li.dataset.effectId && jetzt - vorher.t < 450) {
+          SF.fxListClick = null;
+          oeffneEffekt(li);
+          return;
+        }
+        waehleObjekt(li);
       });
       li.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' || e.target !== li) return;
