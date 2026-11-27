@@ -87,6 +87,13 @@ final class Workspace
         return sha1(implode('|', $parts));
     }
 
+    /** Anzahl Folien der Arbeitskopie (0 = leer oder unlesbar). */
+    private static function slideCount(string $id): int
+    {
+        $d = Storage::read(Presentation::dir($id) . '/slides.json', ['slides' => []]);
+        return is_array($d) && is_array($d['slides'] ?? null) ? count($d['slides']) : 0;
+    }
+
     /** Recht der Person in der Arbeitskopie eintragen (Präsentations-ACL; Quelle ist immer FileForge). */
     private static function grant(string $id, string $person, bool $canWrite): void
     {
@@ -162,6 +169,7 @@ final class Workspace
                 }
                 $created = $w === null;
                 $w = ['key' => $key, 'id' => $id, 'ref' => $ref !== '' ? $ref : (string)$st['ref'], 'share' => $share, 'name' => $name,
+                    'slides' => self::slideCount($id),
                     'oid' => $r['oid'] !== '' ? $r['oid'] : (string)$st['oid'], 'external' => $r['external'], 'source' => 'cfs',
                     'sig' => self::signature($id), 'savedAt' => time(), 'savedBy' => ''];
             }
@@ -258,6 +266,11 @@ final class Workspace
                 }
                 $dirPath = rtrim(dirname($loc['path']), '/') . '/';
                 return self::createFrom($w, $person, $loc['repo'], $dirPath, (string)$w['name'], $sig);
+            }
+            // Schutz (3.2.6): eine .cfs wird nie durch eine Arbeitskopie ohne Folien ersetzt (auch Arbeitskopien von vor 3.2.6)
+            if (self::slideCount($id) === 0) {
+                error_log('SlideForge: Speichern abgelehnt, Arbeitskopie ohne Folien (' . $id . ')');
+                return ['ok' => false, 'error' => 'empty'];
             }
             $tmp = self::tmp('.cfs');
             try {

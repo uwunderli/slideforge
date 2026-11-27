@@ -739,6 +739,89 @@
     document.getElementById('presentLocalBtn')?.click();
   }
 
+  // Export-Dialog (3.2.6 wiederhergestellt: 3.2.0 hatte ihn mit den Freigabe-Funktionen gelöscht, der Aufruf in der
+  // Initialisierung blieb → ReferenceError, Editor ohne Folien)
+  function openExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (!modal) return;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function initExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (!modal) return;
+
+    document.getElementById('exportModalClose')?.addEventListener('click', closeExportModal);
+    document.getElementById('exportModalDone')?.addEventListener('click', closeExportModal);
+    window.SFModalBackdrop?.bindDismiss(modal, closeExportModal);
+
+    modal.querySelectorAll('[data-export-download]').forEach((link) => {
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const url = link.getAttribute('href');
+        if (!url) return;
+        if (SF.canEdit) {
+          try {
+            await saveCurrentSlide(true);
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        setSaveStatus(I.exportPreparing || 'Export wird vorbereitet…');
+        if (window.CfStatus) CfStatus.show('info', I.exportPreparing || 'Export wird vorbereitet…');
+        const busyTitle = I.exportPreparing || 'Export wird vorbereitet…';
+        if (window.SFBusy) SFBusy.show(busyTitle);
+        else if (window.HubPageBusy) HubPageBusy.show({ title: busyTitle, soft: true });
+        try {
+          const startRes = await fetch(url + (url.includes('?') ? '&' : '?') + 'async=1', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+          });
+          const startJson = await startRes.json();
+          if (!startJson.ok || !startJson.job_id) {
+            throw new Error(startJson.error || I.exportFailed || 'Export fehlgeschlagen');
+          }
+          const jobId = startJson.job_id;
+          for (;;) {
+            const stRes = await fetch('export.php?action=status&job=' + encodeURIComponent(jobId), {
+              credentials: 'same-origin',
+            });
+            const stJson = await stRes.json();
+            if (!stJson.ok) throw new Error(stJson.error || I.exportFailed || 'Export fehlgeschlagen');
+            const status = stJson.job && stJson.job.status;
+            if (status === 'done') {
+              if (window.SFBusy) SFBusy.hide();
+              else if (window.HubPageBusy) HubPageBusy.hide();
+              window.location.href = 'export.php?action=download&job=' + encodeURIComponent(jobId);
+              setSaveStatus(I.exportStarted || 'Download gestartet');
+              if (window.CfStatus) CfStatus.show('ok', I.exportStarted || 'Download gestartet');
+              return;
+            }
+            if (status === 'failed') {
+              throw new Error((stJson.job && stJson.job.error) || I.exportFailed || 'Export fehlgeschlagen');
+            }
+            await new Promise((r) => setTimeout(r, 700));
+          }
+        } catch (err) {
+          if (window.SFBusy) SFBusy.hide();
+          else if (window.HubPageBusy) HubPageBusy.hide();
+          const msg = err?.message || I.exportFailed || 'Export fehlgeschlagen';
+          setSaveStatus(msg);
+          if (window.CfStatus) CfStatus.show('error', msg);
+        }
+      });
+    });
+  }
+
+
   async function handleMasterSlideNavClick(btn, e) {
     e.preventDefault();
     e.stopPropagation();

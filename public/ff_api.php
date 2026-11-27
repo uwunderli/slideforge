@@ -44,6 +44,7 @@ $messages = [
     'ppt_unsupported' => 'Alte PowerPoint-Dateien (.ppt) gehen nicht. Bitte als .pptx speichern.',
     'import_failed' => 'Die Datei liess sich nicht übernehmen.',
     'bad_type' => 'Diese Datei kann die FolienSchmiede nicht öffnen.',
+    'empty' => 'Nicht gespeichert: Die Präsentation hat keine Folien. Die Datei in FileForge bleibt unverändert.',
     'no_template_dir' => 'Lege zuerst in den Einstellungen einen Ordner für Vorlagen fest.',
 ];
 $fail = static function (string $error, int $code = 200) use ($out, $messages): never {
