@@ -10,12 +10,27 @@ final class Geraete
 {
     private const SESSION = 'sf_geraet';
 
-    /** @return array{ok:bool,geraete:list<array<string,mixed>>,error:string} */
+    /** Geräte der Person; `icons` = Icon-Liste des Hubs (≥ 2.34.3). @return array{ok:bool,geraete:list<array<string,mixed>>,icons:list<array<string,mixed>>,error:string} */
     public static function liste(string $person): array
     {
         $r = HubApp::hub('/api/anzeige.php?op=geraete', ['person' => $person]);
         $g = is_array($r['json']['geraete'] ?? null) ? $r['json']['geraete'] : [];
-        return ['ok' => $r['ok'], 'geraete' => array_values($g), 'error' => $r['error']];
+        $i = is_array($r['json']['icons'] ?? null) ? $r['json']['icons'] : [];
+        return ['ok' => $r['ok'], 'geraete' => array_values($g), 'icons' => array_values($i), 'error' => $r['error']];
+    }
+
+    /**
+     * Name oder Icon eines Geräts ändern (3.9.9, Hub ≥ 2.34.3 `op=umbenennen`/`op=icon`); Recht (Besitzer oder Admin) prüft der Hub.
+     * @return array{ok:bool,error:string}
+     */
+    public static function aendern(string $person, string $geraet, string $feld, string $wert): array
+    {
+        $op = $feld === 'icon' ? 'icon' : 'umbenennen';
+        $r = HubApp::hub('/api/anzeige.php?op=' . $op, ['person' => $person, 'geraet' => $geraet, $feld === 'icon' ? 'icon' : 'name' => $wert]);
+        if ($r['ok']) {
+            return ['ok' => true, 'error' => ''];
+        }
+        return ['ok' => false, 'error' => $r['status'] === 200 ? 'recht' : (string)($r['json']['error'] ?? $r['error'])];
     }
 
     /**

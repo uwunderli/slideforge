@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /**
  * **Auf Gerät zeigen** (Urs, 27.11.2026; `Geraete`, Hub `api/anzeige.php`).
- *   GET  ?action=liste                         → {ok, geraete:[{id,name,dauer,ablauf,freigabe,zeigt}], anmelden:<Hub-Adresse Geräte>}
+ *   GET  ?action=liste                         → {ok, geraete:[{id,name,icon,symbol,darf_aendern,…,zeigt}], icons:[…], anmelden:<Hub-Adresse Geräte>}
+ *   POST {action:umbenennen, geraet, name} · {action:icon, geraet, icon} → {ok}   (3.9.9, Hub ≥ 2.34.3; Recht prüft der Hub)
  *   POST {action:zeigen, geraet, id, mit?}     → {ok}   Präsentation (Arbeitskopie `id`) auf dem Gerät zeigen; mit=1: folgt dem Editor (3.8.0)
  *   POST {action:leeren, geraet}               → {ok}
  *   POST {action:neuladen, geraet}             → {ok}   Gerät lädt die Seite neu (3.6.6, Hub ≥ 2.33.11)
@@ -25,7 +26,7 @@ if (!Auth::isLoggedIn() || ($me = Auth::currentUser()) === null) {
 }
 $person = (string)$me['id'];
 $messages = [
-    'recht' => 'Dieses Gerät darfst du nicht bespielen.',
+    'recht' => 'Dieses Gerät darfst du nicht ändern oder bespielen.',
     'geraet' => 'Das Gerät ist nicht mehr angemeldet.',
     'no_app_call' => 'Der Hub ist nicht erreichbar.',
     'unreachable' => 'Der Hub ist nicht erreichbar.',
@@ -44,7 +45,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
     if (!$r['ok']) {
         $fail($r['error'] !== '' ? $r['error'] : 'unreachable');
     }
-    $out(['ok' => true, 'geraete' => $r['geraete'], 'anmelden' => '/admin/settings.php?tab=geraete']);
+    $out(['ok' => true, 'geraete' => $r['geraete'], 'icons' => $r['icons'], 'anmelden' => '/admin/settings.php?tab=geraete']);
 }
 
 $body = json_decode((string)file_get_contents('php://input', false, null, 0, 8192), true);
@@ -80,6 +81,14 @@ if ($action === 'zeigen') {
     $titel = (string)($meta['title'] ?? '');
     $r = Geraete::zeigen($person, $geraet, $id, $mit ? $titel . ' (Mitlaufen)' : $titel, $mit);
     $r['ok'] ? $out(['ok' => true]) : $fail($r['error']);
+}
+if ($action === 'umbenennen' || $action === 'icon') {
+    $wert = $action === 'icon' ? (string)($body['icon'] ?? '') : trim((string)($body['name'] ?? ''));
+    if ($wert === '' || ($action === 'icon' && preg_match('/^[a-z]{1,24}\z/', $wert) !== 1)) {
+        $fail('eingabe');
+    }
+    $r = Geraete::aendern($person, $geraet, $action === 'icon' ? 'icon' : 'name', mb_substr($wert, 0, 60));
+    $r['ok'] ? $out(['ok' => true]) : $fail($r['error'] !== '' ? $r['error'] : 'unreachable');
 }
 if ($action === 'neuladen') {
     $r = Geraete::neuladen($person, $geraet);

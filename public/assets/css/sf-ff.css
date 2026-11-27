@@ -90,3 +90,19 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
   width: 2.2rem; min-width: 2.2rem; max-width: 2.2rem; flex-basis: 2.2rem; height: 28px; min-height: 28px; }
 :is(.editor-ribbon, .hub-ribbon, #presentRibbon, .ribbon-farben-grid, .ribbon-object-kontur-grid) .sf-color-field .hub-color-dropdown__btn {
   height: 28px; min-height: 28px; padding: 0 .35rem; }
+/* Gerät bearbeiten (3.9.9): Stift oben rechts auf der Kachel (hub-icon-btn), Unterdialog mit Name und Icon-Raster.
+   Raster wie Hub hub-icon-picker (admin.css:1849–1890, dort nicht geladen), nur Hub-Variablen. */
+.sf-dev__tile { position: relative; }
+.sf-dev__edit { position: absolute; top: 4px; right: 4px; z-index: 1; width: 26px; height: 26px; background: var(--surface); }
+.sf-dev--edit { display: grid; gap: .85rem; }
+.sf-dev__iconset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.sf-dev__iconset legend { padding: 0; margin-bottom: .3rem; font-size: .8rem; color: var(--text-muted); font-weight: 600; }
+.sf-icon-picker { display: grid; grid-template-columns: repeat(6, 2.4rem); gap: .35rem; }
+.sf-icon-picker__opt { position: relative; width: 2.4rem; height: 2.4rem; margin: 0; cursor: pointer; }
+.sf-icon-picker__opt input { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; }
+.sf-icon-picker__face { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.sf-icon-picker__face .sf-dev__icon { width: 1.2rem; height: 1.2rem; }
+.sf-icon-picker__opt input:checked + .sf-icon-picker__face { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--accent); }
+.sf-icon-picker__opt:focus-within .sf-icon-picker__face { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sf-dev__save { margin: 0; min-height: 1.2em; color: var(--text-muted); }

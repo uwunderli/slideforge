@@ -78,6 +78,66 @@
    * Mitlauf-Ansicht in einem eigenen Fenster dieses Browsers.
    * Aufbau wie Lab › Dialoge (lab/dialogs.php:401–421): Inhalt, Fusszeile `hub-dialog-actions` mit data-hub-dialog-footer.
    */
+  /**
+   * Unterdialog «Gerät bearbeiten» (3.9.9, Urs 27.11.: «dass ich das hier umbenennen und ein anderes Icon wählen kann»):
+   * Name speichert beim Verlassen/Enter, Icon sofort beim Wählen (Raster wie Hub › Einstellungen › Geräte, `hub-icon-picker`).
+   * Über `geraet_api.php` → Hub AppCall `umbenennen`/`icon`; das Recht (Besitzer oder Admin) prüft der Hub. `done` lädt die Liste neu.
+   */
+  function editDevice(g, icons, done) {
+    var cur = String(g.icon || 'bildschirm'), changed = false;
+    var opts = (icons.length ? icons : [{ key: cur, symbol: g.symbol, label: 'Aktuell' }]).map(function (ic) {
+      var k = /^[a-z]{1,24}$/.test(String(ic.key || '')) ? String(ic.key) : '';
+      if (!k) return '';
+      return '<label class="sf-icon-picker__opt" title="' + esc(ic.label) + '"><input type="radio" name="sfDevIcon" value="' + k + '"' + (k === cur ? ' checked' : '') + '>' +
+        '<span class="sf-icon-picker__face">' + devIcon(ic.symbol) + '</span><span class="sr-only">' + esc(ic.label) + '</span></label>';
+    }).join('');
+    var html = '<form class="sf-dev sf-dev--edit" novalidate>' +
+      '<label class="hub-admin-field"><span>Name</span><input type="text" name="name" maxlength="60" autocomplete="off" value="' + esc(g.name) + '" required></label>' +
+      '<fieldset class="sf-dev__iconset"><legend>Icon</legend><div class="sf-icon-picker" role="radiogroup" aria-label="Icon">' + opts + '</div></fieldset>' +
+      '<p class="sf-dev__save small" role="status" aria-live="polite"></p>' +
+      '<div class="sf-dev__msg" hidden></div></form>' +
+      '<div class="hub-dialog-actions" data-hub-dialog-footer><button type="button" class="hub-btn hub-btn--primary sf-dev__done" data-hub-primary>Fertig</button></div>';
+    global.HubFloatDialog.open('Gerät bearbeiten', html, { id: 'sfDeviceEdit', width: 360, onClose: function () { if (changed && done) done(); }, bind: function (body, dlg) {
+      var host = dlg || body, form = body.querySelector('form'), nameIn = form.elements.name;
+      var save = form.querySelector('.sf-dev__save'), msg = form.querySelector('.sf-dev__msg');
+      var last = String(g.name), pending = Promise.resolve();
+      function put(data) {
+        save.textContent = 'speichert…';
+        devMsg(msg, '');
+        return devSend(Object.assign({ geraet: g.id }, data)).then(function (r) {
+          save.textContent = r.ok ? 'gespeichert' : '';
+          if (r.ok) changed = true; else devMsg(msg, r.message || 'Nicht gespeichert.', 'error');
+          return r.ok;
+        });
+      }
+      function saveName() {
+        var v = String(nameIn.value).trim();
+        if (v === last) return;
+        if (v === '') { nameIn.setAttribute('aria-invalid', 'true'); devMsg(msg, 'Der Name darf nicht leer sein.', 'error'); return; }
+        nameIn.removeAttribute('aria-invalid');
+        last = v;
+        pending = put({ action: 'umbenennen', name: v }).then(function (ok) { if (!ok) last = ''; });
+      }
+      nameIn.addEventListener('change', saveName);
+      nameIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveName(); } });
+      form.addEventListener('submit', function (e) { e.preventDefault(); saveName(); });
+      form.addEventListener('change', function (e) {
+        if (!e.target.matches('input[name="sfDevIcon"]')) return;
+        var k = e.target.value, vorher = cur;
+        put({ action: 'icon', icon: k }).then(function (ok) {
+          if (ok) { cur = k; return; }
+          var back = form.querySelector('input[name="sfDevIcon"][value="' + vorher + '"]');
+          if (back) back.checked = true;
+        });
+      });
+      var fertig = host.querySelector('.sf-dev__done');
+      if (fertig) fertig.addEventListener('click', function () {
+        saveName();
+        pending.then(function () { if (!msg.hidden) return; global.HubFloatDialog.close('sfDeviceEdit'); });
+      });
+      nameIn.focus();
+    } });
+  }
   function devices(id, opts) {
     opts = opts || {};
     if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
@@ -95,7 +155,7 @@
     global.HubFloatDialog.open(opts.title || 'Geräte', html, { id: 'sfDevices', width: 480, bind: function (body, dlg) {
       var host = dlg || body;
       var root = body.querySelector('.sf-dev'), wrap = root.querySelector('.sf-dev__list-wrap'), msg = root.querySelector('.sf-dev__msg');
-      var list = [];
+      var list = [], icons = [];
       function sendBtn() { return host.querySelector('.sf-dev__send'); }
       function sync() { var s = sendBtn(); if (s) s.disabled = !wrap.querySelector('.sf-dev__pick[aria-pressed="true"]'); }
       function render(j) {
@@ -107,6 +167,7 @@
           return;
         }
         list = j.geraete || [];
+        icons = Array.isArray(j.icons) ? j.icons : [];
         // Raster aus Kacheln (Urs 27.11.: «pro Gerät ein Icon … ein Grid mit den Icons»): Icon gross, Name, «zeigt …» klein.
         // Kachel antippen = wählen (mehrfach, aria-pressed). «Web» ist auch eine Kachel: Zuschauer-Adresse kopieren/öffnen.
         var tiles = '<li class="sf-dev__tile sf-dev__tile--web"><a class="sf-dev__pick" href="' + esc(web) + '" target="_blank" rel="noopener">' +
@@ -114,7 +175,9 @@
           '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__copy">Adresse kopieren</button></li>';
         tiles += list.map(function (g, i) {
           var zeigt = g.zeigt ? 'zeigt ' + (g.zeigt.titel || g.zeigt.app) : 'zeigt nichts';
-          return '<li class="sf-dev__tile"><button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '">' +
+          // Stift nur, wenn der Hub `darf_aendern` meldet (nur Darstellung; das Recht prüft der Hub beim Speichern).
+          return '<li class="sf-dev__tile">' + (g.darf_aendern ? '<button type="button" class="hub-icon-btn sf-dev__edit" data-i="' + i + '" title="Bearbeiten" aria-label="' + esc(g.name) + ' bearbeiten">' + devIcon('pencil') + '</button>' : '') +
+            '<button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '">' +
             devIcon(g.symbol) + '<span class="sf-dev__name">' + esc(g.name) + '</span><span class="sf-dev__state">' + esc(zeigt) + '</span></button>' +
             '<div class="sf-dev__tile-act">' +
             (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__clear" data-i="' + i + '" aria-label="' + esc(g.name) + ' leeren">Leeren</button>' : '') +
@@ -123,6 +186,8 @@
         wrap.innerHTML = '<ul class="sf-dev__grid" aria-label="Geräte">' + tiles + '</ul>' +
           (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert' + (opts.onRegister ? ' – mit «Registrieren …» eines hinzufügen.' : '.') + '</p>');
         sync();
+        // Höhe nach dem Laden an den Inhalt anpassen (Kachelzeile «Leeren / Neu laden» war unten abgeschnitten, 3.9.9).
+        if (global.HubFloatDialog.fit) global.HubFloatDialog.fit('sfDevices');
       }
       function load() {
         root.setAttribute('aria-busy', 'true');
@@ -146,6 +211,8 @@
           if (win) { win.focus(); global.HubFloatDialog.close('sfDevices'); } else devMsg(msg, 'Das Fenster wurde blockiert – Pop-ups für diese Seite erlauben.', 'error');
           return;
         }
+        var ed = e.target.closest('.sf-dev__edit');
+        if (ed) { var ge = list[+ed.getAttribute('data-i')]; if (ge) editDevice(ge, icons, load); return; }
         var pk = e.target.closest('button.sf-dev__pick');
         if (pk) { pk.setAttribute('aria-pressed', pk.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); sync(); return; }
         var nl = e.target.closest('.sf-dev__reloaddev');
@@ -338,7 +405,7 @@
           }
           stop();
           global.HubFloatDialog.close('sfDeviceRegister');
-          toast('success', 'Gerät ' + ((r.geraet && r.geraet.name) || '') + ' registriert.');
+          toast('success', ((r.geraet && r.geraet.name) || 'Gerät') + ' registriert.');
           if (opts.after) opts.after();
         });
       });
