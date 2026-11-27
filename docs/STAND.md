@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. SF 3.9.4 gebaut** (`entwickler/slide-einklappen`, Worktree `_claude/entwickler/wt-slide-einklappen`, nach 3.9.3): Folien-/Seitenleiste ein-/ausklappbar wie PD (Griff, HubSplit), Stand in `editor_ui.collapsed`. Braucht Hub 2.34.2 (`entwickler/hub-split-einklappen`) zuerst. Presenter nicht umgestellt.
 - **27.11. 3.9.3 gebaut** (Zweig `entwickler/slide-unterpunkte` auf 3.9.2, Worktree `_claude/entwickler/wt-slide-unterpunkte`), beim Gitwart, braucht Hub 2.34.1: Unterpunkte der Einstellungen meldet SF selbst an den Hub (`src/SettingsNav.php`, eine Quelle), Hub-Seitenleiste zeigt sie; im Rahmen eigene Reiterleiste aus.
 
 - **27.11. 3.9.2 gebaut** (`entwickler/slide-farbwahl`, nach 3.9.1): Farbwahl überall HubColorPicker mit Hub-Palette (`SfPalette`, `sf-color.js`), eigene Markenfarben-Liste und Schnellwahlen entfernt; Reiter Farben nur Anzeige + Link Hub › Branding. Offen: im Browser ansehen (Menüband-Farbfelder).

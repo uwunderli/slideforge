@@ -7351,14 +7351,15 @@ body.editor-grid-dragging .editor-slide-grid-item {
 }
 
 .editor-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: var(--editor-filmstrip-width, 300px) minmax(0, 1fr) minmax(0, var(--editor-props-width, 300px));
+  grid-template-columns: var(--editor-filmstrip-cur, var(--editor-filmstrip-width, 300px)) minmax(0, 1fr) minmax(0, var(--editor-props-cur, var(--editor-props-width, 300px)));
   height: calc(100vh - 130px);
   min-height: 0;
   overflow: hidden;
 }
 .editor-layout.editor-layout-no-filmstrip {
-  grid-template-columns: minmax(0, 1fr) minmax(0, var(--editor-props-width, 300px));
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--editor-props-cur, var(--editor-props-width, 300px)));
 }
 .editor-layout > .options-panel,
 .editor-layout > .canvas-area,
@@ -7420,8 +7421,60 @@ body.hub-split-resizing {
   opacity: 1;
   background: var(--accent);
 }
+/* 3.9.4 Ein-/Ausklappen (Urs 27.11. «wie im PD»): Griff wie Hub style.css .hub-split__grip (2.34.2,
+   Vorbild PD pf.css .pf-panegrip); HubSplit setzt is-side-off / is-detail-off. Die Spalte bleibt mit
+   Breite 0 im Raster, die Bühne wird breiter (ResizeObserver der .canvas-scroll). */
+.editor-layout.is-side-off { --editor-filmstrip-cur: 0px; }
+.editor-layout.is-detail-off { --editor-props-cur: 0px; }
+.editor-layout.is-side-off > .options-panel-filmstrip,
+.editor-layout.is-detail-off > .editor-right-sidebar {
+  visibility: hidden;
+  border: 0;
+}
+.editor-layout .hub-split__grip {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface-raised, var(--surface));
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.editor-layout .hub-split__grip[hidden] { display: none; }
+.editor-layout .hub-split__grip:hover,
+.editor-layout .hub-split__grip:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+}
+.editor-layout .hub-split__grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.editor-layout .hub-split__grip svg { width: 14px; height: 14px; display: block; }
+.editor-layout .hub-split__grip--side {
+  left: var(--editor-filmstrip-cur, var(--editor-filmstrip-width, 300px));
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+}
+.editor-layout .hub-split__grip--detail {
+  right: var(--editor-props-cur, var(--editor-props-width, 300px));
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+}
+.editor-layout .hub-split__grip--detail svg,
+.editor-layout .hub-split__grip--side[aria-expanded="false"] svg { transform: rotate(180deg); }
+.editor-layout .hub-split__grip--detail[aria-expanded="false"] svg { transform: none; }
 @media (max-width: 900px) {
-  .editor-layout .hub-split__resize { display: none; }
+  .editor-layout .hub-split__resize,
+  .editor-layout .hub-split__grip { display: none; }
+  .editor-layout.is-side-off > .options-panel-filmstrip,
+  .editor-layout.is-detail-off > .editor-right-sidebar { visibility: visible; }
 }
 .options-panel-filmstrip .editor-slides-toolbar {
   flex-shrink: 0;

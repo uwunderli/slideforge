@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.9.4] - 2026-11-27
+
+- **Folienleiste und Seitenleiste ein- und ausklappbar wie im PD** (Urs 27.11.: «Mach die Seitenlisten noch ein und ausklapbar wie im PD»): Griff mittig am Rand der Spalte (`.hub-split__grip`, Pfeil zeigt die Richtung, Knopf mit Enter/Leertaste, Beschriftung «… ausblenden/einblenden»), Logik in `HubSplit` (Hub 2.34.2, Kopie `public/assets/js/hub-split.js` als Rückfall). Die Spalte bleibt mit Breite 0 im Raster, die Bühne wird breiter. Stand je Person serverseitig in `editor_ui.collapsed` und schon im ersten Bild gesetzt. Braucht Hub 2.34.2 (sonst bleibt der Griff verborgen). ASSET 731.
+
 ## [3.9.2] - 2026-11-27
 
 - **Farbwahl nach Hub-Standard** (Regel Urs 09.11. «Markenfarben und Emojis: ein Standard»): Jedes Farbfeld der FolienSchmiede (Editor: Hintergrund, Textfarbe, Füllung, Verlauf, Kontur, Eigenschaften, Markieren/Textfarbe in der Auswahl, Iconify; Textvorlagen; Traktanden- und Logos-Import; Präsentieren: Zeitleiste, Laserpointer) ist jetzt `HubColorPicker`: Farbfeld, daneben «▾» mit den Markenfarben des Hubs als Punkte. `sf-color.js` hüllt jedes `<input type="color">` in den Baustein (Feld, id und Zuhörer bleiben; auch später eingefügte Felder). Pop-up im Menüband fest am Bildschirm, damit die Gruppenkante es nicht abschneidet.

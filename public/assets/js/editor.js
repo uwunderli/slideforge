@@ -27,6 +27,8 @@
     notesHeight: Math.max(60, Math.min(900, parseInt((boot.editorUi && boot.editorUi.notesHeight), 10) || 140)),
     /* Trennerbreiten (HubSplit), Schlüssel ohne «split:», serverseitig in editor_ui.splits */
     splits: Object.assign({}, (boot.editorUi && boot.editorUi.splits && typeof boot.editorUi.splits === 'object' && !Array.isArray(boot.editorUi.splits)) ? boot.editorUi.splits : {}),
+    /* Eingeklappte Seitenleisten (HubSplit-Griff, 3.9.4), serverseitig in editor_ui.collapsed */
+    collapsed: Object.assign({}, (boot.editorUi && boot.editorUi.collapsed && typeof boot.editorUi.collapsed === 'object' && !Array.isArray(boot.editorUi.collapsed)) ? boot.editorUi.collapsed : {}),
     activeSideTab: (boot.editorUi && boot.editorUi.sideTab) || 'templates',
     activePosSubtab: (boot.editorUi && boot.editorUi.posSubtab) || 'layout',
     activeFormatSubtab: (boot.editorUi && boot.editorUi.formatSubtab) || 'text',
@@ -98,6 +100,7 @@
             objectOpen: SF.objectPanelOpen !== false,
             notesHeight: SF.notesHeight,
             splits: SF.splits,
+            collapsed: SF.collapsed,
           },
           csrf_token: SF.csrfToken,
         }),
@@ -1470,6 +1473,7 @@
   function updateFilmstripDimensions() {
     const container = document.getElementById('slideFilmstrip');
     if (!container || !container.querySelector('.editor-filmstrip-item')) return;
+    if (!container.clientWidth) return;   /* eingeklappt (3.9.4): beim Ausklappen rechnet der ResizeObserver neu */
     const fsScale = filmstripScale();
     const itemHeight = filmstripItemHeight();
     container.querySelectorAll('.editor-filmstrip-item').forEach((item) => {
@@ -2045,6 +2049,11 @@
      (z. B. Schwebedialog-Lage von hub-float-dialog.js) wie bisher im Browser unter «sf_ui:». */
   function ensureUserPrefsUi() {
     if (window.HubUserPrefsUi) return;
+    /* «split:<key>:off» = Seitenleiste eingeklappt (HubSplit 2.34.2); ohne Eintrag gilt der Stand im Markup (is-side-off/is-detail-off). */
+    const offKey = (key) => {
+      const m = /^split:([a-z0-9_]{1,40}):off$/.exec(String(key || ''));
+      return m ? m[1] : null;
+    };
     const splitKey = (key) => {
       const k = String(key || '');
       return k.indexOf('split:') === 0 ? k.slice(6) : null;
@@ -2067,12 +2076,21 @@
       ensure: () => Promise.resolve(),
       flush: () => {},
       get(key, fallback) {
+        const ck = offKey(key);
+        if (ck !== null) return Object.prototype.hasOwnProperty.call(SF.collapsed, ck) ? true : fallback;
         const sk = splitKey(key);
         if (sk !== null) return Object.prototype.hasOwnProperty.call(SF.splits, sk) ? SF.splits[sk] : fallback;
         const v = local.get(String(key || ''));
         return v == null ? fallback : v;
       },
       set(key, value) {
+        const ck = offKey(key);
+        if (ck !== null) {
+          if (value === true) SF.collapsed[ck] = true;
+          else delete SF.collapsed[ck];
+          persistEditorUi({});
+          return;
+        }
         const sk = splitKey(key);
         if (sk !== null) {
           if (!/^[a-z0-9_]{1,40}$/.test(sk)) return;
@@ -2099,7 +2117,8 @@
     };
   }
 
-  /* Folienleiste links und Seitenleiste rechts per Trenner verbreitern (Hub-Vorlage Lab › Layout).
+  /* Folienleiste links und Seitenleiste rechts per Trenner verbreitern (Hub-Vorlage Lab › Layout)
+     und per Griff ein-/ausklappen (3.9.4, wie PD; HubSplit 2.34.2, Stand in editor_ui.collapsed).
      Miniaturen und Bühne folgen über ihre ResizeObserver (updateFilmstripDimensions, resizeStageToFit). */
   function bindEditorSplit() {
     const root = document.querySelector('.editor-layout');

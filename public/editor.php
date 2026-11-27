@@ -892,10 +892,22 @@ $sfSplits = Auth::getEditorUi($me)['splits'] ?? [];
 $sfSplitStyle = '';
 if (!empty($sfSplits['sf_editor_filmstrip'])) { $sfSplitStyle .= '--editor-filmstrip-width:' . (int)$sfSplits['sf_editor_filmstrip'] . 'px;'; }
 if (!empty($sfSplits['sf_editor_props'])) { $sfSplitStyle .= '--editor-props-width:' . (int)$sfSplits['sf_editor_props'] . 'px;'; }
+/* 3.9.4: eingeklappte Seitenleisten (HubSplit-Griff, Urs 27.11. «wie im PD») ebenfalls schon im ersten Bild. */
+$sfCollapsed = Auth::getEditorUi($me)['collapsed'] ?? [];
+$sfHasFilmstrip = !$isTemplateMode || $isLayoutSetMode;
+$sfLayoutClass = ($sfHasFilmstrip ? '' : ' editor-layout-no-filmstrip')
+    . (($sfHasFilmstrip && !empty($sfCollapsed['sf_editor_filmstrip'])) ? ' is-side-off' : '')
+    . (!empty($sfCollapsed['sf_editor_props']) ? ' is-detail-off' : '');
+$sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg>';
 ?>
-<div class="editor-layout<?= ($isTemplateMode && !$isLayoutSetMode) ? ' editor-layout-no-filmstrip' : '' ?>"<?= $sfSplitStyle !== '' ? ' style="' . h($sfSplitStyle) . '"' : '' ?>>
-  <?php if (!$isTemplateMode || $isLayoutSetMode): ?>
-  <aside class="options-panel options-panel-filmstrip">
+<div class="editor-layout<?= $sfLayoutClass ?>"<?= $sfSplitStyle !== '' ? ' style="' . h($sfSplitStyle) . '"' : '' ?>>
+  <?php /* Griffe zum Ein-/Ausklappen wie PD-Personenansicht (Hub .hub-split__grip, HubSplit); bleiben verborgen, bis HubSplit sie bindet. */ ?>
+  <?php if ($sfHasFilmstrip): ?>
+  <button type="button" class="hub-split__grip hub-split__grip--side" data-hub-split-toggle="side" aria-controls="sfFilmstripPanel" aria-expanded="<?= !empty($sfCollapsed['sf_editor_filmstrip']) ? 'false' : 'true' ?>" data-label-hide="<?= h(t('editor.filmstrip_hide')) ?>" data-label-show="<?= h(t('editor.filmstrip_show')) ?>" aria-label="<?= h(t('editor.filmstrip_hide')) ?>" title="<?= h(t('editor.filmstrip_hide')) ?>" hidden><?= $sfGripSvg ?></button>
+  <?php endif; ?>
+  <button type="button" class="hub-split__grip hub-split__grip--detail" data-hub-split-toggle="detail" aria-controls="editorRightSidebar" aria-expanded="<?= !empty($sfCollapsed['sf_editor_props']) ? 'false' : 'true' ?>" data-label-hide="<?= h(t('editor.props_hide')) ?>" data-label-show="<?= h(t('editor.props_show')) ?>" aria-label="<?= h(t('editor.props_hide')) ?>" title="<?= h(t('editor.props_hide')) ?>" hidden><?= $sfGripSvg ?></button>
+  <?php if ($sfHasFilmstrip): ?>
+  <aside class="options-panel options-panel-filmstrip" id="sfFilmstripPanel">
     <div class="editor-slides-toolbar">
       <?php if ($canEdit): ?>
         <button type="button" class="tool-btn-block" id="addSlideBtn">+ <?= h(t('editor.new_slide')) ?></button>

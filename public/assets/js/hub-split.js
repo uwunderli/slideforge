@@ -1,6 +1,9 @@
 /**
  * Hub Split — Spaltenbreite per Drag (Lab Layout / Module-Vorlage).
  * Nutzung: HubSplit.bind(rootEl) auf .hub-split mit data-hub-split + Resize-Handles.
+ * Einklappen (2.34.2, Vorbild PD-Personenansicht): Griff `.hub-split__grip` mit
+ * data-hub-split-toggle="side|detail" am Rand der Spalte; Klasse is-side-off / is-detail-off
+ * am Root, Stand je Person unter «split:<Storage-Key>:off» (true/false). Ohne Griff kein Einklappen.
  */
 (function () {
   'use strict';
@@ -120,6 +123,64 @@
     });
   }
 
+  function savePref(key, value) {
+    if (!key) return;
+    const prefs = window.HubUserPrefsUi;
+    if (prefs) {
+      try { prefs.set(key, value); } catch (_) {}
+    } else {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) {}
+    }
+  }
+
+  function readOff(key, fallback) {
+    if (!key) return fallback;
+    let v = null;
+    const prefs = window.HubUserPrefsUi;
+    if (prefs) {
+      try { v = prefs.get(key, null); } catch (_) { v = null; }
+    } else {
+      try {
+        const raw = localStorage.getItem(key);
+        v = raw == null ? null : JSON.parse(raw);
+      } catch (_) { v = null; }
+    }
+    if (v == null) return fallback;
+    return v === true || v === 1 || v === '1' || v === 'true';
+  }
+
+  /* Griff zum Ein-/Ausklappen einer Seitenspalte (Knopf, also Enter/Leertaste; Beschriftung wechselt). */
+  function bindToggle(root, opts) {
+    const btn = root.querySelector(opts.toggle);
+    if (!btn || btn.dataset.hubSplitBound) return;
+    btn.dataset.hubSplitBound = '1';
+    const cls = opts.offClass;
+    const key = opts.storageKey ? 'split:' + opts.storageKey + ':off' : '';
+    const labelHide = btn.getAttribute('data-label-hide') || btn.getAttribute('aria-label') || '';
+    const labelShow = btn.getAttribute('data-label-show') || labelHide;
+
+    function apply(off) {
+      root.classList.toggle(cls, off);
+      btn.setAttribute('aria-expanded', off ? 'false' : 'true');
+      const t = off ? labelShow : labelHide;
+      if (t) {
+        btn.title = t;
+        btn.setAttribute('aria-label', t);
+      }
+    }
+
+    apply(readOff(key, root.classList.contains(cls)));
+    btn.hidden = false;
+    btn.addEventListener('click', () => {
+      const off = !root.classList.contains(cls);
+      apply(off);
+      savePref(key, off);
+      try {
+        root.dispatchEvent(new CustomEvent('hub-split-toggle', { detail: { pane: opts.pane, off } }));
+      } catch (_) {}
+    });
+  }
+
   function bind(root, options) {
     if (!root) return;
     const opts = options || {};
@@ -142,6 +203,20 @@
       invert: true,
       resizingClass: 'is-resizing-detail',
       maxFrac: 0.5,
+    });
+    const sideKey = opts.sideStorage || root.getAttribute('data-split-side-key') || '';
+    const detailKey = opts.detailStorage || root.getAttribute('data-split-detail-key') || '';
+    bindToggle(root, {
+      toggle: opts.sideToggle || '[data-hub-split-toggle="side"]',
+      offClass: 'is-side-off',
+      storageKey: sideKey,
+      pane: 'side',
+    });
+    bindToggle(root, {
+      toggle: opts.detailToggle || '[data-hub-split-toggle="detail"]',
+      offClass: 'is-detail-off',
+      storageKey: detailKey,
+      pane: 'detail',
     });
   }
 

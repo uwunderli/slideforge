@@ -648,6 +648,8 @@ class Auth
             'notesHeight' => 140,
             /* Spaltenbreiten der Editor-Trenner (HubSplit, Schlüssel ohne «split:»), Pixel. */
             'splits' => [],
+            /* Eingeklappte Seitenleisten (HubSplit-Griff, Schlüssel wie bei splits), nur true-Einträge. */
+            'collapsed' => [],
             /* Zuletzt benutzte Einstellungen des Logos-Import-Dialogs. Bewusst nur die
                dokumentunabhängigen Werte - Abwahl einzelner Folien und eigene Notizen
                gehören zu einer bestimmten Predigt und werden nicht gemerkt. */
@@ -696,8 +698,30 @@ class Auth
             /* Höhe des Notizfeldes in Pixeln, per Ziehen an der Trennlinie gesetzt. */
             'notesHeight' => max(60, min(900, (int)($ui['notesHeight'] ?? $defaults['notesHeight']))),
             'splits' => self::normalizeSplits($ui['splits'] ?? null),
+            'collapsed' => self::normalizeCollapsed($ui['collapsed'] ?? null),
             'import' => self::normalizeImportUi($ui['import'] ?? null, $defaults['import']),
         ];
+    }
+
+    /**
+     * Eingeklappte Spalten aus dem Browser: nur einfache Schlüssel, nur «true» wird gemerkt, höchstens 16 Einträge.
+     */
+    private static function normalizeCollapsed($collapsed): array
+    {
+        if (!is_array($collapsed)) {
+            return [];
+        }
+        $out = [];
+        foreach ($collapsed as $k => $v) {
+            if (count($out) >= 16) {
+                break;
+            }
+            $k = (string)$k;
+            if (preg_match('/^[a-z0-9_]{1,40}$/', $k) && ($v === true || $v === 1 || $v === '1')) {
+                $out[$k] = true;
+            }
+        }
+        return $out;
     }
 
     /**
