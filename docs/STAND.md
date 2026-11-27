@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.40 gebaut** (`entwickler/slide-uebergang` ab 3.12.39): Folienübergang gehört der kommenden Folie (SlideRenderer transitionPairs/transitionCss). Bei Gitwart.
 - **27.11. 3.12.39 gebaut** (`entwickler/slide-ebenen-fix` ab 3.12.38): Ebenen-Kürzel auch mit Fokus in der Seitenleiste. Bei Gitwart.
 - **27.11. 3.12.38 gebaut** (`entwickler/slide-keytip-seite` ab 3.12.35 bf5d1ec, Worktree `_claude/entwickler/wt-slide-keytip`, Version nicht angehoben): Tastentipps Seitenleiste/Filmstreifen (Ctrl wechselt, Foliennummern), neue Datei sf-keytips-side.js. Braucht Hub 2.37.4 (`entwickler/hub-keytip-bereiche`). Nicht im Browser gesehen.
 - **27.11. 3.12.37 gebaut** (gleicher Zweig nach 3.12.36): Texteditor T4 — Menüband/Format-Spalte wirken beim Bearbeiten auf die Markierung (SfRichEdit.toggle/setValue), Zustand an der Schreibmarke, Kürzel text_bold/italic/underline im Katalog. Nicht im Browser geprüft. Offen: T5 Tabellenzellen/Exporte.

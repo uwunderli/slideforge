@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.40] - 2026-11-27
+
+### Changed
+- **Folienübergang wie PowerPoint** (Urs 27.11.): Der Übergang gehört zur kommenden Folie und gilt für beide Seiten des Wechsels (vorher spielte die abtretende Folie ihren eigenen Übergang, die kommende ihren – ein Gemisch). Rückwärts gilt der Übergang der Folie, von der man kommt. Ausgeblendete Folien zählen nicht. Bestehende Präsentationen mit gemischten Übergängen wirken dadurch teilweise anders.
+
 ## [3.12.39] - 2026-11-27
 
 ### Fixed

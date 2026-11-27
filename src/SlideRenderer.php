@@ -458,18 +458,78 @@ class SlideRenderer
             . self::fragmentAutoSlideAttr($plan, $order) . ' style="' . $style . '">' . $html . "</div>\n";
     }
 
+    private const TRANSITIONS = ['none', 'fade', 'slide', 'convex', 'concave', 'zoom'];
+
+    /**
+     * Übergang wie PowerPoint: er gehört zur kommenden Folie und gilt für beide Seiten des Wechsels.
+     * Folie i kommt mit ihrem eigenen Übergang herein (-in, auch rückwärts verlassen) und geht mit dem
+     * Übergang der nächsten gezeigten Folie hinaus (-out, auch rückwärts wieder betreten).
+     * Ausgeblendete Folien (presentDisabled) werden beim Suchen der nächsten übersprungen.
+     * @return array<int, array{0:string,1:string}> je Folie [in, out]
+     */
+    private static function transitionPairs(array $slides): array
+    {
+        $own = [];
+        foreach ($slides as $i => $slide) {
+            $t = (string)($slide['transition'] ?? '');
+            $own[$i] = in_array($t, self::TRANSITIONS, true) ? $t : 'slide';
+        }
+        $pairs = [];
+        $n = count($slides);
+        for ($i = 0; $i < $n; $i++) {
+            $out = $own[$i];
+            for ($j = $i + 1; $j < $n; $j++) {
+                if (empty($slides[$j]['presentDisabled'])) {
+                    $out = $own[$j];
+                    break;
+                }
+            }
+            $pairs[$i] = [$own[$i], $out];
+        }
+        return $pairs;
+    }
+
+    /**
+     * reveal.js kennt fade und none nur für beide Seiten; hier die getrennten -in/-out-Formen.
+     * Die hereinkommende Folie (Zustand present) nimmt data-sf-enter: vorwärts ihr -in, rückwärts ihr -out.
+     * Das Skript setzt data-sf-enter nach jedem Wechsel für den nächsten (Folien davor: out, danach: in).
+     */
+    private static function transitionCss(): string
+    {
+        $s = '.reveal .slides>section';
+        return '<style>'
+            . $s . '[data-transition~=fade-in].future,' . $s . '[data-transition~=fade-out].past,'
+            . $s . '[data-sf-enter=fade].present'
+            . '{transform:none;transition:opacity .5s;}'
+            . $s . '[data-transition~=none-in].future,' . $s . '[data-transition~=none-out].past,'
+            . $s . '[data-sf-enter=none].present'
+            . '{transform:none;transition:none;}'
+            . '</style>'
+            . '<script>(function(){function mark(){var R=window.Reveal;if(!R||!R.getIndices)return;'
+            . 'var c=R.getIndices().h;'
+            . 'document.querySelectorAll(".reveal .slides>section").forEach(function(s,i){'
+            . 'var v=s.getAttribute(i<c?"data-sf-out":"data-sf-in");if(v)s.setAttribute("data-sf-enter",v);});}'
+            . 'window.addEventListener("load",function(){var R=window.Reveal;if(!R||!R.on)return;'
+            . 'R.on("ready",mark);R.on("slidechanged",mark);if(R.isReady&&R.isReady())mark();});})();</script>';
+    }
+
     public static function renderSections(array $slidesData, ?string $publicToken = null): string
     {
         $html = '';
-        foreach ($slidesData['slides'] ?? [] as $slide) {
+        $slidesList = array_values($slidesData['slides'] ?? []);
+        $transitionPairs = self::transitionPairs($slidesList);
+        if ($slidesList) {
+            $html .= self::transitionCss() . "\n";
+        }
+        foreach ($slidesList as $slideIdx => $slide) {
             $objects = $slide['objects'] ?? [];
             $plan = self::buildSlideFragmentPlan($objects);
             $plan['slideHasAutoAdvance'] = !empty($slide['autoAdvance']);
 
             $attrs = self::backgroundAttrs($slide['background'] ?? null, $publicToken);
-            if (!empty($slide['transition'])) {
-                $attrs .= ' data-transition="' . h($slide['transition']) . '"';
-            }
+            [$tIn, $tOut] = $transitionPairs[$slideIdx];
+            $attrs .= ' data-transition="' . h($tIn === $tOut ? $tIn : $tIn . '-in ' . $tOut . '-out') . '"'
+                . ' data-sf-in="' . h($tIn) . '" data-sf-out="' . h($tOut) . '" data-sf-enter="' . h($tIn) . '"';
             if (!empty($slide['autoAdvance'])) {
                 // Nicht data-autoslide: das wertet reveal.js nativ aus (Boot-Pause greift nicht).
                 $attrs .= ' data-sf-slide-autoslide="' . ((int)$slide['autoAdvance'] * 1000) . '"';
