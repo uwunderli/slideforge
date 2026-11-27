@@ -8242,7 +8242,7 @@ body.notes-resizing {
 }
 .props-effects-list > li.active {
   border-color: var(--accent);
-  background: rgba(58, 108, 141, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .props-effects-list > li.dragging {
   opacity: 0.55;
