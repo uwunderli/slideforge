@@ -5301,8 +5301,63 @@
       /* T4: Format-Bedienelemente, die die Bearbeitung nicht beenden */
       keepZone: (t) => !!(t && t.closest && inlineEditKeepZone(t)),
       finish,
+      /** Schalter auf die Markierung; false = keine Markierung (dann wirkt der Knopf aufs ganze Objekt). */
+      applyToggle: (key) => applyToSelection((lines, a, b) => R.toggle(lines, a, b, key)),
+      /** Wert (color, mark, size) auf die Markierung; gleich dem Grundstil = Angabe entfernen. */
+      applyValue(key, val, toggleSame) {
+        let v = val;
+        if (key === 'color' && v && String(v).toLowerCase() === String(node.fill() || '').toLowerCase()) v = null;
+        if (key === 'size' && v && Math.round(v) === Math.round(node.fontSize())) v = null;
+        return applyToSelection((lines, a, b) => R.setValue(lines, a, b, key, v, !!toggleSame));
+      },
     };
     SF.inlineEdit = ie;
+    let saved = null;   // letzte Markierung im Feld {a, b} — bleibt, wenn der Fokus in ein Format-Feld geht
+
+    function applyToSelection(fn) {
+      const focused = document.activeElement === el;
+      let cur = R.readSelection(el, base());
+      if (!cur && saved) cur = { lines: window.SfMarkup.readLines(el, { base: base() }), a: saved.a, b: saved.b };
+      if (!cur || R.isEmptyRange(cur.lines, cur.a, cur.b)) return false;
+      R.render(el, fn(cur.lines, cur.a, cur.b), cur.a, cur.b, focused);
+      saved = { a: cur.a, b: cur.b };
+      dirty = true;
+      syncInlineState(cur.a, cur.b);
+      return true;
+    }
+    /* Knöpfe zeigen den Zustand an der Schreibmarke (bzw. am Anfang der Markierung). */
+    function syncInlineState(a, b) {
+      const lines = window.SfMarkup.readLines(el, { base: base() });
+      const r = R.propsAt(lines, a, !!b && R.cmp(a, b) !== 0);
+      const st = String(node.fontStyle() || '');
+      const deco = String(node.textDecoration() || '');
+      const on = {
+        rb_bold: !!r.b || /bold|[6-9]00/.test(st),
+        rb_italic: !!r.i || /italic/.test(st),
+        rb_underline: !!r.u || /underline/.test(deco),
+        rb_strikethrough: !!r.s || /line-through/.test(deco),
+        rb_uppercase: !!r.upper || !!node.getAttr('uppercase'),
+        rb_smallcaps: !!r.sc || !!node.getAttr('smallCaps'),
+      };
+      Object.keys(on).forEach((id) => {
+        const b2 = document.getElementById(id);
+        if (!b2) return;
+        b2.classList.toggle('active', on[id]);
+        b2.setAttribute('aria-pressed', on[id] ? 'true' : 'false');
+      });
+      const sizeEl = document.getElementById('rb_fontsize');
+      if (sizeEl && document.activeElement !== sizeEl) sizeEl.value = r.size || Math.round(node.fontSize());
+      const colorEl = document.getElementById('rb_color');
+      if (colorEl && document.activeElement !== colorEl && /^#[0-9a-f]{6}$/i.test(r.color || node.fill() || '')) colorEl.value = r.color || node.fill();
+    }
+    function onSelChange() {
+      if (done) return;
+      const cur = R.readSelection(el, base());
+      if (!cur) return;
+      saved = { a: cur.a, b: cur.b };
+      syncInlineState(cur.a, cur.b);
+    }
+    document.addEventListener('selectionchange', onSelChange);
 
     /** Modell-Eingriff an der Markierung: fn(lines, a, b) → {lines, pos} */
     function modelEdit(fn) {
@@ -5324,9 +5379,12 @@
       if (SF.transformer) SF.transformer.show();
       el.remove();
       document.removeEventListener('mousedown', onOutsideDown, true);
+      document.removeEventListener('selectionchange', onSelChange);
       refreshCanvas();
       if (save && dirty) scheduleSave();
       refreshPropsPanel();
+      ['rb_bold', 'rb_italic', 'rb_underline', 'rb_strikethrough', 'rb_uppercase', 'rb_smallcaps'].forEach((id) => document.getElementById(id)?.removeAttribute('aria-pressed'));
+      syncRibbonStartTab();
     }
     function onOutsideDown(e) {
       if (el.contains(e.target)) return;
@@ -5371,11 +5429,20 @@
     setTimeout(() => { if (!done) document.addEventListener('mousedown', onOutsideDown, true); }, 0);
   }
 
-  /* Bedienelemente, die eine laufende Bearbeitung an Ort nicht beenden (T4 füllt die Liste). */
-  const INLINE_EDIT_BTN_SEL = '#__sf_none__';
+  /* Bedienelemente, die eine laufende Bearbeitung an Ort nicht beenden (Texteditor T4, 3.12.37):
+     Menüband «Zeichen»/«Farben» und die Format-Knöpfe der Format-Spalte. Bei den Knöpfen verhindert
+     mousedown den Fokuswechsel, damit Fokus und Markierung im Feld bleiben; Felder (Grösse, Farbe)
+     bekommen den Fokus, die Markierung merkt sich das Feld (saved). */
+  const INLINE_EDIT_BTN_SEL = '#rb_bold, #rb_italic, #rb_underline, #rb_strikethrough, #rb_uppercase, #rb_smallcaps, ' +
+    '.format-toggle-btn[data-wrap], .format-toggle-btn[data-wraptag], #markSelectionBtn, #colorSelectionBtn';
+  const INLINE_EDIT_ZONE_SEL = INLINE_EDIT_BTN_SEL + ', #ribbonStartZeichen, #ribbonStartColors, ' +
+    '#markSelectionPalette, #colorSelectionPalette';
   function inlineEditKeepZone(t) {
-    return false;
+    return !!(t && t.closest && t.closest(INLINE_EDIT_ZONE_SEL));
   }
+  /* Run-Schlüssel der Menüband-Knöpfe und der Format-Spalte (data-wrap/-wraptag) */
+  const RB_INLINE_KEY = { rb_bold: 'b', rb_italic: 'i', rb_underline: 'u', rb_strikethrough: 's', rb_uppercase: 'upper', rb_smallcaps: 'sc' };
+  const WRAP_INLINE_KEY = { '**': 'b', '*': 'i', '++': 'u', '~~': 's', upper: 'upper', sc: 'sc' };
 
   /* Rohtext-Bearbeitung (bis 3.12.35), nur noch ohne sf-markup.js/sf-richedit.js. */
   function editTextInlineRaw(node) {
@@ -6407,10 +6474,14 @@
       el.addEventListener('click', () => {
         const node = ribbonStartTextNode();
         if (!node) return;
+        /* T4: Bearbeiten an Ort mit Markierung → nur die Markierung; sonst wie bisher das ganze Objekt. */
+        const ie = SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null;
+        if (ie && RB_INLINE_KEY[id] && ie.applyToggle(RB_INLINE_KEY[id])) return;
         const next = el.dataset.checked !== '1';
         el.dataset.checked = next ? '1' : '0';
         el.classList.toggle('active', next);
         onToggle(node, next);
+        if (ie) ie.restyle();
       });
     };
 
@@ -6479,6 +6550,9 @@
     document.getElementById('rb_fontsize')?.addEventListener('input', (e) => {
       const node = ribbonStartTextNode();
       if (!node) return;
+      const ie = SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null;
+      const want = parseInt(e.target.value, 10);
+      if (ie && want > 0 && ie.applyValue('size', Math.max(6, Math.min(400, want)))) return;   // T4: nur die Markierung
       node.fontSize(parseInt(e.target.value, 10) || 1);
       const ls = parseFloat(node.getAttr('letterSpacing')) || 0;
       node.letterSpacing(ls * node.fontSize());
@@ -6506,6 +6580,8 @@
     document.getElementById('rb_color')?.addEventListener('input', (e) => {
       const node = ribbonStartTextNode();
       if (!node) return;
+      const ie = SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null;
+      if (ie && /^#[0-9a-f]{6}$/i.test(e.target.value) && ie.applyValue('color', e.target.value.toLowerCase())) return;   // T4
       node.fill(e.target.value);
       refreshCanvas();
       scheduleSave();
@@ -8522,11 +8598,23 @@
         ta.focus();
         ta.setSelectionRange(start + before.length, end + before.length);
       }
+      /* T4: während Bearbeiten an Ort wirken die Knöpfe auf die Markierung im Feld (ohne Markierung: nichts). */
+      const inlineFor = () => (SF.inlineEdit && SF.inlineEdit.node === node ? SF.inlineEdit : null);
       document.querySelectorAll('[data-wrap]').forEach(btn => {
-        btn.addEventListener('click', () => { const w = btn.dataset.wrap; wrapTextSelection(w, w); });
+        btn.addEventListener('click', () => {
+          const w = btn.dataset.wrap;
+          const ie = inlineFor();
+          if (ie) { ie.applyToggle(WRAP_INLINE_KEY[w]); return; }
+          wrapTextSelection(w, w);
+        });
       });
       document.querySelectorAll('[data-wraptag]').forEach(btn => {
-        btn.addEventListener('click', () => { const t = btn.dataset.wraptag; wrapTextSelection('[' + t + ']', '[/' + t + ']'); });
+        btn.addEventListener('click', () => {
+          const t = btn.dataset.wraptag;
+          const ie = inlineFor();
+          if (ie) { ie.applyToggle(WRAP_INLINE_KEY[t]); return; }
+          wrapTextSelection('[' + t + ']', '[/' + t + ']');
+        });
       });
 
       function bindColorSelectionTool(btnId, paletteId, pickerId, tagName) {
@@ -8548,7 +8636,12 @@
           }
         });
         picker.addEventListener('change', () => {
-          wrapTextSelection('[' + tagName + '=' + picker.value + ']', '[/' + tagName + ']');
+          const ie = inlineFor();
+          if (ie) {
+            if (/^#[0-9a-f]{6}$/i.test(picker.value)) ie.applyValue(tagName, picker.value.toLowerCase(), true);   // gleiche Farbe nochmals = entfernen
+          } else {
+            wrapTextSelection('[' + tagName + '=' + picker.value + ']', '[/' + tagName + ']');
+          }
           palette.hidden = true;
           btn.classList.remove('active');
         });
@@ -8911,6 +9004,7 @@
   }
 
   function refreshCanvas() {
+    if (SF.inlineEdit) SF.inlineEdit.restyle();   // Bearbeiten an Ort: Grundstil des Objekts nachführen (T4)
     if (SF.transformer) SF.transformer.forceUpdate();
     SF.layer.draw();
   }
@@ -10649,6 +10743,20 @@
     SFS.register('group', () => { groupSelectedNodes(); return true; });
     SFS.register('ungroup', () => { ungroupSelected(); return true; });
     SFS.register('find_replace', () => { openFindReplace(); return true; });
+    /* Texteditor T4 (3.12.37): Ctrl+B/I/U (Vorgaben im Katalog) — im Bearbeiten an Ort auf die Markierung
+       (ohne Markierung aufs Objekt), auf der Folienfläche aufs gewählte Textobjekt; sonst dem Feld/Browser lassen. */
+    const textFormatKey = (rbId) => (e) => {
+      const ie = SF.inlineEdit;
+      const inInline = !!(ie && e && e.target && ie.el.contains(e.target));
+      if (!inInline && (inField(e) || !ribbonStartTextNode() || !stagePlayContext())) return 'native';
+      const btn = document.getElementById(rbId);
+      if (!btn || btn.disabled) return 'native';
+      btn.click();
+      return true;
+    };
+    SFS.register('text_bold', textFormatKey('rb_bold'));
+    SFS.register('text_italic', textFormatKey('rb_italic'));
+    SFS.register('text_underline', textFormatKey('rb_underline'));
     /* Entf: im Filmstreifen/Raster Folien löschen, sonst weiter an die Bühne (markierte Objekte löschen). */
     SFS.register('delete_slides', () => {
       if (SF.canEdit && slideShortcutContext()) { deleteSlides(shortcutSlideIndices()); return true; }

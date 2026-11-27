@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.37] - 2026-11-27
+
+### Changed
+- **Menüband und Format-Spalte formatieren die markierte Textstelle** (Urs 27.11., Texteditor Häppchen T4): Beim Bearbeiten an Ort wirken Fett, Kursiv, Unterstrichen, Durchgestrichen, Gross, Kapitälchen, Schriftgrösse und Textfarbe im Menüband sowie die Knöpfe, Marker und Textfarbe der Format-Spalte nur auf die markierte Stelle; nochmals klicken nimmt die Formatierung wieder weg. Ohne Markierung oder ohne Bearbeiten wirken sie wie bisher aufs ganze Textobjekt. Die Knöpfe zeigen beim Bearbeiten den Zustand an der Schreibmarke. Klicks ins Menüband beenden die Bearbeitung nicht mehr.
+- **Tastenkürzel Ctrl+B / Ctrl+I / Ctrl+U** für Fett, Kursiv und Unterstrichen (im Dialog «Ribbon anpassen» › Weitere Befehle › Text änderbar): beim Bearbeiten auf die Markierung, auf der Folienfläche aufs gewählte Textobjekt.
+
 ## [3.12.36] - 2026-11-27
 
 ### Changed

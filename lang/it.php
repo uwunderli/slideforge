@@ -1579,6 +1579,8 @@ return [
     'shortcut.group_present' => 'Presenta',
     'shortcut.group_view' => 'Visualizza',
     'shortcut.group_stage' => 'Area diapositiva',
+    'shortcut.group_text' => 'Testo',
+    'shortcut.text_format_hint' => 'Durante la modifica di un testo: si applica alla selezione, altrimenti all’oggetto di testo selezionato.',
     'shortcut.group_grid' => 'Vista griglia',
     'shortcut.group_play' => 'Riproduci',
     'shortcut.slide_prev' => 'Diapositiva precedente',

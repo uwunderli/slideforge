@@ -1579,6 +1579,8 @@ return [
     'shortcut.group_present' => 'Preschentar',
     'shortcut.group_view' => 'Vista',
     'shortcut.group_stage' => 'Surfatscha da la folia',
+    'shortcut.group_text' => 'Text',
+    'shortcut.text_format_hint' => 'Durant l’elavuraziun d’in text: vala per la selecziun, uschiglio per l’object da text selecziunà.',
     'shortcut.group_grid' => 'Vista da griglia',
     'shortcut.group_play' => 'Reproducir',
     'shortcut.slide_prev' => 'Folia precedenta',

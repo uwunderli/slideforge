@@ -1672,6 +1672,8 @@ return [
     'shortcut.group_present' => 'Present',
     'shortcut.group_view' => 'View',
     'shortcut.group_stage' => 'Slide canvas',
+    'shortcut.group_text' => 'Text',
+    'shortcut.text_format_hint' => 'While editing a text: applies to the selection, otherwise to the selected text object.',
     'shortcut.group_grid' => 'Grid view',
     'shortcut.group_play' => 'Play',
     'shortcut.slide_prev' => 'Previous slide',

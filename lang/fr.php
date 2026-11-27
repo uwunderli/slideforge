@@ -1590,6 +1590,8 @@ return [
     'shortcut.group_present' => 'Présenter',
     'shortcut.group_view' => 'Affichage',
     'shortcut.group_stage' => 'Surface de la diapositive',
+    'shortcut.group_text' => 'Texte',
+    'shortcut.text_format_hint' => 'Pendant la modification d’un texte : s’applique à la sélection, sinon à l’objet texte sélectionné.',
     'shortcut.group_grid' => 'Vue grille',
     'shortcut.group_play' => 'Lecture',
     'shortcut.slide_prev' => 'Diapositive précédente',

@@ -1848,6 +1848,8 @@ return [
     'shortcut.group_present' => 'Präsentieren',
     'shortcut.group_view' => 'Ansicht',
     'shortcut.group_stage' => 'Folienfläche',
+    'shortcut.group_text' => 'Text',
+    'shortcut.text_format_hint' => 'Beim Bearbeiten eines Textes auf die Markierung, sonst auf das gewählte Textobjekt.',
     'shortcut.group_grid' => 'Rasteransicht',
     'shortcut.group_play' => 'Abspielen',
     'shortcut.slide_prev' => 'Vorige Folie',
