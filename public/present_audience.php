@@ -214,14 +214,62 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     var revNochmal = false;   // während eines Abrufs neu gespeichert → danach nochmals holen
     var secHtml = null;   // zuletzt geladene Folien-HTML je Folie (Vergleich: nur geänderte Folien tauschen)
 
-    // Mitlaufen: alle Effekte sichtbar wie im Editor.
+    // Mitlaufen: alle Effekte sichtbar wie im Editor. Spielt der Editor gerade ab (3.11.0), meldet er den
+    // Effekt-Schritt (frag); dann gilt der Stand von reveal.js, nicht «alles sichtbar».
     function alleSichtbar() {
       if (window.sfLiveChannel !== 'editor') return;
+      if (typeof lastFrag === 'number' || autoLauf) return;
       // Ausblende-Hüllen (sf-exit) nicht schalten, sonst verschwindet das Objekt.
       document.querySelectorAll('.reveal .slides .fragment').forEach(function (el) { el.classList.toggle('visible', !el.classList.contains('sf-exit')); });
     }
     Reveal.on('slidechanged', alleSichtbar);
     Reveal.on('ready', alleSichtbar);
+
+    // Mitlaufen mit «Animationen beim Folienwechsel abspielen» (3.11.0): wechselt der Editor die Folie, spielt diese
+    // Ansicht sie ab Schritt 0 selbst durch (je Schritt nach dessen Dauer + kurzer Pause bzw. nach der Auto-Zeit)
+    // und bleibt am Ende stehen. Ein neuer Speicherstand bricht ab und zeigt sofort die fertige Folie.
+    var autoLauf = false;
+    var autoTimer = null;
+    var AUTO_PAUSE = 700;
+    function autoStopp() {
+      if (autoTimer) clearTimeout(autoTimer);
+      autoTimer = null;
+      autoLauf = false;
+    }
+    function autoGruppe(idx) {
+      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+      return slide ? Array.prototype.slice.call(slide.querySelectorAll('.fragment[data-fragment-index="' + idx + '"]')) : [];
+    }
+    function autoWarten() {
+      var f = Reveal.getIndices().f;
+      var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
+      if (typeof f !== 'number' || f < 0) {
+        var erst = slide ? (parseInt(slide.getAttribute('data-sf-first-autoadvance') || '0', 10) || 0) : 0;
+        return erst > 0 ? erst : AUTO_PAUSE;
+      }
+      var dauer = 0, auto = 0;
+      autoGruppe(f).forEach(function (el) {
+        auto = Math.max(auto, parseInt(el.getAttribute('data-sf-fragment-autoslide') || '0', 10) || 0);
+        dauer = Math.max(dauer, (parseFloat(getComputedStyle(el).transitionDuration) || 0) * 1000);
+      });
+      return auto > 0 ? Math.max(auto, dauer) : dauer + AUTO_PAUSE;
+    }
+    function autoSchritt() {
+      autoTimer = null;
+      if (!autoLauf) return;
+      var av = Reveal.availableFragments();
+      if (!av || !av.next) { autoLauf = false; return; }   // fertig: bleibt stehen
+      Reveal.nextFragment();
+      autoTimer = setTimeout(autoSchritt, autoWarten());
+    }
+    function autoStart() {
+      autoStopp();
+      var av = Reveal.availableFragments();
+      if (!av || (!av.next && !av.prev)) return;           // Folie ohne Effekte
+      autoLauf = true;
+      Reveal.slide(lastIndex, 0, -1);
+      autoTimer = setTimeout(autoSchritt, autoWarten());
+    }
 
     // Neuer Speicherstand: Folien holen, nur geänderte <section> austauschen (kein Flackern, Geste/Vollbild/Ton bleiben).
     // nurMerken: erster Stand nach dem Laden — nur festhalten, was angezeigt wird, nichts tauschen.
@@ -238,11 +286,14 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
           var neu = Array.prototype.slice.call(tpl.content.children);
           var host = document.querySelector('.reveal .slides');
           var alt = Array.prototype.slice.call(host.children);
+          var aktuellNeu = true;   // Folie, die gerade läuft, verändert? (sonst läuft eine Animation weiter)
           if (alt.length !== neu.length || !secHtml || secHtml.length !== neu.length) {
             host.innerHTML = d.sections;
           } else {
+            aktuellNeu = false;
             neu.forEach(function (el, i) {
               if (secHtml[i] === el.outerHTML) return;
+              if (i === lastIndex) aktuellNeu = true;
               var old = alt[i];
               ['present', 'past', 'future', 'stack'].forEach(function (c) { if (old.classList.contains(c)) el.classList.add(c); });
               if (old.getAttribute('style')) el.setAttribute('style', old.getAttribute('style'));
@@ -255,7 +306,12 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
           secHtml = Array.prototype.map.call(tpl.content.children, function (el) { return el.outerHTML; });
           try { Reveal.configure({ width: d.width, height: d.height }); } catch (e) {}
           Reveal.sync();
-          if (typeof lastIndex === 'number') Reveal.slide(lastIndex, 0);
+          if (autoLauf && !aktuellNeu) return;
+          autoStopp();
+          if (typeof lastIndex === 'number') {
+            if (typeof lastFrag === 'number') Reveal.slide(lastIndex, 0, lastFrag);
+            else Reveal.slide(lastIndex, 0);
+          }
           alleSichtbar();
           if (typeof sfMediaStatusTrackSlide === 'function') { try { sfMediaStatusTrackSlide(Reveal.getCurrentSlide()); } catch (e) {} }
         })
@@ -275,11 +331,14 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
           if (!data.ok || !data.live) return;
           var frag = typeof data.live.frag === 'number' ? data.live.frag : null;
           if (data.live.index !== lastIndex || frag !== lastFrag) {
+            var folieNeu = typeof lastIndex === 'number' && data.live.index !== lastIndex;
             lastIndex = data.live.index;
             lastFrag = frag;
+            autoStopp();
             if (frag !== null) { Reveal.slide(data.live.index, 0, frag); }
             else { Reveal.slide(data.live.index, 0); }
             alleSichtbar();
+            if (window.sfLiveChannel === 'editor' && frag === null && folieNeu && data.live.anim) autoStart();
             // Kein lokales sfArmMediaTriggers — sonst Doppelstart mit live-Medienbefehl.
           }
           if (window.sfLiveChannel === 'editor' && typeof data.live.rev === 'number' && data.live.rev !== lastRev) {

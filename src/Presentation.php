@@ -1194,7 +1194,8 @@ class Presentation
         string $source = 'present',
         ?string $clientId = null,
         ?string $userId = null,
-        bool $saved = false
+        bool $saved = false,
+        ?bool $anim = null
     ): array {
         if (!in_array($channel, ['editor', 'present'], true)) {
             $channel = 'present';
@@ -1206,7 +1207,7 @@ class Presentation
         $accepted = true;
         $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
 
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, $saved, &$accepted, &$leaderResult) {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, $saved, $anim, &$accepted, &$leaderResult) {
             if ($channel === 'present' && $source === 'present' && $clientId !== '') {
                 self::registerControlClient($data, $clientId, 'present', $userId);
                 $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
@@ -1257,6 +1258,10 @@ class Presentation
             // Mitlaufen (3.8.0): Speicherstand des Editors; Geräte laden die Folien nur neu, wenn er sich ändert.
             if ($channel === 'editor' && ($saved || !isset($data['editor']['rev']))) {
                 $data['editor']['rev'] = (int)round(microtime(true) * 1000);
+            }
+            // 3.11.0: Geräte im Mitlaufen spielen beim Folienwechsel die Effekte ab (Schalter im Dialog «Auf Gerät»).
+            if ($channel === 'editor' && $anim !== null) {
+                $data['editor']['anim'] = $anim;
             }
 
             return $data;
@@ -1502,6 +1507,9 @@ class Presentation
         ];
         if (isset($ch['rev'])) {
             $result['rev'] = (int)$ch['rev'];
+        }
+        if ($channel === 'editor') {
+            $result['anim'] = !empty($ch['anim']);
         }
         if (!empty($data['media'])) {
             $result['media'] = $data['media'];

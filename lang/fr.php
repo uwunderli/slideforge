@@ -334,6 +334,7 @@ return [
     'ribbon.present_mode_short' => 'Mode présentation',
     'ribbon.preview_tab_short' => 'Aperçu',
     'ribbon.preview_device_short' => 'Sur appareil',
+    'ribbon.play_slide_short' => 'Lire',
     'ribbon.present_display_short' => 'Options',
     'ribbon.present_progress_short' => 'Progression',
     'ribbon.present_controls_short' => 'Navigation',

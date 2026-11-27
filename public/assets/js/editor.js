@@ -29,6 +29,10 @@
     splits: Object.assign({}, (boot.editorUi && boot.editorUi.splits && typeof boot.editorUi.splits === 'object' && !Array.isArray(boot.editorUi.splits)) ? boot.editorUi.splits : {}),
     /* Eingeklappte Seitenleisten (HubSplit-Griff, 3.9.4), serverseitig in editor_ui.collapsed */
     collapsed: Object.assign({}, (boot.editorUi && boot.editorUi.collapsed && typeof boot.editorUi.collapsed === 'object' && !Array.isArray(boot.editorUi.collapsed)) ? boot.editorUi.collapsed : {}),
+    /* Mitlaufen: Geräte spielen beim Folienwechsel die Effekte ab (3.11.0), serverseitig in editor_ui.mitAnim */
+    mitAnim: !!(boot.editorUi && boot.editorUi.mitAnim),
+    /* Abspielen (3.11.0): Effekt-Schritt für den Live-Kanal «editor» (reveal-Fragment, -1 = Schritt 0); null = nicht am Abspielen */
+    playFrag: null,
     activeSideTab: (boot.editorUi && boot.editorUi.sideTab) || 'templates',
     activePosSubtab: (boot.editorUi && boot.editorUi.posSubtab) || 'layout',
     activeFormatSubtab: (boot.editorUi && boot.editorUi.formatSubtab) || 'text',
@@ -101,6 +105,7 @@
             notesHeight: SF.notesHeight,
             splits: SF.splits,
             collapsed: SF.collapsed,
+            mitAnim: !!SF.mitAnim,
           },
           csrf_token: SF.csrfToken,
         }),
@@ -771,6 +776,9 @@
         case 'present_mode':
           handlePresentModeLinkClick(cmdEl, e);
           break;
+        case 'play_slide':
+          openPlayOverlay();
+          break;
         case 'export':
           e.preventDefault();
           openExportModal();
@@ -912,7 +920,7 @@
     const ribbonEl = document.getElementById('editorRibbon');
     if (!ribbonEl) return;
 
-    const commandIds = ['present_mode', 'export', 'preview_tab', 'preview_device'];
+    const commandIds = ['present_mode', 'export', 'preview_tab', 'preview_device', 'play_slide'];
     commandIds.forEach((cmdId) => {
       ribbonEl.querySelectorAll('[data-ribbon-command="' + cmdId + '"]').forEach((el) => {
         el.classList.add('is-master-disabled');
@@ -1527,7 +1535,7 @@
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ index: SF.currentIndex, channel: 'editor', source: 'editor', saved, csrf_token: SF.csrfToken }),
+        body: JSON.stringify({ index: SF.currentIndex, frag: typeof SF.playFrag === 'number' ? SF.playFrag : null, anim: !!SF.mitAnim, channel: 'editor', source: 'editor', saved, csrf_token: SF.csrfToken }),
       });
       const json = await res.json().catch(() => null);
       if (json && json.error === 'csrf' && json.csrf_token && !retry) {
@@ -2342,6 +2350,7 @@
 
   async function switchToSlide(index) {
     if (index === SF.currentIndex) return;
+    if (play.el) closePlayOverlay();
     SF.skipPreviewReload = true;
     await saveCurrentSlide(true);
     SF.skipPreviewReload = false;
@@ -6852,16 +6861,211 @@
     });
   }
 
+  /* ---- Abspielen (3.11.0, Urs 27.11.: «… dass ich die Animation gleich im Editor und im Vorschaufenster testen kann») ----
+     «▶ Abspielen» zeigt die aktuelle Folie in einer Überlagerung über der Bühne: iframe auf preview.php?play=1 (derselbe
+     Renderer wie die Präsentation, nur diese Folie, ab Schritt 0). Steuerung hier, die Seite im iframe meldet ihren Schritt
+     per postMessage. Mitlaufen folgt Schritt für Schritt (frag im Live-Kanal «editor»). */
+  const play = { el: null, frame: null, step: 0, total: 0, prevFocus: null };
+
+  function playBarHtml() {
+    const label = I.animPlay || 'Abspielen';
+    const tip = I.animPlayHint || 'Folie mit allen Effekten Schritt für Schritt abspielen';
+    return '<div class="props-fx-playbar">'
+      + '<button type="button" class="button button-sm hub-btn hub-btn--sm" data-fx-play-slide title="' + escapeHtml(tip) + '">'
+      + '<span aria-hidden="true">▶</span> ' + escapeHtml(label) + '</button>'
+      + '</div>';
+  }
+
+  function wirePlayBar(panel, node) {
+    panel.querySelector('[data-fx-play-slide]')?.addEventListener('click', () => openPlayOverlay());
+    panel.querySelectorAll('[data-fx-play-one]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playEffectOnStage(node, btn.dataset.fxPlayOne);
+      });
+    });
+  }
+
+  async function openPlayOverlay() {
+    if (play.el || SF.masterSlideEditing) return;
+    const host = document.getElementById('canvasArea');
+    if (!host || !SF.slides[SF.currentIndex]) return;
+    play.prevFocus = document.activeElement;
+    play.step = 0;
+    play.total = 0;
+    const el = document.createElement('div');
+    el.className = 'sf-play-overlay';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', I.animPlay || 'Abspielen');
+    const closeTip = I.animPlayClose || 'Abspielen schliessen';
+    el.innerHTML = '<div class="sf-play-bar">'
+      + '<span class="sf-play-step" role="status" aria-live="polite">' + escapeHtml(I.animPlayLoading || 'Folie wird geladen…') + '</span>'
+      + '<span class="sf-play-help">' + escapeHtml(I.animPlayHelp || '') + '</span>'
+      + '<button type="button" class="hub-icon-btn sf-play-close" title="' + escapeHtml(closeTip) + '" aria-label="' + escapeHtml(closeTip) + '">'
+      + '<span aria-hidden="true">✕</span></button>'
+      + '</div>'
+      + '<iframe class="sf-play-frame" title="' + escapeHtml(I.animPlay || 'Abspielen') + '"></iframe>';
+    host.appendChild(el);
+    play.el = el;
+    play.frame = el.querySelector('.sf-play-frame');
+    el.querySelector('.sf-play-close').addEventListener('click', closePlayOverlay);
+    el.querySelector('.sf-play-close').focus();
+    document.addEventListener('keydown', playKeydown, true);
+    try {
+      if (SF.canEdit && window.SFEditor) await window.SFEditor.flush();
+    } catch (e) { /* Speichern meldet selbst */ }
+    if (!play.el || play.el !== el) return;
+    play.frame.addEventListener('load', () => {
+      let ok = false;
+      try { ok = !!(play.frame && play.frame.contentWindow && play.frame.contentWindow.sfPlay); } catch (e) { ok = false; }
+      if (!ok && play.el === el) {
+        const st = el.querySelector('.sf-play-step');
+        if (st) { st.textContent = I.animPlayError || 'Folie konnte nicht geladen werden.'; st.classList.add('is-error'); }
+      }
+    });
+    play.frame.src = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex + '&play=1&_=' + Date.now();
+  }
+
+  function closePlayOverlay() {
+    if (!play.el) return;
+    document.removeEventListener('keydown', playKeydown, true);
+    play.el.remove();
+    play.el = null;
+    play.frame = null;
+    if (SF.playFrag !== null) {
+      SF.playFrag = null;
+      mitlaufMelden(false);
+    }
+    const back = play.prevFocus;
+    play.prevFocus = null;
+    if (back && document.contains(back) && back.focus) back.focus({ preventScroll: true });
+  }
+
+  function playControl(dir) {
+    try {
+      const w = play.frame && play.frame.contentWindow;
+      if (w && w.sfPlay) w.sfPlay[dir]();
+    } catch (e) { /* Seite im iframe noch nicht bereit */ }
+  }
+
+  function playKey(key) {
+    if (key === 'Escape') { closePlayOverlay(); return; }
+    if ([' ', 'Enter', 'ArrowRight', 'ArrowDown', 'PageDown'].includes(key)) playControl('next');
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(key)) playControl('prev');
+  }
+
+  function playKeydown(e) {
+    if (!play.el) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const closeBtn = play.el.querySelector('.sf-play-close');
+    if (e.key === 'Tab') { e.preventDefault(); closeBtn?.focus(); return; }
+    if (e.key === 'Enter' && document.activeElement === closeBtn) return; // Enter auf ✕ schliesst
+    /* Andere Tasten (Entf, Buchstaben …) nicht an die Bühne darunter weitergeben. */
+    if (![' ', 'Enter', 'Escape', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(e.key)) { e.stopPropagation(); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    playKey(e.key);
+  }
+
+  function renderPlayStep() {
+    const st = play.el && play.el.querySelector('.sf-play-step');
+    if (!st) return;
+    st.classList.remove('is-error');
+    st.textContent = (I.animPlayStep || 'Schritt {x} von {y}').replace('{x}', String(play.step)).replace('{y}', String(play.total));
+  }
+
+  window.addEventListener('message', (e) => {
+    if (!play.el || !play.frame || e.origin !== window.location.origin || e.source !== play.frame.contentWindow) return;
+    const d = e.data || {};
+    if (d.type === 'sf-play-step') {
+      play.step = Math.max(0, parseInt(d.step, 10) || 0);
+      play.total = Math.max(0, parseInt(d.total, 10) || 0);
+      renderPlayStep();
+      SF.playFrag = play.step - 1;
+      mitlaufMelden(false);
+    } else if (d.type === 'sf-play-key') {
+      playKey(String(d.key || ''));
+    }
+  });
+
+  /* Kleines ▶ in den Kopfzeilen Einblenden/Ausblenden: diesen Effekt einmal auf der Konva-Bühne nachspielen.
+     Nur Darstellung: Tween von/zu den gespeicherten Werten, danach exakt der alte Zustand; nichts wird gespeichert. */
+  const PLAY_SHIFT = 40;      // wie die Richtungseffekte im Renderer (translate 40px)
+  const PLAY_DEFAULT_MS = 600;
+  function playEffectOnStage(node, teil) {
+    if (!node || !SF.layer || typeof Konva === 'undefined' || node._sfPlaying) return;
+    let type = '';
+    let ms = 0;
+    if (teil === 'out') {
+      const ex = nodeExit(node);
+      if (!ex) return;
+      type = 'exit-' + ex.type;
+      ms = ex.duration;
+    } else {
+      type = node.getAttr('animType') || 'none';
+      ms = parseInt(node.getAttr('animDuration'), 10) || 0;
+    }
+    if (type === 'none') return;
+    const dur = (ms > 0 ? ms : PLAY_DEFAULT_MS) / 1000;
+    const base = { x: node.x(), y: node.y(), opacity: node.opacity(), scaleX: node.scaleX(), scaleY: node.scaleY() };
+    const box = node.getClientRect({ relativeTo: node.getParent() });
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const scaled = (k) => ({ scaleX: base.scaleX * k, scaleY: base.scaleY * k, x: cx + (base.x - cx) * k, y: cy + (base.y - cy) * k });
+    let from = null;
+    let to = null;
+    switch (type) {
+      case 'fade-in': from = { opacity: 0 }; to = { opacity: base.opacity }; break;
+      case 'fade-out': case 'exit-fade': from = {}; to = { opacity: 0 }; break;
+      case 'fade-up': from = { opacity: 0, y: base.y + PLAY_SHIFT }; to = { opacity: base.opacity, y: base.y }; break;
+      case 'fade-down': from = { opacity: 0, y: base.y - PLAY_SHIFT }; to = { opacity: base.opacity, y: base.y }; break;
+      case 'fade-left': from = { opacity: 0, x: base.x + PLAY_SHIFT }; to = { opacity: base.opacity, x: base.x }; break;
+      case 'fade-right': from = { opacity: 0, x: base.x - PLAY_SHIFT }; to = { opacity: base.opacity, x: base.x }; break;
+      case 'grow': from = {}; to = scaled(1.3); break;
+      case 'shrink': from = {}; to = scaled(0.7); break;
+      case 'strike': from = { opacity: base.opacity * 0.4 }; to = { opacity: base.opacity }; break;
+      case 'exit-up': from = {}; to = { opacity: 0, y: base.y - PLAY_SHIFT }; break;
+      case 'exit-down': from = {}; to = { opacity: 0, y: base.y + PLAY_SHIFT }; break;
+      case 'exit-left': from = {}; to = { opacity: 0, x: base.x - PLAY_SHIFT }; break;
+      case 'exit-right': from = {}; to = { opacity: 0, x: base.x + PLAY_SHIFT }; break;
+      case 'exit-shrink': from = {}; to = Object.assign({ opacity: 0 }, scaled(0.7)); break;
+      case 'exit-grow': from = {}; to = Object.assign({ opacity: 0 }, scaled(1.3)); break;
+      default: return;
+    }
+    node._sfPlaying = true;
+    const hadTransformer = SF.transformer && SF.transformer.nodes().includes(node);
+    if (hadTransformer) SF.transformer.visible(false);
+    removeAnimationBadge(node);
+    node.setAttrs(from);
+    SF.layer.batchDraw();
+    const restore = () => {
+      node.setAttrs(base);
+      node._sfPlaying = false;
+      if (hadTransformer && SF.transformer) SF.transformer.visible(true);
+      updateAnimationBadge(node);
+      refreshCanvas();
+    };
+    const tween = new Konva.Tween(Object.assign({ node, duration: dur, easing: Konva.Easings.EaseInOut }, to, {
+      onFinish: () => {
+        /* Ende kurz stehen lassen, dann zurück in den Bearbeitungsstand. */
+        setTimeout(() => { tween.destroy(); restore(); }, 400);
+      },
+    }));
+    tween.play();
+  }
+
   function renderEffectsPanel(node, obj, isText) {
     const panel = document.getElementById('propsEffectsPanel');
     if (!panel) return;
     if (!node || SF.selectedNodes.length !== 1 || isObjectGroup(node)) {
       if (SF.selectedNodes.length === 0 && SF.canEdit) {
-        panel.innerHTML = buildSlideEffectsHtml();
+        panel.innerHTML = playBarHtml() + buildSlideEffectsHtml();
         wireSlideEffectsPanel();
       } else {
-        panel.innerHTML = propsPanelEmptyHtml();
+        panel.innerHTML = playBarHtml() + propsPanelEmptyHtml();
       }
+      wirePlayBar(panel, null);
       return;
     }
     const hatEin = (obj.animType || 'none') !== 'none';
@@ -6872,11 +7076,12 @@
     const ausZus = ex
       ? [(I.animStepShort || 'Schritt') + ' ' + ex.order, exitLabel(ex.type), dauerLabel(ex.duration)]
       : [I.optExit?.none || 'Keiner'];
-    panel.innerHTML = '<div class="ribbon-props-sections">' +
-      effektKlappeHtml('in', I.animIn || 'Einblenden', einZus, effektKlappeOffen('in', hatEin), buildEffectPropsHtml(node, obj, isText)) +
-      effektKlappeHtml('out', I.animOut || 'Ausblenden', ausZus, effektKlappeOffen('out', !!ex), buildExitPropsHtml(node)) +
+    panel.innerHTML = playBarHtml() + '<div class="ribbon-props-sections">' +
+      effektKlappeHtml('in', I.animIn || 'Einblenden', einZus, effektKlappeOffen('in', hatEin), buildEffectPropsHtml(node, obj, isText), hatEin) +
+      effektKlappeHtml('out', I.animOut || 'Ausblenden', ausZus, effektKlappeOffen('out', !!ex), buildExitPropsHtml(node), !!ex) +
       '</div>';
     wireEffektKlappen(panel);
+    wirePlayBar(panel, node);
   }
 
   /* Ein-/ausklappbare Abschnitte im Effekte-Reiter (3.10.2, Urs 27.11.). Muster wie die
@@ -6897,16 +7102,23 @@
     return (o && o.label) || '';
   }
 
-  function effektKlappeHtml(teil, titel, zusammenfassung, offen, bodyHtml) {
+  function effektKlappeHtml(teil, titel, zusammenfassung, offen, bodyHtml, abspielbar) {
     const bodyId = 'fxFold_' + teil;
     const zus = zusammenfassung.filter(Boolean).join(' · ');
+    const playTip = (I.animPlayOne || 'Diesen Effekt einmal auf der Bühne zeigen') + ' (' + titel + ')';
     return '<div class="props-accordion-group props-fx-fold' + (offen ? ' open' : '') + '" data-fx-fold="' + teil + '">'
+      + '<div class="props-fx-headrow">'
       + '<button type="button" class="props-layers-header props-fx-head" aria-expanded="' + (offen ? 'true' : 'false')
       + '" aria-controls="' + bodyId + '">'
       + '<span class="props-accordion-chevron" aria-hidden="true">▾</span>'
       + '<span class="props-fx-title">' + escapeHtml(titel) + '</span>'
       + '<span class="props-fx-summary">' + escapeHtml(zus) + '</span>'
       + '</button>'
+      + (abspielbar
+        ? '<button type="button" class="hub-icon-btn props-fx-play" data-fx-play-one="' + teil + '" title="' + escapeHtml(playTip)
+          + '" aria-label="' + escapeHtml(playTip) + '"><span aria-hidden="true">▶</span></button>'
+        : '')
+      + '</div>'
       + '<div class="props-accordion-body props-fx-body" id="' + bodyId + '">' + bodyHtml + '</div>'
       + '</div>';
   }
@@ -9497,14 +9709,15 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-      /* Pfeil hoch/runter (auch Bild hoch/runter, Pos1/Ende) im Filmstreifen: vorige/nächste Folie öffnen (Urs 27.11.). */
+      /* Pfeil hoch/runter/links/rechts (auch Bild hoch/runter, Pos1/Ende) im Filmstreifen: vorige/nächste Folie öffnen
+         (Urs 27.11.; ←/→ seit 3.11.0). */
       if (SF.editorViewMode !== 'grid' && slideShortcutContext() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
-          && ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
+          && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
         e.preventDefault();
         const last = SF.slides.length - 1;
         let next = SF.currentIndex;
-        if (e.key === 'ArrowUp' || e.key === 'PageUp') next -= 1;
-        else if (e.key === 'ArrowDown' || e.key === 'PageDown') next += 1;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') next -= 1;
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown') next += 1;
         else if (e.key === 'Home') next = 0;
         else next = last;
         next = Math.max(0, Math.min(last, next));
@@ -9513,6 +9726,13 @@
             document.querySelector('#slideFilmstrip .filmstrip-item.active')?.focus({ preventScroll: true });
           });
         }
+        return;
+      }
+      /* Rasteransicht (3.11.0): ←/→ eine Folie, ↑/↓ eine Zeile; wählt die Folie wie ein Klick ohne Zusatztaste. */
+      if (SF.editorViewMode === 'grid' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
+          && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        gridArrowMove(e.key);
         return;
       }
       /* F5 startet die Präsentation ab der ersten Folie, Shift+F5 ab der aktuellen —
@@ -9805,6 +10025,15 @@
         SF.saveTimer = null;
         await saveCurrentSlide(true);
       }
+      /* Läuft gerade ein Speichern, auch darauf warten (Abspielen lädt sonst den alten Stand, 3.11.0). */
+      if (SF.saveRun) await SF.saveRun;
+    },
+    /* Dialog «Auf Gerät (Mitlaufen)», Schalter «Animationen beim Folienwechsel abspielen» (3.11.0, sf-ff.js). */
+    mitAnim: function () { return !!SF.mitAnim; },
+    setMitAnim: function (on) {
+      SF.mitAnim = !!on;
+      persistEditorUi({});
+      mitlaufMelden(false);
     },
   };
 
@@ -9841,7 +10070,9 @@
       if (layoutKey !== null) payload.layoutKey = layoutKey;
       if (label !== null) payload.label = label;
       if (layoutSetSlideId !== null) payload.layoutSetSlideId = layoutSetSlideId;
-      await api('save_slide', payload);
+      const run = api('save_slide', payload);
+      SF.saveRun = run.then(() => {}, () => {});
+      await run;
       if (SF.slides[SF.currentIndex]) {
         SF.slides[SF.currentIndex].background = background;
         SF.slides[SF.currentIndex].objects = objects;
@@ -10163,6 +10394,34 @@
      Strg+C/X/V/D. Massgeblich ist, wo die Eingabemarke steht — liegt sie im
      Filmstreifen (oder ist die Rasteransicht offen), gelten die Folien, sonst
      weiterhin das angewählte Objekt. Darum haben die Einträge `tabindex`. */
+
+  /* Pfeiltasten in der Rasteransicht (3.11.0): Zeilenlänge aus der Lage der Karten (gleiche Oberkante = eine Zeile). */
+  function gridArrowMove(key) {
+    const cards = [...document.querySelectorAll('#slideGrid .editor-slide-grid-item')];
+    if (!cards.length) return;
+    const ae = document.activeElement && document.activeElement.closest && document.activeElement.closest('.editor-slide-grid-item');
+    let from = ae ? parseInt(ae.dataset.index, 10) : (gridLastClickedIndex !== null ? gridLastClickedIndex : SF.currentIndex);
+    if (!Number.isFinite(from)) from = 0;
+    const top0 = cards[0].offsetTop;
+    let perRow = cards.findIndex((c) => c.offsetTop !== top0);
+    if (perRow < 1) perRow = cards.length;
+    let to = from;
+    if (key === 'ArrowLeft') to -= 1;
+    else if (key === 'ArrowRight') to += 1;
+    else if (key === 'ArrowUp') to -= perRow;
+    else to += perRow;
+    to = Math.max(0, Math.min(cards.length - 1, to));
+    gridSelectedIndices.clear();
+    gridSelectedIndices.add(to);
+    gridLastClickedIndex = to;
+    syncRibbonTransitionFieldsFromSlide(to);
+    cards.forEach((el) => {
+      el.classList.toggle('selected', parseInt(el.dataset.index, 10) === to);
+    });
+    updateGridSelectionUi();
+    cards[to].focus({ preventScroll: true });
+    cards[to].scrollIntoView({ block: 'nearest' });
+  }
 
   function slideShortcutContext() {
     if (SF.editorViewMode === 'grid') return true;

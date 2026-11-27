@@ -327,6 +327,7 @@ return [
     'ribbon.present_mode_short' => 'Modus da preschentar',
     'ribbon.preview_tab_short' => 'Previsualisaziun',
     'ribbon.preview_device_short' => 'Sin apparat',
+    'ribbon.play_slide_short' => 'Reproducir',
     'ribbon.present_display_short' => 'Opziuns',
     'ribbon.present_progress_short' => 'Progress',
     'ribbon.present_controls_short' => 'Navigaziun',

@@ -350,6 +350,7 @@ return [
     'ribbon.present_mode_short' => 'Present mode',
     'ribbon.preview_tab_short' => 'Preview',
     'ribbon.preview_device_short' => 'On device',
+    'ribbon.play_slide_short' => 'Play',
     'ribbon.present_display_short' => 'Options',
     'ribbon.present_progress_short' => 'Progress',
     'ribbon.present_controls_short' => 'Navigation',

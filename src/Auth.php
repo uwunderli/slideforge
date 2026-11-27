@@ -650,6 +650,8 @@ class Auth
             'splits' => [],
             /* Eingeklappte Seitenleisten (HubSplit-Griff, Schlüssel wie bei splits), nur true-Einträge. */
             'collapsed' => [],
+            /* Mitlaufen: Geräte spielen beim Folienwechsel die Effekte ab (3.11.0, Dialog «Auf Gerät»). */
+            'mitAnim' => false,
             /* Zuletzt benutzte Einstellungen des Logos-Import-Dialogs. Bewusst nur die
                dokumentunabhängigen Werte - Abwahl einzelner Folien und eigene Notizen
                gehören zu einer bestimmten Predigt und werden nicht gemerkt. */
@@ -699,6 +701,7 @@ class Auth
             'notesHeight' => max(60, min(900, (int)($ui['notesHeight'] ?? $defaults['notesHeight']))),
             'splits' => self::normalizeSplits($ui['splits'] ?? null),
             'collapsed' => self::normalizeCollapsed($ui['collapsed'] ?? null),
+            'mitAnim' => !empty($ui['mitAnim']),
             'import' => self::normalizeImportUi($ui['import'] ?? null, $defaults['import']),
         ];
     }

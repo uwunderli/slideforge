@@ -185,7 +185,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $source = 'present';
     }
     $clientId = (string)($body['client_id'] ?? '');
-    $result = Presentation::setLivePosition($id, $index, $frag, $channel, $source, $clientId, $me['id'], $channel === 'editor' && !empty($body['saved']));
+    // 3.11.0: Mitlaufen-Schalter «Animationen beim Folienwechsel abspielen» (nur Kanal «editor»).
+    $anim = $channel === 'editor' && array_key_exists('anim', $body) ? !empty($body['anim']) : null;
+    $result = Presentation::setLivePosition($id, $index, $frag, $channel, $source, $clientId, $me['id'], $channel === 'editor' && !empty($body['saved']), $anim);
     if ($source === 'remote') {
         Presentation::touchLiveSession($id, 'remote', $me['id']);
     }

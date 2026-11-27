@@ -63,9 +63,9 @@
       '<div class="hub-status__body"><span>' + esc(text) + '</span></div>';
   }
   /** Gerät-Icon aus dem Hub-Sprite (`hub-icons.svg`, Hub ≥ 2.33.10 liefert `symbol`); unbekannt → Bildschirm. */
-  function devIcon(symbol) {
+  function devIcon(symbol, cls) {
     var s = /^[a-z-]{1,24}$/.test(String(symbol || '')) ? String(symbol) : 'monitor';
-    return '<svg class="sf-dev__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(location.origin + '/assets/icons/hub-icons.svg#hub-i-' + s) + '"></use></svg>';
+    return '<svg class="' + (cls === 'small' ? 'sf-dev__icon sf-dev__icon--small' : 'sf-dev__icon') + '" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(location.origin + '/assets/icons/hub-icons.svg#hub-i-' + s) + '"></use></svg>';
   }
   /** Zuschauer-Ansicht als Adresse («Web»): dieselbe Seite wie «Präsentieren» im eigenen Fenster; `mit`: folgt dem Editor (3.8.0). */
   function webUrl(id, mit) {
@@ -145,7 +145,13 @@
     var web = webUrl(id, mit);
     var html = '<div class="sf-dev" aria-busy="true">' +
       (mit ? '<p class="muted small">Das Gerät zeigt laufend die Folie, die du bearbeitest, und jede gespeicherte Änderung. ' +
-        'Leeren oder eine Präsentation senden beendet das Mitlaufen.</p>' : '') +
+        'Leeren oder eine Präsentation senden beendet das Mitlaufen.</p>' +
+        // 3.11.0 (Urs 27.11.): beim Folienwechsel spielt das Gerät die Effekte der neuen Folie ab; gemerkt je Person (editor_ui.mitAnim).
+        '<label class="hub-toggle sf-dev__anim"><input type="checkbox" role="switch" class="sf-dev__anim-input"' +
+        (global.SFEditor && global.SFEditor.mitAnim && global.SFEditor.mitAnim() ? ' checked' : '') +
+        (global.SFEditor && global.SFEditor.setMitAnim ? '' : ' disabled') + '>' +
+        '<span class="hub-toggle-track" aria-hidden="true"></span>' +
+        '<span class="hub-toggle-label">Animationen beim Folienwechsel abspielen</span></label>' : '') +
       '<div class="sf-dev__list-wrap"><p class="muted small" role="status">Geräte werden geladen …</p></div>' +
       '<div class="sf-dev__msg" hidden></div></div>' +
       '<div class="hub-dialog-actions" data-hub-dialog-footer>' +
@@ -170,18 +176,24 @@
         icons = Array.isArray(j.icons) ? j.icons : [];
         // Raster aus Kacheln (Urs 27.11.: «pro Gerät ein Icon … ein Grid mit den Icons»): Icon gross, Name, «zeigt …» klein.
         // Kachel antippen = wählen (mehrfach, aria-pressed). «Web» ist auch eine Kachel: Zuschauer-Adresse kopieren/öffnen.
-        var tiles = '<li class="sf-dev__tile sf-dev__tile--web"><a class="sf-dev__pick" href="' + esc(web) + '" target="_blank" rel="noopener">' +
-          devIcon('globe') + '<span class="sf-dev__name">Web</span><span class="sf-dev__state">' + (mit ? 'Mitlaufen im eigenen Fenster' : 'Zuschauer-Ansicht öffnen') + '</span></a>' +
-          '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__copy">Adresse kopieren</button></li>';
+        // Alle Kacheln gleich gross (3.11.0, Urs 27.11.: «Mach die Kacheln immer gleich gross»): Name und Status je höchstens
+        // zwei Zeilen (ganz im title), Aktionen als kleine Icon-Knöpfe in einer festen Fusszeile der Kachel.
+        var webState = mit ? 'Mitlaufen im eigenen Fenster' : 'Zuschauer-Ansicht öffnen';
+        var tiles = '<li class="sf-dev__tile sf-dev__tile--web"><a class="sf-dev__pick" href="' + esc(web) + '" target="_blank" rel="noopener" title="Web – ' + esc(webState) + '">' +
+          devIcon('globe') + '<span class="sf-dev__name">Web</span><span class="sf-dev__state">' + esc(webState) + '</span></a>' +
+          '<div class="sf-dev__tile-act">' +
+          '<button type="button" class="hub-icon-btn sf-dev__copy" title="Adresse kopieren" aria-label="Adresse kopieren">' + devIcon('link', 'small') + '</button>' +
+          '<a class="hub-icon-btn sf-dev__open" href="' + esc(web) + '" target="_blank" rel="noopener" title="Öffnen" aria-label="Web-Ansicht öffnen">' + devIcon('ext', 'small') + '</a>' +
+          '</div></li>';
         tiles += list.map(function (g, i) {
           var zeigt = g.zeigt ? 'zeigt ' + (g.zeigt.titel || g.zeigt.app) : 'zeigt nichts';
           // Stift nur, wenn der Hub `darf_aendern` meldet (nur Darstellung; das Recht prüft der Hub beim Speichern).
-          return '<li class="sf-dev__tile">' + (g.darf_aendern ? '<button type="button" class="hub-icon-btn sf-dev__edit" data-i="' + i + '" title="Bearbeiten" aria-label="' + esc(g.name) + ' bearbeiten">' + devIcon('pencil') + '</button>' : '') +
-            '<button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '">' +
+          return '<li class="sf-dev__tile">' + (g.darf_aendern ? '<button type="button" class="hub-icon-btn sf-dev__edit" data-i="' + i + '" title="Bearbeiten" aria-label="' + esc(g.name) + ' bearbeiten">' + devIcon('pencil', 'small') + '</button>' : '') +
+            '<button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '" title="' + esc(g.name + ' – ' + zeigt) + '">' +
             devIcon(g.symbol) + '<span class="sf-dev__name">' + esc(g.name) + '</span><span class="sf-dev__state">' + esc(zeigt) + '</span></button>' +
             '<div class="sf-dev__tile-act">' +
-            (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__clear" data-i="' + i + '" aria-label="' + esc(g.name) + ' leeren">Leeren</button>' : '') +
-            '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__reloaddev" data-i="' + i + '" aria-label="' + esc(g.name) + ' neu laden">Neu laden</button></div></li>';
+            (g.zeigt ? '<button type="button" class="hub-icon-btn sf-dev__clear" data-i="' + i + '" title="Leeren" aria-label="' + esc(g.name) + ' leeren">' + devIcon('power', 'small') + '</button>' : '') +
+            '<button type="button" class="hub-icon-btn sf-dev__reloaddev" data-i="' + i + '" title="Neu laden" aria-label="' + esc(g.name) + ' neu laden">' + devIcon('refresh', 'small') + '</button></div></li>';
         }).join('');
         wrap.innerHTML = '<ul class="sf-dev__grid" aria-label="Geräte">' + tiles + '</ul>' +
           (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert' + (opts.onRegister ? ' – mit «Registrieren …» eines hinzufügen.' : '.') + '</p>');
@@ -193,6 +205,10 @@
         root.setAttribute('aria-busy', 'true');
         fetch(DEV, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; }).then(render);
       }
+      var animIn = root.querySelector('.sf-dev__anim-input');
+      if (animIn) animIn.addEventListener('change', function () {
+        if (global.SFEditor && global.SFEditor.setMitAnim) global.SFEditor.setMitAnim(animIn.checked);
+      });
       host.addEventListener('click', function (e) {
         if (e.target.closest('.sf-dev__cancel')) { global.HubFloatDialog.close('sfDevices'); return; }
         if (e.target.closest('.sf-dev__reload')) { devMsg(msg, ''); load(); return; }
@@ -203,7 +219,7 @@
           else done(false);
           return;
         }
-        if (mit && e.target.closest('a.sf-dev__pick')) {
+        if (mit && e.target.closest('a.sf-dev__pick, a.sf-dev__open')) {
           // «Web» im Modus Mitlaufen: eigenes Fenster dieses Browsers (ersetzt das frühere «Fenster»), Grösse nach Folienformat.
           e.preventDefault();
           var w = Math.min(1280, Math.round(screen.availWidth * 0.6)), h = Math.round(w * 9 / 16) + 40;

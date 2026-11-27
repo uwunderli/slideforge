@@ -46,20 +46,27 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-dev__msg--busy { margin: 0; font-size: .85rem; color: var(--text-muted); }
 /* Geräte: Raster aus Kacheln (Icon gross, Name, «zeigt …» klein); gewählt = Akzentrand + Fläche wie hub-icon-picker (Hub admin.css:1882). */
 .sf-dev { display: grid; gap: .75rem; }
-.sf-dev__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: .6rem; }
-.sf-dev__tile { display: grid; gap: .35rem; align-content: start; justify-items: stretch; }
-.sf-dev__pick { box-sizing: border-box; display: grid; justify-items: center; gap: .3rem; width: 100%; min-height: 118px; margin: 0; padding: .8rem .5rem .6rem;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; text-align: center;
+/* Geräte-Raster (3.11.0, Urs 27.11.: «Mach die Kacheln immer gleich gross»): feste Kachel 160×176 für alle (auch «Web»),
+   Name/Status je höchstens 2 Zeilen mit Auslassungspunkten (ganz im title), Aktionen in fester Fusszeile der Kachel. */
+.sf-dev__grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, 160px); justify-content: start; gap: .6rem; }
+.sf-dev__tile { box-sizing: border-box; width: 160px; height: 176px; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.sf-dev__tile:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.sf-dev__tile:has(.sf-dev__pick[aria-pressed="true"]) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.sf-dev__pick { box-sizing: border-box; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: .25rem; width: 100%;
+  margin: 0; padding: .7rem .5rem .3rem; border: 0; border-radius: 10px 10px 0 0; background: transparent; color: var(--text); font: inherit; text-align: center;
   text-decoration: none; cursor: pointer; }
-.sf-dev__pick:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
-.sf-dev__pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.sf-dev__pick[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
-.sf-dev__icon { width: 40px; height: 40px; color: var(--text); }
+.sf-dev__pick:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sf-dev__icon { flex: 0 0 auto; width: 36px; height: 36px; color: var(--text); }
+.sf-dev__icon--small { width: 16px; height: 16px; }
 .sf-dev__pick[aria-pressed="true"] .sf-dev__icon { color: var(--accent); }
-.sf-dev__name { font-weight: 600; font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
-.sf-dev__state { font-size: .75rem; color: var(--text-muted); line-height: 1.25; overflow-wrap: anywhere; }
-.sf-dev__tile > .hub-btn { justify-self: center; }
-.sf-dev__tile-act { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
+.sf-dev__name, .sf-dev__state { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; max-width: 100%;
+  overflow-wrap: anywhere; line-height: 1.25; }
+.sf-dev__name { font-weight: 600; font-size: .9rem; }
+.sf-dev__state { font-size: .75rem; color: var(--text-muted); }
+.sf-dev__tile-act { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; gap: .3rem; border-top: 1px solid var(--border); }
+.sf-dev__tile-act .hub-icon-btn { width: 28px; height: 28px; }
+.sf-dev__anim { margin: 0; }
 /* Dateifeld in Formularen (FfFile::fieldHtml): Knopf für den FileForge-Dialog, daneben der gewählte Name. */
 .sf-ff-field { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; margin-top: 4px; }
 .sf-ff-field-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--text); }

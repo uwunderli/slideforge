@@ -327,6 +327,7 @@ return [
     'ribbon.present_mode_short' => 'Modalità presentazione',
     'ribbon.preview_tab_short' => 'Anteprima',
     'ribbon.preview_device_short' => 'Su dispositivo',
+    'ribbon.play_slide_short' => 'Riproduci',
     'ribbon.present_display_short' => 'Opzioni',
     'ribbon.present_progress_short' => 'Avanzamento',
     'ribbon.present_controls_short' => 'Navigazione',

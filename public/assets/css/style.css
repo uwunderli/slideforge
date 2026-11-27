@@ -12031,8 +12031,23 @@ select.sf-fsel-native { display: none !important; }
 .props-fx-fold .props-fx-head {
   border-bottom: none;
 }
-.props-fx-fold.open .props-fx-head {
+/* 3.11.0: Kopfzeile = Klapp-Knopf + kleines ▶; die Trennlinie liegt unter der ganzen Zeile. */
+.props-fx-headrow {
+  display: flex;
+  align-items: center;
+  background: var(--surface-raised);
+}
+.props-fx-headrow .props-fx-head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.props-fx-fold.open .props-fx-headrow {
   border-bottom: 1px solid var(--border);
+}
+.props-fx-play {
+  flex: 0 0 auto;
+  margin-right: 8px;
+  font-size: 0.7rem;
 }
 .props-fx-head:focus-visible {
   outline: 2px solid var(--accent, currentColor);
@@ -12064,4 +12079,54 @@ select.sf-fsel-native { display: none !important; }
 }
 .props-fx-body {
   padding: 10px 12px 12px;
+}
+
+/* Abspielen (3.11.0): Knopfzeile oben im Effekte-Reiter, Überlagerung über der Bühne */
+.props-fx-playbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sf-play-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #000);
+}
+.sf-play-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 4px 8px 4px 14px;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+.sf-play-step {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sf-play-step.is-error {
+  color: var(--danger, currentColor);
+}
+.sf-play-help {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.sf-play-frame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: #000;
 }

@@ -8,7 +8,7 @@ class RibbonLayout
      * Stand der Nachrüstungen in gespeicherten Menübändern (3.8.0). Jede Nachrüstung läuft genau einmal: Danach trägt das Layout
      * diesen Stand, und wer den Knopf später selbst entfernt, bekommt ihn nicht wieder. 1 = «Folien löschen» (3.7.0).
      */
-    public const STAND = 1;
+    public const STAND = 2;
 
     /** @param array<string,bool> $context */
     public static function buildContext(array $vars): array
@@ -380,6 +380,9 @@ class RibbonLayout
         if ($stand < 1 && isset($catalog['delete_slides'])) {
             $tabs = self::migrateAddDeleteSlides($tabs);
         }
+        if ($stand < 2 && isset($catalog['play_slide'])) {
+            $tabs = self::migrateAddPlaySlide($tabs);
+        }
 
         $prefs = is_array($layout['prefs'] ?? null) ? $layout['prefs'] : [];
         $tabIds = array_column($tabs, 'id');
@@ -740,6 +743,39 @@ class RibbonLayout
                 array_splice($items, $at, 0, [['id' => 'delete_slides', 'gridSpan' => ['cols' => 2, 'rows' => 2]]]);
                 $tabs[$ti]['groups'][$gi]['items'] = $items;
                 return $tabs;
+            }
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * 3.11.0: «Abspielen» neben «Vorschau» in gespeicherte Menübänder einfügen (einmal, Stand 2).
+     *
+     * @param list<array<string,mixed>> $tabs
+     * @return list<array<string,mixed>>
+     */
+    private static function migrateAddPlaySlide(array $tabs): array
+    {
+        foreach ($tabs as $tab) {
+            foreach ($tab['groups'] ?? [] as $group) {
+                foreach ($group['items'] ?? [] as $item) {
+                    if ((string)($item['id'] ?? '') === 'play_slide') {
+                        return $tabs;
+                    }
+                }
+            }
+        }
+        foreach ($tabs as $ti => $tab) {
+            foreach ($tab['groups'] ?? [] as $gi => $group) {
+                $items = array_values($group['items'] ?? []);
+                foreach ($items as $i => $item) {
+                    if ((string)($item['id'] ?? '') === 'preview_tab') {
+                        array_splice($items, $i + 1, 0, [['id' => 'play_slide', 'gridSpan' => ['cols' => 2, 'rows' => 2]]]);
+                        $tabs[$ti]['groups'][$gi]['items'] = $items;
+                        return $tabs;
+                    }
+                }
             }
         }
 
