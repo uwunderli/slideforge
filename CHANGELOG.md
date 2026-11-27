@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.6.2] - 2026-11-27
+
+- **Medien-Seitenleiste füllt die Höhe** (Urs: «Halbwegs repariert»): Die Liste reicht bis unten, Bildlauf nur in der Liste; vorher fester Kasten von ~240 px.
+
 ## [3.6.1] - 2026-11-27
 
 - **Farben aus der Hub-Einstellung** (Urs 27.11.: «Farb Design vom SlideForge stimmt übrigens immer noch nicht»): `sf_hub_asset()` nimmt grundsätzlich die Datei des Hubs, die Kopie in `public/assets/` nur als Rückfall. Die veraltete eigene `cf-theme.js` hatte die Akzent-Nachricht des Hubs ignoriert, die Oberfläche blieb Sand. Feste Beigewerte (Schachbrett um die Folie, Scrim, Overlay, Schatten) auf Hub-Töne.

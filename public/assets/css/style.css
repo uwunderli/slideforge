@@ -9669,6 +9669,31 @@ body:has(.editor-layout) > .editor-layout {
 .props-sidebar-tabs .props-layers-header {
   display: none;
 }
+/* Medien-Seitenleiste (3.6.2, Urs: «Halbwegs repariert» — Liste nur ~240 px, darunter leer). Ursache: .props-side-panel-body
+   ist ein Block, die Flex-Kette brach dort ab, und die Liste hatte max-height: min(36vh, 280px). Jetzt Flex-Kette bis zur Liste,
+   die Liste füllt die Höhe der Leiste bis unten, Bildlauf nur in der Liste. */
+.props-side-panel[data-side-panel="media"] .props-side-panel-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.props-sidebar-tabs .props-media-accordion.open .props-media-body {
+  overflow: hidden;
+}
+/* Die alten Regeln für die gestapelte Leiste (props-sidebar-overflow/media-menu-open: max-height min(48vh, 420px), margin-top:auto)
+   gelten im Reiter «Medien» nicht. */
+.props-panel-wrap.props-sidebar-tabs .props-side-panel[data-side-panel="media"] .props-media-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  margin-top: 0;
+}
+.props-sidebar-tabs .props-media-body .media-library-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
 .props-side-panel[data-side-panel="spell"] .props-side-panel-body {
   display: flex;
   flex-direction: column;
