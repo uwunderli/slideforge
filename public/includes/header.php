@@ -41,6 +41,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
          slideforge-float-dialog.css     Vorgabegroesse der Schwebedialoge */ ?>
 <link rel="stylesheet" href="assets/css/slideforge-float-dialog.css?v=<?= ASSET_VERSION ?>">
 <link rel="stylesheet" href="assets/css/sf-ff.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/hub-ribbon.css?v=<?= ASSET_VERSION ?>"><?php /* Menüband-Stil, Kopie aus FileForge (Hub style.css), wie Dossier/FileForge */ ?>
 <?php /* Schlichter Hub-Stil (Vorgabe 17.10., _berichte/hub/vorgabe-schlichtes-design-apps):
          ZULETZT geladen - nach den eigenen Stilen UND nach dem Kit. Sie setzt nur Groesse,
          Gewicht, Rundung, Rahmen und Luft neu, keine Farben und kein Verhalten. Wer sie
