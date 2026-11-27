@@ -1,3 +1,17 @@
+/**
+ * Menüband (Editor und Präsentation) auf den Hub-Bausteinen (3.12.0, Urs 27.11.: «Ja umbauen auf den Hub»).
+ *
+ * HubRibbon zeichnet Reiter, Gruppen, Raster und Zeilenstapel, führt «Ribbon anpassen», Tastenkürzel, Tastentipps (Alt),
+ * Einklappen (Doppelklick, Strg+F1) und Peek. SlideForge liefert nur:
+ *   - Katalog und Layout (config/ribbon_*.php bzw. present_ribbon_*.php, Ablage weiter serverseitig über ribbon.php / present_ribbon.php
+ *     — Speicher-Adapter),
+ *   - den Inhalt der Einträge (SFRibbonRenderer.createItem: Knöpfe aller Arten, Widgets aus dem Vorrat),
+ *   - die Bedeutung der Kürzel (SFShortcuts, z. B. Strg+C auf Folien oder Objekt),
+ *   - die schwebenden Einstellungs-Panels und Auslöser-Knöpfe.
+ * Klicks auf Befehle laufen wie bisher über die Delegation in editor.js / present.js (data-ribbon-command).
+ *
+ * Ladereihenfolge: Hub hub-shortcuts.js → hub-ribbon-customize.js → hub-ribbon.js, dann ribbon-renderer.js, dann diese Datei.
+ */
 (function (global) {
   'use strict';
 
@@ -6,147 +20,158 @@
   const ribbon = document.getElementById(rootId);
   if (!ribbon) return;
 
-  const userId = ribbon.dataset.userId || 'default';
-  const storagePrefix = rootId === 'presentRibbon' ? 'sf_present_ribbon_' : 'sf_ribbon_';
-  const storageTab = storagePrefix + 'tab_' + userId;
-  const storageCollapsed = storagePrefix + 'collapsed_' + userId;
   const apiUrl = boot.apiUrl || (rootId === 'presentRibbon' ? 'present_ribbon.php' : 'ribbon.php');
-  let prefsSaveTimer = null;
+  const R = global.SFRibbonRenderer;
+  const I = boot.i18n || {};
+  const tabsEl = ribbon.querySelector('.editor-ribbon-tabs');
+  const panelsEl = ribbon.querySelector('.editor-ribbon-panels');
+  let hub = null;
 
-  let tabs = [];
-  let panels = [];
+  /* ── Befehle für den Hub: Katalog + Definitionen; icon = SVG für Katalog/Dialog, iconName = Name für SF-Knöpfe ───────────── */
+  const catalogById = {};
+  (boot.catalog || []).forEach((c) => { catalogById[c.id] = c; });
+  const commands = {};
+  (boot.commands || []).forEach((def) => {
+    if (!def || !def.id) return;
+    if (def.kind === 'separator' || def.kind === 'row_separator' || def.id === 'separator' || def.id === 'row_separator') return;
+    if (def.id === 'ribbon_customize') return;   // Anpassen liegt in der Reiter-Leiste
+    const cat = catalogById[def.id] || {};
+    const iconName = def.icon || cat.icon || (def.kind === 'widget' ? 'widget' : '');
+    commands[def.id] = Object.assign({}, def, {
+      label: def.label || cat.label || def.id,
+      category: cat.category || def.category || '',
+      iconName: iconName,
+      icon: R ? R.svgIcon(iconName) : '',
+      tileable: !!(def.tileable || cat.tileable),
+    });
+  });
+  const categoryLabels = I.categories || {};
+  const categories = [...new Set(Object.values(commands).map((c) => c.category).filter(Boolean))]
+    .map((id) => ({ id: id, label: categoryLabels[id] || id }));
 
-  function refreshTabPanels() {
-    tabs = [...ribbon.querySelectorAll('[data-ribbon-tab]')];
-    panels = [...ribbon.querySelectorAll('[data-ribbon-panel]')];
+  /* ── Layout: SlideForge-Format ↔ Hub-Format ─────────────────────────────────────────────────────────────────────────── */
+  function toHub(sf) {
+    if (!sf || !Array.isArray(sf.tabs)) return null;
+    const prefs = sf.prefs || {};
+    const out = {
+      iconSize: ['small', 'medium', 'large'].includes(prefs.iconSize) ? prefs.iconSize : 'medium',
+      hideLabels: prefs.showLabels === false,
+      tabs: sf.tabs.map((t) => ({
+        id: String(t.id),
+        label: String(t.label || t.id),
+        groups: (t.groups || []).map((g) => ({
+          id: String(g.id),
+          label: String(g.label || g.id),
+          rows: g.rows === 1 ? 1 : 2,
+          items: (g.items || []).map((it) => {
+            const id = typeof it === 'object' ? String(it.id || '') : String(it || '');
+            const o = { id: id };
+            if (it && it.gridSpan) o.gridSpan = { cols: it.gridSpan.cols, rows: it.gridSpan.rows };
+            if (it && it.showLabel === false) o.showLabel = false;
+            const cmd = commands[id];
+            if (cmd && o.gridSpan && R) o.size = R.tileSizeFromSpan(o.gridSpan, cmd.kind, id);
+            return o;
+          }),
+        })),
+      })),
+      shortcuts: sf.shortcuts && typeof sf.shortcuts === 'object' && !Array.isArray(sf.shortcuts) ? sf.shortcuts : {},
+    };
+    if (Array.isArray(sf.known) && sf.known.length) out.known = sf.known;
+    if (prefs.collapsed) out.collapsed = true;
+    if (prefs.activeTab) out.activeTab = String(prefs.activeTab);
+    return out;
   }
 
-  function normalizePrefs(prefs) {
-    const p = prefs && typeof prefs === 'object' ? prefs : {};
-    const iconSize = ['small', 'medium', 'large'].includes(p.iconSize) ? p.iconSize : 'medium';
+  function fromHub(l) {
     return {
-      activeTab: p.activeTab || 'start',
-      collapsed: !!p.collapsed,
-      iconSize,
-      showLabels: p.showLabels !== false,
+      version: 1,
+      tabs: (l.tabs || []).map((t) => ({
+        id: t.id,
+        label: t.label,
+        groups: (t.groups || []).map((g) => {
+          const go = {
+            id: g.id,
+            label: g.label,
+            items: (g.items || []).map((it) => {
+              const o = { id: it.id };
+              if (it.gridSpan) o.gridSpan = { cols: it.gridSpan.cols, rows: it.gridSpan.rows };
+              if (it.showLabel === false) o.showLabel = false;
+              return o;
+            }),
+          };
+          if (g.rows === 1) go.rows = 1;
+          return go;
+        }),
+      })),
+      known: l.known || [],
+      shortcuts: l.shortcuts || {},
+      prefs: {
+        activeTab: l.activeTab || (hub ? hub.activeTab() : '') || 'start',
+        collapsed: !!l.collapsed,
+        iconSize: l.iconSize || 'medium',
+        showLabels: !l.hideLabels,
+      },
     };
   }
 
-  function applyAppearancePrefs(prefs) {
-    const normalized = normalizePrefs(prefs);
-    ribbon.dataset.iconSize = normalized.iconSize;
-    ribbon.dataset.showLabels = normalized.showLabels ? 'true' : 'false';
-    ribbon.classList.toggle('is-labels-hidden', !normalized.showLabels);
-    return normalized;
-  }
-
-  function persistPrefsToServer(partial) {
-    const layout = global.SFRibbonRenderer?.getLayoutData?.();
-    if (layout?.prefs) {
-      Object.assign(layout.prefs, partial);
+  function apiExtra() {
+    if (rootId !== 'presentRibbon') {
+      return {
+        templateMode: !!global.SF_BOOTSTRAP?.templateMode,
+        layoutSetMode: !!global.SF_BOOTSTRAP?.layoutSetMode,
+        showMasterSlideNav: !!boot.meta?.masterSlideNav,
+      };
     }
-    if (boot.layout?.prefs) {
-      Object.assign(boot.layout.prefs, partial);
-    }
-    clearTimeout(prefsSaveTimer);
-    prefsSaveTimer = setTimeout(() => {
-      const prefs = normalizePrefs(layout?.prefs || boot.layout?.prefs || partial);
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'save_prefs',
-          csrf_token: global.SF_BOOTSTRAP?.csrfToken,
-          prefs: {
-            activeTab: prefs.activeTab,
-            collapsed: prefs.collapsed,
-          },
-        }),
-      }).catch(() => {});
-    }, 280);
+    return {
+      canBroadcast: !!boot.meta?.canBroadcast,
+      isOwner: !!boot.meta?.isOwner,
+      hasRemote: !!boot.meta?.hasRemote,
+    };
   }
 
-  function migrateLocalRibbonPrefs(serverPrefs) {
-    let tab = serverPrefs?.activeTab || 'start';
-    let collapsed = !!serverPrefs?.collapsed;
-    try {
-      const localTab = localStorage.getItem(storageTab);
-      const localCollapsed = localStorage.getItem(storageCollapsed);
-      let migrated = false;
-      if (localTab) {
-        tab = localTab;
-        migrated = true;
-      }
-      if (localCollapsed !== null) {
-        collapsed = localCollapsed === '1';
-        migrated = true;
-      }
-      if (migrated) {
-        persistPrefsToServer({ activeTab: tab, collapsed });
-        localStorage.removeItem(storageTab);
-        localStorage.removeItem(storageCollapsed);
-      }
-    } catch (e) { /* ignore */ }
-    return { activeTab: tab, collapsed };
-  }
-
-  function setTab(name, opts) {
-    refreshTabPanels();
-    const valid = tabs.some((t) => t.dataset.ribbonTab === name);
-    const tabName = valid ? name : tabs[0]?.dataset.ribbonTab || 'start';
-    tabs.forEach((tab) => {
-      const active = tab.dataset.ribbonTab === tabName;
-      tab.classList.toggle('active', active);
-      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+  function post(payload) {
+    return fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ csrf_token: global.SF_BOOTSTRAP?.csrfToken }, payload, apiExtra())),
+    }).then((r) => r.json()).then((data) => {
+      if (!data || !data.ok) throw new Error((data && data.error) || 'save failed');
+      return data;
     });
-    panels.forEach((panel) => {
-      const active = panel.dataset.ribbonPanel === tabName;
-      panel.hidden = !active;
-    });
-    const layout = global.SFRibbonRenderer?.getLayoutData?.();
-    if (layout?.prefs) layout.prefs.activeTab = tabName;
-    if (!opts || opts.persist !== false) {
-      persistPrefsToServer({ activeTab: tabName });
-    }
   }
 
-  function getActiveTab() {
-    const fromDom = ribbon?.querySelector?.('.editor-ribbon-tabs [data-ribbon-tab].active, .editor-ribbon-tabs [data-ribbon-tab][aria-selected="true"]');
-    if (fromDom?.dataset?.ribbonTab) return fromDom.dataset.ribbonTab;
-    const layout = global.SFRibbonRenderer?.getLayoutData?.();
-    return layout?.prefs?.activeTab || 'start';
+  /* Speicher-Adapter: Aufbau geändert → «save» (Server prüft, behält im Kontext ausgeblendete Befehle), nur Reiter/Einklappen → «save_prefs». */
+  let lastStructure = '';
+  function structureOf(sf) {
+    return JSON.stringify([sf.tabs, sf.shortcuts, sf.prefs.iconSize, sf.prefs.showLabels]);
   }
+  const storage = {
+    load: function () {
+      const l = toHub(boot.layout);
+      if (l) lastStructure = structureOf(fromHub(l));
+      return l;
+    },
+    save: function (l) {
+      const sf = fromHub(l);
+      const st = structureOf(sf);
+      if (st === lastStructure) {
+        return post({ action: 'save_prefs', prefs: { activeTab: sf.prefs.activeTab, collapsed: sf.prefs.collapsed } }).catch(() => {});
+      }
+      lastStructure = st;
+      return post({
+        action: 'save',
+        layout: sf,
+        visible: Object.keys(commands).concat(['separator', 'row_separator', 'ribbon_customize']),
+      }).then((data) => {
+        if (data.layout) boot.layout = data.layout;
+      }).catch((err) => {
+        lastStructure = '';
+        if (global.SFDialog?.alert) global.SFDialog.alert((err && err.message) || I.errorSave || 'Speichern fehlgeschlagen');
+      });
+    },
+  };
 
-  function setPeek(open) {
-    const show = !!open && ribbon.classList.contains('is-collapsed');
-    ribbon.classList.toggle('is-peek', show);
-  }
-
-  function setCollapsed(collapsed, opts) {
-    const persist = !opts || opts.persist !== false;
-    ribbon.classList.toggle('is-collapsed', !!collapsed);
-    if (!collapsed) setPeek(false);
-    if (!persist) return;
-    const layout = global.SFRibbonRenderer?.getLayoutData?.();
-    if (layout?.prefs) layout.prefs.collapsed = !!collapsed;
-    persistPrefsToServer({ collapsed: !!collapsed });
-  }
-
-  function isCollapsed() {
-    return ribbon.classList.contains('is-collapsed');
-  }
-
-  function isPeekOpen() {
-    return ribbon.classList.contains('is-peek');
-  }
-
-  function closePeekUnlessTo(related) {
-    if (!isCollapsed() || !isPeekOpen()) return;
-    const el = eventElement(related);
-    if (el && (ribbon.contains(el) || el.closest?.('[data-settings-menu]'))) return;
-    setPeek(false);
-  }
-
+  /* ── Schwebende Einstellungs-Panels und Auslöser (SlideForge-eigen) ─────────────────────────────────────────────────── */
   function resetFloatingSettingsPanels() {
     const wrap = document.querySelector('[data-settings-menu]');
     if (!wrap) return;
@@ -178,51 +203,6 @@
     }
   }
 
-  function bindTabEvents() {
-    refreshTabPanels();
-    tabs.forEach((tab) => {
-      tab.replaceWith(tab.cloneNode(true));
-    });
-    refreshTabPanels();
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', (e) => {
-        /* Zweiter Klick eines Doppelklicks ignorieren (detail >= 2). */
-        if (e.detail > 1) return;
-        const name = tab.dataset.ribbonTab;
-        if (isCollapsed()) {
-          if (!tab.classList.contains('active')) setTab(name);
-          setPeek(true);
-          return;
-        }
-        if (tab.classList.contains('active')) return;
-        setTab(name);
-      });
-      tab.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        const nextCollapsed = !isCollapsed();
-        setPeek(false);
-        setCollapsed(nextCollapsed);
-      });
-    });
-  }
-
-  function bindRibbonPeekClose() {
-    if (ribbon.dataset.peekBound === '1') return;
-    ribbon.dataset.peekBound = '1';
-    ribbon.addEventListener('mouseleave', (e) => {
-      closePeekUnlessTo(e.relatedTarget);
-    });
-    document.addEventListener('mousedown', (e) => {
-      if (!isPeekOpen()) return;
-      const el = eventElement(e.target);
-      if (el && (ribbon.contains(el) || el.closest?.('[data-settings-menu]'))) return;
-      setPeek(false);
-    }, true);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isPeekOpen()) setPeek(false);
-    });
-  }
-
   function bindRibbonActions() {
     ribbon.querySelectorAll('[data-ribbon-trigger]').forEach((btn) => {
       if (btn.dataset.wiredRibbonTrigger) return;
@@ -244,54 +224,18 @@
         if (!wrap || !panelId) return;
         const panel = wrap.querySelector('[data-settings-panel="' + panelId + '"]');
         if (!panel) return;
-        const alreadyOpen = !panel.hidden
-          && panel.classList.contains('ribbon-settings-panel-floating');
+        const alreadyOpen = !panel.hidden && panel.classList.contains('ribbon-settings-panel-floating');
         resetFloatingSettingsPanels();
         wrap.querySelectorAll('[data-settings-panel]').forEach((p) => { p.hidden = true; });
-        ribbon.querySelectorAll('[data-ribbon-settings].active').forEach((b) => {
-          b.classList.remove('active');
-        });
+        ribbon.querySelectorAll('[data-ribbon-settings].active').forEach((b) => b.classList.remove('active'));
         if (alreadyOpen) return;
         panel.hidden = false;
         btn.classList.add('active');
         positionFloatingSettingsPanel(panel, btn);
-        document.dispatchEvent(new CustomEvent('sf:ribbon-settings-open', {
-          detail: { panelId: panelId },
-        }));
+        document.dispatchEvent(new CustomEvent('sf:ribbon-settings-open', { detail: { panelId: panelId } }));
       });
     });
   }
-
-  function rebindTabs() {
-    bindTabEvents();
-    bindRibbonActions();
-    bindRibbonPeekClose();
-    if (global.SFEditorMenus?.init) {
-      global.SFEditorMenus.init();
-    }
-  }
-
-  global.SFRibbon = {
-    setTab,
-    getActiveTab,
-    setCollapsed,
-    setPeek,
-    resetFloatingSettingsPanels,
-    normalizePrefs,
-    applyAppearancePrefs,
-    _rebindTabs: rebindTabs,
-    getLayout: () => global.SFRibbonRenderer?.getLayoutData?.(),
-    applyLayout: (layout, opts) => {
-      global.SFRibbonRenderer?.setLayoutData?.(layout);
-      const prefs = applyAppearancePrefs(layout?.prefs || {});
-      setCollapsed(!!prefs.collapsed, {
-        persist: !opts || opts.persistCollapsed !== false,
-      });
-      rebindTabs();
-      const tab = prefs.activeTab || layout?.prefs?.activeTab;
-      if (tab) setTab(tab, { persist: false });
-    },
-  };
 
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-ribbon-settings]') || e.target.closest('[data-settings-menu]')) return;
@@ -301,9 +245,7 @@
     if (!openPanel) return;
     openPanel.hidden = true;
     resetFloatingSettingsPanels();
-    ribbon.querySelectorAll('[data-ribbon-settings].active').forEach((b) => {
-      b.classList.remove('active');
-    });
+    ribbon.querySelectorAll('[data-ribbon-settings].active').forEach((b) => b.classList.remove('active'));
   });
 
   window.addEventListener('resize', () => {
@@ -316,14 +258,24 @@
     if (anchor) positionFloatingSettingsPanel(openPanel, anchor);
   });
 
-  function eventElement(target) {
-    if (!target) return null;
-    if (target instanceof Element) return target;
-    return target.parentElement || null;
+  /* ── Anpassen: Knopf in der Reiter-Leiste, Rechtsklick auf freie Menüband-Fläche ───────────────────────────────────── */
+  function customizeButton() {
+    let btn = tabsEl && tabsEl.querySelector('#sfRibbonTabCustomize');
+    if (btn) return btn;
+    if (!tabsEl) return null;
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'sfRibbonTabCustomize';
+    btn.className = 'editor-ribbon-tab-customize';
+    btn.title = I.title || 'Ribbon anpassen';
+    btn.setAttribute('aria-label', btn.title);
+    btn.innerHTML = '<span class="editor-ribbon-tab-customize__icon" aria-hidden="true">' + (R ? R.svgIcon('ribbon_customize') : '') + '</span>';
+    tabsEl.appendChild(btn);   // rechts in der Reiter-Leiste; HubRibbon setzt die Reiter davor
+    return btn;
   }
 
-  function isInsideRibbon(el) {
-    return !!(el && ribbon.contains(el));
+  function openRibbonCustomize() {
+    if (hub) hub.openCustomize();
   }
 
   function shouldAllowNativeRibbonContextMenu(el) {
@@ -333,71 +285,129 @@
     return false;
   }
 
-  function openRibbonCustomize() {
-    try {
-      if (global.SFRibbonCustomize?.open) {
-        global.SFRibbonCustomize.open();
-        return;
-      }
-      console.warn('[ribbon] SFRibbonCustomize is not loaded');
-    } catch (err) {
-      console.error('[ribbon] customize open failed', err);
-    }
-  }
-
-  function openRibbonCustomizeFromContext(e) {
-    const el = eventElement(e.target);
-    if (!isInsideRibbon(el)) return;
-    if (shouldAllowNativeRibbonContextMenu(el)) return;
+  ribbon.addEventListener('contextmenu', (e) => {
+    const el = e.target instanceof Element ? e.target : e.target?.parentElement;
+    if (!el || !ribbon.contains(el) || shouldAllowNativeRibbonContextMenu(el)) return;
     e.preventDefault();
     e.stopPropagation();
-    openRibbonCustomize();
-  }
-
-  // Present + Editor: Anpassen per Rechtsklick und Ribbon-Befehl / Sidebar-Button.
-  ribbon.addEventListener('contextmenu', openRibbonCustomizeFromContext, true);
-  ribbon.addEventListener('mousedown', (e) => {
-    if (e.button !== 2) return;
-    const el = eventElement(e.target);
-    if (!isInsideRibbon(el) || shouldAllowNativeRibbonContextMenu(el)) return;
-    e.preventDefault();
     openRibbonCustomize();
   }, true);
 
-  document.getElementById('ribbonCustomizeBtn')?.addEventListener('click', () => {
-    openRibbonCustomize();
-  });
-
+  document.getElementById('ribbonCustomizeBtn')?.addEventListener('click', openRibbonCustomize);
+  document.getElementById('presentRibbonCustomizeBtn')?.addEventListener('click', openRibbonCustomize);
   ribbon.addEventListener('click', (e) => {
-    const btn = e.target.closest?.(
-      '#ribbonCustomizeBtn, #presentRibbonCustomizeBtn, #sfRibbonTabCustomize, [data-ribbon-command="ribbon_customize"]'
-    );
-    if (!btn) return;
-    /* Tab-Leisten-Button liegt in .editor-ribbon-tabs; Kachel kann noch in alten Layouts vorkommen. */
-    if (!ribbon.contains(btn) && btn.id !== 'ribbonCustomizeBtn' && btn.id !== 'presentRibbonCustomizeBtn') return;
+    const btn = e.target.closest?.('[data-ribbon-command="ribbon_customize"]');
+    if (!btn || !ribbon.contains(btn)) return;
     e.preventDefault();
     e.stopPropagation();
     openRibbonCustomize();
   });
 
-  function bootRibbon() {
-    if (global.SFRibbonRenderer && boot.layout) {
-      global.SFRibbonRenderer.init({
-        root: ribbon,
-        rootId: rootId,
-        widgetStoreId: boot.widgetStoreId || 'ribbonWidgetTemplates',
-        layout: boot.layout,
-        commands: boot.commands || [],
-        meta: boot.meta || {},
-      });
-    }
-
-    const migrated = migrateLocalRibbonPrefs(boot.layout?.prefs || {});
-    rebindTabs();
-    applyAppearancePrefs(boot.layout?.prefs || {});
-    setTab(migrated.activeTab, { persist: false });
-    setCollapsed(migrated.collapsed, { persist: false });
+  /* ── Start ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+  function hubI18n() {
+    return {
+      title: I.title,
+      hint: I.livePreviewHint,
+      search: I.search,
+      categoryAll: I.categoryAll,
+      tabAdd: I.tabAdd,
+      tabNew: I.newTab,
+      groupAdd: I.groupAdd,
+      reset: I.reset,
+      save: I.save,
+      cancel: I.cancel,
+      emptyLayout: I.emptyLayout,
+      toggleGroup: I.toggleGroup,
+      iconSize: I.appearanceIconSize,
+      rowsTitle: I.appearanceGroupRows,
+      rows1: I.appearanceGroupRows1,
+      rows2: I.appearanceGroupRows2,
+    };
   }
+
+  function bootRibbon() {
+    if (!global.HubRibbon || !R || !tabsEl || !panelsEl) {
+      console.warn('[ribbon] HubRibbon (Hub ≥ 2.36.1) oder SFRibbonRenderer fehlt');
+      return;
+    }
+    const i18n = {};
+    const raw = hubI18n();
+    Object.keys(raw).forEach((k) => { if (raw[k]) i18n[k] = raw[k]; });
+    R.beginRender({ root: ribbon, widgetStoreId: boot.widgetStoreId || 'ribbonWidgetTemplates', meta: boot.meta || {}, commands: Object.values(commands) });
+    const def = toHub(boot.defaultLayout || boot.layout) || { iconSize: 'medium', hideLabels: false, tabs: [] };
+    delete def.known;
+    delete def.shortcuts;
+    delete def.collapsed;
+    delete def.activeTab;
+    hub = global.HubRibbon.create({
+      root: ribbon,
+      body: panelsEl,
+      tabsEl: tabsEl,
+      panels: panelsEl,
+      grid: true,
+      commands: commands,
+      defaultLayout: def,
+      storage: storage,
+      categories: categories,
+      i18n: i18n,
+      dialogId: rootId === 'presentRibbon' ? 'present-ribbon-customize' : 'ribbon-customize',
+      customizeButton: customizeButton(),
+      dialog: {
+        open: (t, h, o) => global.HubFloatDialog.open(t, h, o),
+        close: (id) => global.HubFloatDialog.close(id),
+        register: (id, fn) => global.HubFloatDialog.register(id, fn),
+      },
+      classes: {
+        tab: 'editor-ribbon-tab',
+        tabActive: 'active',
+        panel: 'editor-ribbon-panel',
+        group: 'ribbon-group',
+        groupLabel: 'ribbon-group-label',
+        grid: 'ribbon-group-grid',
+        cell: 'ribbon-grid-cell',
+        cellWidget: 'ribbon-grid-cell--widget',
+        cellSep: 'ribbon-grid-cell--separator',
+        cellNoLabel: 'ribbon-grid-cell--no-label',
+        cellStack: 'ribbon-grid-cell--line-stack',
+        lineStack: 'ribbon-line-stack',
+        lineRow: 'ribbon-line-stack-row',
+        sep: 'ribbon-separator',
+        cmdAttr: 'data-ribbon-command',
+        varCell: '--ribbon-cell',
+        varGap: '--ribbon-cell-gap',
+        varGroupRows: '--group-rows',
+        varLineCount: '--line-count',
+      },
+      peekKeepOpen: '[data-settings-menu]',
+      beforeRender: () => R.beginRender(),
+      renderItem: (cmd, item, ctx) => R.createItem(cmd, item, ctx),
+      spanOf: (cmd, item, rows) => R.spanOf(cmd, item, rows),
+      isTileable: (cmd) => R.isTileable(cmd),
+      spanForSize: (cmd, size) => R.tileSpanFromSize(size, cmd && cmd.kind, cmd && cmd.id),
+      sizeOfSpan: (cmd, span) => R.tileSizeFromSpan(span, cmd && cmd.kind, cmd && cmd.id),
+      onShortcut: (id, e) => (global.SFShortcuts && typeof global.SFShortcuts.run === 'function' ? global.SFShortcuts.run(id, e) : undefined),
+      onRendered: () => {
+        /* Bisherige Attribute für SlideForge-CSS (data-ribbon-panel/-group/-tab) */
+        ribbon.querySelectorAll('[data-hub-ribbon-panel]').forEach((p) => p.setAttribute('data-ribbon-panel', p.getAttribute('data-hub-ribbon-panel')));
+        ribbon.querySelectorAll('.ribbon-group[data-group]').forEach((g) => g.setAttribute('data-ribbon-group', g.getAttribute('data-group')));
+        ribbon.querySelectorAll('[data-hub-ribbon-tab]').forEach((t) => t.setAttribute('data-ribbon-tab', t.getAttribute('data-hub-ribbon-tab')));
+        R.afterRender(ribbon);
+        bindRibbonActions();
+        if (global.SFEditorMenus?.init) global.SFEditorMenus.init();
+        document.dispatchEvent(new CustomEvent('sf:ribbon-rendered'));
+      },
+    });
+  }
+
+  /* Bisherige Schnittstelle für editor.js/present.js */
+  global.SFRibbon = {
+    setTab: (name) => hub && hub.setTab(name),
+    getActiveTab: () => (hub ? hub.activeTab() : 'start'),
+    setCollapsed: (on) => hub && hub.setCollapsed(!!on),
+    resetFloatingSettingsPanels: resetFloatingSettingsPanels,
+    openCustomize: openRibbonCustomize,
+    hub: () => hub,
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootRibbon);

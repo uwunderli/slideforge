@@ -2,7 +2,7 @@
 
 class PresentRibbonLayout
 {
-    private const USER_KEY = 'present_ribbon_layout';
+    public const USER_KEY = 'present_ribbon_layout';
 
     /** @param array<string,bool> $flags */
     public static function buildContext(array $flags): array
@@ -103,7 +103,7 @@ class PresentRibbonLayout
         if ($stored !== null) {
             $forPersist = self::sanitizeLayout($stored, self::persistContext());
             $persisted = self::stripRuntimeKeys($forPersist);
-            if (self::layoutItemsSignature($stored) !== self::layoutItemsSignature($persisted)) {
+            if (self::layoutItemsSignature($stored) !== self::layoutItemsSignature($persisted) || !is_array($stored['known'] ?? null)) {
                 self::saveLayout($userId, $persisted);
             }
         }
@@ -255,15 +255,25 @@ class PresentRibbonLayout
             $prefs['activeTab'] = $tabIds[0];
         }
 
-        /* 3.4.0: Gruppe «Geräte» auch in schon angepassten Menübändern einmal nachrüsten (Marker devicesGroup);
-           wer sie danach selbst entfernt, bekommt sie nicht wieder. */
-        if (empty($prefs['devicesGroup'])) {
+        /* Neue Befehle ergänzt seit 3.12.0 das Hub-Verfahren («known», HubRibbon). Die alten Nachrüstungen (Gruppe «Geräte» 3.4.0,
+           Panel-Befehle) laufen nur noch einmal für Layouts ohne «known» (Übernahme). */
+        $known = RibbonLayout::knownList($layout['known'] ?? null);
+        $legacy = $known === null;
+        if ($legacy && empty($prefs['devicesGroup'])) {
             $tabs = self::ensureDevicesGroup($tabs, $catalog);
         }
+        $known = $known ?? [];
+        foreach (self::catalogIndex(self::persistContext()) as $cid => $_c) {
+            if ($cid !== 'separator' && $cid !== 'row_separator' && !in_array($cid, $known, true)) {
+                $known[] = (string)$cid;
+            }
+        }
 
-        return self::ensurePanelCommands([
+        $out = [
             'version' => 1,
             'tabs' => $tabs,
+            'known' => array_slice($known, 0, RibbonLayout::KNOWN_MAX),
+            'shortcuts' => RibbonLayout::shortcutMap($layout['shortcuts'] ?? null),
             'prefs' => [
                 'activeTab' => (string)$prefs['activeTab'],
                 'collapsed' => !empty($prefs['collapsed']),
@@ -272,7 +282,8 @@ class PresentRibbonLayout
                 'showLabels' => ($prefs['showLabels'] ?? true) !== false,
                 'devicesGroup' => true,
             ],
-        ], $catalog);
+        ];
+        return $legacy ? self::ensurePanelCommands($out, $catalog) : $out;
     }
 
     /**
@@ -536,6 +547,8 @@ class PresentRibbonLayout
         return [
             'version' => 1,
             'tabs' => $layout['tabs'] ?? [],
+            'known' => RibbonLayout::knownList($layout['known'] ?? null) ?? [],
+            'shortcuts' => RibbonLayout::shortcutMap($layout['shortcuts'] ?? null),
             'prefs' => [
                 'activeTab' => (string)($layout['prefs']['activeTab'] ?? 'present'),
                 'collapsed' => !empty($layout['prefs']['collapsed']),
@@ -620,8 +633,18 @@ class PresentRibbonLayout
         return [
             'version' => 1,
             'tabs' => $tabs,
+            'known' => $layout['known'] ?? [],
+            'shortcuts' => $layout['shortcuts'] ?? [],
             'prefs' => $layout['prefs'],
         ];
+    }
+
+    /** Standard-Layout für «Zurücksetzen» und neue Befehle im Browser (HubRibbon). @param array<string,bool> $context */
+    public static function defaultForClient(array $context): array
+    {
+        $out = self::layoutForClient(self::defaultLayout(), $context);
+        unset($out['known'], $out['shortcuts']);
+        return $out;
     }
 
     /**

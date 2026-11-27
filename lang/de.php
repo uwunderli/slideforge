@@ -266,6 +266,8 @@ return [
     'editor.duplicate_slide' => 'Duplizieren',
     'editor.delete_slide' => 'Löschen',
     'editor.delete_slides' => 'Folien löschen',
+    'editor.slide_move_up' => 'Folie nach oben',
+    'editor.slide_move_down' => 'Folie nach unten',
     'editor.delete_slides_confirm' => '{n} Folien löschen?',
     'editor.slide_label' => 'Folie',
     'editor.restore_invalid' => 'Die Folienliste ist ungültig.',

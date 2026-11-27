@@ -9814,7 +9814,67 @@
     applySpellcheckAttrs(document.getElementById('slideNotesInput'));
     applySpellcheckAttrs(document.getElementById('edTitle'));
 
+    /*
+     * Tastenkürzel der Menüband-Befehle (3.12.0): Welche Taste, bestimmt die Person im Hub-Dialog «Ribbon anpassen»
+     * (Vorgaben config/ribbon_commands.php); HubRibbon fragt hier zuerst nach der Bedeutung. true = erledigt,
+     * 'native' = Taste weiterreichen (Browser bzw. die festen Bühnen-Kürzel unten), sonst klickt der Hub den Knopf.
+     */
+    const SFS = window.SFShortcuts = window.SFShortcuts || {
+      handlers: {},
+      register(id, fn) { this.handlers[id] = fn; },
+      run(id, e) { const fn = this.handlers[id]; return fn ? fn(e) : undefined; },
+    };
+    const inField = (e) => !!(window.HubShortcuts && window.HubShortcuts.isEditable(e.target));
+    SFS.register('undo', () => { undo(); return true; });
+    SFS.register('redo', () => { redo(); return true; });
+    /* Im Filmstreifen und im Raster beziehen sich Kopieren/Ausschneiden/Einfügen/Duplizieren auf ganze Folien. */
+    SFS.register('copy', () => {
+      if (slideShortcutContext()) { copySelectedToClipboard(); return true; }
+      if (SF.selectedNode) { copySelected(); return true; }
+      return 'native';
+    });
+    SFS.register('cut', () => {
+      if (slideShortcutContext()) { cutSlidesToClipboard(); return true; }
+      if (SF.selectedNode) { cutSelected(); return true; }
+      return 'native';
+    });
+    SFS.register('paste', () => {
+      if (slideShortcutContext()) { pasteSlidesShortcut(); return true; }
+      if (SF.clipboard) { pasteClipboard(); return true; }
+      return 'native';
+    });
+    SFS.register('duplicate', () => {
+      if (slideShortcutContext()) { duplicateSlidesShortcut(); return true; }
+      if (SF.selectedNode) { duplicateNode(SF.selectedNode); return true; }
+      return 'native';
+    });
+    SFS.register('group', () => { groupSelectedNodes(); return true; });
+    SFS.register('ungroup', () => { ungroupSelected(); return true; });
+    SFS.register('find_replace', () => { openFindReplace(); return true; });
+    /* Entf: im Filmstreifen/Raster Folien löschen, sonst weiter an die Bühne (markierte Objekte löschen). */
+    SFS.register('delete_slides', () => {
+      if (SF.canEdit && slideShortcutContext()) { deleteSlides(shortcutSlideIndices()); return true; }
+      return 'native';
+    });
+    /* Strg+Umschalt+↑/↓ (3.11.1): markierte Folien um eine Stelle verschieben. */
+    const moveSlidesKey = (dir) => () => {
+      if (SF.canEdit && slideShortcutContext() && !(document.activeElement && document.activeElement.isContentEditable)) {
+        moveSelectedSlides(dir);
+        return true;
+      }
+      return 'native';
+    };
+    SFS.register('slide_move_up', moveSlidesKey(-1));
+    SFS.register('slide_move_down', moveSlidesKey(1));
+    /* F5 startet die Präsentation ab der ersten Folie (Umschalt+F5 ab der aktuellen, fest unten). */
+    SFS.register('present_mode', (e) => {
+      if (inField(e) || !presentLinkAvailable()) return 'native';
+      startPresentation(0);
+      return true;
+    });
+
     document.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented) return;   // vom Menüband (HubRibbon) schon erledigt
       if (e.key === 'Escape') {
         if (SF.editorViewMode === 'grid') {
           e.preventDefault();
@@ -9824,13 +9884,11 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
-      /* Strg+Umschalt+Pfeil (3.11.1): markierte Folien um eine Stelle verschieben; Folienleiste ↑/↓ (auch ←/→),
-         Raster ←/→. Nur ausserhalb von Eingabefeldern, dort bleibt es wortweises Markieren. */
+      /* Strg+Umschalt+←/→ (3.11.1): markierte Folien um eine Stelle verschieben (fest, wie die Pfeile der Bühne);
+         ↑/↓ laufen über die Menüband-Befehle «Folie nach oben/unten» (Kürzel umstellbar). Nur ausserhalb von Eingabefeldern. */
       if (SF.canEdit && (e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && slideShortcutContext()
           && !(document.activeElement && document.activeElement.isContentEditable)
-          && (SF.editorViewMode === 'grid'
-            ? ['ArrowLeft', 'ArrowRight'].includes(e.key)
-            : ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key))) {
+          && ['ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
         moveSelectedSlides(e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1);
         return;
@@ -9861,15 +9919,14 @@
         gridArrowMove(e.key);
         return;
       }
-      /* F5 startet die Präsentation ab der ersten Folie, Shift+F5 ab der aktuellen —
-         wie in den gängigen Präsentationsprogrammen. Steht vor der Abfrage auf
-         Steuerungstaste weiter unten, weil F5 ohne Zusatztaste kommt. */
-      if (e.key === 'F5' && !e.ctrlKey && !e.metaKey && !e.altKey && presentLinkAvailable()) {
+      /* Umschalt+F5 startet ab der aktuellen Folie (fest; F5 selbst ist der Menüband-Befehl «Präsentieren»). */
+      if (e.key === 'F5' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && presentLinkAvailable()) {
         e.preventDefault();
-        startPresentation(e.shiftKey ? SF.currentIndex : 0);
+        startPresentation(SF.currentIndex);
         return;
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && SF.canEdit && slideShortcutContext()
+      /* Rücktaste wie Entf (fest); Entf selbst ist der Menüband-Befehl «Folien löschen». */
+      if (e.key === 'Backspace' && SF.canEdit && slideShortcutContext()
         && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         deleteSlides(shortcutSlideIndices());
@@ -9905,25 +9962,9 @@
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
-      /* Im Filmstreifen und im Raster beziehen sich dieselben Tasten auf ganze
-         Folien statt auf das angewählte Objekt. */
-      if (slideShortcutContext() && ['c', 'x', 'v', 'd'].includes(key) && !e.shiftKey) {
-        e.preventDefault();
-        if (key === 'c') copySelectedToClipboard();
-        else if (key === 'x') cutSlidesToClipboard();
-        else if (key === 'v') pasteSlidesShortcut();
-        else duplicateSlidesShortcut();
-        return;
-      }
-      if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      else if ((key === 'z' && e.shiftKey) || key === 'y') { e.preventDefault(); redo(); }
-      else if (key === 'd' && SF.selectedNode) { e.preventDefault(); duplicateNode(SF.selectedNode); }
-      else if (key === 'c' && SF.selectedNode) { e.preventDefault(); copySelected(); }
-      else if (key === 'x' && SF.selectedNode) { e.preventDefault(); cutSelected(); }
-      else if (key === 'v' && SF.clipboard) { e.preventDefault(); pasteClipboard(); }
-      else if (key === 'g' && e.shiftKey) { e.preventDefault(); ungroupSelected(); }
-      else if (key === 'g' && !e.shiftKey) { e.preventDefault(); groupSelectedNodes(); }
-      else if (key === 'h') { e.preventDefault(); openFindReplace(); }
+      /* Strg+C/X/V/D/Z/Y/G/H laufen seit 3.12.0 über die Menüband-Kürzel (SFShortcuts oben). Fest bleiben nur Zweitbelegungen:
+         Strg+Umschalt+Z = Wiederholen (neben Strg+Y). */
+      if (key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
       /* Strg+P startet die Präsentation ab der aktuellen Folie — wie der Knopf im
          Menüband. F5 beginnt dagegen vorn. Lässt sich hier nicht präsentieren,
          bleibt die Taste beim Browser und öffnet wie gewohnt den Druckdialog. */

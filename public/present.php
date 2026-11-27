@@ -91,6 +91,7 @@ $presentRibbonRaw = PresentRibbonLayout::getLayout($me['id'], $presentRibbonCont
 $presentRibbonLayout = PresentRibbonLayout::layoutForClient($presentRibbonRaw, $presentRibbonContext);
 $presentRibbonCommands = PresentRibbonLayout::commandDefsForClient($presentRibbonContext);
 $presentRibbonCatalog = PresentRibbonLayout::catalogForClient($presentRibbonContext);
+$presentRibbonDefault = PresentRibbonLayout::defaultForClient($presentRibbonContext);
 
 $bodyClass = 'present-mode';
 $hideTopbar = true;
@@ -369,6 +370,7 @@ window.SF_BOOTSTRAP = {
     rootId: 'presentRibbon',
     widgetStoreId: 'presentRibbonWidgetTemplates',
     layout: <?= json_encode($presentRibbonLayout, JSON_UNESCAPED_UNICODE) ?>,
+    defaultLayout: <?= json_encode($presentRibbonDefault, JSON_UNESCAPED_UNICODE) ?>,
     catalog: <?= json_encode($presentRibbonCatalog, JSON_UNESCAPED_UNICODE) ?>,
     commands: <?= json_encode($presentRibbonCommands, JSON_UNESCAPED_UNICODE) ?>,
     apiUrl: 'present_ribbon.php',
@@ -504,8 +506,11 @@ window.SF_PRESENT = {
   }
 };
 </script>
+<?php /* Menüband = Hub-Bausteine (3.12.0): Kürzel, Anpassen, Raster/Reiter aus dem Hub; SlideForge liefert Inhalt und Ablage */ ?>
+<script src="<?= h(sf_hub_asset('js/hub-shortcuts.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
 <script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
-<script src="assets/js/ribbon-customize.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-config.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-layout.js?v=<?= ASSET_VERSION ?>"></script>

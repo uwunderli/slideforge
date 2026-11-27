@@ -191,6 +191,8 @@
         '<path d="M15.4 18.2l5.5-5.5 2 2-5.5 5.5-2.55.55.55-2.55z" fill="currentColor" stroke="none"/>',
     },
     separator: '<path d="M12 4v16"/>',
+    slide_move_up: '<rect x="5" y="10" width="14" height="10" rx="1.5"/><path d="M12 7V2.5M9.5 5L12 2.5 14.5 5"/>',
+    slide_move_down: '<rect x="5" y="4" width="14" height="10" rx="1.5"/><path d="M12 17v4.5M9.5 19l2.5 2.5 2.5-2.5"/>',
     row_separator: '<path d="M19 5v6a3 3 0 0 1-3 3H7"/><path d="M10 10l-4 4 4 4"/>',
     bg_none: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M7 17L17 7"/>',
     bg_gradient: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 20L20 4"/><path d="M8 20h12V8"/>',
@@ -219,7 +221,6 @@
   };
 
   const commandIndex = {};
-  let layoutData = null;
   let ribbonMeta = {};
   let renderState = null;
   let ribbonRoot = null;
@@ -315,17 +316,8 @@
     return cmd.kind !== 'widget';
   }
 
-  function lineWidth(entries) {
-    return entries.reduce((sum, entry) => sum + Math.max(1, entry.cols || 1), 0);
-  }
-
   function isTransitionWrapSpan(span) {
     return (span?.rows || 1) >= 2 && (span?.cols || 10) <= 6;
-  }
-
-  function normalizeGroupRows(rows) {
-    const n = parseInt(rows, 10);
-    return n === 1 ? 1 : 2;
   }
 
   function clampSpan(span, maxRows, cmd) {
@@ -357,35 +349,6 @@
     }
     if (item && item.gridSpan) return normalizeSpan(item.gridSpan);
     return defaultGridSpan(cmd);
-  }
-
-  function createGridCell(content, cols, rows) {
-    const cell = document.createElement('div');
-    cell.className = 'ribbon-grid-cell';
-    cell.dataset.gridCols = String(cols);
-    cell.dataset.gridRows = String(rows);
-    cell.style.gridColumn = 'span ' + cols;
-    cell.style.gridRow = 'span ' + rows;
-    if (content) cell.appendChild(content);
-    return cell;
-  }
-
-  function createGroupShell(groupId, label, groupRows) {
-    const rows = normalizeGroupRows(groupRows);
-    const wrap = document.createElement('div');
-    wrap.className = 'ribbon-group';
-    wrap.dataset.ribbonGroup = groupId;
-    wrap.dataset.groupRows = String(rows);
-    const grid = document.createElement('div');
-    grid.className = 'ribbon-group-grid';
-    grid.setAttribute('role', 'group');
-    grid.style.setProperty('--group-rows', String(rows));
-    wrap.appendChild(grid);
-    const labelEl = document.createElement('div');
-    labelEl.className = 'ribbon-group-label';
-    labelEl.textContent = label;
-    wrap.appendChild(labelEl);
-    return wrap;
   }
 
   function extractWidgetBody(widget) {
@@ -697,263 +660,69 @@
       .replace(/"/g, '&quot;');
   }
 
-  function renderGroup(group) {
-    const state = renderState || { usedDomIds: new Set(), usedWidgetTemplates: new Set() };
-    const groupRows = normalizeGroupRows(group.rows);
-    const wrap = createGroupShell(group.id, group.label, groupRows);
-    const grid = wrap.querySelector('.ribbon-group-grid');
-    let hasContent = false;
-    /* Zeilen-Stapel: 1-zeilige Items; Zeilentrenner = <br> bis voller Trenner / Gruppenende. */
-    let lineStack = null;
-
-    function appendCell(cell) {
-      grid.appendChild(cell);
-      hasContent = true;
+  /**
+   * Inhalt eines Menüband-Eintrags für HubRibbon.renderItem (3.12.0): Knöpfe aller Arten und Widgets aus dem Vorrat.
+   * Das Raster (Gruppen, Zeilenstapel, Trenner) zeichnet der Hub; hier bleibt nur, was SlideForge-eigen ist.
+   */
+  function createItem(cmd, item, ctx) {
+    if (!cmd || cmd.id === 'ribbon_customize') return null;
+    const span = (ctx && ctx.span) || { cols: 1, rows: 2 };
+    const sfCmd = Object.assign({}, cmd, { icon: cmd.iconName || '', shortcut: '' });  // Kürzel im Tooltip setzt der Hub
+    if (cmd.kind === 'widget') {
+      const state = renderState || (renderState = { usedDomIds: new Set(), usedWidgetTemplates: new Set() });
+      if (state.usedWidgetTemplates.has(cmd.templateId)) return null;
+      state.usedWidgetTemplates.add(cmd.templateId);
+      const widget = takeWidget(cmd.templateId);
+      if (!widget) return null;
+      const body = extractWidgetBody(widget);
+      if (body && cmd.id === 'widget:slide_transition') {
+        body.dataset.transitionLayout = isTransitionWrapSpan(span) ? 'wrap' : 'row';
+      }
+      if (body && cmd.id === 'widget:settings_size') {
+        /* Gross (2 Zeilen) = B über H; klein (1 Zeile) = B × H nebeneinander. */
+        body.dataset.sizeLayout = span.rows >= 2 ? 'stack' : 'row';
+      }
+      return body;
     }
-
-    function buildItemCell(cmd, itemRef, span) {
-      if (cmd.kind === 'widget') {
-        if (state.usedWidgetTemplates.has(cmd.templateId)) {
-          return null;
-        }
-        state.usedWidgetTemplates.add(cmd.templateId);
-        const widget = takeWidget(cmd.templateId);
-        if (!widget) return null;
-        const body = extractWidgetBody(widget);
-        const cell = createGridCell(body, span.cols, span.rows);
-        cell.classList.add('ribbon-grid-cell--widget');
-        if (cmd.id === 'widget:slide_transition') {
-          const wrapLayout = isTransitionWrapSpan(span);
-          cell.classList.add(wrapLayout ? 'ribbon-transition--wrap' : 'ribbon-transition--row');
-          if (body) {
-            body.dataset.transitionLayout = wrapLayout ? 'wrap' : 'row';
-          }
-        }
-        if (cmd.id === 'widget:settings_size' && body) {
-          /* Gross (2 Zeilen) = B über H; klein (1 Zeile) = B × H nebeneinander. */
-          body.dataset.sizeLayout = span.rows >= 2 ? 'stack' : 'row';
-        }
-        return cell;
-      }
-
-      if (cmd.kind === 'separator') {
-        const sep = createSeparator(span.rows);
-        const cell = createGridCell(sep, 1, span.rows);
-        cell.classList.add('ribbon-grid-cell--separator');
-        return cell;
-      }
-
-      const el = createCommandButton(cmd, span);
-      if (!el) return null;
-      const cell = createGridCell(el, span.cols, span.rows);
-      if (itemRef.showLabel === false) {
-        cell.classList.add('ribbon-grid-cell--no-label');
-        el.classList.add('ribbon-no-label');
-      }
-      return cell;
-    }
-
-    function prepareLineCell(cell, cols) {
-      cell.dataset.gridCols = String(cols);
-      cell.dataset.gridRows = '1';
-      cell.style.gridColumn = '';
-      cell.style.gridRow = '';
-      cell.style.flex = '0 0 auto';
-      cell.style.width = cols <= 1
-        ? 'var(--ribbon-cell)'
-        : 'calc(' + cols + ' * var(--ribbon-cell) + ' + (cols - 1) + ' * var(--ribbon-cell-gap))';
-      cell.style.height = 'var(--ribbon-cell)';
-      return cell;
-    }
-
-    function flushLineStack() {
-      if (!lineStack) return;
-      lineStack = lineStack.filter((line) => line.length > 0);
-      if (!lineStack.length) {
-        lineStack = null;
-        return;
-      }
-
-      if (groupRows < 2) {
-        lineStack.forEach((line) => {
-          line.forEach((entry) => appendCell(entry.cell));
-        });
-        lineStack = null;
-        return;
-      }
-
-      const packCols = Math.max(1, ...lineStack.map((line) => lineWidth(line)));
-      const lineCount = lineStack.length;
-      const stackCell = document.createElement('div');
-      stackCell.className = 'ribbon-grid-cell ribbon-grid-cell--line-stack';
-      stackCell.dataset.gridCols = String(packCols);
-      stackCell.dataset.gridRows = String(groupRows);
-      stackCell.style.gridColumn = 'span ' + packCols;
-      stackCell.style.gridRow = 'span ' + groupRows;
-
-      const stack = document.createElement('div');
-      stack.className = 'ribbon-line-stack';
-      stack.style.setProperty('--line-count', String(lineCount));
-      stack.style.gridTemplateRows = 'repeat(' + lineCount + ', var(--ribbon-cell))';
-
-      lineStack.forEach((line) => {
-        const row = document.createElement('div');
-        row.className = 'ribbon-line-stack-row';
-        line.forEach((entry) => row.appendChild(prepareLineCell(entry.cell, entry.cols)));
-        stack.appendChild(row);
-      });
-
-      stackCell.appendChild(stack);
-      appendCell(stackCell);
-      lineStack = null;
-    }
-
-    function ensureLineStack() {
-      if (!lineStack) lineStack = [[]];
-      if (!lineStack.length) lineStack.push([]);
-    }
-
-    function pushToCurrentLine(entry) {
-      ensureLineStack();
-      lineStack[lineStack.length - 1].push(entry);
-    }
-
-    group.items.forEach((item) => {
-      const itemRef = typeof item === 'object' ? item : { id: item };
-      const cmd = commandIndex[itemRef.id];
-      if (!cmd) return;
-      /* Anpassen gehört in die Tab-Leiste (OF/Hub-Muster), nicht in die Befehlskacheln. */
-      if (cmd.id === 'ribbon_customize') return;
-
-      if (cmd.kind === 'row_separator') {
-        /* <br> in der Zeile; allein am Anfang startet nur den Zeilenmodus. */
-        if (!lineStack) {
-          lineStack = [[]];
-        } else {
-          lineStack.push([]);
-        }
-        return;
-      }
-
-      const span = clampSpan(getGridSpan(cmd, itemRef), groupRows, cmd);
-
-      if (cmd.kind === 'separator') {
-        flushLineStack();
-        const cell = buildItemCell(cmd, itemRef, span);
-        if (cell) appendCell(cell);
-        return;
-      }
-
-      /* Offener Zeilenstapel (nach Zeilentrenner/<br>): auch breite/hohe Widgets in die aktuelle Zeile. */
-      const joinLineStack = groupRows >= 2 && (lineStack || span.rows < 2);
-      const lineSpan = joinLineStack ? { cols: Math.max(1, span.cols), rows: 1 } : span;
-      const cell = buildItemCell(cmd, itemRef, lineSpan);
-      if (!cell) return;
-
-      if (joinLineStack) {
-        pushToCurrentLine({ cell: cell, cols: lineSpan.cols, rows: 1 });
-        return;
-      }
-
-      flushLineStack();
-      appendCell(cell);
-    });
-
-    flushLineStack();
-
-    if (!hasContent) return [];
-    return [wrap];
+    const el = createCommandButton(sfCmd, span);
+    if (!el) return null;
+    if (item && item.showLabel === false) el.classList.add('ribbon-no-label');
+    return el;
   }
 
-  function renderLayout(layout) {
-    const ribbon = getRibbonEl();
-    if (!ribbon || !layout) return;
-
+  /** Vor jedem Zeichnen: Widgets zurück in den Vorrat, Merker für doppelte IDs leeren. */
+  function beginRender(config) {
+    if (config) {
+      if (config.root) ribbonRoot = config.root;
+      if (config.widgetStoreId) widgetStoreId = config.widgetStoreId;
+      if (config.meta) ribbonMeta = config.meta;
+      if (config.commands) buildCommandIndex(config.commands);
+    }
     beginRenderState();
     returnWidgetsToStore();
+  }
 
-    const tabsEl = ribbon.querySelector('.editor-ribbon-tabs');
-    const panelsEl = ribbon.querySelector('.editor-ribbon-panels');
-    if (!tabsEl || !panelsEl) return;
-
-    tabsEl.innerHTML = '';
-    panelsEl.innerHTML = '';
-
-    layout.tabs.forEach((tab, tabIndex) => {
-      const tabBtn = document.createElement('button');
-      tabBtn.type = 'button';
-      tabBtn.className = 'editor-ribbon-tab' + (tabIndex === 0 ? ' active' : '');
-      tabBtn.role = 'tab';
-      tabBtn.dataset.ribbonTab = tab.id;
-      tabBtn.setAttribute('aria-selected', tabIndex === 0 ? 'true' : 'false');
-      tabBtn.textContent = tab.label;
-      tabsEl.appendChild(tabBtn);
-
-      const panel = document.createElement('div');
-      panel.className = 'editor-ribbon-panel';
-      panel.dataset.ribbonPanel = tab.id;
-      panel.role = 'tabpanel';
-      if (tabIndex !== 0) panel.hidden = true;
-
-      tab.groups.forEach((group) => {
-        renderGroup(group).forEach((node) => {
-          if (node) panel.appendChild(node);
-        });
-      });
-
-      panelsEl.appendChild(panel);
+  /** Nach dem Zeichnen: Zellen-Klassen, die vom Widget-Inhalt abhängen (Übergänge als Reihe oder Raster). */
+  function afterRender(root) {
+    (root || getRibbonEl())?.querySelectorAll('[data-transition-layout]').forEach((body) => {
+      const cell = body.parentElement;
+      if (!cell) return;
+      const wrap = body.dataset.transitionLayout === 'wrap';
+      cell.classList.toggle('ribbon-transition--wrap', wrap);
+      cell.classList.toggle('ribbon-transition--row', !wrap);
     });
-
-    const customizeCmd = commandIndex.ribbon_customize || {};
-    const customizeBtn = document.createElement('button');
-    customizeBtn.type = 'button';
-    customizeBtn.id = 'sfRibbonTabCustomize';
-    customizeBtn.className = 'editor-ribbon-tab-customize';
-    customizeBtn.title = customizeCmd.label || ribbonMeta.customizeTitle || 'Ribbon anpassen';
-    customizeBtn.setAttribute('aria-label', customizeCmd.shortLabel || customizeCmd.label || customizeBtn.title);
-    customizeBtn.innerHTML = '<span class="editor-ribbon-tab-customize__icon" aria-hidden="true">' +
-      svgIcon('ribbon_customize') +
-      '</span>';
-    tabsEl.appendChild(customizeBtn);
-
-    layoutData = layout;
-    if (global.SFRibbon && global.SFRibbon.applyAppearancePrefs) {
-      global.SFRibbon.applyAppearancePrefs(layout.prefs || {});
-    }
-    if (global.SFRibbon && global.SFRibbon._rebindTabs) {
-      global.SFRibbon._rebindTabs();
-    }
-    document.dispatchEvent(new CustomEvent('sf:ribbon-rendered'));
   }
 
-  function init(config) {
-    widgetStoreId = config.widgetStoreId || 'ribbonWidgetTemplates';
-    if (config.root instanceof Element) {
-      ribbonRoot = config.root;
-    } else if (config.rootId) {
-      ribbonRoot = document.getElementById(config.rootId);
-    } else {
-      ribbonRoot = document.getElementById('editorRibbon');
-    }
-    ribbonMeta = config.meta || {};
-    buildCommandIndex(config.commands || []);
-    renderLayout(config.layout);
-  }
-
-  function getLayoutData() {
-    return layoutData;
-  }
-
-  function setLayoutData(layout) {
-    renderLayout(layout);
+  /** Raster-Spanne wie bisher (feste Widget-Breiten, Übergänge nie zu schmal). */
+  function spanOf(cmd, item, groupRows) {
+    return clampSpan(getGridSpan(cmd, item), groupRows, cmd);
   }
 
   global.SFRibbonRenderer = {
-    init,
-    renderLayout,
-    getLayoutData,
-    setLayoutData,
-    buildCommandIndex,
+    createItem,
+    beginRender,
+    afterRender,
+    spanOf,
     returnWidgetsToStore,
     catalogIconHtml,
     svgIcon,

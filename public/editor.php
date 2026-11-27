@@ -705,6 +705,7 @@ $bootstrap = [
     ],
     'ribbon' => $canEdit ? [
         'layout' => RibbonLayout::layoutForClient($ribbonUserLayout, $ribbonContext),
+        'defaultLayout' => RibbonLayout::defaultForClient($ribbonContext),
         'catalog' => RibbonLayout::catalogForClient($ribbonContext),
         'commands' => RibbonLayout::commandDefsForClient($ribbonContext),
         'apiUrl' => 'ribbon.php',
@@ -1613,8 +1614,11 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php if ($canEdit): ?>
 <script src="assets/js/modal-backdrop.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ui-dialog.js?v=<?= ASSET_VERSION ?>"></script>
+<?php /* Menüband = Hub-Bausteine (3.12.0): Kürzel, Anpassen, Raster/Reiter aus dem Hub; SlideForge liefert Inhalt und Ablage */ ?>
+<script src="<?= h(sf_hub_asset('js/hub-shortcuts.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
 <script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
-<script src="assets/js/ribbon-customize.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-split.js')) ?>"></script>
 <?php endif; ?>

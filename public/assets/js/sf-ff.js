@@ -566,13 +566,13 @@
       var openFollow = function () { devices(cfg.id, { title: 'Auf Gerät (Mitlaufen)', mit: true, onRegister: function () { register({ after: openFollow }); } }); };
       openFollow();
     }, true);
-    document.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === 's') {
-        e.preventDefault();
-        e.stopPropagation();
-        save(true);
-      }
-    }, true);
+    // Strg+S = Menüband-Befehl «Speichern» (ff_save); die Taste stellt die Person im Hub-Dialog «Ribbon anpassen» ein (3.12.0).
+    var sfs = global.SFShortcuts = global.SFShortcuts || {
+      handlers: {},
+      register: function (id, fn) { this.handlers[id] = fn; },
+      run: function (id, e) { var fn = this.handlers[id]; return fn ? fn(e) : undefined; }
+    };
+    sfs.register('ff_save', function () { save(true); return true; });
     // alle 30 s (der Server speichert nur, wenn sich etwas geändert hat)
     setInterval(function () { if (!document.hidden && st.source !== 'import') save(false); }, 30000);
     // beim Schliessen oder Wegwechseln

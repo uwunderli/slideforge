@@ -18,17 +18,27 @@
 - Dialog: Befehle links, Struktur rechts; Tabs/Gruppen anlegen, umbenennen, löschen
 - **Zurücksetzen** stellt Standard-Layout wieder her (`config/ribbon_default_layout.php`)
 
-## Technik
+## Technik (ab 3.12.0: Hub-Bausteine)
+
+Menüband und «Ribbon anpassen» sind **HubRibbon / HubRibbonCustomize / HubShortcuts** aus dem Hub (≥ 2.36.1, Hub `docs/DESIGN.md`
+§ Ribbon, Tastenkürzel, Reiter und Raster). SlideForge liefert Katalog, Layout-Ablage, Inhalt der Einträge und die Bedeutung der Kürzel.
 
 | Datei | Rolle |
 |-------|--------|
-| `config/ribbon_commands.php` | Befehlskatalog |
-| `config/ribbon_default_layout.php` | Standard-Layout (Neuinstallation / Reset) |
-| `src/RibbonLayout.php` | Validierung, Speichern in `users.json` |
-| `public_html/ribbon.php` | API (`layout`, `save`, `reset`) |
-| `public_html/assets/js/ribbon-renderer.js` | DOM aus Layout |
-| `public_html/assets/js/ribbon-customize.js` | Anpassungs-Dialog |
-| `public_html/assets/js/ribbon.js` | Tabs, Collapse, Events |
+| `config/ribbon_commands.php` | Befehlskatalog, Standard-Kürzel (`shortcut`, Windows-Schreibweise; `Ctrl` = Strg/⌘) |
+| `config/ribbon_default_layout.php` | Standard-Layout (Neuinstallation / Zurücksetzen / Ort neuer Befehle) |
+| `src/RibbonLayout.php` | Validierung, Speichern in `users.json` (`tabs`, `known`, `shortcuts`, `prefs`), Übernahme alter Layouts |
+| `public/ribbon.php` | API (`layout`, `save`, `save_prefs`, `reset`); `save` behält im Kontext ausgeblendete Befehle |
+| `public/assets/js/ribbon.js` | Start von HubRibbon (Speicher-Adapter, Klassen-Präfixe), schwebende Einstellungs-Panels, Auslöser, Rechtsklick → Anpassen |
+| `public/assets/js/ribbon-renderer.js` | Symbole, Knöpfe aller Arten und Widgets aus dem Vorrat (`createItem`), Raster-Spannen (`spanOf`) |
+| `public/assets/js/editor.js` | `SFShortcuts`: Bedeutung der Kürzel (Folie vs. Objekt), feste Bühnen-Kürzel |
+
+**Neue Befehle:** Feld `known` im Layout (Hub-Verfahren). Neues aus dem Standard-Layout erscheint an seiner Stelle, Entferntes bleibt weg.
+Die alten Nachrüstungen (Stand 1/2, Präsentieren-Vorgaben, Geräte-Gruppe, Panel-Befehle) laufen nur noch einmal für Layouts ohne `known`.
+
+**Kürzel:** im Anpassen-Dialog je Befehl und je Reiter; Prüfung auf doppelte und Browser-Kürzel macht der Hub. Fest (keine Menüband-Befehle):
+Pfeile/Umschalt+Pfeile (Objekt verschieben, Folie wechseln), Strg+Umschalt+←/→ (Folien verschieben), Rücktaste (wie Entf),
+Umschalt+F5 (ab aktueller Folie), Strg+P (ab aktueller Folie), Strg+Umschalt+Z (Wiederholen), Esc.
 
 Widget-Blöcke (Schrift, Hintergrund, …) bleiben PHP-Templates in `#ribbonWidgetTemplates` und werden vom Renderer platziert.
 

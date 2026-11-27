@@ -5,10 +5,11 @@
 class RibbonLayout
 {
     /**
-     * Stand der Nachrüstungen in gespeicherten Menübändern (3.8.0). Jede Nachrüstung läuft genau einmal: Danach trägt das Layout
-     * diesen Stand, und wer den Knopf später selbst entfernt, bekommt ihn nicht wieder. 1 = «Folien löschen» (3.7.0).
+     * Neue Befehle ergänzt seit 3.12.0 das Hub-Verfahren (HubRibbon, Layout-Feld «known»: was es beim Speichern gab; Neues kommt an
+     * seine Standardstelle, Entferntes bleibt weg). Die alten Nachrüstungen (Stand 1 «Folien löschen», Stand 2 «Abspielen», Präsentieren-
+     * Vorgaben) laufen nur noch einmal für Layouts ohne «known» (Übernahme), danach nie wieder.
      */
-    public const STAND = 2;
+    public const KNOWN_MAX = 2000;
 
     /** @param array<string,bool> $context */
     public static function buildContext(array $vars): array
@@ -108,7 +109,7 @@ class RibbonLayout
         if ($stored !== null) {
             $forPersist = self::sanitizeLayout($stored, self::persistContext());
             $persisted = self::stripRuntimeKeys($forPersist);
-            if (self::layoutItemsSignature($stored) !== self::layoutItemsSignature($persisted)) {
+            if (self::layoutItemsSignature($stored) !== self::layoutItemsSignature($persisted) || !is_array($stored['known'] ?? null)) {
                 self::saveLayout($userId, $persisted);
             }
         }
@@ -140,7 +141,7 @@ class RibbonLayout
         $stand = (int)($layout['stand'] ?? 0);
         if ($version !== 1 || !isset($layout['tabs']) || !is_array($layout['tabs'])) {
             $layout = $default;
-            $stand = self::STAND;
+            $stand = 99;
         }
 
         $tabs = [];
@@ -376,12 +377,23 @@ class RibbonLayout
         $tabs = self::migrateDesignApplySettingsGroup($tabs);
         $tabs = self::migratePresentModeLabel($tabs);
         $tabs = self::migratePresentPreviewToView($tabs, $injectViewPreviews);
-        $tabs = self::migrateRestorePresentTabDefaults($tabs);
-        if ($stand < 1 && isset($catalog['delete_slides'])) {
-            $tabs = self::migrateAddDeleteSlides($tabs);
+        $known = self::knownList($layout['known'] ?? null);
+        if ($known === null) {
+            /* Übernahme (3.12.0): Layout ohne «known» bekommt die alten Nachrüstungen ein letztes Mal, danach gilt «known». */
+            $tabs = self::migrateRestorePresentTabDefaults($tabs);
+            if ($stand < 1 && isset($catalog['delete_slides'])) {
+                $tabs = self::migrateAddDeleteSlides($tabs);
+            }
+            if ($stand < 2 && isset($catalog['play_slide'])) {
+                $tabs = self::migrateAddPlaySlide($tabs);
+            }
+            $known = [];
         }
-        if ($stand < 2 && isset($catalog['play_slide'])) {
-            $tabs = self::migrateAddPlaySlide($tabs);
+        /* bekannt = alles im vollen Katalog (Speicherkontext) + was schon bekannt war */
+        foreach (self::catalogIndex(self::persistContext()) as $cid => $_c) {
+            if ($cid !== 'separator' && $cid !== 'row_separator' && !in_array($cid, $known, true)) {
+                $known[] = (string)$cid;
+            }
         }
 
         $prefs = is_array($layout['prefs'] ?? null) ? $layout['prefs'] : [];
@@ -393,8 +405,9 @@ class RibbonLayout
 
         return [
             'version' => 1,
-            'stand' => self::STAND,
             'tabs' => $tabs,
+            'known' => array_slice($known, 0, self::KNOWN_MAX),
+            'shortcuts' => self::shortcutMap($layout['shortcuts'] ?? null),
             'prefs' => [
                 'activeTab' => $activeTab,
                 'collapsed' => !empty($prefs['collapsed']),
@@ -404,6 +417,51 @@ class RibbonLayout
                 'showLabels' => !array_key_exists('showLabels', $prefs) || !empty($prefs['showLabels']),
             ],
         ];
+    }
+
+    /** «known» aus dem Layout: Liste von Befehls-IDs, null = fehlt (altes Layout). @return list<string>|null */
+    public static function knownList(mixed $raw): ?array
+    {
+        if (!is_array($raw)) {
+            return null;
+        }
+        $out = [];
+        foreach ($raw as $id) {
+            if (is_string($id) && $id !== '' && strlen($id) <= 120 && preg_match('/^[\w:.\-]+$/', $id)) {
+                $out[] = $id;
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * Tastenkürzel der Person (HubRibbon, nur Abweichungen von der Vorgabe): Schlüssel Befehl / tab:<id> / ribbon:<name>,
+     * Wert «Mod+Shift+G» o. ä. oder '' (bewusst leer).
+     *
+     * @return array<string,string>
+     */
+    public static function shortcutMap(mixed $raw): array
+    {
+        $out = [];
+        if (!is_array($raw)) {
+            return $out;
+        }
+        foreach ($raw as $k => $v) {
+            if (!is_string($k) || $k === '' || strlen($k) > 120 || !preg_match('/^(tab:|ribbon:)?[\w:.\-]+$/', $k)) {
+                continue;
+            }
+            if (!is_string($v) || strlen($v) > 40) {
+                continue;
+            }
+            if ($v !== '' && !preg_match('/^((Ctrl|Mod|Alt|Shift)\+)*[^\s+]{1,12}$/u', $v)) {
+                continue;
+            }
+            $out[$k] = $v;
+            if (count($out) >= 400) {
+                break;
+            }
+        }
+        return $out;
     }
 
     /** @param list<array<string,mixed>> $tabs @return list<array<string,mixed>> */
@@ -969,8 +1027,9 @@ class RibbonLayout
         unset($layout['customized']);
         return [
             'version' => 1,
-            'stand' => (int)($layout['stand'] ?? self::STAND),
             'tabs' => $layout['tabs'] ?? [],
+            'known' => self::knownList($layout['known'] ?? null) ?? [],
+            'shortcuts' => self::shortcutMap($layout['shortcuts'] ?? null),
             'prefs' => [
                 'activeTab' => (string)($layout['prefs']['activeTab'] ?? 'start'),
                 'collapsed' => !empty($layout['prefs']['collapsed']),
@@ -1073,6 +1132,8 @@ class RibbonLayout
         return [
             'version' => 1,
             'tabs' => $tabs,
+            'known' => self::knownList($layout['known'] ?? null) ?? [],
+            'shortcuts' => self::shortcutMap($layout['shortcuts'] ?? null),
             'prefs' => [
                 'activeTab' => (string)($layout['prefs']['activeTab'] ?? 'start'),
                 'collapsed' => !empty($layout['prefs']['collapsed']),
@@ -1084,6 +1145,134 @@ class RibbonLayout
             ],
             'customized' => !empty($layout['customized']),
         ];
+    }
+
+    /**
+     * Beim Speichern aus dem Browser: Befehle, die im aktuellen Kontext ausgeblendet sind (z. B. Datei-Gruppe ohne FileForge-Datei,
+     * Teilen ohne Besitz), kennt der Browser nicht. Sie bleiben an ihrer bisherigen Stelle stehen, statt mit dem Speichern zu verschwinden.
+     *
+     * @param array<string,mixed> $in vom Browser
+     * @param array<string,mixed>|null $stored bisher gespeichert
+     * @param array<string,array<string,mixed>> $visible Katalog des aktuellen Kontexts
+     * @return array<string,mixed>
+     */
+    public static function keepHiddenItems(array $in, ?array $stored, array $visible): array
+    {
+        if (!is_array($stored) || !is_array($stored['tabs'] ?? null) || !is_array($in['tabs'] ?? null)) {
+            return $in;
+        }
+        $present = [];
+        foreach ($in['tabs'] as $tab) {
+            foreach (is_array($tab['groups'] ?? null) ? $tab['groups'] : [] as $group) {
+                foreach (is_array($group['items'] ?? null) ? $group['items'] : [] as $item) {
+                    $present[is_array($item) ? (string)($item['id'] ?? '') : (string)$item] = true;
+                }
+            }
+        }
+        foreach ($stored['tabs'] as $st) {
+            $ti = null;
+            foreach ($in['tabs'] as $i => $t) {
+                if ((string)($t['id'] ?? '') === (string)($st['id'] ?? '')) {
+                    $ti = $i;
+                    break;
+                }
+            }
+            if ($ti === null) {
+                continue;
+            }
+            foreach (is_array($st['groups'] ?? null) ? $st['groups'] : [] as $sg) {
+                $gi = null;
+                foreach ($in['tabs'][$ti]['groups'] ?? [] as $j => $g) {
+                    if ((string)($g['id'] ?? '') === (string)($sg['id'] ?? '')) {
+                        $gi = $j;
+                        break;
+                    }
+                }
+                if ($gi === null) {
+                    continue;
+                }
+                $prev = null;
+                foreach (is_array($sg['items'] ?? null) ? $sg['items'] : [] as $item) {
+                    $id = is_array($item) ? (string)($item['id'] ?? '') : (string)$item;
+                    if ($id === '' || $id === 'separator' || $id === 'row_separator') {
+                        continue;
+                    }
+                    if (isset($present[$id]) || isset($visible[$id])) {
+                        if (isset($present[$id])) {
+                            $prev = $id;
+                        }
+                        continue;
+                    }
+                    $items = array_values($in['tabs'][$ti]['groups'][$gi]['items'] ?? []);
+                    $pos = $prev === null ? 0 : count($items);
+                    if ($prev !== null) {
+                        foreach ($items as $k => $it) {
+                            if ((is_array($it) ? (string)($it['id'] ?? '') : (string)$it) === $prev) {
+                                $pos = $k + 1;
+                                break;
+                            }
+                        }
+                    }
+                    array_splice($items, $pos, 0, [is_array($item) ? $item : ['id' => $id]]);
+                    $in['tabs'][$ti]['groups'][$gi]['items'] = $items;
+                    $present[$id] = true;
+                    $prev = $id;
+                }
+            }
+        }
+        return $in;
+    }
+
+    /** Standard-Layout für «Zurücksetzen» und das Einsetzen neuer Befehle im Browser (HubRibbon). @param array<string,bool> $context */
+    public static function defaultForClient(array $context): array
+    {
+        $layout = self::sanitizeLayout(self::defaultLayout(), $context);
+        unset($layout['known'], $layout['shortcuts']);
+        return self::layoutForClient($layout, $context);
+    }
+
+    /**
+     * Beschriftung zurück auf den Sprachschlüssel, wo sie der Vorgabe entspricht (Reiter/Gruppen aus dem Browser tragen die übersetzte
+     * Beschriftung; so bleibt das Menüband beim Sprachwechsel übersetzt).
+     *
+     * @param array<string,mixed> $layout
+     * @return array<string,mixed>
+     */
+    public static function restoreLabelKeys(array $layout, array $default): array
+    {
+        $tabKeys = [];
+        $groupKeys = [];
+        foreach ($default['tabs'] ?? [] as $dt) {
+            if (!empty($dt['labelKey'])) {
+                $tabKeys[(string)$dt['id']] = (string)$dt['labelKey'];
+            }
+            foreach ($dt['groups'] ?? [] as $dg) {
+                if (!empty($dg['labelKey'])) {
+                    $groupKeys[(string)$dg['id']] = (string)$dg['labelKey'];
+                }
+            }
+        }
+        foreach ($layout['tabs'] ?? [] as $ti => $tab) {
+            if (!is_array($tab)) {
+                continue;
+            }
+            $tid = (string)($tab['id'] ?? '');
+            if (isset($tabKeys[$tid]) && trim((string)($tab['label'] ?? '')) === t($tabKeys[$tid])) {
+                $layout['tabs'][$ti]['labelKey'] = $tabKeys[$tid];
+                unset($layout['tabs'][$ti]['label']);
+            }
+            foreach ($tab['groups'] ?? [] as $gi => $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+                $gid = (string)($group['id'] ?? '');
+                if (isset($groupKeys[$gid]) && trim((string)($group['label'] ?? '')) === t($groupKeys[$gid])) {
+                    $layout['tabs'][$ti]['groups'][$gi]['labelKey'] = $groupKeys[$gid];
+                    unset($layout['tabs'][$ti]['groups'][$gi]['label']);
+                }
+            }
+        }
+        return $layout;
     }
 
     /** @param array<string,bool> $context @return list<array<string,mixed>> */
@@ -1103,6 +1292,9 @@ class RibbonLayout
             }
             if (!empty($cmd['disabled'])) {
                 $entry['disabled'] = true;
+            }
+            if (!empty($cmd['allowInInput'])) {
+                $entry['allowInInput'] = true;
             }
             if (!empty($cmd['tileable'])) {
                 $entry['tileable'] = true;

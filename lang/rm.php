@@ -246,6 +246,8 @@ return [
     'editor.duplicate_slide' => 'Duplicar',
     'editor.delete_slide' => 'Stizzar',
     'editor.delete_slides' => 'Stizzar folias',
+    'editor.slide_move_up' => 'Folia ensi',
+    'editor.slide_move_down' => 'Folia engiu',
     'editor.delete_slides_confirm' => 'Stizzar {n} folias?',
     'editor.slide_label' => 'Folia',
     'editor.restore_invalid' => 'La glista da folias n’è betg valida.',

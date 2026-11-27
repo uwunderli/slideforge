@@ -260,6 +260,8 @@ return [
     'editor.duplicate_slide' => 'Duplicate',
     'editor.delete_slide' => 'Delete',
     'editor.delete_slides' => 'Delete slides',
+    'editor.slide_move_up' => 'Move slide up',
+    'editor.slide_move_down' => 'Move slide down',
     'editor.delete_slides_confirm' => 'Delete {n} slides?',
     'editor.slide_label' => 'Slide',
     'editor.restore_invalid' => 'The slide list is invalid.',

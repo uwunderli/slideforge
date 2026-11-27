@@ -27,6 +27,7 @@ require __DIR__ . '/includes/header.php';
     <div id="sfForMe"><p class="muted small">Lädt …</p></div>
   </section>
 </main>
+<script src="<?= h(sf_hub_asset('js/hub-shortcuts.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>

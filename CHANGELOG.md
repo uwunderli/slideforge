@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.0] - 2026-11-27
+
+### Changed
+- Menüband und «Ribbon anpassen» (Editor und Präsentation) laufen über die Hub-Bausteine (HubRibbon, braucht Hub 2.36.1): gleiche Optik, eigener Dialog entfällt.
+- Tastenkürzel je Befehl und je Reiter im Anpassen-Dialog einstellbar, mit Prüfung auf doppelte und Browser-Kürzel; Alt antippen zeigt Tastentipps; Strg+F1 klappt das Menüband ein.
+- Neue Befehle erscheinen in angepassten Menübändern an ihrer Standardstelle, entfernte bleiben weg (Feld `known` statt Nachrüst-Stand).
+
+### Added
+- Befehle «Folie nach oben/unten» (Strg+Umschalt+↑/↓).
+
 ## [3.9.8] - 2026-11-27
 
 ### Added

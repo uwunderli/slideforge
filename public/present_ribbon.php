@@ -61,6 +61,18 @@ try {
             if (!is_array($layoutIn)) {
                 present_ribbon_json_fail(t('ribbon.error_invalid_layout'));
             }
+            /* Neue Befehle: Feld «known» (HubRibbon, 3.12.0); im Kontext ausgeblendete Befehle bleiben stehen. */
+            if (!is_array($layoutIn['known'] ?? null)) {
+                $layoutIn['known'] = [];
+            }
+            $layoutIn = RibbonLayout::restoreLabelKeys($layoutIn, PresentRibbonLayout::defaultLayout());
+            $storedUser = Auth::findById($me['id']);
+            $layoutIn = RibbonLayout::keepHiddenItems(
+                $layoutIn,
+                is_array($storedUser[PresentRibbonLayout::USER_KEY] ?? null) ? $storedUser[PresentRibbonLayout::USER_KEY] : PresentRibbonLayout::defaultLayout(),
+                array_fill_keys(array_map('strval', array_filter(is_array($body['visible'] ?? null) ? $body['visible'] : [], 'is_string')), true)
+                    ?: PresentRibbonLayout::catalogIndex($context)
+            );
             $sanitized = PresentRibbonLayout::sanitizeLayout($layoutIn, $persistContext);
             PresentRibbonLayout::saveLayout($me['id'], $sanitized);
             $sanitized['customized'] = true;

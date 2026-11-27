@@ -62,9 +62,18 @@ try {
             if (!is_array($layoutIn)) {
                 ribbon_json_fail(t('ribbon.error_invalid_layout'));
             }
-            /* Speichern immer mit vollem Katalog — Vorlagen-Kontext darf nichts löschen. */
-            // Eigene Änderung = aktueller Stand: einmalige Nachrüstungen gelten als gesehen (was entfernt wurde, bleibt weg).
-            $layoutIn['stand'] = RibbonLayout::STAND;
+            /* Speichern immer mit vollem Katalog — Vorlagen-Kontext darf nichts löschen. Neue Befehle: Feld «known» (HubRibbon, 3.12.0). */
+            if (!is_array($layoutIn['known'] ?? null)) {
+                $layoutIn['known'] = [];
+            }
+            $layoutIn = RibbonLayout::restoreLabelKeys($layoutIn, RibbonLayout::defaultLayout());
+            $storedUser = Auth::findById($me['id']);
+            $layoutIn = RibbonLayout::keepHiddenItems(
+                $layoutIn,
+                is_array($storedUser['ribbon_layout'] ?? null) ? $storedUser['ribbon_layout'] : RibbonLayout::defaultLayout(),
+                array_fill_keys(array_map('strval', array_filter(is_array($body['visible'] ?? null) ? $body['visible'] : [], 'is_string')), true)
+                    ?: RibbonLayout::catalogIndex($context)
+            );
             $sanitized = RibbonLayout::sanitizeLayout($layoutIn, $persistContext);
             RibbonLayout::saveLayout($me['id'], $sanitized);
             $sanitized['customized'] = true;

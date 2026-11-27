@@ -246,6 +246,8 @@ return [
     'editor.duplicate_slide' => 'Duplica',
     'editor.delete_slide' => 'Elimina',
     'editor.delete_slides' => 'Elimina diapositive',
+    'editor.slide_move_up' => 'Sposta diapositiva su',
+    'editor.slide_move_down' => 'Sposta diapositiva giù',
     'editor.delete_slides_confirm' => 'Eliminare {n} diapositive?',
     'editor.slide_label' => 'Diapositiva',
     'editor.restore_invalid' => 'L’elenco delle diapositive non è valido.',

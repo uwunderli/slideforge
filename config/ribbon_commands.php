@@ -13,7 +13,7 @@ function ribbon_command_catalog(): array
         ['id' => 'row_separator', 'kind' => 'row_separator', 'category' => 'start', 'labelKey' => 'ribbon.row_separator', 'icon' => 'row_separator', 'visibleWhen' => ['canEdit']],
 
         // --- Start ---
-        ['id' => 'ff_save', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save', 'icon' => 'save', 'shortcut' => 'Ctrl+S', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'ff_save', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save', 'icon' => 'save', 'shortcut' => 'Ctrl+S', 'allowInInput' => true, 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'ff_save_copy', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_copy', 'icon' => 'save_copy', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'ff_save_template', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'ff.save_template', 'icon' => 'save_template', 'visibleWhen' => ['canEdit', 'ffFile'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'undo', 'kind' => 'command', 'category' => 'start', 'labelKey' => 'editor.undo', 'icon' => 'undo', 'domId' => 'undoBtn', 'shortcut' => 'Ctrl+Z', 'visibleWhen' => ['canEdit']],
@@ -36,6 +36,9 @@ function ribbon_command_catalog(): array
         // --- Einfügen ---
         ['id' => 'add_slide', 'kind' => 'trigger', 'category' => 'insert', 'labelKey' => 'editor.new_slide', 'icon' => 'add_slide', 'domId' => 'addSlideBtnRibbon', 'triggerId' => 'addSlideBtn', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'delete_slides', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.delete_slides', 'icon' => 'delete_slides', 'shortcut' => 'Entf', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
+        /* 3.12.0: Folien verschieben (Strg+Umschalt+↑/↓, 3.11.1) als Befehle im Katalog — Kürzel umstellbar; ←/→ bleiben feste Bühnen-Kürzel. */
+        ['id' => 'slide_move_up', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_up', 'icon' => 'slide_move_up', 'shortcut' => 'Ctrl+Shift+Up', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
+        ['id' => 'slide_move_down', 'kind' => 'command', 'category' => 'insert', 'labelKey' => 'editor.slide_move_down', 'icon' => 'slide_move_down', 'shortcut' => 'Ctrl+Shift+Down', 'visibleWhen' => ['canEdit', 'showInsertSlides']],
         ['id' => 'tool:markdown-text', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.text_field', 'icon' => 'text_field', 'tool' => 'markdown-text', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:table', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.table', 'icon' => 'table', 'tool' => 'table', 'visibleWhen' => ['canEdit']],
         ['id' => 'tool:line', 'kind' => 'tool', 'category' => 'insert', 'labelKey' => 'shape.line', 'icon' => 'line', 'tool' => 'line', 'visibleWhen' => ['canEdit']],
@@ -69,7 +72,7 @@ function ribbon_command_catalog(): array
         ['id' => 'apply_transition_all', 'kind' => 'command', 'category' => 'design', 'labelKey' => 'ribbon.slide_apply_all_short', 'icon' => 'apply_all', 'domId' => 'applyTransitionAllBtn', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
 
         // --- Präsentation ---
-        ['id' => 'present_mode', 'kind' => 'link', 'category' => 'present', 'labelKey' => 'ribbon.present_mode_short', 'icon' => 'present', 'domId' => 'presentModeLink', 'hrefKey' => 'present', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'present_mode', 'kind' => 'link', 'category' => 'present', 'labelKey' => 'ribbon.present_mode_short', 'icon' => 'present', 'domId' => 'presentModeLink', 'hrefKey' => 'present', 'shortcut' => 'F5', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_on_device', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.show_on_device', 'icon' => 'device', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_progress', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_progress_short', 'icon' => 'progress_bar', 'domId' => 'showProgressToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_controls', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_controls_short', 'icon' => 'navigation', 'domId' => 'showControlsToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
