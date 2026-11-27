@@ -37,6 +37,8 @@
     activeSideTab: (boot.editorUi && boot.editorUi.sideTab) || 'templates',
     activePosSubtab: (boot.editorUi && boot.editorUi.posSubtab) || 'layout',
     activeFormatSubtab: (boot.editorUi && boot.editorUi.formatSubtab) || 'text',
+    /* Effekte-Untertab bei gewähltem Objekt (3.12.5): in | out | order, serverseitig in editor_ui.fxSubtab */
+    activeFxSubtab: ['in', 'out', 'order'].indexOf(boot.editorUi && boot.editorUi.fxSubtab) !== -1 ? boot.editorUi.fxSubtab : 'in',
     layersPanelOpen: true,
     objectPanelOpen: boot.editorUi && typeof boot.editorUi.objectOpen === 'boolean'
       ? !!boot.editorUi.objectOpen
@@ -102,6 +104,7 @@
             sideTab: SF.activeSideTab,
             posSubtab: SF.activePosSubtab,
             formatSubtab: SF.activeFormatSubtab,
+            fxSubtab: SF.activeFxSubtab,
             objectOpen: SF.objectPanelOpen !== false,
             notesHeight: SF.notesHeight,
             splits: SF.splits,
@@ -113,6 +116,15 @@
       }).catch(() => {});
     }, 280);
   }
+
+  /* 3.12.5: Die Klapp-Abschnitte des Effekte-Reiters (3.10.2) sind weg; ihre gemerkten Schlüssel fx_in_/fx_out_ auch. */
+  (function altEffektKlappenWeg() {
+    const c = SF.collapsed || {};
+    const alt = Object.keys(c).filter((k) => /^fx_(in|out)_(auf|zu)$/.test(k));
+    if (!alt.length) return;
+    alt.forEach((k) => delete c[k]);
+    persistEditorUi({});
+  })();
 
   function migrateEditorUiFromLocalStorage() {
     let changed = false;
@@ -6917,9 +6929,10 @@
     const oeffneEffekt = (li) => {
       const node = li && findeAnimKnoten(li.dataset.effectId);
       if (!node) return;
+      SF.activeFxSubtab = 'in';
+      persistEditorUi({});
       selectNode(node);
-      const p = document.getElementById('propsEffectsPanel');
-      p?.querySelector('.props-fx-fold')?.scrollIntoView({ block: 'nearest' });
+      document.getElementById('fxTab_in')?.focus();
     };
     panel.querySelectorAll('.props-effects-list > li[data-effect-id]').forEach((li) => {
       li.addEventListener('dblclick', (e) => {
@@ -7259,87 +7272,97 @@
   function renderEffectsPanel(node, obj, isText) {
     const panel = document.getElementById('propsEffectsPanel');
     if (!panel) return;
-    if (!node || SF.selectedNodes.length !== 1 || isObjectGroup(node)) {
-      if (SF.selectedNodes.length === 0 && SF.canEdit) {
-        panel.innerHTML = playBarHtml() + buildSlideEffectsHtml();
-        wireSlideEffectsPanel();
+    const einzeln = !!(node && SF.selectedNodes.length === 1 && !isObjectGroup(node));
+    const aktiv = einzeln ? SF.activeFxSubtab : 'order';
+    let inhalt = '';
+    let ex = null;
+    if (aktiv === 'order') {
+      if (SF.canEdit) {
+        inhalt = buildSlideEffectsHtml();
+        if (!einzeln) {
+          inhalt += '<div class="props-video-note props-fx-pick">' + escapeHtml(I.fxPickObjectHint
+            || 'Objekt wählen, um Ein- und Ausblenden zu bearbeiten.') + '</div>';
+        }
       } else {
-        panel.innerHTML = playBarHtml() + propsPanelEmptyHtml();
+        inhalt = propsPanelEmptyHtml();
       }
-      wirePlayBar(panel, null);
-      return;
+    } else if (aktiv === 'in') {
+      const hatEin = (obj.animType || 'none') !== 'none';
+      inhalt = fxPlayOneHtml('in', I.animIn || 'Einblenden', hatEin) + buildEffectPropsHtml(node, obj, isText);
+    } else {
+      ex = nodeExit(node);
+      inhalt = fxPlayOneHtml('out', I.animOut || 'Ausblenden', !!ex) + buildExitPropsHtml(node);
     }
-    const hatEin = (obj.animType || 'none') !== 'none';
-    const ex = nodeExit(node);
-    const einZus = hatEin
-      ? [(I.animStepShort || 'Schritt') + ' ' + (obj.animOrder || 1), animationLabel(obj.animType), dauerLabel(obj.animDuration)]
-      : [I.optAnim?.none || 'Keine'];
-    const ausZus = ex
-      ? [(I.animStepShort || 'Schritt') + ' ' + ex.order, exitLabel(ex.type), dauerLabel(ex.duration)]
-      : [I.optExit?.none || 'Keiner'];
-    panel.innerHTML = playBarHtml() + '<div class="ribbon-props-sections">' +
-      effektKlappeHtml('in', I.animIn || 'Einblenden', einZus, effektKlappeOffen('in', hatEin), buildEffectPropsHtml(node, obj, isText), hatEin) +
-      effektKlappeHtml('out', I.animOut || 'Ausblenden', ausZus, effektKlappeOffen('out', !!ex), buildExitPropsHtml(node), !!ex) +
-      '</div>';
-    wireEffektKlappen(panel);
-    wirePlayBar(panel, node);
+    panel.innerHTML = playBarHtml() + fxTabsHtml(aktiv, einzeln)
+      + '<div class="props-fx-tabpanel" id="fxTabPanel" role="tabpanel" aria-labelledby="fxTab_' + aktiv + '">'
+      + '<div class="props-fx-body">' + inhalt + '</div></div>';
+    if (aktiv === 'order' && SF.canEdit) wireSlideEffectsPanel();
+    wireFxTabs(panel);
+    wirePlayBar(panel, einzeln ? node : null);
   }
 
-  /* Ein-/ausklappbare Abschnitte im Effekte-Reiter (3.10.2, Urs 27.11.). Muster wie die
-     Abschnitte im Objekt-Reiter (props-accordion-group / props-layers-header) mit
-     aria-expanded wie Lab › Navigation. Standard: mit Effekt offen, ohne Effekt zu.
-     Gemerkt je Person in editor_ui.collapsed (fx_in_auf/fx_in_zu, fx_out_auf/fx_out_zu). */
-  function effektKlappeOffen(teil, standard) {
-    const c = SF.collapsed || {};
-    if (c['fx_' + teil + '_auf']) return true;
-    if (c['fx_' + teil + '_zu']) return false;
-    return !!standard;
-  }
+  /* Untertabs im Effekte-Reiter (3.12.5, Urs 27.11.: «drei Tabs … Einblenden, ausblenden und Reihenfolge? Je mit einem Icon»):
+     gleiche Klassen wie Position («Grösse & Lage | Ebenen»), role=tablist, Pfeiltasten wechseln. Ohne gewähltes Objekt
+     nur «Reihenfolge»; mit Objekt der zuletzt benutzte Tab (editor_ui.fxSubtab), Vorgabe Einblenden. */
+  const FX_TABS = [
+    { id: 'in', icon: 'sun', label: () => I.animIn || 'Einblenden' },
+    { id: 'out', icon: 'moon', label: () => I.animOut || 'Ausblenden' },
+    { id: 'order', icon: 'list', label: () => I.fxOrder || 'Reihenfolge' },
+  ];
 
-  function dauerLabel(ms) {
-    const v = parseInt(ms, 10) || 0;
-    if (!v) return '';
-    const o = ANIM_DURATION_OPTIONS.find((d) => d.value === v);
-    return (o && o.label) || '';
-  }
-
-  function effektKlappeHtml(teil, titel, zusammenfassung, offen, bodyHtml, abspielbar) {
-    const bodyId = 'fxFold_' + teil;
-    const zus = zusammenfassung.filter(Boolean).join(' · ');
-    const playTip = (I.animPlayOne || 'Diesen Effekt einmal auf der Bühne zeigen') + ' (' + titel + ')';
-    return '<div class="props-accordion-group props-fx-fold' + (offen ? ' open' : '') + '" data-fx-fold="' + teil + '">'
-      + '<div class="props-fx-headrow">'
-      + '<button type="button" class="props-layers-header props-fx-head" aria-expanded="' + (offen ? 'true' : 'false')
-      + '" aria-controls="' + bodyId + '">'
-      + '<span class="props-accordion-chevron" aria-hidden="true">▾</span>'
-      + '<span class="props-fx-title">' + escapeHtml(titel) + '</span>'
-      + '<span class="props-fx-summary">' + escapeHtml(zus) + '</span>'
-      + '</button>'
-      + (abspielbar
-        ? '<button type="button" class="hub-icon-btn props-fx-play" data-fx-play-one="' + teil + '" title="' + escapeHtml(playTip)
-          + '" aria-label="' + escapeHtml(playTip) + '"><span aria-hidden="true">▶</span></button>'
-        : '')
-      + '</div>'
-      + '<div class="props-accordion-body props-fx-body" id="' + bodyId + '">' + bodyHtml + '</div>'
+  function fxTabsHtml(aktiv, einzeln) {
+    const pick = I.fxPickObject || 'Objekt wählen';
+    return '<div class="props-pos-subtabs props-fx-subtabs" role="tablist" aria-label="' + escapeHtml(I.tabEffect || I.sideTabEffects || 'Effekte') + '">'
+      + FX_TABS.map((t) => {
+        const an = t.id === aktiv;
+        const aus = !einzeln && t.id !== 'order';
+        return '<button type="button" class="props-pos-subtab props-fx-subtab' + (an ? ' active' : '') + '" role="tab" id="fxTab_' + t.id
+          + '" data-fx-subtab="' + t.id + '" aria-selected="' + (an ? 'true' : 'false') + '" aria-controls="fxTabPanel" tabindex="' + (an ? '0' : '-1') + '"'
+          + (aus ? ' disabled aria-disabled="true" title="' + escapeHtml(pick) + '"' : '') + '>'
+          + hubSpriteIcon(t.icon) + '<span>' + escapeHtml(t.label()) + '</span></button>';
+      }).join('')
       + '</div>';
   }
 
-  function wireEffektKlappen(panel) {
-    panel.querySelectorAll('.props-fx-fold').forEach((gruppe) => {
-      const kopf = gruppe.querySelector('.props-fx-head');
-      if (!kopf) return;
-      kopf.addEventListener('click', () => {
-        const teil = gruppe.dataset.fxFold;
-        const offen = !gruppe.classList.contains('open');
-        gruppe.classList.toggle('open', offen);
-        kopf.setAttribute('aria-expanded', offen ? 'true' : 'false');
-        if (!SF.collapsed) SF.collapsed = {};
-        delete SF.collapsed['fx_' + teil + '_auf'];
-        delete SF.collapsed['fx_' + teil + '_zu'];
-        SF.collapsed['fx_' + teil + (offen ? '_auf' : '_zu')] = true;
-        persistEditorUi({});
-      });
+  function wireFxTabs(panel) {
+    const leiste = panel.querySelector('.props-fx-subtabs');
+    if (!leiste) return;
+    const wechsle = (id) => {
+      if (['in', 'out', 'order'].indexOf(id) === -1 || id === SF.activeFxSubtab) return;
+      SF.activeFxSubtab = id;
+      persistEditorUi({});
+      refreshPropsPanel();
+      document.getElementById('fxTab_' + id)?.focus();
+    };
+    leiste.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-fx-subtab]');
+      if (!btn || btn.disabled) return;
+      e.preventDefault();
+      wechsle(btn.dataset.fxSubtab);
     });
+    leiste.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) === -1) return;
+      const tabs = [...leiste.querySelectorAll('[data-fx-subtab]:not([disabled])')];
+      if (tabs.length < 2) return;
+      const i = Math.max(0, tabs.indexOf(document.activeElement));
+      let n = i;
+      if (e.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+      if (e.key === 'ArrowRight') n = (i + 1) % tabs.length;
+      if (e.key === 'Home') n = 0;
+      if (e.key === 'End') n = tabs.length - 1;
+      e.preventDefault();
+      wechsle(tabs[n].dataset.fxSubtab);
+    });
+  }
+
+  /** Kleines ▶ oben im Tab: zeigt diesen Effekt einmal auf der Bühne (3.11.0). */
+  function fxPlayOneHtml(teil, titel, abspielbar) {
+    if (!abspielbar) return '';
+    const tip = (I.animPlayOne || 'Diesen Effekt einmal auf der Bühne zeigen') + ' (' + titel + ')';
+    return '<div class="props-fx-tabhead">'
+      + '<button type="button" class="hub-icon-btn props-fx-play" data-fx-play-one="' + teil + '" title="' + escapeHtml(tip)
+      + '" aria-label="' + escapeHtml(tip) + '"><span aria-hidden="true">▶</span></button>'
+      + '</div>';
   }
 
   function renderPropsPanel(node) {

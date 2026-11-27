@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.5 gebaut** (`entwickler/slide-fx-tabs` ab 3.12.4 f8f4963, Worktree `_claude/entwickler/wt-slide-fx-doppelklick`, beim Gitwart): Effekte-Reiter mit Untertabs Einblenden/Ausblenden/Reihenfolge (editor_ui.fxSubtab), Klapp-Abschnitte 3.10.2 entfernt.
 - **27.11. 3.12.3 gebaut** (`entwickler/slide-pfeil-abspielen` ab 3.12.2 7ca9131, Worktree `_claude/entwickler/wt-slide-pfeil-abspielen`): ←/→ auf der Folienfläche spielt Effekte + Übergänge über Foliengrenzen (preview.php play = ganze Präsentation ab Start), Abspielen ohne Fenster (Klick/Taste beendet, Esc), Weitere Befehle stage_play_next/prev; Fix ↑↓ im Filmstreifen (SF.keyArea). Beim Gitwart.
 
 - **27.11. 3.12.2 gebaut** (`entwickler/slide-fx-zeilen` ab 3.12.0 8ba6ecf, nach 3.12.1, Worktree `_claude/entwickler/wt-slide-ausblenden`): Effekte-Paare je in einer Zeile mit Hub-Symbolen, Schritt-Abzeichen als Pillen «5 → 6».

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.5] - 2026-11-27
+
+### Changed
+- Effekte-Reiter mit drei Untertabs wie bei Position: Einblenden, Ausblenden, Reihenfolge (je mit Symbol). Reihenfolge = Liste aller Effekte der Folie; ohne gewähltes Objekt nur sie, Einblenden/Ausblenden gesperrt mit Hinweis «Objekt wählen». Mit Objekt gilt der zuletzt benutzte Tab (je Person gemerkt), Vorgabe Einblenden; Doppelklick in der Liste springt auf Einblenden.
+
+### Removed
+- Klapp-Abschnitte Einblenden/Ausblenden (3.10.2) samt gemerkter Schlüssel fx_in_/fx_out_ und CSS.
+
 ## [3.12.4] - 2026-11-27
 
 ### Added

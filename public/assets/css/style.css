@@ -12044,58 +12044,36 @@ select.sf-fsel-native { display: none !important; }
   color: var(--text-muted);
 }
 
-/* Effekte-Reiter: ein-/ausklappbare Abschnitte Einblenden/Ausblenden (3.10.2) */
-.props-fx-fold {
-  border-bottom: 1px solid var(--border);
-}
-.props-fx-fold .props-fx-head {
-  border-bottom: none;
-}
-/* 3.11.0: Kopfzeile = Klapp-Knopf + kleines ▶; die Trennlinie liegt unter der ganzen Zeile. */
-.props-fx-headrow {
-  display: flex;
+/* Effekte-Reiter: Untertabs Einblenden | Ausblenden | Reihenfolge (3.12.5, ersetzt die Klapp-Abschnitte aus 3.10.2) */
+.props-fx-subtab {
+  display: inline-flex;
   align-items: center;
-  background: var(--surface-raised);
-}
-.props-fx-headrow .props-fx-head {
-  flex: 1 1 auto;
+  justify-content: center;
+  gap: 5px;
   min-width: 0;
 }
-.props-fx-fold.open .props-fx-headrow {
-  border-bottom: 1px solid var(--border);
-}
-.props-fx-play {
-  flex: 0 0 auto;
-  margin-right: 8px;
-  font-size: 0.7rem;
-}
-.props-fx-head:focus-visible {
-  outline: 2px solid var(--accent, currentColor);
-  outline-offset: -2px;
-}
-.props-fx-fold .props-accordion-chevron {
-  transform: rotate(-90deg);
-  transition: transform 0.15s ease;
-}
-.props-fx-fold.open .props-accordion-chevron {
-  transform: none;
-}
-.props-fx-title {
-  flex: 0 0 auto;
-}
-.props-fx-summary {
-  margin-left: auto;
+.props-fx-subtab > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-body, inherit);
-  font-weight: 400;
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
-.props-fx-fold.open .props-fx-summary {
-  display: none;
+.props-fx-subtab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.props-fx-subtab:focus-visible {
+  outline: 2px solid var(--accent, currentColor);
+  outline-offset: -2px;
+}
+.props-fx-tabhead {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+.props-fx-play {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
 }
 .props-fx-body {
   padding: 10px 12px 12px;
@@ -12188,11 +12166,6 @@ select.sf-fsel-native { display: none !important; }
   pointer-events: none;
 }
 
-/* 3.11.2 (Urs 27.11.: «Ein Ausklappen geht noch nicht»): `.props-sidebar-tabs .props-layers-header { display:none }`
-   blendete im Reiter-Modus auch den Klapp-Kopf der Effekte-Abschnitte aus – sichtbar blieb nur das kleine ▶. */
-.props-sidebar-tabs .props-fx-fold .props-fx-head {
-  display: flex;
-}
 
 /* Effekte: Knopf- und Auswahl-Paare je in einer Zeile, zwei gleich breite Spalten,
    bei sehr schmaler Seitenleiste untereinander (3.12.2, Urs 27.11.) */

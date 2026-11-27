@@ -644,6 +644,8 @@ class Auth
             'sideTab' => 'templates',
             'posSubtab' => 'layout',
             'formatSubtab' => 'text',
+            /* Effekte-Reiter: zuletzt benutzter Untertab bei gewähltem Objekt (3.12.5): in | out | order */
+            'fxSubtab' => 'in',
             'objectOpen' => true,
             'notesHeight' => 140,
             /* Spaltenbreiten der Editor-Trenner (HubSplit, Schlüssel ohne «split:»), Pixel. */
@@ -690,10 +692,15 @@ class Auth
         if (!in_array($formatSubtab, ['text', 'templates', 'format'], true)) {
             $formatSubtab = $defaults['formatSubtab'];
         }
+        $fxSubtab = (string)($ui['fxSubtab'] ?? $defaults['fxSubtab']);
+        if (!in_array($fxSubtab, ['in', 'out', 'order'], true)) {
+            $fxSubtab = $defaults['fxSubtab'];
+        }
         return [
             'sideTab' => $sideTab,
             'posSubtab' => $posSubtab,
             'formatSubtab' => $formatSubtab,
+            'fxSubtab' => $fxSubtab,
             'objectOpen' => array_key_exists('objectOpen', $ui)
                 ? (bool)$ui['objectOpen']
                 : $defaults['objectOpen'],
