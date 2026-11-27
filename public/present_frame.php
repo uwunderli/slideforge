@@ -207,7 +207,7 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
       function matchGhostEl(liveEl) {
         const idx = liveEl.getAttribute('data-fragment-index');
         if (idx == null) return null;
-        return ghost.querySelector('[data-fragment-index="' + idx + '"]');
+        return ghost.querySelector('[data-fragment-index="' + idx + '"]:not(.sf-exit)');
       }
 
       function setSuppressed(liveEl, ghostEl) {
@@ -236,8 +236,9 @@ window.SF_LASER = <?= json_encode(['color' => $laserColor, 'size' => $laserSize,
         return;
       }
 
-      const ghostFrags = ghost.querySelectorAll('.sf-ghost-frag');
-      Array.from(slideEl.querySelectorAll('.fragment')).filter(isLiveEl).forEach(function (lf, i) {
+      const ghostFrags = ghost.querySelectorAll('.sf-ghost-frag:not(.sf-exit)');
+      // Ausblende-Hüllen (sf-exit) haben keinen Geist: nur Einblende-Fragmente zählen.
+      Array.from(slideEl.querySelectorAll('.fragment:not(.sf-exit)')).filter(isLiveEl).forEach(function (lf, i) {
         const gf = matchGhostEl(lf) || ghostFrags[i];
         if (gf) setSuppressed(lf, gf);
       });

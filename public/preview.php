@@ -62,7 +62,8 @@ $sections = SlideRenderer::renderSections($slidesData);
     var slide = Reveal.getCurrentSlide && Reveal.getCurrentSlide();
     if (!slide) return;
     slide.querySelectorAll('.fragment').forEach(function (el) {
-      el.classList.add('visible');
+      // Ausblende-Hüllen (sf-exit) bleiben unsichtbar geschaltet = Objekt sichtbar.
+      el.classList.toggle('visible', !el.classList.contains('sf-exit'));
       el.classList.remove('current-fragment');
     });
   }

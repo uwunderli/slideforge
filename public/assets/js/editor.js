@@ -191,6 +191,36 @@
     { value: 'strike', label: I.optAnim?.strike, icon: ANIM_ICONS.strike },
   ];
 
+  /* Ausblende-Effekte (animExit.type, 3.10.0): nur echte Ausgänge. */
+  const EXIT_ANIMATIONS = [
+    { value: 'none', label: I.optExit?.none || 'Keiner', icon: ANIM_ICONS.none },
+    { value: 'fade', label: I.optExit?.fade || 'Ausblenden', icon: ANIM_ICONS['fade-out'] },
+    { value: 'up', label: I.optExit?.up || 'Nach oben ausblenden', icon: ANIM_ICONS['fade-up'] },
+    { value: 'down', label: I.optExit?.down || 'Nach unten ausblenden', icon: ANIM_ICONS['fade-down'] },
+    { value: 'left', label: I.optExit?.left || 'Nach links ausblenden', icon: ANIM_ICONS['fade-left'] },
+    { value: 'right', label: I.optExit?.right || 'Nach rechts ausblenden', icon: ANIM_ICONS['fade-right'] },
+    { value: 'shrink', label: I.optExit?.shrink || 'Schrumpfend ausblenden', icon: ANIM_ICONS.shrink },
+    { value: 'grow', label: I.optExit?.grow || 'Wachsend ausblenden', icon: ANIM_ICONS.grow },
+  ];
+  const EXIT_TYPES = EXIT_ANIMATIONS.map((a) => a.value).filter((v) => v !== 'none');
+
+  /** Ausblende-Effekt bereinigt; null = keiner. */
+  function normExit(e) {
+    if (!e || typeof e !== 'object' || EXIT_TYPES.indexOf(e.type) === -1) return null;
+    return {
+      type: e.type,
+      order: Math.max(1, parseInt(e.order, 10) || 1),
+      duration: Math.max(0, parseInt(e.duration, 10) || 0),
+      auto: Math.max(0, parseInt(e.auto, 10) || 0),
+    };
+  }
+  function nodeExit(node) {
+    return node ? normExit(node.getAttr('animExit')) : null;
+  }
+  function hatEinblenden(node) {
+    return (node.getAttr('animType') || 'none') !== 'none';
+  }
+
   const TRANSITION_OPTIONS = [
     { value: 'none', label: I.optTransition?.none || 'None', icon: TRANSITION_ICONS.none },
     { value: 'fade', label: I.optTransition?.fade || 'Fade', icon: TRANSITION_ICONS.fade },
@@ -3700,6 +3730,7 @@
       animOrder: obj.animOrder || 1,
       animAutoAdvance: obj.animAutoAdvance || 0,
       animDuration: obj.animDuration || 0,
+      animExit: normExit(obj.animExit) || undefined,
     };
     if (obj.type === 'text') {
       const styleParts = [];
@@ -3894,6 +3925,8 @@
       animAutoAdvance: node.getAttr('animAutoAdvance') || 0,
       animDuration: node.getAttr('animDuration') || 0,
     };
+    const baseExit = nodeExit(node);
+    if (baseExit) base.animExit = baseExit;
     if (type === 'text') {
       const styleStr = node.fontStyle() || '';
       const decoStr = node.textDecoration() || '';
@@ -4299,16 +4332,25 @@
     if (node._sfBadge) { node._sfBadge.destroy(); node._sfBadge = null; }
   }
 
+  /** Plaketten-Text: «1» nur ein, «1→2» ein und aus, «→2» nur aus. */
+  function animBadgeText(node) {
+    const ein = hatEinblenden(node) ? String(Math.max(1, parseInt(node.getAttr('animOrder'), 10) || 1)) : '';
+    const aus = nodeExit(node);
+    if (!ein && !aus) return '';
+    return aus ? ein + '→' + aus.order : ein;
+  }
+
   function updateAnimationBadge(node) {
     removeAnimationBadge(node);
-    const animType = node.getAttr('animType') || 'none';
-    if (animType === 'none' || !SF.layer) return;
+    const text = animBadgeText(node);
+    if (!text || !SF.layer) return;
     const box = node.getClientRect({ relativeTo: SF.layer });
+    const breite = Math.max(22, 10 + text.length * 8);
     const badge = new Konva.Group({ x: box.x - 11, y: box.y - 11, listening: false, name: 'sf-badge' });
-    badge.add(new Konva.Circle({ x: 11, y: 11, radius: 11, fill: '#3a6c8d', stroke: '#ffffff', strokeWidth: 1 }));
+    badge.add(new Konva.Rect({ x: 0, y: 0, width: breite, height: 22, cornerRadius: 11, fill: '#3a6c8d', stroke: '#ffffff', strokeWidth: 1 }));
     badge.add(new Konva.Text({
-      x: 0, y: 0, width: 22, height: 22,
-      text: String(node.getAttr('animOrder') || 1),
+      x: 0, y: 0, width: breite, height: 22,
+      text: text,
       fontSize: 12, fontFamily: 'JetBrains Mono', fill: '#ffffff',
       align: 'center', verticalAlign: 'middle',
     }));
@@ -6452,11 +6494,39 @@
       buildRibbonPositionPanelHtml(node, obj) + '</div>';
   }
 
+  /** Schritt-Nummer mit «Mit vorherigem» / «Nach vorherigem». */
+  function effektSchrittHtml(id, wert) {
+    const mitTitel = I.animWithPrevHint || 'Gleichzeitig mit dem letzten Schritt dieser Folie';
+    const nachTitel = I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
+    return '<div><label for="' + id + '">' + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '</label>'
+      + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '"></div>'
+      + '<div class="props-transfer-row">'
+      + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_mit" title="'
+      + escapeHtml(mitTitel) + '">' + escapeHtml(I.animWithPrev || 'Mit vorherigem') + '</button>'
+      + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_nach" title="'
+      + escapeHtml(nachTitel) + '">' + escapeHtml(I.animAfterPrev || 'Nach vorherigem') + '</button>'
+      + '</div>';
+  }
+
+  /** Abschnitt «Ausblenden» im Effekte-Reiter. */
+  function buildExitPropsHtml(node) {
+    const ex = nodeExit(node);
+    let html = fieldIconPicker('p_exit', escapeHtml(I.exitEffect || 'Effekt'), EXIT_ANIMATIONS, ex ? ex.type : 'none', 'effect-icon-grid anim-icon-grid');
+    if (ex) {
+      html += effektSchrittHtml('p_exitOrder', ex.order);
+      html += fieldSelectKV('p_exitDuration', I.animDuration, ANIM_DURATION_OPTIONS, ex.duration);
+      html += fieldSelectKV('p_exitAuto', I.animAutostart, ANIM_AUTOSTART_OPTIONS, ex.auto);
+      html += '<div class="props-video-note">' + escapeHtml(I.exitHint
+        || 'Das Objekt verschwindet bei diesem Schritt. Hat ein anderes Objekt dieselbe Nummer beim Einblenden, tauscht ein Klick die beiden.') + '</div>';
+    }
+    return html;
+  }
+
   function buildEffectPropsHtml(node, obj, isText) {
     let html = fieldIconPicker('p_anim', I.effect, ANIMATIONS, obj.animType || 'none', 'effect-icon-grid anim-icon-grid');
     html += propsTransferRowHtml('copyAnimationBtn', 'pasteAnimationBtn', I.animationCopy, I.animationPaste, !!SF.animationClipboard);
     if ((obj.animType || 'none') !== 'none') {
-      html += fieldNumber('p_animOrder', I.animOrder, obj.animOrder || 1);
+      html += effektSchrittHtml('p_animOrder', obj.animOrder || 1);
       html += fieldSelectKV('p_animDuration', I.animDuration, ANIM_DURATION_OPTIONS, obj.animDuration || 0);
       html += fieldSelectKV('p_animAuto', I.animAutostart, ANIM_AUTOSTART_OPTIONS, obj.animAutoAdvance || 0);
       if (isText) {
@@ -6545,7 +6615,34 @@
   }
 
   function knotenMitEffekt() {
-    return animierbareKnoten().filter((n) => (n.getAttr('animType') || 'none') !== 'none');
+    return animierbareKnoten().filter((n) => hatEinblenden(n) || !!nodeExit(n));
+  }
+
+  /**
+   * Höchster Schritt der Folie (Einblenden und Ausblenden). Der eigene Wert des
+   * gerade bearbeiteten Feldes zählt nicht mit, sonst zählte «nach vorherigem»
+   * bei jedem Klick weiter. Beim Einblenden zählt auch das eigene Ausblenden nicht.
+   */
+  function hoechsterSchritt(node, feld) {
+    let max = 0;
+    animierbareKnoten().forEach((n) => {
+      const ex = nodeExit(n);
+      if (n !== node || feld === 'exit') {
+        if (hatEinblenden(n) && !(n === node && feld === 'in')) {
+          max = Math.max(max, parseInt(n.getAttr('animOrder'), 10) || 1);
+        }
+      }
+      if (ex && n !== node) max = Math.max(max, ex.order);
+    });
+    return max;
+  }
+
+  /** Ausblenden kommt nach dem eigenen Einblenden (mind. ein Schritt später). */
+  function exitNachEinblenden(node) {
+    const ex = nodeExit(node);
+    if (!ex || !hatEinblenden(node)) return;
+    const ein = parseInt(node.getAttr('animOrder'), 10) || 1;
+    if (ex.order <= ein) node.setAttr('animExit', Object.assign({}, ex, { order: ein + 1 }));
   }
 
   const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -6554,8 +6651,12 @@
   function effekteDerFolie() {
     const alle = animierbareKnoten();
     return alle
-      .map((n, i) => ({ node: n, nr: Math.max(1, parseInt(n.getAttr('animOrder'), 10) || 1), tiefe: i }))
-      .filter((e) => (e.node.getAttr('animType') || 'none') !== 'none')
+      .map((n, i) => {
+        const ex = nodeExit(n);
+        const nurAus = !hatEinblenden(n) && !!ex;
+        return { node: n, nurAus: nurAus, nr: nurAus ? ex.order : Math.max(1, parseInt(n.getAttr('animOrder'), 10) || 1), tiefe: i };
+      })
+      .filter((e) => hatEinblenden(e.node) || e.nurAus)
       /* Gleiche Nummer = gleichzeitig; dann entscheidet die Lage im Stapel. */
       .sort((a, b) => (a.nr - b.nr) || (a.tiefe - b.tiefe));
   }
@@ -6565,12 +6666,26 @@
     return (eintrag && eintrag.label) || typ || '';
   }
 
+  function exitLabel(typ) {
+    const eintrag = EXIT_ANIMATIONS.find((a) => a.value === typ);
+    return (eintrag && eintrag.label) || typ || '';
+  }
+
+  /** Effekt-Beschreibung für die Liste: «Einblenden → Ausblenden». */
+  function effektBeschreibung(node) {
+    const teile = [];
+    if (hatEinblenden(node)) teile.push(animationLabel(node.getAttr('animType')));
+    const ex = nodeExit(node);
+    if (ex) teile.push(exitLabel(ex.type));
+    return teile.join(' → ');
+  }
+
   function findeAnimKnoten(id) {
     return animierbareKnoten().find((n) => n.id() === id) || null;
   }
 
   function effektWeg(node) {
-    ['animType', 'animOrder', 'animDuration', 'animAutoAdvance', 'animPerLine'].forEach((k) => node.setAttr(k, undefined));
+    ['animType', 'animOrder', 'animDuration', 'animAutoAdvance', 'animPerLine', 'animExit'].forEach((k) => node.setAttr(k, undefined));
     updateAnimationBadge(node);
   }
 
@@ -6593,10 +6708,10 @@
         body += '<li data-effect-id="' + escapeHtml(e.node.id()) + '" data-anim-order="' + e.nr + '">'
           + '<span class="props-layer-drag-handle" draggable="true" title="'
           + escapeHtml(I.effectsListDrag || 'Ziehen ändert die Reihenfolge') + '" aria-hidden="true">⠿</span>'
-          + '<span class="props-effect-order">' + e.nr + '</span>'
+          + '<span class="props-effect-order">' + escapeHtml(animBadgeText(e.node)) + '</span>'
           + '<span class="props-effect-text">'
           + '<span class="props-effect-name">' + escapeHtml(layerItemLabel(e.node)) + '</span>'
-          + '<span class="props-effect-anim">' + escapeHtml(animationLabel(e.node.getAttr('animType'))) + '</span>'
+          + '<span class="props-effect-anim">' + escapeHtml(effektBeschreibung(e.node)) + '</span>'
           + '</span>'
           + '<button type="button" class="props-effect-del" data-effect-id="' + escapeHtml(e.node.id()) + '" title="'
           + escapeHtml(I.effectsRowDelete || 'Diesen Effekt löschen') + '" aria-label="'
@@ -6715,7 +6830,13 @@
       effektNummernAusListe(listEl, gezogen).forEach((z) => {
         const node = findeAnimKnoten(z.id);
         if (!node) return;
-        node.setAttr('animOrder', z.nr);
+        if (hatEinblenden(node)) {
+          node.setAttr('animOrder', z.nr);
+          exitNachEinblenden(node);
+        } else {
+          const ex = nodeExit(node);
+          if (ex) node.setAttr('animExit', Object.assign({}, ex, { order: z.nr }));
+        }
         updateAnimationBadge(node);
       });
       dragLi.classList.remove('dragging');
@@ -6744,7 +6865,8 @@
       return;
     }
     panel.innerHTML = '<div class="ribbon-props-sections">' +
-      ribbonPropsSection(I.tabEffect || I.sideTabEffects || 'Effekte', buildEffectPropsHtml(node, obj, isText)) +
+      ribbonPropsSection(I.animIn || 'Einblenden', buildEffectPropsHtml(node, obj, isText)) +
+      ribbonPropsSection(I.animOut || 'Ausblenden', buildExitPropsHtml(node)) +
       '</div>';
   }
 
@@ -7119,6 +7241,7 @@
       animAutoAdvance: node.getAttr('animAutoAdvance') || 0,
       animDuration: node.getAttr('animDuration') || 0,
       animPerLine: !!node.getAttr('animPerLine'),
+      animExit: nodeExit(node),
     };
     setSaveStatus(I.propsCopied || 'Kopiert');
   }
@@ -7130,6 +7253,7 @@
     node.setAttr('animOrder', c.animOrder);
     node.setAttr('animAutoAdvance', c.animAutoAdvance);
     node.setAttr('animDuration', c.animDuration);
+    node.setAttr('animExit', c.animExit ? Object.assign({}, c.animExit) : undefined);
     if (node.getAttr('objType') === 'text') {
       node.setAttr('animPerLine', c.animPerLine);
     }
@@ -7573,17 +7697,49 @@
       const wasNone = (node.getAttr('animType') || 'none') === 'none';
       node.setAttr('animType', value);
       if (value !== 'none' && wasNone) {
-        const siblings = getTopLevelNodes().filter(n => n !== node && (n.getAttr('animType') || 'none') !== 'none');
-        node.setAttr('animOrder', siblings.length + 1);
+        // Neu: ein Klick nach dem letzten Schritt der Folie («nach vorherigem»).
+        node.setAttr('animOrder', hoechsterSchritt(node, 'in') + 1);
       }
+      exitNachEinblenden(node);
       updateAnimationBadge(node);
       refreshCanvas(); scheduleSave(); refreshPropsPanel();
     });
-    on('p_animOrder', 'input', (e) => {
-      node.setAttr('animOrder', parseInt(e.target.value, 10) || 1);
+    const setzeEinSchritt = (nr) => {
+      node.setAttr('animOrder', Math.max(1, nr));
+      exitNachEinblenden(node);
       updateAnimationBadge(node);
-      scheduleSave();
+      refreshCanvas(); scheduleSave(); refreshPropsPanel();
+    };
+    on('p_animOrder', 'change', (e) => setzeEinSchritt(parseInt(e.target.value, 10) || 1));
+    on('p_animOrder_mit', 'click', () => setzeEinSchritt(hoechsterSchritt(node, 'in') || 1));
+    on('p_animOrder_nach', 'click', () => setzeEinSchritt(hoechsterSchritt(node, 'in') + 1));
+
+    const setzeExit = (teil) => {
+      const ex = nodeExit(node);
+      if (!ex) return;
+      node.setAttr('animExit', Object.assign({}, ex, teil));
+      exitNachEinblenden(node);
+      updateAnimationBadge(node);
+      refreshCanvas(); scheduleSave();
+    };
+    bindValueIconPicker('p_exit', (value) => {
+      const ex = nodeExit(node);
+      if (value === 'none') {
+        node.setAttr('animExit', undefined);
+      } else if (ex) {
+        node.setAttr('animExit', Object.assign({}, ex, { type: value }));
+      } else {
+        node.setAttr('animExit', { type: value, order: hoechsterSchritt(node, 'exit') + 1, duration: 0, auto: 0 });
+      }
+      exitNachEinblenden(node);
+      updateAnimationBadge(node);
+      refreshCanvas(); scheduleSave(); refreshPropsPanel();
     });
+    on('p_exitOrder', 'change', (e) => { setzeExit({ order: Math.max(1, parseInt(e.target.value, 10) || 1) }); refreshPropsPanel(); });
+    on('p_exitOrder_mit', 'click', () => { setzeExit({ order: Math.max(1, hoechsterSchritt(node, 'exit')) }); refreshPropsPanel(); });
+    on('p_exitOrder_nach', 'click', () => { setzeExit({ order: hoechsterSchritt(node, 'exit') + 1 }); refreshPropsPanel(); });
+    on('p_exitDuration', 'change', (e) => setzeExit({ duration: parseInt(e.target.value, 10) || 0 }));
+    on('p_exitAuto', 'change', (e) => setzeExit({ auto: parseInt(e.target.value, 10) || 0 }));
     on('p_animAuto', 'change', (e) => {
       node.setAttr('animAutoAdvance', parseInt(e.target.value, 10) || 0);
       scheduleSave();

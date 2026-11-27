@@ -220,85 +220,178 @@ class SlideRenderer
         return array_map(fn($p) => [(float)$p[0] / 100 * $w, (float)$p[1] / 100 * $h], $tpl);
     }
 
+    /** Ausblende-Effekte (animExit.type) → CSS-Klasse sf-exit-<typ>. */
+    private const EXIT_TYPES = ['fade', 'up', 'down', 'left', 'right', 'shrink', 'grow'];
+
     /**
-     * Plant alle Animations-Schritte einer Folie und vergibt eindeutige, fortlaufende
-     * Fragment-Indizes (1, 2, 3, …). Ohne das würden bei „Jede Zeile einzeln animieren"
-     * zwei Textfelder mit überlappenden Klick-Nummern (z. B. links ab 1, rechts ab 2)
-     * zur gleichen Zeit erscheinen – reveal.js gruppiert gleiche data-fragment-index-Werte.
+     * Ausblende-Effekt eines Objekts, bereinigt; null = keiner.
+     * Form im Datenmodell: animExit {type, order, duration, auto} (3.10.0).
      */
-    private static function buildSlideFragmentPlan(array $objects): array
+    public static function exitOf(array $o): ?array
     {
-        $units = [];
-        foreach ($objects as $objIndex => $o) {
-            if (($o['animType'] ?? 'none') === 'none') {
-                continue;
+        $e = $o['animExit'] ?? null;
+        if (!is_array($e)) {
+            return null;
+        }
+        $type = (string)($e['type'] ?? 'none');
+        if (!in_array($type, self::EXIT_TYPES, true)) {
+            return null;
+        }
+        return [
+            'type' => $type,
+            'order' => max(1, (int)($e['order'] ?? 1)),
+            'duration' => max(0, min(60000, (int)($e['duration'] ?? 0))),
+            'auto' => max(0, min(3600000, (int)($e['auto'] ?? 0))),
+        ];
+    }
+
+    /** Sammelt die Animations-Einheiten eines Objekts (auch der Kinder einer Gruppe). */
+    private static function collectAnimUnits(array $o, string $key, array &$units): void
+    {
+        if (($o['type'] ?? '') === 'group') {
+            foreach (array_values($o['children'] ?? []) as $ci => $child) {
+                if (is_array($child)) {
+                    self::collectAnimUnits($child, $key . '.' . $ci, $units);
+                }
             }
-            $baseOrder = (int)($o['animOrder'] ?? 1);
+        }
+        $lastIn = null;
+        if (($o['animType'] ?? 'none') !== 'none' && ($o['type'] ?? '') !== 'group') {
+            $baseOrder = max(1, (int)($o['animOrder'] ?? 1));
             $ms = (int)($o['animAutoAdvance'] ?? 0);
             if (($o['type'] ?? '') === 'text' && !empty($o['animPerLine'])) {
                 $lines = preg_split('/\n/', $o['text'] ?? '');
+                $sub = 0;
                 foreach (array_keys($lines) as $lineIndex) {
                     if (!self::isAnimatablePerLineText($lines[$lineIndex])) {
                         continue;
                     }
-                    $units[] = [
-                        'objIndex' => $objIndex,
-                        'lineIndex' => $lineIndex,
-                        'sortOrder' => $baseOrder,
-                        'subOrder' => $lineIndex,
-                        'ms' => $ms,
-                    ];
+                    $units[] = ['key' => $key, 'kind' => 'in', 'lineIndex' => $lineIndex, 'order' => $baseOrder, 'sub' => $sub, 'ms' => $ms];
+                    $lastIn = [$baseOrder, $sub];
+                    $sub++;
                 }
             } else {
-                $units[] = [
-                    'objIndex' => $objIndex,
-                    'lineIndex' => -1,
-                    'sortOrder' => $baseOrder,
-                    'subOrder' => 0,
-                    'ms' => $ms,
-                ];
+                $units[] = ['key' => $key, 'kind' => 'in', 'lineIndex' => -1, 'order' => $baseOrder, 'sub' => 0, 'ms' => $ms];
+                $lastIn = [$baseOrder, 0];
+            }
+        }
+        $exit = self::exitOf($o);
+        if ($exit !== null) {
+            $order = $exit['order'];
+            $sub = 0;
+            // Ausblenden kommt immer nach dem letzten Einblende-Schritt desselben Objekts.
+            if ($lastIn !== null && ($order < $lastIn[0] || ($order === $lastIn[0] && $sub <= $lastIn[1]))) {
+                $order = $lastIn[0];
+                $sub = $lastIn[1] + 1;
+            }
+            $units[] = ['key' => $key, 'kind' => 'exit', 'lineIndex' => -1, 'order' => $order, 'sub' => $sub, 'ms' => $exit['auto']];
+        }
+    }
+
+    /**
+     * Plant alle Animations-Schritte einer Folie und vergibt fortlaufende
+     * Fragment-Indizes (1, 2, 3, …). Ein Schritt = eine Klick-Nummer: Objekte mit
+     * derselben Nummer (Einblenden wie Ausblenden) kommen gleichzeitig, reveal.js
+     * gruppiert gleiche data-fragment-index-Werte. Zeilen eines zeilenweise
+     * animierten Textes bekommen Unterschritte (Nummer, Zeile) – so überlappen
+     * zwei Textfelder nicht (links ab 1, rechts ab 2).
+     */
+    private static function buildSlideFragmentPlan(array $objects): array
+    {
+        $units = [];
+        foreach (array_values($objects) as $objIndex => $o) {
+            if (is_array($o)) {
+                self::collectAnimUnits($o, (string)$objIndex, $units);
             }
         }
 
         usort($units, function (array $a, array $b): int {
-            if ($a['sortOrder'] !== $b['sortOrder']) {
-                return $a['sortOrder'] <=> $b['sortOrder'];
-            }
-            if ($a['objIndex'] !== $b['objIndex']) {
-                return $a['objIndex'] <=> $b['objIndex'];
-            }
-            return $a['subOrder'] <=> $b['subOrder'];
+            return [$a['order'], $a['sub']] <=> [$b['order'], $b['sub']];
         });
 
+        $stepOf = [];
+        $stepMs = [];
         $fragmentIndex = [];
+        $exitIndex = [];
+        foreach ($units as $u) {
+            $k = $u['order'] . ':' . $u['sub'];
+            if (!isset($stepOf[$k])) {
+                $stepOf[$k] = count($stepOf) + 1;
+                $stepMs[$stepOf[$k]] = 0;
+            }
+            $step = $stepOf[$k];
+            if ($u['ms'] > $stepMs[$step]) {
+                $stepMs[$step] = $u['ms'];
+            }
+            if ($u['kind'] === 'exit') {
+                $exitIndex[$u['key']] = $step;
+            } else {
+                $fragmentIndex[$u['key']][$u['lineIndex']] = $step;
+            }
+        }
+
         $autoAdvanceForOrder = [];
         $firstUnitAutoMs = null;
         $hasManualStep = false;
-
-        foreach ($units as $i => $u) {
-            if ($u['ms'] <= 0) {
+        foreach ($stepMs as $step => $ms) {
+            if ($ms <= 0) {
                 $hasManualStep = true;
-            }
-            $revealIdx = $i + 1;
-            $fragmentIndex[$u['objIndex']][$u['lineIndex']] = $revealIdx;
-            if ($u['ms'] <= 0) {
                 continue;
             }
-            if ($i === 0) {
-                // Erster Schritt nach Folienstart (ohne Klick), wenn animAutoAdvance > 0
-                $firstUnitAutoMs = $u['ms'];
+            if ($step === 1) {
+                // Erster Schritt nach Folienstart (ohne Klick)
+                $firstUnitAutoMs = $ms;
                 continue;
             }
-            $autoAdvanceForOrder[$revealIdx - 1] = $u['ms'];
+            $autoAdvanceForOrder[$step - 1] = $ms;
         }
 
         return [
             'fragmentIndex' => $fragmentIndex,
+            'exitIndex' => $exitIndex,
             'autoAdvanceForOrder' => $autoAdvanceForOrder,
             'firstUnitAutoMs' => $firstUnitAutoMs,
-            'animStepCount' => count($units),
-            'wantsGhostPreview' => count($units) >= 2 && $hasManualStep,
+            'animStepCount' => count($stepMs),
+            'wantsGhostPreview' => count($stepMs) >= 2 && $hasManualStep,
+            'hasExit' => $exitIndex !== [],
         ];
+    }
+
+    /**
+     * CSS für Ausblende-Wrapper. reveal.js kennt nur fade-out als Ausgang; die
+     * Richtungen und Grössen kommen von hier. Im Druck (PDF) bleibt alles sichtbar,
+     * wie im Editor.
+     */
+    private static function exitCss(): string
+    {
+        $base = '.reveal .slides section .fragment.sf-exit';
+        return '<style>'
+            . $base . '{opacity:1;visibility:inherit;transform:none;}'
+            . $base . '.visible{opacity:0;visibility:hidden;}'
+            . $base . '.sf-exit-up.visible{transform:translateY(-40px);}'
+            . $base . '.sf-exit-down.visible{transform:translateY(40px);}'
+            . $base . '.sf-exit-left.visible{transform:translateX(-40px);}'
+            . $base . '.sf-exit-right.visible{transform:translateX(40px);}'
+            . $base . '.sf-exit-shrink.visible{transform:scale(0.7);}'
+            . $base . '.sf-exit-grow.visible{transform:scale(1.3);}'
+            . 'html.print-pdf ' . $base . ',html.reveal-print ' . $base
+            . '{opacity:1 !important;visibility:inherit !important;transform:none !important;}'
+            . '</style>';
+    }
+
+    /**
+     * Legt um ein fertig gerendertes Objekt den Ausblende-Wrapper (äusseres Fragment).
+     * $html ist das Objekt mit left/top 0 relativ zum Wrapper.
+     */
+    private static function wrapExit(string $html, array $exit, array $plan, string $key, $x, $y, $w, $h): string
+    {
+        $order = (int)($plan['exitIndex'][$key] ?? $exit['order']);
+        $style = sprintf('position:absolute; left:%dpx; top:%dpx; width:%dpx; height:%dpx;', $x, $y, $w, $h);
+        if ($exit['duration'] > 0) {
+            $style .= 'transition-duration:' . (int)$exit['duration'] . 'ms !important;';
+        }
+        return '<div class="fragment sf-exit sf-exit-' . h($exit['type']) . '" data-fragment-index="' . $order . '"'
+            . self::fragmentAutoSlideAttr($plan, $order) . ' style="' . $style . '">' . $html . "</div>\n";
     }
 
     public static function renderSections(array $slidesData, ?string $publicToken = null): string
@@ -326,7 +419,10 @@ class SlideRenderer
                 $attrs .= ' data-sf-slide-disabled="1" class="sf-slide-present-disabled"';
             }
             $html .= "<section{$attrs} style=\"width:100%; height:100%;\">\n";
-            foreach ($objects as $objIndex => $obj) {
+            if (!empty($plan['hasExit'])) {
+                $html .= self::exitCss() . "\n";
+            }
+            foreach (array_values($objects) as $objIndex => $obj) {
                 $html .= self::renderObject($obj, $publicToken, $plan, $objIndex);
             }
             $html .= "</section>\n";
@@ -398,7 +494,7 @@ class SlideRenderer
         return '';
     }
 
-    private static function renderTextPerLine(array $obj, string $outerStyle, string $animType, array $plan, int $objIndex): string
+    private static function renderTextPerLine(array $obj, string $outerStyle, string $animType, array $plan, string $objIndex): string
     {
         $fontFamily = $obj['fontFamily'] ?? 'Open Sans';
         $fontSize = $obj['fontSize'] ?? 32;
@@ -440,7 +536,31 @@ class SlideRenderer
         return '<div style="' . $outerStyle . '"><div class="sf-object sf-text" style="width:100%; height:100%; box-sizing:border-box; opacity:' . $opacity . ';">' . $linesHtml . '</div></div>' . "\n";
     }
 
-    private static function renderObject(array $obj, ?string $publicToken = null, array $plan = [], int $objIndex = 0): string
+    /**
+     * Ein Objekt mit Ausblende-Effekt steckt in einem äusseren Fragment (sf-exit),
+     * das Einblenden bleibt das innere Fragment: reveal.js schachtelt beide, so
+     * tauscht ein Klick A gegen B, wenn A-aus und B-ein dieselbe Nummer haben.
+     *
+     * @param int|string $objKey Index in der Folie, bei Gruppen-Kindern «i.k»
+     */
+    private static function renderObject(array $obj, ?string $publicToken = null, array $plan = [], $objKey = 0): string
+    {
+        $key = (string)$objKey;
+        $exit = self::exitOf($obj);
+        if ($exit === null) {
+            return self::renderObjectInner($obj, $publicToken, $plan, $key);
+        }
+        $inner = $obj;
+        $inner['x'] = 0;
+        $inner['y'] = 0;
+        return self::wrapExit(
+            self::renderObjectInner($inner, $publicToken, $plan, $key),
+            $exit, $plan, $key,
+            $obj['x'] ?? 0, $obj['y'] ?? 0, $obj['w'] ?? 100, $obj['h'] ?? 100
+        );
+    }
+
+    private static function renderObjectInner(array $obj, ?string $publicToken, array $plan, string $objIndex): string
     {
         $autoAdvanceForOrder = $plan['autoAdvanceForOrder'] ?? [];
         $objectIndices = $plan['fragmentIndex'][$objIndex] ?? [];
@@ -455,8 +575,10 @@ class SlideRenderer
 
         if ($type === 'group') {
             $childrenHtml = '';
-            foreach ($obj['children'] ?? [] as $child) {
-                $childrenHtml .= self::renderObject($child, $publicToken, $plan, $objIndex);
+            foreach (array_values($obj['children'] ?? []) as $ci => $child) {
+                if (is_array($child)) {
+                    $childrenHtml .= self::renderObject($child, $publicToken, $plan, $objIndex . '.' . $ci);
+                }
             }
             $outerStyle = sprintf(
                 'position:absolute; left:%dpx; top:%dpx; width:%dpx; height:%dpx; transform:rotate(%sdeg); transform-origin:top left; opacity:%s; box-sizing:border-box;',
@@ -855,7 +977,7 @@ class SlideRenderer
         $objects = $slide['objects'] ?? [];
         $plan = self::buildSlideFragmentPlan($objects);
         $html = '<div style="position:relative; width:100%; height:100%; box-sizing:border-box; ' . $bgStyle . ' overflow:hidden;">';
-        foreach ($objects as $objIndex => $obj) {
+        foreach (array_values($objects) as $objIndex => $obj) {
             $html .= self::renderObject($obj, $publicToken, $plan, $objIndex);
         }
         $html .= '</div>';
@@ -972,7 +1094,7 @@ class SlideRenderer
         $objects = $slide['objects'] ?? [];
         $plan = self::buildSlideFragmentPlan($objects);
         $html = '<div style="position:relative; width:100%; height:100%; box-sizing:border-box; ' . $bgStyle . ' overflow:hidden;">';
-        foreach ($objects as $objIndex => $obj) {
+        foreach (array_values($objects) as $objIndex => $obj) {
             $html .= self::renderObject($obj, $publicToken, $plan, $objIndex);
         }
         $html .= '</div>';

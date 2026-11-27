@@ -217,7 +217,8 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     // Mitlaufen: alle Effekte sichtbar wie im Editor.
     function alleSichtbar() {
       if (window.sfLiveChannel !== 'editor') return;
-      document.querySelectorAll('.reveal .slides .fragment').forEach(function (el) { el.classList.add('visible'); });
+      // Ausblende-Hüllen (sf-exit) nicht schalten, sonst verschwindet das Objekt.
+      document.querySelectorAll('.reveal .slides .fragment').forEach(function (el) { el.classList.toggle('visible', !el.classList.contains('sf-exit')); });
     }
     Reveal.on('slidechanged', alleSichtbar);
     Reveal.on('ready', alleSichtbar);
