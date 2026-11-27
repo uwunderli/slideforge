@@ -8666,24 +8666,33 @@
     return hidden ? hidden.value : 'slide';
   }
 
+  /* 4.0: Übergänge sind Einzelbefehle im Menüband (transition_*); die Knöpfe liegen im Vorrat oder in ihrer Zelle. */
+  function transitionButtons() {
+    return document.querySelectorAll('.sf-transition-btn[data-icon-value]');
+  }
+
   function setTransitionPickerValue(value) {
     const hidden = document.getElementById('transitionSelect');
-    const group = document.getElementById('transitionPickerGroup');
-    if (!hidden || !group) return;
+    if (!hidden) return;
     hidden.value = value || 'slide';
-    group.querySelectorAll('[data-icon-value]').forEach(btn => {
+    transitionButtons().forEach(btn => {
       btn.classList.toggle('active', btn.dataset.iconValue === hidden.value);
+      btn.setAttribute('aria-pressed', btn.dataset.iconValue === hidden.value ? 'true' : 'false');
     });
   }
 
   function initTransitionPicker() {
-    const group = document.getElementById('transitionPickerGroup');
     const hidden = document.getElementById('transitionSelect');
-    if (!group || !hidden) return;
-    group.innerHTML = TRANSITION_OPTIONS.map(o =>
-      '<button type="button" class="ribbon-btn ribbon-btn-tall effect-icon-btn' + (o.value === hidden.value ? ' active' : '') + '" data-icon-value="' + o.value + '" title="' + escapeHtml(o.label) + '">' + o.icon + '<span class="ribbon-btn-label">' + escapeHtml(o.label) + '</span></button>'
-    ).join('');
-    group.querySelectorAll('[data-icon-value]').forEach(btn => {
+    if (!hidden) return;
+    transitionButtons().forEach(btn => {
+      const o = TRANSITION_OPTIONS.find((x) => x.value === btn.dataset.iconValue);
+      if (!o) return;
+      btn.innerHTML = o.icon + '<span class="ribbon-btn-label">' + escapeHtml(o.label) + '</span>';
+      btn.title = o.label;
+      btn.classList.toggle('active', o.value === hidden.value);
+      btn.setAttribute('aria-pressed', o.value === hidden.value ? 'true' : 'false');
+    });
+    transitionButtons().forEach(btn => {
       btn.addEventListener('click', () => {
         hidden.value = btn.dataset.iconValue;
         setTransitionPickerValue(hidden.value);
@@ -11141,7 +11150,9 @@
       return true;
     };
     [['text_font', 'rb_font'], ['text_fontsize', 'rb_fontsize'], ['text_lineheight', 'rb_lineheight'], ['text_letterspacing', 'rb_letterspacing'],
-      ['text_color', 'rb_color'], ['text_mark_color', 'rb_mark'], ['text_opacity', 'rb_opacity']].forEach(([cmd, id]) => SFS.register(cmd, fieldFocusKey(id)));
+      ['text_color', 'rb_color'], ['text_mark_color', 'rb_mark'], ['text_opacity', 'rb_opacity'],
+      ['slide_bg_color', 'bgColorInput'], ['slide_autoadvance', 'autoAdvanceInput'], ['settings_title', 'edTitle'], ['settings_width', 'edWidth'],
+      ['settings_height', 'edHeight'], ['settings_margin', 'edSafeMargin'], ['settings_duration', 'edDuration'], ['settings_layout_set', 'edLayoutSet']].forEach(([cmd, id]) => SFS.register(cmd, fieldFocusKey(id)));
     /* 3.12.49: Markerfarbe anwenden / Kein Marker (Kürzel frei wählbar) — gleicher Weg wie die Knöpfe im Menüband. */
     const markKey = (clear) => (e) => {
       const notesEl = notesField();

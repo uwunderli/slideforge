@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 4.0.0 gebaut** (gleicher Zweig nach 3.12.55): übrige Menüband-Blöcke aus Einzelbefehlen (Übergänge, Hintergrundfarbe, Automatisch weiter, Einstellungen, Zoom); CHANGELOG «Neu in 4.0», docs/RELEASE_v4.0.0.md. Nicht im Browser geprüft.
 - **27.11. 3.12.55 gebaut** (`entwickler/slide-start-einzeln` ab 3.12.54 639f1d9, Worktree `gemeinde/wt-slide-start-einzeln`): Start-Menüband aus Einzelbefehlen (kind 'field', Vorrat je Element in editor_ribbon_start.php, IDs rb_* bleiben); alte Layouts mit widget:zeichen/absatz/text_colors werden beim Laden ersetzt. Nicht im Browser geprüft.
 - **27.11. 3.12.54 gebaut** (`entwickler/slide-farben-breite` ab 3.12.53): Farben-Gruppe im Menüband 7 Felder breit.
 - **27.11. 3.12.53 gebaut** (gleicher Zweig): Zeitstrahl-Reiter wirklich ausgeblendet ohne Zeitstrahl.
@@ -114,7 +115,7 @@ Ab 3.0.0 über Hub-Installer/Gitwart (Web-Share). Altbestand slides.bkbiel.ch: v
 - 04.11.: Agenda-Import (Layout wählbar, Traktanden auf Spalten verteilt, Vorschau-Kacheln). Eingabe docx/md/pdf → Gliederung (Markdown, korrigierbar) → Titelfolie + je Traktandum eine Übersicht mit Hervorhebung (Farbe/fett/beides, über `[color=]`/`**`) + optional Unterpunkt-Folie + Zusatz-PPTX hinter gewähltem Traktandum.
 
 ## Offen
-- Schritt 2: übrige Ribbon-Widgets zerlegen (Übergang, Hintergrund, Einstellungen, Zoom).
+- Menüband: bewusst Blöcke geblieben widget:templates (Galerie), widget:layout_elements, widget:slide_bg_preview (Vorschau). Aussehen 4.0 im Browser offen (Übergänge 12 statt 10 Spalten, Zoom ohne gemeinsamen Rahmen).
 
 ## Fallen
 - Importer läuft über eigene Seite `agenda.php` (nicht über den Logos-Dialog); PDF-Upload im Hauptdialog bleibt Bild-Import.

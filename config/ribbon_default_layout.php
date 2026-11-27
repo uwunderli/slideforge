@@ -97,16 +97,14 @@ function ribbon_default_layout(): array
                         ['id' => 'bg:none', 'gridSpan' => ['cols' => 1, 'rows' => 1], 'showLabel' => false],
                         ['id' => 'bg:gradient', 'gridSpan' => ['cols' => 1, 'rows' => 1], 'showLabel' => false],
                         ['id' => 'row_separator'],
-                        ['id' => 'widget:slide_bg_color'],
+                        ['id' => 'slide_bg_color'],
                         ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                         ['id' => 'bg:image', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'bg:video', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
-                    ['id' => 'g_transition', 'labelKey' => 'ribbon.group_slide_transition', 'items' => [
-                        ['id' => 'widget:slide_transition'],
-                    ]],
+                    ['id' => 'g_transition', 'labelKey' => 'ribbon.group_slide_transition', 'items' => ribbon_default_items_transitions()],
                     ['id' => 'g_timing', 'labelKey' => 'ribbon.group_slide_timing', 'items' => [
-                        ['id' => 'widget:slide_autoadvance'],
+                        ['id' => 'slide_autoadvance'],
                     ]],
                     ['id' => 'g_design_settings', 'labelKey' => 'ribbon.group_settings', 'items' => [
                         ['id' => 'apply_transition_selected', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
@@ -125,18 +123,7 @@ function ribbon_default_layout(): array
                         ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
-                    ['id' => 'g_settings', 'labelKey' => 'ribbon.group_settings', 'items' => [
-                        ['id' => 'widget:settings_title', 'gridSpan' => ['cols' => 6, 'rows' => 2]],
-                        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-                        ['id' => 'widget:settings_size', 'gridSpan' => ['cols' => 3, 'rows' => 2]],
-                        ['id' => 'widget:settings_margin', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
-                        ['id' => 'row_separator'],
-                        ['id' => 'widget:settings_duration', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
-                        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-                        ['id' => 'widget:settings_layout_set', 'gridSpan' => ['cols' => 4, 'rows' => 2]],
-                        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-                        ['id' => 'widget:settings_spellcheck', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-                    ]],
+                    ['id' => 'g_settings', 'labelKey' => 'ribbon.group_settings', 'items' => ribbon_default_items_settings()],
                     ['id' => 'g_collab', 'labelKey' => 'ribbon.group_collaboration', 'items' => [
                         ['id' => 'export', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                     ]],
@@ -155,9 +142,7 @@ function ribbon_default_layout(): array
                         ['id' => 'play_slide', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'preview_device', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
-                    ['id' => 'g_zoom', 'labelKey' => 'ribbon.group_zoom', 'items' => [
-                        ['id' => 'widget:zoom'],
-                    ]],
+                    ['id' => 'g_zoom', 'labelKey' => 'ribbon.group_zoom', 'items' => ribbon_default_items_zoom()],
                 ],
             ],
         ],
@@ -217,5 +202,50 @@ function ribbon_default_items_text_colors(): array
         ['id' => 'text_mark_clear', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
         ['id' => 'row_separator'],
         ['id' => 'text_opacity', 'gridSpan' => ['cols' => 7, 'rows' => 1]],
+    ];
+}
+
+/** Übergänge (4.0, vorher widget:slide_transition): je ein grosser Knopf. @return list<array<string,mixed>> */
+function ribbon_default_items_transitions(): array
+{
+    $out = [];
+    foreach (['none', 'fade', 'slide', 'convex', 'concave', 'zoom'] as $v) {
+        $out[] = ['id' => 'transition_' . $v, 'gridSpan' => ['cols' => 2, 'rows' => 2]];
+    }
+    return $out;
+}
+
+/**
+ * Einstellungen (4.0, vorher widget:settings_*): Titel · Breite/Rand über Höhe/Dauer · Folien-Set · Rechtschreibung.
+ * Breite und Höhe stehen untereinander wie früher im Block «B×H», Rand und Dauer daneben.
+ *
+ * @return list<array<string,mixed>>
+ */
+function ribbon_default_items_settings(): array
+{
+    return [
+        ['id' => 'settings_title', 'gridSpan' => ['cols' => 6, 'rows' => 2]],
+        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+        ['id' => 'settings_width', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
+        ['id' => 'settings_margin', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
+        ['id' => 'row_separator'],
+        ['id' => 'settings_height', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
+        ['id' => 'settings_duration', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
+        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+        ['id' => 'settings_layout_set', 'gridSpan' => ['cols' => 4, 'rows' => 2]],
+        ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+        ['id' => 'settings_spellcheck', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+    ];
+}
+
+/** Zoom (4.0, vorher widget:zoom). @return list<array<string,mixed>> */
+function ribbon_default_items_zoom(): array
+{
+    return [
+        ['id' => 'zoom_out', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'zoom_level', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
+        ['id' => 'zoom_in', 'gridSpan' => ['cols' => 1, 'rows' => 1]],
+        ['id' => 'row_separator'],
+        ['id' => 'zoom_fit', 'gridSpan' => ['cols' => 5, 'rows' => 1]],
     ];
 }

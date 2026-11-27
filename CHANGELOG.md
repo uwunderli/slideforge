@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.0.0] - 2026-11-27
+
+### Neu in 4.0
+- **Texteditor wie in Office:** Texte an Ort mit sichtbarer Formatierung bearbeiten; Menüband und Format-Spalte wirken auf die Markierung; Ctrl+B/I/U.
+- **Zeitstrahl** als neues Objekt mit Ereignisliste und eigenem Aussehen (Blasen, Strahl, Kategorien).
+- **Tastentipps und Kürzel:** Alt zeigt Buchstaben an Reitern, Knöpfen, Seitenleiste und Filmstreifen; jeder Befehl hat ein einstellbares Kürzel.
+- **Notizen:** formatiert bearbeiten, Menüband wirkt aufs Notizfeld, in der Referentenansicht unten oder links mit Textspalten.
+- **Übergänge wie PowerPoint:** Der Übergang gehört zur kommenden Folie.
+- **Verläufe mit Farbpunkten:** beliebig viele Farben mit Position und Deckkraft.
+- **Menüband aus Einzelbefehlen:** Jeder Knopf und jedes Feld ist einzeln verschieb- und ausblendbar.
+- **Ablage über FileForge:** Öffnen, Speichern, Vorlagen und Medien über den FileForge-Dialog; Schriften und Markenfarben aus dem Hub.
+
+### Changed
+- **Übrige Menüband-Blöcke aus Einzelbefehlen** (Urs 27.11.: «und dann 2. auch gleich»): Übergänge (Keiner, Überblenden, Schieben, Konvex, Konkav, Zoom) sind je ein Knopf; Hintergrundfarbe, «Automatisch weiter», Titel, Breite, Höhe, Rand, Dauer, Folien-Set und Rechtschreibung vor dem Präsentieren je ein Feld; Zoom besteht aus «−», Zoomstufe, «+» und «Einpassen». Alle einzeln im «Ribbon anpassen» verschiebbar, ausblendbar und mit Kürzelfeld; die bisherigen Zoom-Kürzel sind dieselben Befehle.
+- Gespeicherte Menübänder bekommen die Einzelbefehle beim Laden an derselben Stelle; Breite/Höhe stehen wie früher untereinander, Rand und Dauer daneben.
+- Bleiben Blöcke: Folienvorlagen-Galerie, Vorlage-Elemente und die Vorschau des Folienhintergrunds (reine Anzeige mit «×» zum Entfernen).
+
 ## [3.12.55] - 2026-11-27
 
 ### Changed

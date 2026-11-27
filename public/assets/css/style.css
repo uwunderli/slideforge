@@ -4578,7 +4578,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-grid-cell--widget > .ribbon-slide-bg-grid,
 .ribbon-grid-cell--widget > .ribbon-slide-bg-color-inner,
 .ribbon-grid-cell--widget > .ribbon-slide-bg-preview-inner,
-.ribbon-grid-cell--widget > .ribbon-slide-transition-inner,
 .ribbon-grid-cell--widget > .ribbon-slide-timing-inner,
 .ribbon-grid-cell--widget > .ribbon-slide-autoadvance-inner,
 .ribbon-grid-cell--widget > .ribbon-group-content,
@@ -5201,7 +5200,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-grid-cell--widget .ribbon-slide-bg-grid,
 .ribbon-grid-cell--widget .ribbon-slide-bg-color-inner,
 .ribbon-grid-cell--widget .ribbon-slide-bg-preview-inner,
-.ribbon-grid-cell--widget .ribbon-slide-transition-inner,
 .ribbon-grid-cell--widget .ribbon-slide-timing-inner,
 .ribbon-grid-cell--widget .ribbon-slide-autoadvance-inner,
 .ribbon-grid-cell--widget .ribbon-group-content,
@@ -6104,7 +6102,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
   padding: 1px 5px;
   text-align: center;
 }
-.ribbon-settings-size-inner .ribbon-settings-field--icon input,
 .ribbon-settings-margin-inner .ribbon-settings-field--icon input,
 .ribbon-settings-duration-inner .ribbon-settings-field--icon input {
   min-width: 56px;
@@ -6140,44 +6137,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-settings-field-title input {
   min-width: 0;
   width: 100%;
-}
-.ribbon-settings-size-inner {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  box-sizing: border-box;
-  padding: 1px 2px;
-}
-.ribbon-settings-size-inner[data-size-layout="stack"] {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 4px;
-}
-.ribbon-settings-size-inner[data-size-layout="stack"] .ribbon-settings-size-x {
-  display: none;
-}
-.ribbon-settings-size-inner[data-size-layout="row"] {
-  flex-direction: row;
-  align-items: center;
-}
-.ribbon-settings-size-inner .ribbon-settings-field {
-  flex: 1 1 0;
-  max-width: none;
-}
-.ribbon-settings-size-inner .ribbon-settings-field input {
-  text-align: center;
-}
-.ribbon-settings-size-x {
-  flex: 0 0 auto;
-  padding: 0;
-  opacity: 0.7;
-  font-size: 0.85rem;
-  line-height: 1;
 }
 .ribbon-settings-field-grow {
   flex: 1 1 auto;
@@ -6274,7 +6233,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
   height: 100%;
 }
 .ribbon-grid-cell--widget > .ribbon-settings-title-inner,
-.ribbon-grid-cell--widget > .ribbon-settings-size-inner,
 .ribbon-grid-cell--widget > .ribbon-settings-margin-inner,
 .ribbon-grid-cell--widget > .ribbon-settings-duration-inner,
 .ribbon-grid-cell--widget > .ribbon-settings-spellcheck-inner,
@@ -6379,117 +6337,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
   margin: 0;
   width: 100%;
   justify-content: center;
-}
-.ribbon-slide-transition-inner {
-  display: flex;
-  align-items: stretch;
-  align-self: stretch;
-  height: 100%;
-  width: 100%;
-  min-width: 0;
-}
-.ribbon-slide-transition-picker {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  height: 100%;
-  width: 100%;
-  gap: 2px;
-  min-width: 0;
-}
-/* Übergang 2-zeilig: 3+3-Raster */
-.ribbon-grid-cell.ribbon-transition--wrap .ribbon-slide-transition-picker,
-.ribbon-slide-transition-inner[data-transition-layout="wrap"] .ribbon-slide-transition-picker {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: 1fr 1fr;
-  gap: 2px;
-  width: 100%;
-  height: 100%;
-}
-.ribbon-grid-cell.ribbon-transition--wrap .ribbon-slide-transition-picker .ribbon-btn-tall,
-.ribbon-slide-transition-inner[data-transition-layout="wrap"] .ribbon-slide-transition-picker .ribbon-btn-tall {
-  width: auto;
-  min-width: 0;
-  max-width: none;
-  flex: unset;
-  height: auto;
-  min-height: 0;
-  padding: 2px 2px 1px;
-}
-.ribbon-grid-cell.ribbon-transition--wrap .ribbon-slide-transition-picker .ribbon-btn-tall > svg,
-.ribbon-slide-transition-inner[data-transition-layout="wrap"] .ribbon-slide-transition-picker .ribbon-btn-tall > svg {
-  width: 22px;
-  height: 22px;
-  max-width: 22px;
-  max-height: 22px;
-}
-.ribbon-grid-cell.ribbon-transition--wrap .ribbon-slide-transition-picker .ribbon-btn-label,
-.ribbon-slide-transition-inner[data-transition-layout="wrap"] .ribbon-slide-transition-picker .ribbon-btn-label {
-  font-size: 0.55rem;
-  line-height: 1.05;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-}
-/* Übergang 1-zeilig: eine Reihe Buttons (volle Zellenbreite) */
-.ribbon-grid-cell.ribbon-transition--row .ribbon-slide-transition-picker,
-.ribbon-slide-transition-inner[data-transition-layout="row"] .ribbon-slide-transition-picker {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  width: 100%;
-  height: 100%;
-  gap: 1px;
-}
-.ribbon-grid-cell.ribbon-transition--row .ribbon-slide-transition-picker .ribbon-btn,
-.ribbon-slide-transition-inner[data-transition-layout="row"] .ribbon-slide-transition-picker .ribbon-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: none;
-  width: auto;
-  height: auto;
-  min-height: 0;
-  padding: 2px 2px 1px;
-}
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-slide-transition-picker .ribbon-btn-tall {
-  min-height: 0;
-  height: auto;
-  flex: 0 0 auto;
-  width: 62px;
-  min-width: 52px;
-  max-width: 68px;
-  padding: 4px 4px 3px;
-  border: 1px solid transparent;
-}
-/* Einzeilig: feste 62px-Breite aufgeben, Buttons teilen die Zellenbreite */
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-transition--row .ribbon-slide-transition-picker .ribbon-btn-tall {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-  max-width: none;
-}
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-slide-transition-picker .ribbon-btn-tall.active {
-  background: var(--ribbon-bg-active, rgba(58, 108, 141, 0.22));
-  border-color: var(--ribbon-border-active, var(--accent));
-  color: var(--ribbon-fg, var(--text));
-}
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-slide-transition-picker .ribbon-btn-tall > svg {
-  width: 28px;
-  height: 28px;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-slide-transition-picker .ribbon-btn-label {
-  font-size: 0.58rem;
-  max-width: 100%;
-  line-height: 1.05;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-.editor-ribbon-panel[data-ribbon-panel="design"] .ribbon-transition--wrap .ribbon-slide-transition-picker .ribbon-btn-tall {
-  width: auto;
-  min-width: 0;
-  max-width: none;
 }
 .ribbon-slide-bg-grid {
   display: flex;
@@ -7324,35 +7171,18 @@ body.editor-grid-dragging .editor-slide-grid-item {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
-.ribbon-zoom-inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 2px 0;
-}
-.ribbon-zoom-stepper {
-  display: grid;
-  grid-template-columns: var(--ribbon-cell, 36px) minmax(2.6rem, 1fr) var(--ribbon-cell, 36px);
-  align-items: stretch;
-  height: var(--ribbon-cell, 36px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm, 6px);
-  background: var(--surface-raised, var(--surface));
-  overflow: hidden;
-}
+/* 4.0: Zoom aus Einzelbefehlen — «−», Stufe, «+» je eine Zelle (vorher ein Block mit gemeinsamem Rahmen). */
 .ribbon-zoom-step {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-raised, var(--surface));
   color: var(--ribbon-fg, var(--text));
   cursor: pointer;
 }
@@ -7373,8 +7203,8 @@ body.editor-grid-dragging .editor-slide-grid-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  width: 100%;
+  height: 100%;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
@@ -7414,13 +7244,6 @@ body.editor-grid-dragging .editor-slide-grid-item {
 .ribbon-zoom-fit:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-.ribbon-grid-cell--widget:has(> .ribbon-zoom-inner) {
-  align-items: stretch;
-  justify-content: stretch;
-}
-.ribbon-grid-cell--widget > .ribbon-zoom-inner {
-  align-self: stretch;
 }
 .editor-ribbon-menus {
   display: flex;

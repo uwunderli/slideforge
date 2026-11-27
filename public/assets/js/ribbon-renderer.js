@@ -241,6 +241,20 @@
     mark_color: '<path d="M8 15l8-10 3 3-10 8z"/><path d="M5 19h7"/><path d="M18 15l2 2.5 2-2.5"/>',
     mark_clear: '<path d="M5 19h7"/><path d="M8 15l8-10 3 3-10 8z"/><path d="M15 15l5 5M20 15l-5 5"/>',
     opacity: '<rect x="4" y="4" width="11" height="11" rx="1"/><rect x="9" y="9" width="11" height="11" rx="1" fill="currentColor" fill-opacity="0.28"/>',
+    /* 4.0 Schritt 2: Übergänge, Einstellungen, Zoom */
+    transition_none: '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M6 6l12 12M18 6L6 18"/>',
+    transition_fade: '<rect x="5" y="7" width="9" height="10" rx="1.5" opacity="0.45"/><rect x="10" y="7" width="9" height="10" rx="1.5"/>',
+    transition_slide: '<rect x="4" y="7" width="7" height="10" rx="1.5"/><rect x="13" y="7" width="7" height="10" rx="1.5"/><path d="M11 12h2"/><path d="M12.5 10.5L14 12l-1.5 1.5"/>',
+    transition_convex: '<path d="M4 17V7c4 0 6-4 8-4s4 4 8 4v10"/><rect x="4" y="7" width="16" height="10" rx="1.5" opacity="0.25"/>',
+    transition_concave: '<path d="M4 7h16v10c-4 0-6 4-8 4s-4-4-8-4V7z"/><rect x="4" y="7" width="16" height="10" rx="1.5" opacity="0.25"/>',
+    transition_zoom: '<rect x="9" y="9" width="6" height="6" rx="1"/><path d="M15 15l3 3"/><circle cx="12" cy="12" r="7"/>',
+    size_width: '<path d="M4 12h16"/><path d="M7 9L4 12l3 3"/><path d="M17 9l3 3-3 3"/><rect x="9" y="7" width="6" height="10" rx="1"/>',
+    size_height: '<path d="M12 4v16"/><path d="M9 7l3-3 3 3"/><path d="M9 17l3 3 3-3"/><rect x="7" y="9" width="10" height="6" rx="1"/>',
+    safe_margin: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><rect x="7" y="8" width="10" height="8" rx="1" stroke-dasharray="2.5 2"/>',
+    zoom_out: '<circle cx="11" cy="11" r="7"/><path d="M16 16l4 4"/><path d="M8 11h6"/>',
+    zoom_in: '<circle cx="11" cy="11" r="7"/><path d="M16 16l4 4"/><path d="M8 11h6M11 8v6"/>',
+    zoom_level: '<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 12h1M11 12h2M16 12h1"/>',
+    zoom_fit: '<path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
   };
 
   const commandIndex = {};
@@ -313,20 +327,12 @@
     if (kind === 'separator') {
       return { cols: 1, rows: size === 'small' ? 1 : 2 };
     }
-    if (cmdId === 'widget:slide_transition') {
-      /* 1-zeilig: eine Reihe Tall-Buttons; 2-zeilig: 3+3-Raster */
-      return size === 'small' ? { cols: 10, rows: 2 } : { cols: 5, rows: 2 };
-    }
     return size === 'large' ? { cols: 2, rows: 2 } : { cols: 1, rows: 1 };
   }
 
   function tileSizeFromSpan(span, kind, cmdId) {
     if (kind === 'separator') {
       return (span?.rows || 2) >= 2 ? 'large' : 'small';
-    }
-    if (cmdId === 'widget:slide_transition') {
-      /* Schmal + 2 Zeilen = Wrap (2-zeilig), sonst eine Reihe. */
-      return (span?.rows || 1) >= 2 && (span?.cols || 10) <= 6 ? 'large' : 'small';
     }
     if ((span?.cols || 1) >= 2 && (span?.rows || 1) >= 2) return 'large';
     return 'small';
@@ -336,26 +342,13 @@
     if (!cmd) return false;
     if (cmd.kind === 'row_separator') return false;
     if (cmd.kind === 'field') return false;   // 4.0: Feld/Knopf aus dem Vorrat hat seine natürliche Breite (gridSpan im Katalog)
-    if (cmd.kind === 'widget') return !!cmd.tileable || cmd.id === 'widget:slide_transition';
-    return cmd.kind !== 'widget';
-  }
-
-  function isTransitionWrapSpan(span) {
-    return (span?.rows || 1) >= 2 && (span?.cols || 10) <= 6;
+    if (cmd.kind === 'widget') return !!cmd.tileable;
+    return true;
   }
 
   function clampSpan(span, maxRows, cmd) {
     const rows = Math.min(span.rows, maxRows);
-    if (cmd && cmd.id === 'widget:slide_transition') {
-      /* Breite nie auf 1 Spalte kollabieren — sonst nur «Keiner» sichtbar. */
-      if (rows < 2) {
-        return { cols: Math.max(span.cols, 10), rows: 1 };
-      }
-      if (isTransitionWrapSpan(span)) {
-        return { cols: Math.max(span.cols, 5), rows: 2 };
-      }
-      return { cols: Math.max(span.cols, 10), rows: 2 };
-    }
+    if (cmd && cmd.kind === 'field') return { cols: span.cols, rows };   // 4.0: Feld behält seine Breite auch in 1-zeiligen Gruppen
     /* Grosses Symbol (2×2) in 1-zeiliger Gruppe nicht zu 2×1 verkümmern. */
     if (span.rows >= 2 && rows < 2 && span.cols >= 2) {
       return { cols: 1, rows };
@@ -374,22 +367,12 @@
       widget.classList.contains('ribbon-widget-grid') ||
       widget.classList.contains('ribbon-widget-body') ||
       widget.classList.contains('ribbon-widget-wrap') ||
-      widget.classList.contains('ribbon-slide-bg-color-inner') ||
       widget.classList.contains('ribbon-slide-bg-preview-inner') ||
-      widget.classList.contains('ribbon-slide-transition-inner') ||
-      widget.classList.contains('ribbon-slide-autoadvance-inner') ||
       widget.classList.contains('ribbon-present-display-inner') ||
       widget.classList.contains('present-ribbon-remote-inner') ||
       widget.classList.contains('present-ribbon-local-inner') ||
-      widget.classList.contains('ribbon-settings-title-inner') ||
-      widget.classList.contains('ribbon-settings-size-inner') ||
-      widget.classList.contains('ribbon-settings-margin-inner') ||
-      widget.classList.contains('ribbon-settings-duration-inner') ||
-      widget.classList.contains('ribbon-settings-spellcheck-inner') ||
-      widget.classList.contains('ribbon-settings-layout-set-inner') ||
       widget.classList.contains('ribbon-settings-slides-inner') ||
-      widget.classList.contains('ribbon-settings-presentation-inner') ||
-      widget.classList.contains('ribbon-zoom-inner')
+      widget.classList.contains('ribbon-settings-presentation-inner')
     ) {
       return widget;
     }
@@ -404,23 +387,13 @@
     const content = widget.querySelector(
       ':scope > .ribbon-widget-grid, ' +
       ':scope > .ribbon-slide-bg-grid, ' +
-      ':scope > .ribbon-slide-bg-color-inner, ' +
       ':scope > .ribbon-slide-bg-preview-inner, ' +
-      ':scope > .ribbon-slide-transition-inner, ' +
       ':scope > .ribbon-slide-timing-inner, ' +
-      ':scope > .ribbon-slide-autoadvance-inner, ' +
       ':scope > .ribbon-present-display-inner, ' +
       ':scope > .present-ribbon-remote-inner, ' +
       ':scope > .present-ribbon-local-inner, ' +
-      ':scope > .ribbon-settings-title-inner, ' +
-      ':scope > .ribbon-settings-size-inner, ' +
-      ':scope > .ribbon-settings-margin-inner, ' +
-      ':scope > .ribbon-settings-duration-inner, ' +
-      ':scope > .ribbon-settings-spellcheck-inner, ' +
-      ':scope > .ribbon-settings-layout-set-inner, ' +
       ':scope > .ribbon-settings-slides-inner, ' +
       ':scope > .ribbon-settings-presentation-inner, ' +
-      ':scope > .ribbon-zoom-inner, ' +
       ':scope > .ribbon-group-content, ' +
       ':scope > .ribbon-group-items, ' +
       ':scope > .present-config-wrap'
@@ -693,15 +666,7 @@
       state.usedWidgetTemplates.add(cmd.templateId);
       const widget = takeWidget(cmd.templateId);
       if (!widget) return null;
-      const body = extractWidgetBody(widget);
-      if (body && cmd.id === 'widget:slide_transition') {
-        body.dataset.transitionLayout = isTransitionWrapSpan(span) ? 'wrap' : 'row';
-      }
-      if (body && cmd.id === 'widget:settings_size') {
-        /* Gross (2 Zeilen) = B über H; klein (1 Zeile) = B × H nebeneinander. */
-        body.dataset.sizeLayout = span.rows >= 2 ? 'stack' : 'row';
-      }
-      return body;
+      return extractWidgetBody(widget);
     }
     const el = createCommandButton(sfCmd, span);
     if (!el) return null;
@@ -738,21 +703,18 @@
     returnWidgetsToStore();
   }
 
-  /** Nach dem Zeichnen: Zellen-Klassen, die vom Widget-Inhalt abhängen (Übergänge als Reihe oder Raster). */
+  /**
+   * Nach dem Zeichnen: Zellen der Einzelbefehle (4.0) markieren. --widget dazu, damit die bisherigen Regeln der früheren Blöcke
+   * (z. B. «.ribbon-grid-cell--widget > .ribbon-settings-title-inner») weiter greifen.
+   */
   function afterRender(root) {
     (root || getRibbonEl())?.querySelectorAll('[data-sf-field]').forEach((el) => {
-      if (el.parentElement && el.parentElement.classList.contains('ribbon-grid-cell')) el.parentElement.classList.add('ribbon-grid-cell--field');
-    });
-    (root || getRibbonEl())?.querySelectorAll('[data-transition-layout]').forEach((body) => {
-      const cell = body.parentElement;
-      if (!cell) return;
-      const wrap = body.dataset.transitionLayout === 'wrap';
-      cell.classList.toggle('ribbon-transition--wrap', wrap);
-      cell.classList.toggle('ribbon-transition--row', !wrap);
+      const cell = el.parentElement;
+      if (cell && cell.classList.contains('ribbon-grid-cell')) cell.classList.add('ribbon-grid-cell--field', 'ribbon-grid-cell--widget');
     });
   }
 
-  /** Raster-Spanne wie bisher (feste Widget-Breiten, Übergänge nie zu schmal). */
+  /** Raster-Spanne: Spanne des Eintrags, sonst die natürliche Breite aus dem Katalog. */
   function spanOf(cmd, item, groupRows) {
     return clampSpan(getGridSpan(cmd, item), groupRows, cmd);
   }

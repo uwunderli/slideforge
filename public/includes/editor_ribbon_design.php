@@ -2,16 +2,15 @@
 /** @var bool $canEdit */
 /** @var bool $isTemplateMode */
 ?>
-<div class="ribbon-widget-shell" data-widget-id="widget-slide-bg-color">
-  <div class="ribbon-slide-bg-color-inner ribbon-object-farbe-solid ribbon-slide-farbe-solid">
-    <div class="ribbon-farben-grid">
-      <div class="ribbon-object-fill-colors" id="ribbonSlideFillColors">
-        <div class="ribbon-farben-row">
-          <label class="ribbon-color-picker-wrap">
-            <span class="sr-only"><?= h(t('bg.color')) ?></span>
-            <input type="color" id="bgColorInput" value="#111111" title="<?= h(t('bg.color')) ?>">
-          </label>
-        </div>
+<?php /* 4.0: Einzelbefehle (kind 'field', config/ribbon_commands.php): das Element mit data-widget-id wandert in seine Zelle. */ ?>
+<div class="ribbon-slide-bg-color-inner ribbon-object-farbe-solid ribbon-slide-farbe-solid" data-widget-id="field-slide-bg-color">
+  <div class="ribbon-farben-grid">
+    <div class="ribbon-object-fill-colors" id="ribbonSlideFillColors">
+      <div class="ribbon-farben-row">
+        <label class="ribbon-color-picker-wrap">
+          <span class="sr-only"><?= h(t('bg.color')) ?></span>
+          <input type="color" id="bgColorInput" value="#111111" title="<?= h(t('bg.color')) ?>" data-field-control>
+        </label>
       </div>
     </div>
   </div>
@@ -45,18 +44,15 @@
   </div>
 </div>
 
-<div class="ribbon-widget-shell" data-widget-id="widget-slide-transition">
-  <div class="ribbon-slide-transition-inner">
-    <input type="hidden" id="transitionSelect" value="slide">
-    <div id="transitionPickerGroup" class="ribbon-tall-row ribbon-slide-transition-picker"></div>
-  </div>
-</div>
+<?php /* 4.0: Übergänge als Einzelknöpfe; Symbol und Beschriftung setzt editor.js (initTransitionPicker, TRANSITION_OPTIONS). */ ?>
+<input type="hidden" id="transitionSelect" value="slide">
+<?php foreach (['none', 'fade', 'slide', 'convex', 'concave', 'zoom'] as $sfTransition): ?>
+<button type="button" class="ribbon-btn ribbon-btn-tall ribbon-grid-btn effect-icon-btn sf-transition-btn" data-widget-id="field-transition-<?= $sfTransition ?>" data-icon-value="<?= $sfTransition ?>" data-field-control></button>
+<?php endforeach; ?>
 
-<div class="ribbon-widget-shell" data-widget-id="widget-slide-autoadvance">
-  <div class="ribbon-slide-autoadvance-inner">
-    <label class="ribbon-slide-field" for="autoAdvanceInput">
-      <span class="ribbon-slide-field-label"><?= h(t('ribbon.slide_autoadvance_short')) ?></span>
-      <input type="number" id="autoAdvanceInput" min="0" step="1" value="0" aria-label="<?= h(t('bg.autoadvance_label')) ?>">
-    </label>
-  </div>
+<div class="ribbon-slide-autoadvance-inner" data-widget-id="field-slide-autoadvance">
+  <label class="ribbon-slide-field" for="autoAdvanceInput">
+    <span class="ribbon-slide-field-label"><?= h(t('ribbon.slide_autoadvance_short')) ?></span>
+    <input type="number" id="autoAdvanceInput" min="0" step="1" value="0" aria-label="<?= h(t('bg.autoadvance_label')) ?>" data-field-control>
+  </label>
 </div>

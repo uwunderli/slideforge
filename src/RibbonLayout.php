@@ -148,6 +148,16 @@ class RibbonLayout
         $injectViewPreviews = false;
         // 3.8.0: «Fenster» (preview_window) und «Lokal» (present_local) sind ein Knopf «Auf Gerät» (preview_device) geworden.
         $previewAliases = ['preview_window' => 'preview_device', 'present_local' => 'preview_device'];
+        // 4.0: Einzelfeld-Blöcke sind Einzelbefehle mit neuer Kennung (Spanne der Person bleibt).
+        $previewAliases += [
+            'widget:slide_bg_color' => 'slide_bg_color',
+            'widget:slide_autoadvance' => 'slide_autoadvance',
+            'widget:settings_title' => 'settings_title',
+            'widget:settings_margin' => 'settings_margin',
+            'widget:settings_duration' => 'settings_duration',
+            'widget:settings_spellcheck' => 'settings_spellcheck',
+            'widget:settings_layout_set' => 'settings_layout_set',
+        ];
         $previewDeviceSeen = false;
         foreach ($layout['tabs'] as $tab) {
             if (!is_array($tab) || empty($tab['id'])) {
@@ -175,14 +185,14 @@ class RibbonLayout
                 $legacyExpand = [
                     'widget:slide_background' => [
                         'bg:none',
-                        'widget:slide_bg_color',
+                        'slide_bg_color',
                         'bg:gradient',
                         'bg:image',
                         'bg:video',
                         'widget:slide_bg_preview',
                     ],
                     'widget:slide_timing' => [
-                        'widget:slide_autoadvance',
+                        'slide_autoadvance',
                     ],
                     'widget:present_menu' => [
                         ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
@@ -203,24 +213,18 @@ class RibbonLayout
                     'widget:zeichen' => ribbon_default_items_zeichen(),
                     'widget:absatz' => ribbon_default_items_absatz(),
                     'widget:text_colors' => ribbon_default_items_text_colors(),
+                    /* 4.0 Schritt 2: übrige Blöcke → Einzelbefehle (widget:settings_size siehe unten, Breite/Höhe mit Rand/Dauer verzahnt). */
+                    'widget:slide_transition' => ribbon_default_items_transitions(),
+                    'widget:zoom' => ribbon_default_items_zoom(),
                 ];
+                $stackBlocks = ['widget:zeichen', 'widget:absatz', 'widget:text_colors', 'widget:zoom'];
                 $settingsLegacyIds = [
                     'settings_slides',
                     'widget:settings_slides',
                     'settings_presentation',
                     'widget:settings_presentation',
                 ];
-                $settingsDefaultItems = [
-                    ['id' => 'widget:settings_title', 'gridSpan' => ['cols' => 6, 'rows' => 2]],
-                    ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-                    ['id' => 'widget:settings_size', 'gridSpan' => ['cols' => 3, 'rows' => 2]],
-                    ['id' => 'widget:settings_margin', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
-                    ['id' => 'row_separator'],
-                    ['id' => 'widget:settings_duration', 'gridSpan' => ['cols' => 3, 'rows' => 1]],
-                    ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-                    ['id' => 'widget:settings_spellcheck', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-                    ['id' => 'widget:settings_layout_set', 'gridSpan' => ['cols' => 4, 'rows' => 2]],
-                ];
+                $settingsDefaultItems = ribbon_default_items_settings();
                 $settingsExpanded = false;
                 $rawGroupItems = array_values($group['items'] ?? []);
                 for ($gi = 0, $gLen = count($rawGroupItems); $gi < $gLen; $gi++) {
@@ -272,10 +276,38 @@ class RibbonLayout
                         }
                         continue;
                     }
+                    if ($itemId === 'widget:settings_size') {
+                        /* 4.0: Block «B×H» → settings_width über settings_height. Folgen wie in der Vorgabe Rand, neue Zeile, Dauer
+                           (je einzeilig), werden sie verzahnt (Breite·Rand / Höhe·Dauer) — sieht aus wie vorher. */
+                        $peek = [];
+                        for ($pi = 1; $pi <= 3 && $gi + $pi < $gLen; $pi++) {
+                            $raw = $rawGroupItems[$gi + $pi];
+                            $rid = is_array($raw) ? (string)($raw['id'] ?? '') : (string)$raw;
+                            $peek[] = ['id' => $previewAliases[$rid] ?? $rid, 'raw' => $raw];
+                        }
+                        $oneRow = static fn(array $p): bool => !is_array($p['raw']) || (int)($p['raw']['gridSpan']['rows'] ?? 1) < 2;
+                        $width = ['id' => 'settings_width', 'gridSpan' => ['cols' => 3, 'rows' => 1]];
+                        $height = ['id' => 'settings_height', 'gridSpan' => ['cols' => 3, 'rows' => 1]];
+                        if (count($peek) === 3 && $peek[1]['id'] === 'row_separator'
+                            && isset($catalog[$peek[0]['id']]) && isset($catalog[$peek[2]['id']])
+                            && $peek[0]['id'] !== 'separator' && $peek[2]['id'] !== 'separator'
+                            && $oneRow($peek[0]) && $oneRow($peek[2])) {
+                            $first = ['id' => $peek[0]['id']] + (is_array($peek[0]['raw']) && isset($peek[0]['raw']['gridSpan']) ? ['gridSpan' => $peek[0]['raw']['gridSpan']] : []);
+                            $second = ['id' => $peek[2]['id']] + (is_array($peek[2]['raw']) && isset($peek[2]['raw']['gridSpan']) ? ['gridSpan' => $peek[2]['raw']['gridSpan']] : []);
+                            array_push($items, $width, $first, ['id' => 'row_separator'], $height, $second);
+                            $gi += 3;
+                            continue;
+                        }
+                        array_push($items, $width, ['id' => 'row_separator'], $height);
+                        if ($peek !== [] && $peek[0]['id'] !== 'separator') {
+                            $items[] = ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]];
+                        }
+                        continue;
+                    }
                     if ($itemId !== '' && isset($legacyExpand[$itemId])) {
                         /* 4.0: Teilt ein früherer Start-Block die Gruppe mit anderem, trennt ein Trenner die Einzelbefehle davon
                            (sonst rutschten ihre Zeilen in den Zeilenstapel davor). */
-                        if (in_array($itemId, ['widget:zeichen', 'widget:absatz', 'widget:text_colors'], true)
+                        if (in_array($itemId, $stackBlocks, true)
                             && $items !== [] && ($items[count($items) - 1]['id'] ?? '') !== 'separator') {
                             $items[] = ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]];
                         }
@@ -316,7 +348,7 @@ class RibbonLayout
                     if (in_array($itemId, ['ff_save', 'ff_save_copy', 'ff_save_template'], true)) {
                         $itemEntry['gridSpan'] = ['cols' => 2, 'rows' => 2];
                     }
-                    if ($itemId === 'widget:settings_title') {
+                    if ($itemId === 'settings_title') {
                         $cols = (int)($itemEntry['gridSpan']['cols'] ?? 6);
                         if ($cols < 6) {
                             $cols = 6;
@@ -326,17 +358,7 @@ class RibbonLayout
                             'rows' => 2,
                         ];
                     }
-                    if ($itemId === 'widget:settings_size') {
-                        $cols = (int)($itemEntry['gridSpan']['cols'] ?? 3);
-                        if ($cols < 3) {
-                            $cols = 3;
-                        }
-                        $itemEntry['gridSpan'] = [
-                            'cols' => $cols,
-                            'rows' => 2,
-                        ];
-                    }
-                    if ($itemId === 'widget:settings_spellcheck') {
+                    if ($itemId === 'settings_spellcheck') {
                         $itemEntry['gridSpan'] = [
                             'cols' => 2,
                             'rows' => 2,
@@ -863,14 +885,14 @@ class RibbonLayout
                 }
             }
         }
-        if (empty($have['widget:settings_title'])) {
+        if (empty($have['settings_title'])) {
             return $tabs;
         }
         $needsRestore = empty($have['present_mode'])
             || (empty($have['show_progress']) && empty($have['show_controls']) && empty($have['widget:present_display']))
             || empty($have['export'])
-            || empty($have['widget:settings_duration'])
-            || empty($have['widget:settings_layout_set']);
+            || empty($have['settings_duration'])
+            || empty($have['settings_layout_set']);
         if (!$needsRestore) {
             return $tabs;
         }
