@@ -2967,6 +2967,18 @@
     };
     document.getElementById('stageWrap')?.addEventListener('wheel', (ev) => onWheel(ev, false), { passive: false });
     document.getElementById('slideGrid')?.addEventListener('wheel', (ev) => onWheel(ev, true), { passive: false });
+    /* Klick aufs Mausrad (mittlere Taste) setzt zurück: Folie auf «Einpassen», Raster auf Standardgrösse (Urs 27.11.). */
+    const onMiddle = (ev, grid) => {
+      if (ev.button !== 1) return;
+      ev.preventDefault();
+      if (ev.type !== 'mousedown') return;
+      if (grid) applyGridThumbMin(168, { save: true });
+      else zoomFit();
+    };
+    ['mousedown', 'auxclick'].forEach((t) => {
+      document.getElementById('stageWrap')?.addEventListener(t, (ev) => onMiddle(ev, false));
+      document.getElementById('slideGrid')?.addEventListener(t, (ev) => onMiddle(ev, true));
+    });
   }
 
   function initGridThumbSlider() {
