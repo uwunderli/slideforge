@@ -9438,6 +9438,24 @@
       }
       const tag = (document.activeElement && document.activeElement.tagName) || '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      /* Pfeil hoch/runter (auch Bild hoch/runter, Pos1/Ende) im Filmstreifen: vorige/nächste Folie öffnen (Urs 27.11.). */
+      if (SF.editorViewMode !== 'grid' && slideShortcutContext() && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
+          && ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
+        e.preventDefault();
+        const last = SF.slides.length - 1;
+        let next = SF.currentIndex;
+        if (e.key === 'ArrowUp' || e.key === 'PageUp') next -= 1;
+        else if (e.key === 'ArrowDown' || e.key === 'PageDown') next += 1;
+        else if (e.key === 'Home') next = 0;
+        else next = last;
+        next = Math.max(0, Math.min(last, next));
+        if (next !== SF.currentIndex) {
+          switchToSlide(next).then(() => {
+            document.querySelector('#slideFilmstrip .filmstrip-item.active')?.focus({ preventScroll: true });
+          });
+        }
+        return;
+      }
       /* F5 startet die Präsentation ab der ersten Folie, Shift+F5 ab der aktuellen —
          wie in den gängigen Präsentationsprogrammen. Steht vor der Abfrage auf
          Steuerungstaste weiter unten, weil F5 ohne Zusatztaste kommt. */
