@@ -327,6 +327,7 @@ return [
     'ff.save' => 'Save',
     'ff.save_copy' => 'Save copy …',
     'ff.save_template' => 'Save as template …',
+    'ribbon.show_on_device' => 'Show on device',
     'ribbon.group_undo' => 'Undo',
     'ribbon.group_clipboard' => 'Clipboard',
     'ribbon.group_arrange' => 'Arrange',

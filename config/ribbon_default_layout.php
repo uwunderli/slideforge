@@ -123,6 +123,7 @@ function ribbon_default_layout(): array
                 'groups' => [
                     ['id' => 'g_present_start', 'labelKey' => 'ribbon.group_present', 'items' => [
                         ['id' => 'present_mode', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'show_on_device', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'separator', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
                         ['id' => 'show_progress', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'show_controls', 'gridSpan' => ['cols' => 2, 'rows' => 2]],

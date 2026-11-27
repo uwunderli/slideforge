@@ -333,6 +333,7 @@ return [
     'ff.save' => 'Speichern',
     'ff.save_copy' => 'Als Kopie …',
     'ff.save_template' => 'Als Vorlage …',
+    'ribbon.show_on_device' => 'Auf Gerät zeigen',
     'ribbon.group_undo' => 'Rückgängig',
     'ribbon.group_clipboard' => 'Zwischenablage',
     'ribbon.group_arrange' => 'Anordnen',

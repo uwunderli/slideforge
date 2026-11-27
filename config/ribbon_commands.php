@@ -69,6 +69,7 @@ function ribbon_command_catalog(): array
 
         // --- Präsentation ---
         ['id' => 'present_mode', 'kind' => 'link', 'category' => 'present', 'labelKey' => 'ribbon.present_mode_short', 'icon' => 'present', 'domId' => 'presentModeLink', 'hrefKey' => 'present', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'show_on_device', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.show_on_device', 'icon' => 'device', 'visibleWhen' => ['showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_progress', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_progress_short', 'icon' => 'progress_bar', 'domId' => 'showProgressToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_controls', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_controls_short', 'icon' => 'navigation', 'domId' => 'showControlsToggle', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'export', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'editor.export', 'icon' => 'export', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],

@@ -203,7 +203,17 @@ final class HubApp
      */
     public static function task(array $body, int $timeout = 8): array
     {
-        $path = '/api/tasks.php?op=report';
+        return self::hub('/api/tasks.php?op=report', $body, $timeout);
+    }
+
+    /**
+     * Signierter POST an den eigenen Hub (Ziel `hub`, App-Schlüssel, JSON-Körper), z. B. `api/anzeige.php` (Anzeige-Geräte, 27.11.2026).
+     *
+     * @param array<string,mixed> $body
+     * @return array{ok:bool,status:int,json:?array<string,mixed>,error:string}
+     */
+    public static function hub(string $path, array $body, int $timeout = 8): array
+    {
         $ctx = self::ready() ? self::context() : [];
         if ($ctx === [] || !method_exists('AppKeyClient', 'hubHeaders')) {
             return ['ok' => false, 'status' => 0, 'json' => null, 'error' => 'no_app_call'];

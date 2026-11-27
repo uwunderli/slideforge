@@ -194,8 +194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Lesen (GET): angemeldet mit View-Recht oder gültiger öffentlicher Token
-$allowed = false;
-if (Auth::isLoggedIn()) {
+$allowed = Geraete::darf((string)$id);   // Anzeige-Gerät: nur diese Präsentation (27.11.2026)
+if (!$allowed && Auth::isLoggedIn()) {
     $me = Auth::currentUser();
     if ($me && Presentation::canView($id, $me['id'])) {
         $allowed = true;

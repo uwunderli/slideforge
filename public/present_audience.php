@@ -4,11 +4,15 @@
  * Zuschauer-Ansicht: folgt live.php, nur mit Anmeldung.
  */
 require __DIR__ . '/../config.php';
-Auth::requireLogin();
-$me = Auth::currentUser();
+$id = (string)($_GET['id'] ?? '');
+// Anzeige-Gerät (27.11.2026): Gerätesitzung nur für diese eine Präsentation (`player.php`, `Geraete`), sonst Anmeldung wie bisher.
+$alsGeraet = Geraete::darf($id);
+if (!$alsGeraet) {
+    Auth::requireLogin();
+}
+$me = $alsGeraet ? null : Auth::currentUser();
 
-$id = $_GET['id'] ?? '';
-if (!Presentation::canView($id, $me['id'])) {
+if (!$alsGeraet && !Presentation::canView($id, $me['id'])) {
     http_response_code(403);
     die('Kein Zugriff.');
 }

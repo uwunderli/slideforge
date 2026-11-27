@@ -20,6 +20,44 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
   }
+  /** Dialog «Auf Gerät zeigen»: Geräte des Hubs, zeigen/leeren, neues Gerät anmelden (Hub › Einstellungen › Geräte). */
+  function showOnDevice(id) {
+    var DEV = 'geraet_api.php';
+    var send = function (data) {
+      return fetch(DEV, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify(Object.assign({ csrf_token: csrf }, data)) })
+        .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+        .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
+    };
+    fetch(DEV, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; }).then(function (j) {
+      if (!j || !j.ok) { toast('error', (j && j.message) || 'Geräte nicht lesbar.'); return; }
+      var list = j.geraete || [];
+      var anmelden = location.origin + (j.anmelden || '/admin/settings.php?tab=geraete');
+      var html = '<div class="sf-dev">' + (list.length
+        ? '<ul class="hub-list sf-dev__list">' + list.map(function (g, i) {
+            var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '';
+            return '<li class="hub-list__row"><span class="hub-list__label">' + esc(g.name) +
+              (zeigt ? ' <small class="muted">zeigt: ' + esc(zeigt) + '</small>' : '') + '</span>' +
+              '<span class="hub-list__actions"><button type="button" class="hub-btn hub-btn--sm hub-btn--primary sf-dev__show" data-i="' + i + '">Zeigen</button> ' +
+              (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</span></li>';
+          }).join('') + '</ul>'
+        : '<p class="muted small">Noch kein Gerät angemeldet.</p>') +
+        '<p class="muted small">Neues Gerät: dort <code>' + esc(location.origin) + '/geraet.php</code> öffnen, QR abknipsen oder den Code im Hub eingeben.</p>' +
+        '<p><a class="hub-btn" href="' + esc(anmelden) + '" target="_blank" rel="noopener">Gerät anmelden …</a></p></div>';
+      if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
+      global.HubFloatDialog.open('Auf Gerät zeigen', html, { id: 'sfDevices', width: 440, bind: function (body) {
+        body.addEventListener('click', function (e) {
+          var s = e.target.closest('.sf-dev__show'), c = e.target.closest('.sf-dev__clear');
+          var g = (s || c) ? list[+(s || c).getAttribute('data-i')] : null;
+          if (!g) return;
+          send(c ? { action: 'leeren', geraet: g.id } : { action: 'zeigen', geraet: g.id, id: id }).then(function (r) {
+            if (r.ok) { toast('success', c ? 'Gerät ' + g.name + ' geleert.' : 'Läuft auf ' + g.name + '.'); global.HubFloatDialog.close('sfDevices'); }
+            else toast('error', r.message || 'Das ging nicht.');
+          });
+        });
+      } });
+    });
+  }
   function loadHubFiles() {
     if (global.HubFiles) return Promise.resolve();
     return new Promise(function (resolve, reject) {
@@ -129,6 +167,13 @@
       e.preventDefault();
       var c = b.getAttribute('data-ribbon-command');
       if (c === 'ff_save') save(true); else if (c === 'ff_save_copy') saveCopy(); else saveTemplate();
+    }, true);
+    // Auf Gerät zeigen (27.11.2026): Anzeige-Geräte des Hubs; das Gerät folgt dem Presenter/Tablet (Zuschauer-Ansicht).
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ribbon-command="show_on_device"]');
+      if (!b || b.disabled) return;
+      e.preventDefault();
+      showOnDevice(cfg.id);
     }, true);
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === 's') {
