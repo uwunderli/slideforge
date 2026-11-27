@@ -512,5 +512,9 @@ window.SF_PRESENT = {
 <script src="assets/js/present.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-fullscreen.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/present-user-settings.js?v=<?= ASSET_VERSION ?>"></script>
+<?php if ($canBroadcast): /* Gruppe «Geräte» (3.4.0): Registrieren (QR/Code) und Geräte inkl. «Web» */ ?>
+<script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>
+<script>SfFf.present({ id: <?= json_encode($id) ?>, csrf: <?= json_encode(csrf_token()) ?> });</script>
+<?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

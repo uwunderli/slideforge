@@ -1,6 +1,7 @@
 /**
  * FolienSchmiede als Editor für FileForge-Dateien (27.11.2026).
  *   SfFf.editor({ id, csrf, status })   Speichern im Editor: Menüband, Ctrl+S, alle 30 s, beim Schliessen; 409 → «Als Kopie speichern»
+ *   SfFf.present({ id, csrf })          Presenter: Gruppe «Geräte» (Registrieren per QR/Code, Geräte inkl. «Web» wählen und senden)
  *   SfFf.home({ csrf })                 Startseite: Zuletzt geöffnet, Für mich freigegeben, Neu / Öffnen / Übernehmen, Vorlagen-Ordner
  * Dateiwahl: HubFiles (FileForge-Dialog vom Hub). Das Recht prüft immer FileForge als die angemeldete Person.
  */
@@ -35,46 +36,259 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
       .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
   }
-  /** Dialog «Auf Gerät zeigen»: Geräte des Hubs, zeigen/leeren, neues Gerät anmelden (Hub › Einstellungen › Geräte). */
-  function showOnDevice(id) {
-    var DEV = 'geraet_api.php';
-    var send = function (data) {
-      return fetch(DEV, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
-        body: JSON.stringify(Object.assign({ csrf_token: csrf }, data)) })
-        .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
-        .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
-    };
-    fetch(DEV, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; }).then(function (j) {
-      if (!j || !j.ok) { toast('error', (j && j.message) || 'Geräte nicht lesbar.'); return; }
-      var list = j.geraete || [];
-      var anmelden = location.origin + (j.anmelden || '/admin/settings.php?tab=geraete');
-      // Hub-Liste = Tabelle mit Spaltenköpfen (hub-list.css, Lab › Listen; Liste UI 2).
-      var html = '<div class="sf-dev">' + (list.length
-        ? '<table class="hub-list sf-dev__list"><thead><tr><th>Gerät</th><th>Zeigt</th><th></th></tr></thead><tbody>' + list.map(function (g, i) {
-            var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '–';
-            return '<tr><td>' + esc(g.name) + '</td><td class="muted small">' + esc(zeigt) + '</td>' +
-              '<td class="sf-dev__act"><button type="button" class="hub-btn hub-btn--sm hub-btn--primary sf-dev__show" data-i="' + i + '">Zeigen</button> ' +
-              (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</td></tr>';
-          }).join('') + '</tbody></table>'
-        : '<p class="muted small">Noch kein Gerät angemeldet.</p>') +
-        '<p class="muted small">Neues Gerät: dort <code>' + esc(location.origin) + '/device.php</code> öffnen, QR abknipsen oder den Code im Hub eingeben.</p>' +
-        '<p><a class="hub-btn" href="' + esc(anmelden) + '" target="_blank" rel="noopener">Gerät anmelden …</a></p></div>';
-      if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
-      global.HubFloatDialog.open('Auf Gerät zeigen', html, { id: 'sfDevices', width: 440, bind: function (body) {
-        body.addEventListener('click', function (e) {
-          var s = e.target.closest('.sf-dev__show'), c = e.target.closest('.sf-dev__clear');
-          var g = (s || c) ? list[+(s || c).getAttribute('data-i')] : null;
+  // ------------------------------------------------- Anzeige-Geräte (27.11.2026; Gruppe «Geräte» im Presenter 3.4.0)
+  // Wer ein Gerät koppeln oder bespielen darf, entscheidet der Hub (api/anzeige.php); hier nur zeigen, was er liefert.
+  var DEV = 'geraet_api.php';
+  function devSend(data) {
+    return fetch(DEV, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(Object.assign({ csrf_token: csrf }, data)) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+      .catch(function () { return { ok: false, message: 'Keine Verbindung.' }; });
+  }
+  function devMsg(el, text, kind) {
+    if (!el) return;
+    el.textContent = text || '';
+    el.setAttribute('data-state', kind || '');
+  }
+  /** Zuschauer-Ansicht als Adresse («Web»): dieselbe Seite wie «Präsentieren» im eigenen Fenster. */
+  function webUrl(id) {
+    return new URL('present_audience.php?id=' + encodeURIComponent(id), location.href).href;
+  }
+  /**
+   * Dialog «Geräte»: «Web» (Zuschauer-Adresse kopieren/öffnen) und die Geräte des Hubs; mehrere wählen → «Senden»,
+   * je Gerät «Leeren». Aus dem Editor («Auf Gerät zeigen») und aus dem Presenter (Gruppe «Geräte»).
+   */
+  function devices(id, opts) {
+    opts = opts || {};
+    if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
+    var title = opts.title || 'Geräte';
+    var web = webUrl(id);
+    var shell = '<div class="sf-dev" aria-busy="true"><p class="muted small" role="status">Geräte werden geladen …</p></div>';
+    global.HubFloatDialog.open(title, shell, { id: 'sfDevices', width: 520, bind: function (body) {
+      var root = body.querySelector('.sf-dev');
+      var list = [];
+      function render(j) {
+        root.removeAttribute('aria-busy');
+        if (!j || !j.ok) {
+          root.innerHTML = '<p class="sf-dev__msg" role="alert" data-state="error">' + esc((j && j.message) || 'Die Geräte liessen sich nicht laden.') + '</p>' +
+            '<div class="hub-dialog-actions"><button type="button" class="hub-btn sf-dev__reload">Nochmals laden</button></div>';
+          return;
+        }
+        list = j.geraete || [];
+        var rows = '<tr class="sf-dev__web"><td></td><td><strong>Web</strong><div class="muted small sf-dev__url"><code>' + esc(web) + '</code></div></td>' +
+          '<td class="muted small">Zuschauer-Ansicht im Browser</td>' +
+          '<td class="sf-dev__act"><button type="button" class="hub-btn hub-btn--sm sf-dev__copy">Kopieren</button> ' +
+          '<a class="hub-btn hub-btn--sm" href="' + esc(web) + '" target="_blank" rel="noopener">Öffnen</a></td></tr>';
+        rows += list.map(function (g, i) {
+          var zeigt = g.zeigt ? (g.zeigt.titel || g.zeigt.app) : '–';
+          var cid = 'sfDevChk' + i;
+          return '<tr><td class="sf-dev__chk"><label class="hub-admin-check" for="' + cid + '"><input type="checkbox" id="' + cid + '" data-i="' + i + '" aria-label="' + esc(g.name) + ' wählen"></label></td>' +
+            '<td><label for="' + cid + '">' + esc(g.name) + '</label></td><td class="muted small">' + esc(zeigt) + '</td>' +
+            '<td class="sf-dev__act">' + (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm sf-dev__clear" data-i="' + i + '">Leeren</button>' : '') + '</td></tr>';
+        }).join('');
+        // Hub-Liste = Tabelle mit Spaltenköpfen (hub-list.css, Lab › Listen; Liste UI 2).
+        root.innerHTML = '<table class="hub-list sf-dev__list"><thead><tr><th><span class="sr-only">Wahl</span></th><th>Gerät</th><th>Zeigt</th><th><span class="sr-only">Aktionen</span></th></tr></thead><tbody>' + rows + '</tbody></table>' +
+          (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert.</p>') +
+          '<p class="sf-dev__msg small" role="status" aria-live="polite"></p>' +
+          '<div class="hub-dialog-actions">' +
+          (opts.onRegister ? '<button type="button" class="hub-btn hub-dialog-actions__start sf-dev__register">Registrieren …</button>' : '') +
+          (list.length ? '<button type="button" class="hub-btn hub-btn--primary sf-dev__send" disabled>Senden</button>' : '') + '</div>';
+      }
+      function load() {
+        root.setAttribute('aria-busy', 'true');
+        fetch(DEV, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; }).then(render);
+      }
+      root.addEventListener('change', function (e) {
+        if (!e.target.matches('input[type="checkbox"]')) return;
+        var sendBtn = root.querySelector('.sf-dev__send');
+        if (sendBtn) sendBtn.disabled = !root.querySelector('input[type="checkbox"]:checked');
+      });
+      root.addEventListener('click', function (e) {
+        var msg = root.querySelector('.sf-dev__msg');
+        if (e.target.closest('.sf-dev__reload')) { load(); return; }
+        if (e.target.closest('.sf-dev__register')) { global.HubFloatDialog.close('sfDevices'); opts.onRegister(); return; }
+        if (e.target.closest('.sf-dev__copy')) {
+          var done = function (ok) { devMsg(msg, ok ? 'Adresse kopiert.' : 'Kopieren ging nicht – Adresse von Hand markieren.', ok ? 'ok' : 'error'); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(web).then(function () { done(true); }, function () { done(false); });
+          else done(false);
+          return;
+        }
+        var c = e.target.closest('.sf-dev__clear');
+        if (c) {
+          var g = list[+c.getAttribute('data-i')];
           if (!g) return;
-          var btn = s || c; btn.disabled = true;
-          say(c ? 'Leert ' + g.name + ' …' : 'Schickt an ' + g.name + ' …', 'busy');
-          send(c ? { action: 'leeren', geraet: g.id } : { action: 'zeigen', geraet: g.id, id: id }).then(function (r) {
-            btn.disabled = false;
-            if (r.ok) { toast('success', c ? 'Gerät ' + g.name + ' geleert.' : 'Läuft auf ' + g.name + '.'); global.HubFloatDialog.close('sfDevices'); }
-            else toast('error', r.message || 'Das ging nicht.');
+          c.disabled = true;
+          devMsg(msg, 'Leert ' + g.name + ' …', 'busy');
+          devSend({ action: 'leeren', geraet: g.id }).then(function (r) {
+            c.disabled = false;
+            if (r.ok) { devMsg(msg, g.name + ' geleert.', 'ok'); load(); } else devMsg(msg, r.message || 'Das ging nicht.', 'error');
           });
+          return;
+        }
+        var s = e.target.closest('.sf-dev__send');
+        if (!s) return;
+        var picked = Array.prototype.map.call(root.querySelectorAll('input[type="checkbox"]:checked'), function (cb) { return list[+cb.getAttribute('data-i')]; })
+          .filter(Boolean);
+        if (!picked.length) return;
+        s.disabled = true;
+        devMsg(msg, 'Schickt an ' + picked.map(function (g) { return g.name; }).join(', ') + ' …', 'busy');
+        Promise.all(picked.map(function (g) {
+          return devSend({ action: 'zeigen', geraet: g.id, id: id }).then(function (r) { return { g: g, r: r }; });
+        })).then(function (res) {
+          s.disabled = false;
+          var bad = res.filter(function (x) { return !x.r.ok; });
+          if (!bad.length) {
+            toast('success', 'Läuft auf ' + picked.map(function (g) { return g.name; }).join(', ') + '.');
+            global.HubFloatDialog.close('sfDevices');
+            return;
+          }
+          devMsg(msg, bad.map(function (x) { return x.g.name + ': ' + (x.r.message || 'Das ging nicht.'); }).join(' · '), 'error');
+          load();
         });
-      } });
+      });
+      load();
+    } });
+  }
+
+  // QR-Leser: BarcodeDetector des Browsers, sonst jsQR (lokal, Apache-2.0; erst bei Bedarf geladen, kein CDN).
+  var JSQR = 'assets/js/jsqr-1.4.0.js';
+  function qrReader() {
+    if (global.BarcodeDetector) {
+      return Promise.resolve(global.BarcodeDetector.getSupportedFormats ? global.BarcodeDetector.getSupportedFormats() : ['qr_code']).then(function (f) {
+        if (f.indexOf('qr_code') < 0) throw new Error('no_qr');
+        var det = new global.BarcodeDetector({ formats: ['qr_code'] });
+        return function (video) { return det.detect(video).then(function (r) { return r && r[0] ? String(r[0].rawValue || '') : ''; }); };
+      }).catch(jsqrReader);
+    }
+    return jsqrReader();
+  }
+  function jsqrReader() {
+    var ready = global.jsQR ? Promise.resolve() : new Promise(function (resolve, reject) {
+      var sc = document.createElement('script');
+      sc.src = JSQR;
+      sc.onload = function () { global.jsQR ? resolve() : reject(new Error('no_qr')); };
+      sc.onerror = function () { reject(new Error('no_qr')); };
+      document.head.appendChild(sc);
     });
+    var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    return ready.then(function () {
+      return function (video) {
+        var w = video.videoWidth, h = video.videoHeight;
+        if (!w || !h) return Promise.resolve('');
+        var scale = Math.min(1, 640 / Math.max(w, h));
+        canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var r = global.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return Promise.resolve(r ? String(r.data || '') : '');
+      };
+    });
+  }
+  /** Code aus dem QR von device.php (`…/admin/settings.php?tab=geraete&code=123456`) oder sechs Ziffern. */
+  function codeFromQr(text) {
+    var t = String(text || '').trim();
+    try {
+      var u = new URL(t);
+      var c = (u.searchParams.get('code') || '').replace(/\D/g, '');
+      if (c.length === 6) return c;
+    } catch (_) { /* kein URL */ }
+    t = t.replace(/\D/g, '');
+    return t.length === 6 ? t : '';
+  }
+  /**
+   * Dialog «Gerät registrieren»: Kamera scannt den QR von device.php (oder Code tippen), Name und Dauer wählen, koppeln.
+   * Danach steht das Gerät im Dialog «Geräte» (opts.after).
+   */
+  function register(opts) {
+    opts = opts || {};
+    if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
+    var stream = null, timer = 0, stopped = false;
+    function stop() {
+      stopped = true;
+      if (timer) { clearTimeout(timer); timer = 0; }
+      if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    }
+    var html = '<form class="sf-dev sf-dev--reg" novalidate>' +
+      '<div class="sf-dev__cam"><video class="sf-dev__video" muted playsinline aria-label="Kamerabild für den QR-Code"></video></div>' +
+      '<p class="sf-dev__msg small" role="status" aria-live="polite" data-state="busy">Kamera wird gestartet …</p>' +
+      '<p class="muted small">Auf dem Gerät <code>' + esc(location.origin) + '/device.php</code> öffnen und den QR-Code vor die Kamera halten – oder den Code eintippen.</p>' +
+      '<div class="sf-dev__fields">' +
+      '<label class="hub-admin-field hub-admin-field--narrow"><span>Code vom Gerät</span><input type="text" name="code" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="123 456" required></label>' +
+      '<label class="hub-admin-field"><span>Name</span><input type="text" name="name" maxlength="60" autocomplete="off" placeholder="z. B. Beamer Saal"></label>' +
+      '<label class="hub-admin-field"><span>Freigegeben</span><select name="dauer"><option value="heute">für heute (bis Mitternacht)</option><option value="dauerhaft">dauerhaft</option></select></label>' +
+      '</div>' +
+      '<div class="hub-dialog-actions"><button type="submit" class="hub-btn hub-btn--primary">Registrieren</button></div></form>';
+    global.HubFloatDialog.open('Gerät registrieren', html, { id: 'sfDeviceRegister', width: 460, onClose: stop, bind: function (body) {
+      var form = body.querySelector('form'), video = form.querySelector('video'), msg = form.querySelector('.sf-dev__msg');
+      var codeIn = form.elements.code, nameIn = form.elements.name, btn = form.querySelector('button[type="submit"]');
+      function noCam(text) { stop(); form.querySelector('.sf-dev__cam').hidden = true; devMsg(msg, text, ''); codeIn.focus(); }
+      function found(code) {
+        stop();
+        codeIn.value = code.slice(0, 3) + ' ' + code.slice(3);
+        codeIn.removeAttribute('aria-invalid');
+        form.querySelector('.sf-dev__cam').hidden = true;
+        devMsg(msg, 'Code erkannt. Name wählen und registrieren.', 'ok');
+        nameIn.focus();
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !global.isSecureContext) {
+        noCam('Keine Kamera verfügbar – Code eintippen.');
+      } else {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }).then(function (s) {
+          if (stopped) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+          stream = s;
+          video.srcObject = s;
+          return video.play().then(qrReader).then(function (read) {
+            devMsg(msg, 'QR-Code vor die Kamera halten …', 'busy');
+            (function tick() {
+              if (stopped) return;
+              read(video).then(function (text) {
+                var code = codeFromQr(text);
+                if (code) found(code); else if (!stopped) timer = setTimeout(tick, 250);
+              }, function () { if (!stopped) timer = setTimeout(tick, 500); });
+            })();
+          }, function () { noCam('QR-Leser nicht verfügbar – Code eintippen.'); });
+        }, function (err) {
+          noCam(err && err.name === 'NotAllowedError' ? 'Kamera nicht erlaubt – Code eintippen.' : 'Keine Kamera gefunden – Code eintippen.');
+        });
+      }
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var code = String(codeIn.value).replace(/\D/g, '');
+        if (code.length !== 6) {
+          codeIn.setAttribute('aria-invalid', 'true');
+          devMsg(msg, 'Der Code hat sechs Ziffern.', 'error');
+          codeIn.focus();
+          return;
+        }
+        codeIn.removeAttribute('aria-invalid');
+        btn.disabled = true;
+        devMsg(msg, 'Registriert …', 'busy');
+        devSend({ action: 'koppeln', code: code, name: String(nameIn.value).trim(), dauer: form.elements.dauer.value }).then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            if (r.error === 'code') codeIn.setAttribute('aria-invalid', 'true');
+            devMsg(msg, r.message || 'Das ging nicht.', 'error');
+            return;
+          }
+          stop();
+          global.HubFloatDialog.close('sfDeviceRegister');
+          toast('success', 'Gerät ' + ((r.geraet && r.geraet.name) || '') + ' registriert.');
+          if (opts.after) opts.after();
+        });
+      });
+    } });
+  }
+  /** Presenter (present.php): Gruppe «Geräte» im Menüband – Registrieren und Geräte. */
+  function present(cfg) {
+    csrf = cfg.csrf;
+    var openDevices = function () { devices(cfg.id, { onRegister: openRegister }); };
+    var openRegister = function () { register({ after: openDevices }); };
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ribbon-command="device_register"], [data-ribbon-command="device_pick"]');
+      if (!b || b.disabled) return;
+      e.preventDefault();
+      b.getAttribute('data-ribbon-command') === 'device_register' ? openRegister() : openDevices();
+    }, true);
   }
   function loadHubFiles() {
     if (global.HubFiles) return Promise.resolve();
@@ -192,7 +406,8 @@
       var b = e.target.closest('[data-ribbon-command="show_on_device"]');
       if (!b || b.disabled) return;
       e.preventDefault();
-      showOnDevice(cfg.id);
+      var openDevices = function () { devices(cfg.id, { title: 'Auf Gerät zeigen', onRegister: function () { register({ after: openDevices }); } }); };
+      openDevices();
     }, true);
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === 's') {
@@ -369,5 +584,5 @@
     return choose(['file'], accept, title).then(function (r) { return r && r.ref ? r : null; }).catch(function (e) { pickError(e); return null; });
   }
 
-  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting, pickMedia: pickMedia };
+  global.SfFf = { editor: editor, home: home, templateSetting: templateSetting, pickMedia: pickMedia, present: present, devices: devices, register: register };
 })(window);

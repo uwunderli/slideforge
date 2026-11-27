@@ -26,6 +26,17 @@ final class Geraete
         return ['ok' => $r['ok'], 'error' => $r['ok'] ? '' : (string)($r['json']['error'] ?? $r['error'])];
     }
 
+    /**
+     * Gerät mit dem Code von `device.php` koppeln (3.4.0, Hub ≥ 2.33.8 `op=koppeln`). Wer koppeln darf, prüft der Hub.
+     * @return array{ok:bool,error:string,geraet:array<string,mixed>}
+     */
+    public static function koppeln(string $person, string $code, string $name, string $dauer): array
+    {
+        $r = HubApp::hub('/api/anzeige.php?op=koppeln', ['person' => $person, 'code' => $code, 'name' => $name, 'dauer' => $dauer, 'freigabe' => 'ich']);
+        $g = is_array($r['json']['geraet'] ?? null) ? $r['json']['geraet'] : [];
+        return ['ok' => $r['ok'], 'error' => $r['ok'] ? '' : (string)($r['json']['error'] ?? $r['error']), 'geraet' => $g];
+    }
+
     /** Einmal-Ticket des Hubs einlösen; bei Erfolg Gerätesitzung für genau diese Präsentation. */
     public static function einloesen(string $geraet, string $ticket, string $id): bool
     {

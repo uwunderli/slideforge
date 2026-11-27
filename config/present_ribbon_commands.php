@@ -12,6 +12,9 @@ function present_ribbon_command_catalog(): array
         ['id' => 'show_progress', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_progress_short', 'icon' => 'progress_bar', 'domId' => 'showProgressToggle', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'show_controls', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'ribbon.present_controls_short', 'icon' => 'navigation', 'domId' => 'showControlsToggle', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'widget:remote', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'remote.qr_section', 'templateId' => 'widget-present-remote', 'visibleWhen' => ['canBroadcast', 'hasRemote'], 'gridSpan' => ['cols' => 6, 'rows' => 2]],
+        /* Gruppe «Geräte» (3.4.0): Anzeige-Gerät registrieren (QR von device.php scannen) und Geräte wählen (inkl. «Web») */
+        ['id' => 'device_register', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'present.device_register', 'icon' => 'device_scan', 'domId' => 'presentDeviceRegisterBtn', 'visibleWhen' => ['canBroadcast'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+        ['id' => 'device_pick', 'kind' => 'command', 'category' => 'present', 'labelKey' => 'present.device_pick', 'icon' => 'device', 'domId' => 'presentDevicePickBtn', 'visibleWhen' => ['canBroadcast'], 'gridSpan' => ['cols' => 2, 'rows' => 2]],
         ['id' => 'widget:local_present', 'kind' => 'widget', 'category' => 'present', 'labelKey' => 'present.local_present', 'templateId' => 'widget-present-local', 'visibleWhen' => ['canBroadcast'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
 
         ['id' => 'panel_next', 'kind' => 'command', 'category' => 'settings', 'labelKey' => 'ribbon.panel_next_short', 'icon' => 'present_local', 'gridSpan' => ['cols' => 2, 'rows' => 2]],

@@ -13,6 +13,7 @@ function present_ribbon_default_layout(): array
             'collapsed' => false,
             'iconSize' => 'medium',
             'showLabels' => true,
+            'devicesGroup' => true,
         ],
         'tabs' => [
             [
@@ -39,6 +40,14 @@ function present_ribbon_default_layout(): array
                         'labelKey' => 'remote.qr_section',
                         'items' => [
                             ['id' => 'widget:remote'],
+                        ],
+                    ],
+                    [
+                        'id' => 'devices',
+                        'labelKey' => 'present.device_group',
+                        'items' => [
+                            ['id' => 'device_register'],
+                            ['id' => 'device_pick'],
                         ],
                     ],
                     [

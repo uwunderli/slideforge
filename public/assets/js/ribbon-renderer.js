@@ -176,6 +176,8 @@
         '<path d="M4.5 18.5h15"/>',
     },
     save: '<path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="6" rx="1"/>',
+    /* Gerät registrieren: Scan-Rahmen mit Linie (QR von device.php abknipsen) */
+    device_scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M4 12h16"/><rect x="8" y="8" width="3" height="3" rx=".5"/><rect x="13" y="13.5" width="3" height="3" rx=".5"/>',
     device: '<rect x="3" y="4.5" width="18" height="12" rx="1.8"/><path d="M9 20h6M12 16.5V20"/><path d="M10 8.5l4 2-4 2z"/>',
     save_copy: '<path d="M8 7V5a2 2 0 0 1 2-2h7l3 3v9a2 2 0 0 1-2 2h-2"/><rect x="4" y="7" width="12" height="14" rx="2"/><path d="M7 7v3h6V7"/>',
     save_template: '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/><path d="M8 9v9"/>',

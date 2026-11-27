@@ -6,6 +6,7 @@ declare(strict_types=1);
  *   GET  ?action=liste                         → {ok, geraete:[{id,name,dauer,ablauf,freigabe,zeigt}], anmelden:<Hub-Adresse Geräte>}
  *   POST {action:zeigen, geraet, id}           → {ok}   Präsentation (Arbeitskopie `id`) auf dem Gerät zeigen
  *   POST {action:leeren, geraet}               → {ok}
+ *   POST {action:koppeln, code, name, dauer}   → {ok, geraet}   Gerät mit dem Code von device.php koppeln (3.4.0, Hub ≥ 2.33.8)
  * Nur angemeldet; zeigen nur, wer die Präsentation sehen darf. Wer das Gerät bespielen darf, prüft der Hub.
  */
 require __DIR__ . '/../config.php';
@@ -27,6 +28,11 @@ $messages = [
     'geraet' => 'Das Gerät ist nicht mehr angemeldet.',
     'no_app_call' => 'Der Hub ist nicht erreichbar.',
     'unreachable' => 'Der Hub ist nicht erreichbar.',
+    'code' => 'Der Code stimmt nicht oder ist abgelaufen.',
+    'zu_viele' => 'Zu viele falsche Codes. Bitte in einigen Minuten nochmals.',
+    'eingabe' => 'Angaben unvollständig.',
+    'unauthorized' => 'Der Hub hat den Aufruf abgelehnt.',
+    'unknown_op' => 'Der Hub kennt das Registrieren noch nicht (Hub 2.33.8 nötig).',
 ];
 $fail = static function (string $e) use ($out, $messages): never {
     $out(['ok' => false, 'error' => $e, 'message' => $messages[$e] ?? 'Das ging nicht (' . $e . ').']);
@@ -46,11 +52,23 @@ $token = (string)($body['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
 if (!hash_equals((string)($_SESSION['csrf_token'] ?? ''), $token)) {
     $out(['ok' => false, 'error' => 'csrf'], 403);
 }
+$action = (string)($body['action'] ?? '');
+if ($action === 'koppeln') {
+    $code = preg_replace('/\D/', '', (string)($body['code'] ?? '')) ?? '';
+    $dauer = (string)($body['dauer'] ?? 'heute');
+    if (strlen($code) !== 6) {
+        $fail('code');
+    }
+    if (!in_array($dauer, ['heute', 'dauerhaft'], true)) {
+        $fail('eingabe');
+    }
+    $r = Geraete::koppeln($person, $code, mb_substr(trim((string)($body['name'] ?? '')), 0, 60), $dauer);
+    $r['ok'] ? $out(['ok' => true, 'geraet' => $r['geraet']]) : $fail($r['error'] !== '' ? $r['error'] : 'unreachable');
+}
 $geraet = (string)($body['geraet'] ?? '');
 if (preg_match('/^g[0-9a-f]{12}\z/', $geraet) !== 1) {
     $fail('geraet');
 }
-$action = (string)($body['action'] ?? '');
 if ($action === 'zeigen') {
     $id = (string)($body['id'] ?? '');
     if (!Presentation::exists($id) || !Presentation::canView($id, $person)) {

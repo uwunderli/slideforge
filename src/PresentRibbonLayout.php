@@ -255,6 +255,12 @@ class PresentRibbonLayout
             $prefs['activeTab'] = $tabIds[0];
         }
 
+        /* 3.4.0: Gruppe «Geräte» auch in schon angepassten Menübändern einmal nachrüsten (Marker devicesGroup);
+           wer sie danach selbst entfernt, bekommt sie nicht wieder. */
+        if (empty($prefs['devicesGroup'])) {
+            $tabs = self::ensureDevicesGroup($tabs, $catalog);
+        }
+
         return self::ensurePanelCommands([
             'version' => 1,
             'tabs' => $tabs,
@@ -264,8 +270,62 @@ class PresentRibbonLayout
                 'iconSize' => in_array(($prefs['iconSize'] ?? ''), ['small', 'medium', 'large'], true)
                     ? (string)$prefs['iconSize'] : 'medium',
                 'showLabels' => ($prefs['showLabels'] ?? true) !== false,
+                'devicesGroup' => true,
             ],
         ], $catalog);
+    }
+
+    /**
+     * Gruppe «Geräte» (Registrieren, Geräte) in den Tab «present» setzen, nach «Mobile Fernsteuerung», sonst vor «Präsentieren»,
+     * sonst ans Ende — nur wenn keiner der beiden Befehle schon irgendwo liegt.
+     *
+     * @param list<array<string,mixed>> $tabs
+     * @param array<string,array<string,mixed>> $catalog
+     * @return list<array<string,mixed>>
+     */
+    private static function ensureDevicesGroup(array $tabs, array $catalog): array
+    {
+        if (!isset($catalog['device_register']) && !isset($catalog['device_pick'])) {
+            return $tabs;
+        }
+        $presentIdx = null;
+        foreach ($tabs as $ti => $tab) {
+            if (($tab['id'] ?? '') === 'present' && $presentIdx === null) {
+                $presentIdx = $ti;
+            }
+            foreach ($tab['groups'] ?? [] as $group) {
+                foreach ($group['items'] ?? [] as $item) {
+                    $id = is_array($item) ? (string)($item['id'] ?? '') : (string)$item;
+                    if ($id === 'device_register' || $id === 'device_pick') {
+                        return $tabs;
+                    }
+                }
+            }
+        }
+        if ($presentIdx === null) {
+            return $tabs;
+        }
+        $items = [];
+        foreach (['device_register', 'device_pick'] as $id) {
+            if (isset($catalog[$id])) {
+                $items[] = ['id' => $id];
+            }
+        }
+        $groupOut = ['id' => 'devices', 'labelKey' => 'present.device_group', 'label' => '', 'items' => $items];
+        $groups = $tabs[$presentIdx]['groups'];
+        $pos = count($groups);
+        foreach ($groups as $gi => $group) {
+            if (($group['id'] ?? '') === 'remote') {
+                $pos = $gi + 1;
+                break;
+            }
+            if (($group['id'] ?? '') === 'present') {
+                $pos = $gi;
+            }
+        }
+        array_splice($groups, $pos, 0, [$groupOut]);
+        $tabs[$presentIdx]['groups'] = $groups;
+        return $tabs;
     }
 
     /**
@@ -484,6 +544,7 @@ class PresentRibbonLayout
                     : 'medium',
                 'showLabels' => !array_key_exists('showLabels', $layout['prefs'] ?? [])
                     || !empty($layout['prefs']['showLabels']),
+                'devicesGroup' => !empty($layout['prefs']['devicesGroup']),
             ],
         ];
     }

@@ -17,3 +17,24 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-statusbar__ver { justify-self: end; padding-right: .9rem; font-size: .72rem; opacity: .75; white-space: nowrap; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .sf-statusbar__ver { display: none; } }
 .sf-dev__act { text-align: right; white-space: nowrap; }
+/* Geräte-Dialoge (3.4.0): Felder wie Lab › Felder (hub-admin-field/-check aus admin.css, das SlideForge nicht lädt), nur Hub-Variablen. */
+.sf-dev label { margin: 0; }
+.sf-dev__chk { width: 2rem; }
+.sf-dev__url code { word-break: break-all; }
+.sf-dev__msg { min-height: 1.2em; margin: .5rem 0; color: var(--text-muted); }
+.sf-dev__msg[data-state="error"] { color: var(--danger, #d9483a); }
+.sf-dev__msg[data-state="ok"] { color: var(--success, var(--accent)); }
+.sf-dev__cam { border-radius: 8px; overflow: hidden; background: var(--surface-raised); aspect-ratio: 4 / 3; }
+.sf-dev__cam[hidden] { display: none; }
+.sf-dev__video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sf-dev__fields { display: flex; flex-wrap: wrap; gap: .75rem; margin: .5rem 0 1rem; }
+.sf-dev .hub-admin-field { display: grid; gap: .25rem; min-width: 140px; flex: 1 1 160px; max-width: 22rem; }
+.sf-dev .hub-admin-field--narrow { flex: 0 0 96px; min-width: 72px; }
+.sf-dev .hub-admin-field > span { font-size: .8rem; color: var(--text-muted); font-weight: 600; }
+.sf-dev .hub-admin-field input, .sf-dev .hub-admin-field select { width: 100%; min-height: 38px; padding: .4rem .65rem; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font: inherit; }
+.sf-dev .hub-admin-field input:focus-visible, .sf-dev .hub-admin-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sf-dev .hub-admin-field input[aria-invalid="true"] { border-color: var(--danger, #d9483a); }
+.sf-dev .hub-admin-field input:disabled, .sf-dev .hub-admin-field select:disabled { opacity: .55; cursor: not-allowed; }
+.sf-dev .hub-admin-check { display: flex; align-items: center; cursor: pointer; }
+.sf-dev .hub-admin-check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--accent); cursor: pointer; }
