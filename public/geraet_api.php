@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * **Auf Gerät zeigen** (Urs, 27.11.2026; `Geraete`, Hub `api/anzeige.php`).
  *   GET  ?action=liste                         → {ok, geraete:[{id,name,dauer,ablauf,freigabe,zeigt}], anmelden:<Hub-Adresse Geräte>}
- *   POST {action:zeigen, geraet, id}           → {ok}   Präsentation (Arbeitskopie `id`) auf dem Gerät zeigen
+ *   POST {action:zeigen, geraet, id, mit?}     → {ok}   Präsentation (Arbeitskopie `id`) auf dem Gerät zeigen; mit=1: folgt dem Editor (3.8.0)
  *   POST {action:leeren, geraet}               → {ok}
  *   POST {action:neuladen, geraet}             → {ok}   Gerät lädt die Seite neu (3.6.6, Hub ≥ 2.33.11)
  *   POST {action:koppeln, code, name, dauer}   → {ok, geraet}   Gerät mit dem Code von device.php koppeln (3.4.0, Hub ≥ 2.33.8)
@@ -76,7 +76,9 @@ if ($action === 'zeigen') {
         $out(['ok' => false, 'error' => 'no_access', 'message' => 'Kein Zugriff auf diese Präsentation.'], 403);
     }
     $meta = Presentation::getMeta($id);
-    $r = Geraete::zeigen($person, $geraet, $id, (string)($meta['title'] ?? ''));
+    $mit = !empty($body['mit']);
+    $titel = (string)($meta['title'] ?? '');
+    $r = Geraete::zeigen($person, $geraet, $id, $mit ? $titel . ' (Mitlaufen)' : $titel, $mit);
     $r['ok'] ? $out(['ok' => true]) : $fail($r['error']);
 }
 if ($action === 'neuladen') {

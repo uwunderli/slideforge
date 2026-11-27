@@ -2,6 +2,7 @@
 /**
  * Zuschauer-Ansicht für lokale Präsentation (Beamer/ zweiter Monitor).
  * Zuschauer-Ansicht: folgt live.php, nur mit Anmeldung.
+ * `mit=1` (Mitlaufen, 3.8.0): folgt dem Editor (Kanal «editor») und übernimmt jede gespeicherte Änderung ohne Neuladen der Seite.
  */
 require __DIR__ . '/../config.php';
 $id = (string)($_GET['id'] ?? '');
@@ -21,8 +22,9 @@ $meta = Presentation::getMeta($id);
 $slidesData = Storage::read(Presentation::dir($id) . '/slides.json', ['slides' => []]);
 $sections = SlideRenderer::renderSections($slidesData, null);
 $screenIndex = isset($_GET['screen']) ? max(0, (int)$_GET['screen']) : 0;
-// Anzeige-Gerät: nächste Präsentation als JSON (Folien tauschen ohne Neuladen, `player.php?json=1` hat das Ticket eingelöst).
-if ($alsGeraet && ($_GET['teil'] ?? '') === '1') {
+// Folien als JSON: Anzeige-Gerät (nächste Präsentation ohne Neuladen, `player.php?json=1` hat das Ticket eingelöst) und Mitlaufen
+// (neuer Speicherstand). Zugriff ist oben geprüft (Gerätesitzung oder canView).
+if (($_GET['teil'] ?? '') === '1') {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     echo json_encode([
@@ -32,6 +34,7 @@ if ($alsGeraet && ($_GET['teil'] ?? '') === '1') {
     exit;
 }
 $geraetModus = $alsGeraet && isset($_GET['geraet']);
+$mitModus = ($_GET['mit'] ?? '') === '1';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -96,6 +99,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 <?= Exporter::mediaSlideBootJs(false) ?>
 
   window.sfLiveId = <?= json_encode($id) ?>;
+  window.sfLiveChannel = <?= $mitModus ? "'editor'" : "'present'" ?>;
   (function () {
     var targetScreenIndex = <?= (int)$screenIndex ?>;
     var overlay = document.getElementById('sfPresentOverlay');
@@ -103,6 +107,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 
     function showOverlay() {
       if (<?= $geraetModus ? 'true' : 'false' ?>) return; // Anzeige-Gerät: eigener Tipp-Hinweis (sfGeraetStart)
+      if (window.sfLiveChannel === 'editor') return; // Mitlaufen im Fenster: kein Vollbild-Zwang
       if (overlay) overlay.hidden = false;
     }
     function hideOverlay() {
@@ -187,6 +192,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     document.addEventListener('keydown', function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'F5' || ((e.key === 'f' || e.key === 'F') && !document.fullscreenElement)) { e.preventDefault(); enterPresentFullscreen(targetScreenIndex); return; }
+      if (window.sfLiveChannel === 'editor') return; // Mitlaufen: die Folie wählt der Editor
       var dir = null;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') dir = 'next';
       else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') dir = 'prev';
@@ -201,8 +207,66 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
     var lastIndex = null;
     var lastFrag = undefined;
     var lastMediaCmdTs = null;
+    var lastRev = null;
+    var revBusy = false;
+    var revNochmal = false;   // während eines Abrufs neu gespeichert → danach nochmals holen
+    var secHtml = null;   // zuletzt geladene Folien-HTML je Folie (Vergleich: nur geänderte Folien tauschen)
+
+    // Mitlaufen: alle Effekte sichtbar wie im Editor.
+    function alleSichtbar() {
+      if (window.sfLiveChannel !== 'editor') return;
+      document.querySelectorAll('.reveal .slides .fragment').forEach(function (el) { el.classList.add('visible'); });
+    }
+    Reveal.on('slidechanged', alleSichtbar);
+    Reveal.on('ready', alleSichtbar);
+
+    // Neuer Speicherstand: Folien holen, nur geänderte <section> austauschen (kein Flackern, Geste/Vollbild/Ton bleiben).
+    // nurMerken: erster Stand nach dem Laden — nur festhalten, was angezeigt wird, nichts tauschen.
+    function neuerStand(nurMerken) {
+      if (revBusy) { revNochmal = true; return; }
+      revBusy = true;
+      fetch('present_audience.php?id=' + encodeURIComponent(window.sfLiveId) + '&teil=1', { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok || d.id !== window.sfLiveId) return;
+          var tpl = document.createElement('template');
+          tpl.innerHTML = d.sections;
+          if (nurMerken) { secHtml = Array.prototype.map.call(tpl.content.children, function (el) { return el.outerHTML; }); return; }
+          var neu = Array.prototype.slice.call(tpl.content.children);
+          var host = document.querySelector('.reveal .slides');
+          var alt = Array.prototype.slice.call(host.children);
+          if (alt.length !== neu.length || !secHtml || secHtml.length !== neu.length) {
+            host.innerHTML = d.sections;
+          } else {
+            neu.forEach(function (el, i) {
+              if (secHtml[i] === el.outerHTML) return;
+              var old = alt[i];
+              ['present', 'past', 'future', 'stack'].forEach(function (c) { if (old.classList.contains(c)) el.classList.add(c); });
+              if (old.getAttribute('style')) el.setAttribute('style', old.getAttribute('style'));
+              if (old.hasAttribute('hidden')) el.setAttribute('hidden', '');
+              if (old.hasAttribute('aria-hidden')) el.setAttribute('aria-hidden', old.getAttribute('aria-hidden'));
+              old.querySelectorAll('video, audio').forEach(function (m) { try { m.pause(); } catch (e) {} });
+              host.replaceChild(el, old);
+            });
+          }
+          secHtml = Array.prototype.map.call(tpl.content.children, function (el) { return el.outerHTML; });
+          try { Reveal.configure({ width: d.width, height: d.height }); } catch (e) {}
+          Reveal.sync();
+          if (typeof lastIndex === 'number') Reveal.slide(lastIndex, 0);
+          alleSichtbar();
+          if (typeof sfMediaStatusTrackSlide === 'function') { try { sfMediaStatusTrackSlide(Reveal.getCurrentSlide()); } catch (e) {} }
+        })
+        .catch(function () {})
+        .then(function () {
+          revBusy = false;
+          if (revNochmal) { revNochmal = false; neuerStand(false); }
+        });
+    }
+    // Wechsel des Inhalts ohne Neuladen (Anzeige-Gerät): Live-Stand neu beginnen.
+    window.sfLiveReset = function () { lastIndex = null; lastFrag = undefined; lastRev = null; secHtml = null; };
+
     setInterval(function () {
-      fetch('live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=present')
+      fetch('live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=' + window.sfLiveChannel)
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data.ok || !data.live) return;
@@ -212,7 +276,13 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
             lastFrag = frag;
             if (frag !== null) { Reveal.slide(data.live.index, 0, frag); }
             else { Reveal.slide(data.live.index, 0); }
+            alleSichtbar();
             // Kein lokales sfArmMediaTriggers — sonst Doppelstart mit live-Medienbefehl.
+          }
+          if (window.sfLiveChannel === 'editor' && typeof data.live.rev === 'number' && data.live.rev !== lastRev) {
+            var erst = lastRev === null;
+            lastRev = data.live.rev;
+            neuerStand(erst);
           }
           var media = data.live.media;
           if (media && media.cmd_ts && media.cmd_ts !== lastMediaCmdTs) {
@@ -240,7 +310,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 
     Reveal.on('ready', function () {
       SlideForgePresentLaserAudience?.init({
-        pollUrl: function () { return 'live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=present'; },
+        pollUrl: function () { return 'live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=' + window.sfLiveChannel; },
       });
     });
   })();
@@ -314,6 +384,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
       document.querySelectorAll('video, audio').forEach(function (el) { try { el.pause(); } catch (e) {} });
       document.querySelector('.reveal .slides').innerHTML = d.sections;
       window.sfLiveId = d.id;
+      // Mitlaufen (3.8.0) beginnt mit `mit=1`; eine Präsentation senden beendet es (folgt wieder dem Presenter).
+      window.sfLiveChannel = r.mit ? 'editor' : 'present';
+      if (typeof window.sfLiveReset === 'function') window.sfLiveReset();
       document.title = d.title || document.title;
       try { Reveal.configure({ width: d.width, height: d.height }); } catch (e) {}
       Reveal.sync();

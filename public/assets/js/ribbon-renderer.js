@@ -104,13 +104,6 @@
         '<path d="M2.5 12s3.8-6.5 9.5-6.5S21.5 12 21.5 12s-3.8 6.5-9.5 6.5S2.5 12 2.5 12z"/>' +
         '<circle cx="12" cy="12" r="2.6"/>',
     },
-    preview_window: {
-      strokeWidth: 1.5,
-      paths:
-        '<rect x="3" y="5.5" width="12" height="9.5" rx="1.2"/>' +
-        '<path d="M14 3.5h6.5v6.5"/>' +
-        '<path d="M20.5 3.5l-7.5 7.5"/>',
-    },
     clock: {
       strokeWidth: 1.5,
       paths:
@@ -684,7 +677,7 @@
         btn.title = ribbonMeta.displayControlsTitle;
       }
     }
-    if (ribbonMeta.masterSlideEditing && (cmd.id === 'share' || cmd.id === 'export' || cmd.id === 'preview_window' || cmd.id === 'present_local' || cmd.id === 'show_progress' || cmd.id === 'show_controls')) {
+    if (ribbonMeta.masterSlideEditing && (cmd.id === 'share' || cmd.id === 'export' || cmd.id === 'preview_device' || cmd.id === 'show_progress' || cmd.id === 'show_controls')) {
       const tip = ribbonMeta.masterSlideCommandsDisabled || title;
       btn.setAttribute('aria-disabled', 'true');
       btn.title = tip;

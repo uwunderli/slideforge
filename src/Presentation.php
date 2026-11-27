@@ -1193,7 +1193,8 @@ class Presentation
         string $channel = 'present',
         string $source = 'present',
         ?string $clientId = null,
-        ?string $userId = null
+        ?string $userId = null,
+        bool $saved = false
     ): array {
         if (!in_array($channel, ['editor', 'present'], true)) {
             $channel = 'present';
@@ -1205,7 +1206,7 @@ class Presentation
         $accepted = true;
         $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
 
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, &$accepted, &$leaderResult) {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, $saved, &$accepted, &$leaderResult) {
             if ($channel === 'present' && $source === 'present' && $clientId !== '') {
                 self::registerControlClient($data, $clientId, 'present', $userId);
                 $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
@@ -1253,6 +1254,10 @@ class Presentation
             $data[$channel]['frag'] = $frag;
             $data[$channel]['ts'] = time();
             $data[$channel]['source'] = $source;
+            // Mitlaufen (3.8.0): Speicherstand des Editors; Geräte laden die Folien nur neu, wenn er sich ändert.
+            if ($channel === 'editor' && ($saved || !isset($data['editor']['rev']))) {
+                $data['editor']['rev'] = (int)round(microtime(true) * 1000);
+            }
 
             return $data;
         }, ['media' => null]);
@@ -1484,7 +1489,8 @@ class Presentation
         if (!$ch || !isset($ch['index'], $ch['ts'])) {
             return null;
         }
-        if (time() - (int)$ch['ts'] > 20) {
+        // Der Editor-Kanal (Mitlaufen, 3.8.0) bleibt stehen, auch wenn länger niemand bearbeitet: das Gerät zeigt die letzte Folie.
+        if ($channel !== 'editor' && time() - (int)$ch['ts'] > 20) {
             return null;
         }
 
@@ -1494,6 +1500,9 @@ class Presentation
             'ts' => (int)$ch['ts'],
             'source' => (string)($ch['source'] ?? 'present'),
         ];
+        if (isset($ch['rev'])) {
+            $result['rev'] = (int)$ch['rev'];
+        }
         if (!empty($data['media'])) {
             $result['media'] = $data['media'];
         }

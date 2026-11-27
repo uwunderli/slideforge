@@ -18,7 +18,6 @@
     saveTimer: null,
     deckBusy: false,
     saving: false,
-    previewWindow: null,
     currentBackground: { type: 'color', value: '#111111' },
     manualZoom: null,
     currentZoom: 1,
@@ -691,12 +690,6 @@
         case 'present_mode':
           handlePresentModeLinkClick(cmdEl, e);
           break;
-        case 'preview_window':
-          openPreviewWindow();
-          break;
-        case 'present_local':
-          openLocalPresentWindow();
-          break;
         case 'export':
           e.preventDefault();
           openExportModal();
@@ -720,28 +713,6 @@
           break;
       }
     });
-  }
-
-  function openPreviewWindow() {
-    const w = Math.min(1280, SF.meta.width);
-    const h = Math.round(w * (SF.meta.height / SF.meta.width)) + 40;
-    const url = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + SF.currentIndex;
-    const name = 'sf_preview_' + SF.id;
-    if (SF.previewWindow && !SF.previewWindow.closed) {
-      SF.previewWindow.location.href = url;
-      SF.previewWindow.focus();
-      return;
-    }
-    SF.previewWindow = window.open(url, name, 'popup=1,width=' + w + ',height=' + h);
-  }
-
-  async function openLocalPresentWindow() {
-    const url = 'present_audience.php?id=' + encodeURIComponent(SF.id);
-    if (SF.presentConfigApi?.openAudienceWindow) {
-      await SF.presentConfigApi.openAudienceWindow(url);
-      return;
-    }
-    document.getElementById('presentLocalBtn')?.click();
   }
 
   // Export-Dialog (3.2.6 wiederhergestellt: 3.2.0 hatte ihn mit den Freigabe-Funktionen gelöscht, der Aufruf in der
@@ -860,7 +831,7 @@
     const ribbonEl = document.getElementById('editorRibbon');
     if (!ribbonEl) return;
 
-    const commandIds = ['present_mode', 'export', 'preview_tab', 'preview_window', 'present_local'];
+    const commandIds = ['present_mode', 'export', 'preview_tab', 'preview_device'];
     commandIds.forEach((cmdId) => {
       ribbonEl.querySelectorAll('[data-ribbon-command="' + cmdId + '"]').forEach((el) => {
         el.classList.add('is-master-disabled');
@@ -1070,7 +1041,7 @@
       closeEditorSettingsMenu();
       if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
-      reloadPreviewWindow();
+      mitlaufMelden(true);
     } catch (e) {
       setSaveStatus('Fehler beim Anwenden', true);
       console.error(e);
@@ -1118,7 +1089,7 @@
       closeEditorSettingsMenu();
       if (SF.templatesPanelOpen) renderTemplatesPanel();
       setSaveStatus('Gespeichert');
-      reloadPreviewWindow();
+      mitlaufMelden(true);
     } catch (e) {
       setSaveStatus('Fehler beim Anwenden', true);
       console.error(e);
@@ -1418,24 +1389,35 @@
     return Number.isFinite(idx) && idx >= 0 ? idx : 0;
   }
 
-  function syncPreviewSlideIndex(slideIndex) {
-    if (!SF.canEdit) return;
-    const win = SF.previewWindow;
-    if (!win || win.closed) return;
-    const idx = typeof slideIndex === 'number' ? slideIndex : SF.currentIndex;
-    try {
-      win.postMessage({ type: 'sf_goto', index: idx }, window.location.origin);
-    } catch (e) { /* Vorschaufenster nicht erreichbar */ }
+  // Mitlaufen (3.8.0, Urs 27.11.: «ein Player, der mir immer anzeigt, was ich gerade formatiere»): Folie und Speicherstand gehen in
+  // den Live-Zustand, Kanal «editor» (live.php). Geräte und das «Web»-Fenster im Modus Mitlaufen fragen ihn im gewohnten Rhythmus ab.
+  // Kein eigener Takt: gemeldet wird nur beim Folienwechsel und nach dem Speichern.
+  let mitlaufTimer = null;
+  let mitlaufSaved = false;
+  function mitlaufMelden(saved) {
+    if (!SF.canEdit || SF.masterSlideEditing) return;
+    if (saved) mitlaufSaved = true;
+    clearTimeout(mitlaufTimer);
+    mitlaufTimer = setTimeout(() => { sendMitlauf(false); }, 150);
   }
 
-  function reloadPreviewWindow(slideIndex) {
-    if (!SF.canEdit) return;
-    const win = SF.previewWindow;
-    if (!win || win.closed) return;
-    const idx = typeof slideIndex === 'number' ? slideIndex : SF.currentIndex;
+  async function sendMitlauf(retry) {
+    const saved = mitlaufSaved;
+    mitlaufSaved = false;
     try {
-      win.location.href = 'preview.php?id=' + encodeURIComponent(SF.id) + '&slide=' + idx;
-    } catch (e) { /* Vorschaufenster nicht erreichbar */ }
+      const res = await fetch('live.php?id=' + encodeURIComponent(SF.id), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index: SF.currentIndex, channel: 'editor', source: 'editor', saved, csrf_token: SF.csrfToken }),
+      });
+      const json = await res.json().catch(() => null);
+      if (json && json.error === 'csrf' && json.csrf_token && !retry) {
+        SF.csrfToken = json.csrf_token;
+        mitlaufSaved = mitlaufSaved || saved;
+        await sendMitlauf(true);
+      }
+    } catch (e) { /* Mitlaufen ist Zugabe: Bearbeiten und Speichern laufen weiter */ }
   }
 
   function updatePresentLinkOnSlideChange() {
@@ -2101,7 +2083,7 @@
       setSaveStatus('Gespeichert');
       await renderSlideFilmstrip();
       if (SF.editorViewMode === 'grid') renderSlideGrid();
-      reloadPreviewWindow();
+      mitlaufMelden(true);
       deckCommit(before);
     } catch (e) {
       setSaveStatus('Fehler', true);
@@ -2188,7 +2170,7 @@
     }
     if (!skipHistoryReset) resetHistoryForCurrentSlide();
     updatePresentLinkOnSlideChange();
-    syncPreviewSlideIndex();
+    mitlaufMelden(false);
     updateEditorContextTitle();
     renderLayersPanel();
     /* Die rechte Leiste gehört zur neuen Folie: `deselect()` ganz oben hat sie
@@ -2694,7 +2676,7 @@
       await renderSlideFilmstrip();
       if (SF.editorViewMode === 'grid') renderSlideGrid();
       setSaveStatus('Gespeichert');
-      reloadPreviewWindow();
+      mitlaufMelden(true);
     } catch (e) {
       setSaveStatus('Fehler', true);
       if (window.CfStatus) CfStatus.show('error', e.message);
@@ -2794,7 +2776,7 @@
     await renderSlideFilmstrip();
     if (SF.editorViewMode === 'grid') renderSlideGrid();
     setSaveStatus('Gespeichert');
-    reloadPreviewWindow();
+    mitlaufMelden(true);
   }
 
   // ---------- Slide grid (Raster-Ansicht) ----------
@@ -3083,7 +3065,7 @@
       if (SF.editorViewMode === 'grid') renderSlideGrid();
       await renderSlideFilmstrip();
       syncRibbonTransitionFieldsFromSlide(SF.currentIndex);
-      reloadPreviewWindow();
+      mitlaufMelden(true);
     } catch (err) {
       setSaveStatus('Fehler beim Speichern');
     }
@@ -3107,7 +3089,7 @@
       setSaveStatus('Gespeichert');
       if (SF.editorViewMode === 'grid') renderSlideGrid();
       await renderSlideFilmstrip();
-      reloadPreviewWindow();
+      mitlaufMelden(true);
     } catch (e) {
       setSaveStatus('Fehler beim Speichern');
     }
@@ -9170,10 +9152,6 @@
     initEditorTopbarMenus();
     window.SFEditorMenus = { init: initEditorTopbarMenus };
 
-    document.getElementById('previewWindowBtn')?.addEventListener('click', () => {
-      openPreviewWindow();
-    });
-
     /* bg-type-btn + apply_transition_all: Delegation in initRibbonCommandDelegation */
 
     document.getElementById('bgColorInput').addEventListener('input', (e) => {
@@ -9507,7 +9485,7 @@
     loadSlideIntoStage(idx);
     await renderSlideFilmstrip();
     if (SF.editorViewMode === 'grid') renderSlideGrid();
-    reloadPreviewWindow();
+    mitlaufMelden(true);
   }
 
   /** dir -1 = Rückgängig, +1 = Wiederholen. */
@@ -9605,7 +9583,7 @@
       setSaveStatus('Gespeichert');
       updateCurrentTabSwatch();
       refreshCurrentFilmstripThumb();
-      if (!SF.skipPreviewReload) reloadPreviewWindow();
+      if (!SF.skipPreviewReload) mitlaufMelden(true);
     } catch (e) {
       setSaveStatus('Fehler beim Speichern', true);
       console.error(e);
@@ -9814,7 +9792,7 @@
         loadSlideIntoStage(Math.min(SF.currentIndex, SF.slides.length - 1));
         await renderSlideFilmstrip();
         if (SF.editorViewMode === 'grid') renderSlideGrid();
-        reloadPreviewWindow();
+        mitlaufMelden(true);
       }
       renderFindResults([]);
       const text = (I.findReplaced || '{n}').replace('{n}', String(data.replaced || 0));
@@ -9860,7 +9838,7 @@
       loadSlideIntoStage(Math.min(SF.currentIndex, SF.slides.length - 1), true);
       await renderSlideFilmstrip();
       if (SF.editorViewMode === 'grid') renderSlideGrid();
-      reloadPreviewWindow();
+      mitlaufMelden(true);
       setSaveStatus('Gespeichert');
       const text = (I.notesOutlineDone || '{n}').replace('{n}', String(data.changed || 0));
       if (status) status.textContent = text;

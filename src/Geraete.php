@@ -18,10 +18,13 @@ final class Geraete
         return ['ok' => $r['ok'], 'geraete' => array_values($g), 'error' => $r['error']];
     }
 
-    /** @return array{ok:bool,error:string} */
-    public static function zeigen(string $person, string $geraet, string $id, string $titel): array
+    /**
+     * `$mit` (3.8.0, Mitlaufen): das Gerät folgt dem Editor statt dem Presenter und zeigt jede gespeicherte Änderung.
+     * @return array{ok:bool,error:string}
+     */
+    public static function zeigen(string $person, string $geraet, string $id, string $titel, bool $mit = false): array
     {
-        $url = $id === '' ? '' : self::basis() . '/player.php?p=' . rawurlencode($id);
+        $url = $id === '' ? '' : self::basis() . '/player.php?p=' . rawurlencode($id) . ($mit ? '&mit=1' : '');
         $r = HubApp::hub('/api/anzeige.php?op=zeigen', ['person' => $person, 'geraet' => $geraet, 'url' => $url, 'titel' => $titel, 'inhalt' => $id]);
         return ['ok' => $r['ok'], 'error' => $r['ok'] ? '' : (string)($r['json']['error'] ?? $r['error'])];
     }

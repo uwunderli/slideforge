@@ -85,8 +85,8 @@ function ribbon_command_catalog(): array
         ['id' => 'slide_grid_view', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'editor.tab_slide_grid', 'icon' => 'grid', 'domId' => 'slideGridViewBtn', 'visibleWhen' => ['canEdit', 'showInsertSlides'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'master_slide_nav', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'editor.master_slide', 'icon' => 'master_slide', 'domId' => 'masterSlideNavBtn', 'visibleWhen' => ['showMasterSlideNav'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'preview_tab', 'kind' => 'link', 'category' => 'view', 'labelKey' => 'ribbon.preview_tab_short', 'icon' => 'preview', 'domId' => 'previewTabLink', 'hrefKey' => 'preview', 'target' => '_blank', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-        ['id' => 'preview_window', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'ribbon.preview_window_short', 'icon' => 'preview_window', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-        ['id' => 'present_local', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'ribbon.present_local_short', 'icon' => 'present_local', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+        // 3.8.0 (Urs 27.11.): «Auf Gerät» ersetzt «Fenster» und «Lokal» — Gerät (oder «Web»-Fenster) zeigt laufend die bearbeitete Folie.
+        ['id' => 'preview_device', 'kind' => 'command', 'category' => 'view', 'labelKey' => 'ribbon.preview_device_short', 'icon' => 'device', 'visibleWhen' => ['canEdit', 'showPresentTab'], 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ['id' => 'widget:zoom', 'kind' => 'widget', 'category' => 'view', 'labelKey' => 'ribbon.group_zoom', 'templateId' => 'widget-zoom', 'visibleWhen' => ['canEdit'], 'gridSpan' => ['cols' => 5, 'rows' => 2]],
     ];
 }

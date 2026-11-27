@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $source = 'present';
     }
     $clientId = (string)($body['client_id'] ?? '');
-    $result = Presentation::setLivePosition($id, $index, $frag, $channel, $source, $clientId, $me['id']);
+    $result = Presentation::setLivePosition($id, $index, $frag, $channel, $source, $clientId, $me['id'], $channel === 'editor' && !empty($body['saved']));
     if ($source === 'remote') {
         Presentation::touchLiveSession($id, 'remote', $me['id']);
     }

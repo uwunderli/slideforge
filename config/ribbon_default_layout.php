@@ -156,8 +156,7 @@ function ribbon_default_layout(): array
                     ]],
                     ['id' => 'g_preview', 'labelKey' => 'ribbon.group_preview', 'items' => [
                         ['id' => 'preview_tab', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-                        ['id' => 'preview_window', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
-                        ['id' => 'present_local', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'preview_device', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     ['id' => 'g_zoom', 'labelKey' => 'ribbon.group_zoom', 'items' => [
                         ['id' => 'widget:zoom'],

@@ -77,16 +77,6 @@ $sections = SlideRenderer::renderSections($slidesData);
   <?php if (isset($_GET['slide'])): ?>
   Reveal.on('ready', function () { Reveal.slide(<?= (int)$startSlide ?>, 0); });
   <?php endif; ?>
-
-  window.addEventListener('message', function (e) {
-    if (e.origin !== window.location.origin) return;
-    if (!e.data || e.data.type !== 'sf_goto') return;
-    const index = e.data.index;
-    if (typeof index !== 'number' || index < 0) return;
-    function go() { Reveal.slide(index, 0); }
-    if (Reveal.isReady && Reveal.isReady()) go();
-    else Reveal.on('ready', go);
-  });
 </script>
 </body>
 </html>

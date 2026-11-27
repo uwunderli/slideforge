@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.8.0] - 2026-11-27
+
+- **Vorschau auf Gerät (Mitlaufen)** (Urs: «einen Player, der mir immer anzeigt, was ich gerade formatiere»): Ansicht › Vorschau hat neben «Vorschau» nur noch **«Auf Gerät»**; «Fenster» und «Lokal» sind weg. Der Knopf öffnet das Geräte-Raster im Modus Mitlaufen: Das gewählte Anzeige-Gerät zeigt laufend die Folie, die im Editor bearbeitet wird, und übernimmt jede gespeicherte Änderung, ohne die Seite neu zu laden (nur geänderte Folien werden ausgetauscht; Vollbild, Ton und Tipp-Freigabe bleiben). Die Kachel «Web» öffnet dieselbe Mitlauf-Ansicht in einem eigenen Fenster dieses Browsers. Leeren oder eine Präsentation senden beendet das Mitlaufen.
+- Weg: Der Editor meldet Folie und Speicherstand in den Live-Zustand (`live.php`, Kanal «editor», Recht Bearbeiten); Gerät/Fenster fragen im bestehenden 400-ms-Rhythmus ab. Kein neuer Takt. Gerät senden prüft wie bisher canView, Bespielen prüft der Hub.
+- Angepasste Menübänder: «Fenster»/«Lokal» werden zu «Auf Gerät»; «Folien löschen» (3.7.0) wird einmalig nachgerüstet (Layout-Stand, später Entferntes bleibt weg).
+
 ## [3.7.0] - 2026-11-27
 
 - **Rückgängig/Wiederholen für Folien-Aktionen** (Urs: «Ja und kann ich auch mehrere Folien gleichzeitig löschen?»): Präsentation einfügen, Einfügen aus der Zwischenablage, Löschen, Ausschneiden, Duplizieren, Neue Folie und Verschieben legen den Folienstand in den Verlauf (30 Schritte). Strg+Z/Strg+Y und die Menüband-Knöpfe nehmen zuerst die Inhaltsschritte der offenen Folie, dann die Folien-Aktionen. Neuer Schreibweg `restore_slides` (Recht Bearbeiten + CSRF wie die übrigen); Folien, die es noch gibt, behalten ihren heutigen Inhalt. Medien in assets/ bleiben liegen.

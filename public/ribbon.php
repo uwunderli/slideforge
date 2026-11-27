@@ -63,6 +63,8 @@ try {
                 ribbon_json_fail(t('ribbon.error_invalid_layout'));
             }
             /* Speichern immer mit vollem Katalog — Vorlagen-Kontext darf nichts löschen. */
+            // Eigene Änderung = aktueller Stand: einmalige Nachrüstungen gelten als gesehen (was entfernt wurde, bleibt weg).
+            $layoutIn['stand'] = RibbonLayout::STAND;
             $sanitized = RibbonLayout::sanitizeLayout($layoutIn, $persistContext);
             RibbonLayout::saveLayout($me['id'], $sanitized);
             $sanitized['customized'] = true;

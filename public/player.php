@@ -8,13 +8,14 @@ require __DIR__ . '/../config.php';
 
 header('Cache-Control: no-store');
 $id = (string)($_GET['p'] ?? '');
+$mit = ($_GET['mit'] ?? '') === '1';   // Mitlaufen (3.8.0): folgt dem Editor statt dem Presenter
 $ok = Geraete::darf($id)
     || Geraete::einloesen((string)($_GET['hub_geraet'] ?? ''), (string)($_GET['hub_gt'] ?? ''), $id);
 // Wechsel ohne Neuladen (Urs 27.11.: ein Tippen gibt Vollbild und Ton frei, auch in Safari): die laufende Zuschauer-Ansicht
 // löst das Ticket per fetch ein (`json=1`) und tauscht die Folien selbst aus — die Geste im Dokument bleibt gültig.
 if (($_GET['json'] ?? '') === '1') {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($ok ? ['ok' => true, 'id' => $id] : ['ok' => false, 'error' => 'nicht_freigegeben']);
+    echo json_encode($ok ? ['ok' => true, 'id' => $id, 'mit' => $mit] : ['ok' => false, 'error' => 'nicht_freigegeben']);
     exit;
 }
 if (!$ok) {
@@ -24,5 +25,5 @@ if (!$ok) {
         . 'background:#000;color:#fff;font:16px system-ui,sans-serif">Die Präsentation ist nicht mehr freigegeben.</body>';
     exit;
 }
-header('Location: present_audience.php?id=' . rawurlencode($id) . '&geraet=1');
+header('Location: present_audience.php?id=' . rawurlencode($id) . '&geraet=1' . ($mit ? '&mit=1' : ''));
 exit;

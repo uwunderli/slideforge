@@ -67,20 +67,25 @@
     var s = /^[a-z-]{1,24}$/.test(String(symbol || '')) ? String(symbol) : 'monitor';
     return '<svg class="sf-dev__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="' + esc(location.origin + '/assets/icons/hub-icons.svg#hub-i-' + s) + '"></use></svg>';
   }
-  /** Zuschauer-Ansicht als Adresse («Web»): dieselbe Seite wie «Präsentieren» im eigenen Fenster. */
-  function webUrl(id) {
-    return new URL('present_audience.php?id=' + encodeURIComponent(id), location.href).href;
+  /** Zuschauer-Ansicht als Adresse («Web»): dieselbe Seite wie «Präsentieren» im eigenen Fenster; `mit`: folgt dem Editor (3.8.0). */
+  function webUrl(id, mit) {
+    return new URL('present_audience.php?id=' + encodeURIComponent(id) + (mit ? '&mit=1' : ''), location.href).href;
   }
   /**
    * Dialog «Geräte»: «Web» (Zuschauer-Adresse kopieren/öffnen) und die Geräte des Hubs; mehrere wählen → «Senden»,
-   * je Gerät «Leeren». Aus dem Editor («Auf Gerät zeigen») und aus dem Presenter (Gruppe «Geräte»).
+   * je Gerät «Leeren». Aus dem Editor («Auf Gerät zeigen»), aus dem Presenter (Gruppe «Geräte») und mit `opts.mit` aus Ansicht ›
+   * Vorschau «Auf Gerät» (3.8.0, Mitlaufen): das Gerät zeigt laufend die Folie, die im Editor bearbeitet wird; «Web» öffnet dieselbe
+   * Mitlauf-Ansicht in einem eigenen Fenster dieses Browsers.
    * Aufbau wie Lab › Dialoge (lab/dialogs.php:401–421): Inhalt, Fusszeile `hub-dialog-actions` mit data-hub-dialog-footer.
    */
   function devices(id, opts) {
     opts = opts || {};
     if (!global.HubFloatDialog) { toast('error', 'Dialog nicht verfügbar.'); return; }
-    var web = webUrl(id);
+    var mit = !!opts.mit;
+    var web = webUrl(id, mit);
     var html = '<div class="sf-dev" aria-busy="true">' +
+      (mit ? '<p class="muted small">Das Gerät zeigt laufend die Folie, die du bearbeitest, und jede gespeicherte Änderung. ' +
+        'Leeren oder eine Präsentation senden beendet das Mitlaufen.</p>' : '') +
       '<div class="sf-dev__list-wrap"><p class="muted small" role="status">Geräte werden geladen …</p></div>' +
       '<div class="sf-dev__msg" hidden></div></div>' +
       '<div class="hub-dialog-actions" data-hub-dialog-footer>' +
@@ -105,7 +110,7 @@
         // Raster aus Kacheln (Urs 27.11.: «pro Gerät ein Icon … ein Grid mit den Icons»): Icon gross, Name, «zeigt …» klein.
         // Kachel antippen = wählen (mehrfach, aria-pressed). «Web» ist auch eine Kachel: Zuschauer-Adresse kopieren/öffnen.
         var tiles = '<li class="sf-dev__tile sf-dev__tile--web"><a class="sf-dev__pick" href="' + esc(web) + '" target="_blank" rel="noopener">' +
-          devIcon('globe') + '<span class="sf-dev__name">Web</span><span class="sf-dev__state">Zuschauer-Ansicht öffnen</span></a>' +
+          devIcon('globe') + '<span class="sf-dev__name">Web</span><span class="sf-dev__state">' + (mit ? 'Mitlaufen im eigenen Fenster' : 'Zuschauer-Ansicht öffnen') + '</span></a>' +
           '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__copy">Adresse kopieren</button></li>';
         tiles += list.map(function (g, i) {
           var zeigt = g.zeigt ? 'zeigt ' + (g.zeigt.titel || g.zeigt.app) : 'zeigt nichts';
@@ -131,6 +136,14 @@
           var done = function (ok) { devMsg(msg, ok ? 'Adresse kopiert.' : 'Kopieren ging nicht – Link mit der rechten Maustaste kopieren.', ok ? 'ok' : 'error'); };
           if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(web).then(function () { done(true); }, function () { done(false); });
           else done(false);
+          return;
+        }
+        if (mit && e.target.closest('a.sf-dev__pick')) {
+          // «Web» im Modus Mitlaufen: eigenes Fenster dieses Browsers (ersetzt das frühere «Fenster»), Grösse nach Folienformat.
+          e.preventDefault();
+          var w = Math.min(1280, Math.round(screen.availWidth * 0.6)), h = Math.round(w * 9 / 16) + 40;
+          var win = global.open(web, 'sf_mit_' + id, 'popup=1,width=' + w + ',height=' + h);
+          if (win) { win.focus(); global.HubFloatDialog.close('sfDevices'); } else devMsg(msg, 'Das Fenster wurde blockiert – Pop-ups für diese Seite erlauben.', 'error');
           return;
         }
         var pk = e.target.closest('button.sf-dev__pick');
@@ -167,11 +180,11 @@
         s.disabled = true;
         devMsg(msg, 'Schickt an ' + picked.map(function (g) { return g.name; }).join(', ') + ' …', 'busy');
         Promise.all(picked.map(function (g) {
-          return devSend({ action: 'zeigen', geraet: g.id, id: id }).then(function (r) { return { g: g, r: r }; });
+          return devSend({ action: 'zeigen', geraet: g.id, id: id, mit: mit ? 1 : 0 }).then(function (r) { return { g: g, r: r }; });
         })).then(function (res) {
           var bad = res.filter(function (x) { return !x.r.ok; });
           if (!bad.length) {
-            toast('success', 'Läuft auf ' + picked.map(function (g) { return g.name; }).join(', ') + '.');
+            toast('success', (mit ? 'Läuft mit auf ' : 'Läuft auf ') + picked.map(function (g) { return g.name; }).join(', ') + '.');
             global.HubFloatDialog.close('sfDevices');
             return;
           }
@@ -461,6 +474,14 @@
       e.preventDefault();
       var openDevices = function () { devices(cfg.id, { title: 'Auf Gerät zeigen', onRegister: function () { register({ after: openDevices }); } }); };
       openDevices();
+    }, true);
+    // Ansicht › Vorschau › «Auf Gerät» (3.8.0, Mitlaufen): dasselbe Raster, das Gerät folgt dem Editor.
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ribbon-command="preview_device"]');
+      if (!b || b.disabled || b.getAttribute('aria-disabled') === 'true') return;
+      e.preventDefault();
+      var openFollow = function () { devices(cfg.id, { title: 'Auf Gerät (Mitlaufen)', mit: true, onRegister: function () { register({ after: openFollow }); } }); };
+      openFollow();
     }, true);
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && String(e.key).toLowerCase() === 's') {

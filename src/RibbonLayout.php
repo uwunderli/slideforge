@@ -4,6 +4,12 @@
  */
 class RibbonLayout
 {
+    /**
+     * Stand der Nachrüstungen in gespeicherten Menübändern (3.8.0). Jede Nachrüstung läuft genau einmal: Danach trägt das Layout
+     * diesen Stand, und wer den Knopf später selbst entfernt, bekommt ihn nicht wieder. 1 = «Folien löschen» (3.7.0).
+     */
+    public const STAND = 1;
+
     /** @param array<string,bool> $context */
     public static function buildContext(array $vars): array
     {
@@ -131,12 +137,17 @@ class RibbonLayout
         $catalog = self::catalogIndex($context);
         $default = self::defaultLayout();
         $version = (int)($layout['version'] ?? 1);
+        $stand = (int)($layout['stand'] ?? 0);
         if ($version !== 1 || !isset($layout['tabs']) || !is_array($layout['tabs'])) {
             $layout = $default;
+            $stand = self::STAND;
         }
 
         $tabs = [];
         $injectViewPreviews = false;
+        // 3.8.0: «Fenster» (preview_window) und «Lokal» (present_local) sind ein Knopf «Auf Gerät» (preview_device) geworden.
+        $previewAliases = ['preview_window' => 'preview_device', 'present_local' => 'preview_device'];
+        $previewDeviceSeen = false;
         foreach ($layout['tabs'] as $tab) {
             if (!is_array($tab) || empty($tab['id'])) {
                 continue;
@@ -210,6 +221,16 @@ class RibbonLayout
                 for ($gi = 0, $gLen = count($rawGroupItems); $gi < $gLen; $gi++) {
                     $item = $rawGroupItems[$gi];
                     $itemId = is_array($item) ? (string)($item['id'] ?? '') : (string)$item;
+                    if (isset($previewAliases[$itemId])) {
+                        $itemId = $previewAliases[$itemId];
+                        $item = ['id' => $itemId] + (is_array($item) && isset($item['gridSpan']) ? ['gridSpan' => $item['gridSpan']] : []);
+                    }
+                    if ($itemId === 'preview_device') {
+                        if ($previewDeviceSeen) {
+                            continue;
+                        }
+                        $previewDeviceSeen = true;
+                    }
                     if ($itemId === 'widget:present_menu') {
                         $injectViewPreviews = true;
                     }
@@ -356,6 +377,9 @@ class RibbonLayout
         $tabs = self::migratePresentModeLabel($tabs);
         $tabs = self::migratePresentPreviewToView($tabs, $injectViewPreviews);
         $tabs = self::migrateRestorePresentTabDefaults($tabs);
+        if ($stand < 1 && isset($catalog['delete_slides'])) {
+            $tabs = self::migrateAddDeleteSlides($tabs);
+        }
 
         $prefs = is_array($layout['prefs'] ?? null) ? $layout['prefs'] : [];
         $tabIds = array_column($tabs, 'id');
@@ -366,6 +390,7 @@ class RibbonLayout
 
         return [
             'version' => 1,
+            'stand' => self::STAND,
             'tabs' => $tabs,
             'prefs' => [
                 'activeTab' => $activeTab,
@@ -543,7 +568,7 @@ class RibbonLayout
     }
 
     /**
-     * Vorschau/Fenster/Lokal von Präsentation→Anzeige nach Ansicht verschieben;
+     * Vorschau/«Auf Gerät» (früher Fenster/Lokal) von Präsentation→Anzeige nach Ansicht verschieben;
      * Optionen-Button → Widget «Anzeige».
      *
      * @param list<array<string,mixed>> $tabs
@@ -551,11 +576,10 @@ class RibbonLayout
      */
     private static function migratePresentPreviewToView(array $tabs, bool $injectDefaults): array
     {
-        $moveIds = ['preview_tab', 'preview_window', 'present_local'];
+        $moveIds = ['preview_tab', 'preview_device'];
         $defaults = [
             'preview_tab' => ['id' => 'preview_tab', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-            'preview_window' => ['id' => 'preview_window', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
-            'present_local' => ['id' => 'present_local', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
+            'preview_device' => ['id' => 'preview_device', 'gridSpan' => ['cols' => 1, 'rows' => 2]],
         ];
         $moved = [];
 
@@ -680,6 +704,48 @@ class RibbonLayout
      * @param list<array<string,mixed>> $tabs
      * @return list<array<string,mixed>>
      */
+    /**
+     * «Folien löschen» (3.7.0) in angepasste Menübänder nachrüsten: Einfügen › Folien, nach «Präsentation einfügen».
+     * Nur einmal (Stand < 1); fehlt die Gruppe, hat sie jemand bewusst entfernt — dann nichts.
+     *
+     * @param list<array<string,mixed>> $tabs
+     * @return list<array<string,mixed>>
+     */
+    private static function migrateAddDeleteSlides(array $tabs): array
+    {
+        foreach ($tabs as $tab) {
+            foreach ($tab['groups'] ?? [] as $group) {
+                foreach ($group['items'] ?? [] as $item) {
+                    if ((string)($item['id'] ?? '') === 'delete_slides') {
+                        return $tabs;
+                    }
+                }
+            }
+        }
+        foreach ($tabs as $ti => $tab) {
+            if (($tab['id'] ?? '') !== 'insert') {
+                continue;
+            }
+            foreach ($tab['groups'] ?? [] as $gi => $group) {
+                if (($group['id'] ?? '') !== 'g_slides') {
+                    continue;
+                }
+                $items = array_values($group['items'] ?? []);
+                $at = count($items);
+                foreach ($items as $i => $item) {
+                    if (in_array((string)($item['id'] ?? ''), ['add_slide', 'media:insert_presentation'], true)) {
+                        $at = $i + 1;
+                    }
+                }
+                array_splice($items, $at, 0, [['id' => 'delete_slides', 'gridSpan' => ['cols' => 2, 'rows' => 2]]]);
+                $tabs[$ti]['groups'][$gi]['items'] = $items;
+                return $tabs;
+            }
+        }
+
+        return $tabs;
+    }
+
     private static function migrateRestorePresentTabDefaults(array $tabs): array
     {
         $have = [];
@@ -867,6 +933,7 @@ class RibbonLayout
         unset($layout['customized']);
         return [
             'version' => 1,
+            'stand' => (int)($layout['stand'] ?? self::STAND),
             'tabs' => $layout['tabs'] ?? [],
             'prefs' => [
                 'activeTab' => (string)($layout['prefs']['activeTab'] ?? 'start'),
