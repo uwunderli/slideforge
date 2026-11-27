@@ -3451,6 +3451,8 @@ body.present-panel-dragging { cursor: grabbing !important; user-select: none; }
   background: var(--fs-color, #1a1a1a);
 }
 .editor-filmstrip-item.active { border-color: var(--accent); }
+/* Mehrfachauswahl in der Folienleiste (3.7.0), wie im Raster */
+.editor-filmstrip-item.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .editor-filmstrip-item.dragging {
   opacity: 0.85;
   z-index: 3;

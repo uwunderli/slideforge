@@ -69,6 +69,7 @@
         '<path d="M6 12h7" stroke-width="2.5"/>' +
         '<path d="M14.5 12h3.5" opacity="0.35" stroke-width="2.5"/>',
     },
+    delete_slides: '<path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/>',
     add_slide: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/>',
     insert_presentation: '<rect x="3" y="5" width="14" height="11" rx="1.5"/><path d="M7 19h10"/><path d="M19 8v6"/><path d="M16 11h6"/>',
     text_field: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8"/><path d="M8 12h8"/><path d="M8 15h5"/>',

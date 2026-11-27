@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.7.0] - 2026-11-27
+
+- **Rückgängig/Wiederholen für Folien-Aktionen** (Urs: «Ja und kann ich auch mehrere Folien gleichzeitig löschen?»): Präsentation einfügen, Einfügen aus der Zwischenablage, Löschen, Ausschneiden, Duplizieren, Neue Folie und Verschieben legen den Folienstand in den Verlauf (30 Schritte). Strg+Z/Strg+Y und die Menüband-Knöpfe nehmen zuerst die Inhaltsschritte der offenen Folie, dann die Folien-Aktionen. Neuer Schreibweg `restore_slides` (Recht Bearbeiten + CSRF wie die übrigen); Folien, die es noch gibt, behalten ihren heutigen Inhalt. Medien in assets/ bleiben liegen.
+- **Mehrere Folien löschen:** Mehrfachauswahl auch in der Folienleiste (Strg/Cmd-Klick einzeln, Umschalt-Klick Bereich, markiert, `aria-selected`). Entf/Rücktaste, ✕ und neuer Menüband-Knopf Einfügen › «Folien löschen» löschen alle markierten nach Rückfrage («3 Folien löschen?»); die letzte Folie bleibt. Ausschneiden, Kopieren und Duplizieren nehmen dieselbe Auswahl.
+
 ## [3.6.4] - 2026-11-27
 
 - **FileForge-Dialog statt «Lokale Medien öffnen»** (Urs: «Das öffnet aber immer noch das Lokale Medien öffnen ding und nicht der FF Piker»): Menüband Einfügen › «Präsentation einfügen» wählt die Datei mit HubFiles.choose (pptx/odp/xlsx/chs/zip/html/cfs); api.php holt sie als die Person über AppCall (`FfFile::fetchTemp`) und gibt sie dem bestehenden Einfügen. Ebenso Import (import.php, inkl. Logos-Erkennung über den Dateianfang vom Server), Traktanden-Import und Zusatz-PowerPoint (agenda.php), Folien-Set importieren (templates.php) und Logo (Administration; SVG wird jetzt entschärft). Medien-Seitenleiste: Knopf «Aus Dateien einfügen». Hochladen vom Rechner bietet der Dialog selbst.

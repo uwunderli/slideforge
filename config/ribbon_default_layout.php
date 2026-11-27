@@ -58,6 +58,7 @@ function ribbon_default_layout(): array
                     ['id' => 'g_slides', 'labelKey' => 'ribbon.group_slides', 'items' => [
                         ['id' => 'add_slide', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                         ['id' => 'media:insert_presentation', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
+                        ['id' => 'delete_slides', 'gridSpan' => ['cols' => 2, 'rows' => 2]],
                     ]],
                     ['id' => 'g_text', 'labelKey' => 'ribbon.group_text', 'items' => [
                         ['id' => 'tool:markdown-text', 'gridSpan' => ['cols' => 2, 'rows' => 2]],

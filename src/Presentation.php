@@ -1735,6 +1735,50 @@ class Presentation
         return $result;
     }
 
+    /** Obergrenze für restoreSlides (Grössenlimit). */
+    public const MAX_RESTORE_SLIDES = 2000;
+
+    /**
+     * Ersetzt die Folienliste durch einen früheren Stand aus dem Editor-Verlauf
+     * (Rückgängig/Wiederholen von Folien-Aktionen, 3.7.0). Kennungen bleiben,
+     * damit der Editor die Folien wiederfindet; fehlende oder doppelte bekommen neue.
+     *
+     * @param list<mixed> $slides
+     */
+    public static function restoreSlides(string $id, array $slides): array
+    {
+        $saubere = [];
+        $gesehen = [];
+        foreach ($slides as $slide) {
+            if (!is_array($slide)) {
+                continue;
+            }
+            $sid = is_string($slide['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $slide['id']) ? $slide['id'] : '';
+            if ($sid === '' || isset($gesehen[$sid])) {
+                $sid = Storage::generateId(4);
+            }
+            $gesehen[$sid] = true;
+            $slide['id'] = $sid;
+            if (!is_array($slide['objects'] ?? null)) {
+                $slide['objects'] = [];
+            }
+            $saubere[] = $slide;
+        }
+        if ($saubere === []) {
+            return Storage::read(self::dir($id) . '/slides.json', ['slides' => []]);
+        }
+        $isLayoutSet = LayoutSet::isLayoutSet($id);
+        $result = Storage::update(self::dir($id) . '/slides.json', function ($data) use ($saubere) {
+            $data['slides'] = $saubere;
+            return $data;
+        }, ['slides' => []]);
+        self::updateMeta($id, []);
+        if ($isLayoutSet) {
+            LayoutSet::syncLayoutMap($id);
+        }
+        return $result;
+    }
+
     /** $orderedIds = Array von Folien-IDs in der gewünschten neuen Reihenfolge. */
     public static function reorderSlides(string $id, array $orderedIds): array
     {

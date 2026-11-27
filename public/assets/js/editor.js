@@ -453,7 +453,11 @@
     'add_slide', 'duplicate_slide', 'delete_slide', 'reorder_slides',
     'apply_slide_template', 'apply_layout_from_set', 'import_slide_to_layout_set',
     'clip_paste_slides', 'find_replace', 'notes_outline_style', 'insert_presentation_file',
+    'restore_slides',
   ];
+  /* Verlauf der Folien-Aktionen (siehe deckBegin/deckStep). */
+  SF.deckUndo = [];
+  SF.deckRedo = [];
 
   async function api(action, data) {
     if (DECK_ACTIONS.indexOf(action) !== -1) {
@@ -641,6 +645,9 @@
       switch (cmdKey) {
         case 'undo':
           undo();
+          break;
+        case 'delete_slides':
+          deleteSlides(shortcutSlideIndices());
           break;
         case 'redo':
           redo();
@@ -1664,6 +1671,7 @@
       const idx = SF.slides.findIndex((s) => s.id === item.dataset.id);
       item.classList.toggle('active', idx === SF.currentIndex);
     });
+    updateFilmstripSelection();
   }
 
   function bindFilmstripReorder(container) {
@@ -1738,6 +1746,8 @@
     }
 
     container.innerHTML = '';
+    container.setAttribute('role', 'listbox');
+    container.setAttribute('aria-multiselectable', 'true');
     const fsScale = filmstripScale();
     const itemHeight = filmstripItemHeight();
 
@@ -1753,6 +1763,12 @@
         (hasNotes ? ' has-notes' : '') +
         (presentOff ? ' is-present-disabled' : '');
       tab.dataset.id = slide.id;
+      /* Mehrfachauswahl (3.7.0): Strg/Cmd-Klick einzeln, Umschalt-Klick Bereich. */
+      const istGewaehlt = gridSelectedIndices.size > 1 && gridSelectedIndices.has(i);
+      if (istGewaehlt) tab.classList.add('selected');
+      tab.setAttribute('role', 'option');
+      tab.setAttribute('aria-selected', istGewaehlt || (gridSelectedIndices.size <= 1 && i === SF.currentIndex) ? 'true' : 'false');
+      tab.setAttribute('aria-label', (SF.i18n.slideLabel || 'Folie') + ' ' + (i + 1));
       /* Anwählbar, damit die Eingabemarke hier stehen kann: Daran erkennen die
          Tastenkürzel, dass Strg+C/X/V/D der Folie gelten und nicht dem Objekt. */
       tab.tabIndex = 0;
@@ -1792,6 +1808,17 @@
         if (SF.filmstripSuppressClick) return;
         if (e.target.closest('[data-act]') || e.target.closest('.editor-filmstrip-handle') || e.target.closest('.filmstrip-label-input')) return;
         const idx = SF.slides.findIndex((s) => s.id === tab.dataset.id);
+        if (SF.canEdit && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+          e.preventDefault();
+          filmstripSelectClick(e, idx);
+          return;
+        }
+        if (gridSelectedIndices.size > 1) {
+          gridSelectedIndices.clear();
+          gridSelectedIndices.add(idx);
+          gridLastClickedIndex = idx;
+          updateFilmstripSelection();
+        }
         switchToSlide(idx);
       });
 
@@ -1837,6 +1864,37 @@
        danach dorthin: Sonst gälte das nächste Strg+C wieder dem Objekt, und ein
        zweites Ausschneiden hintereinander wäre nicht möglich. */
     if (hatteFilmstreifenFokus && activeItem) activeItem.focus({ preventScroll: true });
+  }
+
+  /** Strg/Cmd- oder Umschalt-Klick in der Folienleiste: Auswahl ändern, Folie bleibt offen. */
+  function filmstripSelectClick(e, index) {
+    if (index < 0) return;
+    window.getSelection()?.removeAllRanges();
+    if (!gridSelectedIndices.size) gridSelectedIndices.add(SF.currentIndex);
+    if (e.shiftKey) {
+      const anker = gridLastClickedIndex !== null ? gridLastClickedIndex : SF.currentIndex;
+      const a = Math.min(anker, index);
+      const b = Math.max(anker, index);
+      gridSelectedIndices.clear();
+      for (let i = a; i <= b; i++) gridSelectedIndices.add(i);
+    } else {
+      if (gridSelectedIndices.has(index) && gridSelectedIndices.size > 1) gridSelectedIndices.delete(index);
+      else gridSelectedIndices.add(index);
+      gridLastClickedIndex = index;
+    }
+    updateFilmstripSelection();
+  }
+
+  function updateFilmstripSelection() {
+    const container = document.getElementById('slideFilmstrip');
+    if (!container) return;
+    const mehrere = gridSelectedIndices.size > 1;
+    container.querySelectorAll('.editor-filmstrip-item').forEach((item) => {
+      const idx = SF.slides.findIndex((s) => s.id === item.dataset.id);
+      const gewaehlt = mehrere ? gridSelectedIndices.has(idx) : idx === SF.currentIndex;
+      item.classList.toggle('selected', mehrere && gewaehlt);
+      item.setAttribute('aria-selected', gewaehlt ? 'true' : 'false');
+    });
   }
 
   function getFilmstripAfterElement(container, y) {
@@ -2026,6 +2084,7 @@
       .map((i) => SF.slides[i] && SF.slides[i].id)
       .filter(Boolean);
 
+    const before = await deckBegin();
     setSaveStatus('Speichere…');
     try {
       const res = await api('reorder_slides', { order: newOrderIds });
@@ -2043,6 +2102,7 @@
       await renderSlideFilmstrip();
       if (SF.editorViewMode === 'grid') renderSlideGrid();
       reloadPreviewWindow();
+      deckCommit(before);
     } catch (e) {
       setSaveStatus('Fehler', true);
       console.error(e);
@@ -2074,6 +2134,13 @@
     SF.currentIndex = index;
     const slide = SF.slides[index];
     if (!slide) return;
+    /* In der Folienansicht folgt die Auswahl der geöffneten Folie; Strg/Umschalt-Klick
+       in der Folienleiste erweitert sie, ohne die Folie zu wechseln. */
+    if (SF.editorViewMode !== 'grid') {
+      gridSelectedIndices.clear();
+      gridSelectedIndices.add(index);
+      gridLastClickedIndex = index;
+    }
     // Hub-Adresse folgt der offenen Folie (Ctrl+R im Hub öffnet sie wieder, Urs 27.11.)
     if (window.SFAppOrt && !SF.templateMode) window.SFAppOrt.melde({ slide: index });
 
@@ -2610,13 +2677,36 @@
   }
 
   async function duplicateSlide(index) {
-    setSaveStatus('Speichere…');
-    const res = await api('duplicate_slide', { index });
-    SF.slides = res.slides;
-    await renderSlideFilmstrip();
-    if (SF.editorViewMode === 'grid') renderSlideGrid();
-    setSaveStatus('Gespeichert');
-    reloadPreviewWindow();
+    await duplicateSlides(slideActionIndices(index));
+  }
+
+  /** Mehrere Folien duplizieren — ein Schritt im Verlauf. Von hinten nach vorn,
+      damit die Kopien die noch offenen Nummern nicht verschieben. */
+  async function duplicateSlides(indices) {
+    if (!indices.length) return;
+    const before = await deckBegin();
+    try {
+      setSaveStatus('Speichere…');
+      for (const i of [...indices].sort((a, b) => b - a)) {
+        const res = await api('duplicate_slide', { index: i });
+        SF.slides = res.slides;
+      }
+      await renderSlideFilmstrip();
+      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      setSaveStatus('Gespeichert');
+      reloadPreviewWindow();
+    } catch (e) {
+      setSaveStatus('Fehler', true);
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+    deckCommit(before);
+  }
+
+  /** Knopf an einer Folie: Gehört sie zur Mehrfachauswahl, gilt die ganze Auswahl. */
+  function slideActionIndices(index) {
+    if (index < 0) return [];
+    const sel = shortcutSlideIndices();
+    return sel.length > 1 && sel.includes(index) ? sel : [index];
   }
 
   function suggestedLayoutKey(slide) {
@@ -2648,29 +2738,52 @@
   }
 
   async function deleteSlide(index) {
-    if (SF.slides.length <= 1) {
-      await SFDialog.alert('Die letzte verbleibende Folie kann nicht gelöscht werden.');
+    await deleteSlides(slideActionIndices(index));
+  }
+
+  /** Eine oder mehrere Folien löschen (Urs 27.11.: «kann ich auch mehrere Folien gleichzeitig löschen?»).
+      Die letzte Folie bleibt; rückgängig mit Strg+Z. */
+  async function deleteSlides(indices) {
+    indices = [...new Set(indices)].filter((i) => i >= 0 && i < SF.slides.length).sort((a, b) => a - b);
+    if (!indices.length) return;
+    if (indices.length >= SF.slides.length) {
+      await SFDialog.alert(SF.slides.length <= 1
+        ? 'Die letzte verbleibende Folie kann nicht gelöscht werden.'
+        : 'Alle Folien zu löschen geht nicht: Mindestens eine Folie muss bleiben.');
       return;
     }
-    if (!(await SFDialog.confirm('Diese Folie wirklich löschen?', { danger: true }))) return;
+    const frage = indices.length === 1
+      ? 'Diese Folie wirklich löschen?'
+      : (I.deleteSlidesConfirm || '{n} Folien löschen?').replace('{n}', String(indices.length));
+    /* Steht die Rückfrage schon, löst eine weitere Entf-Taste keine zweite aus. */
+    if (SF.deleteAsking) return;
+    SF.deleteAsking = true;
+    let ja = false;
+    try {
+      ja = await SFDialog.confirm(frage, { danger: true });
+    } finally {
+      SF.deleteAsking = false;
+    }
+    if (!ja) return;
+    const before = await deckBegin();
+    const currentId = currentSlideId();
+    const removedIds = new Set(indices.map((i) => SF.slides[i].id));
     try {
       setSaveStatus('Speichere…');
-      const res = await api('delete_slide', { index });
-      SF.slides = res.slides;
-      if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
-      gridSelectedIndices.clear();
-      gridSelectedIndices.add(SF.currentIndex);
-      gridLastClickedIndex = SF.currentIndex;
-      loadSlideIntoStage(SF.currentIndex);
-      await renderSlideFilmstrip();
-      if (SF.editorViewMode === 'grid') renderSlideGrid();
-      reloadPreviewWindow();
+      /* Von hinten nach vorn, sonst verschieben sich die Nummern der noch zu löschenden Folien. */
+      for (const i of [...indices].reverse()) {
+        const res = await api('delete_slide', { index: i });
+        SF.slides = res.slides;
+      }
       setSaveStatus('Gespeichert');
     } catch (e) {
       setSaveStatus('Fehler', true);
       await SFDialog.alert(e.message || 'Folie konnte nicht gelöscht werden.');
       console.error(e);
     }
+    if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
+    await afterDeckChange(removedIds.has(currentId) ? null : currentId);
+    deckCommit(before);
   }
 
   async function toggleSlidePresentDisabled(index) {
@@ -8755,12 +8868,16 @@
 
     document.getElementById('addSlideBtn')?.addEventListener('click', async () => {
       await saveCurrentSlide(true);
-      const res = await api('add_slide', { after_index: SF.currentIndex });
-      SF.slides = res.slides;
-      SF.currentIndex = SF.currentIndex + 1;
-      loadSlideIntoStage(SF.currentIndex);
-      await renderSlideFilmstrip();
-      reloadPreviewWindow();
+      const before = await deckBegin();
+      try {
+        const res = await api('add_slide', { after_index: SF.currentIndex });
+        SF.slides = res.slides;
+      } catch (e) {
+        if (window.CfStatus) CfStatus.show('error', e.message);
+        return;
+      }
+      await afterDeckChange(SF.slides[SF.currentIndex + 1] ? SF.slides[SF.currentIndex + 1].id : null);
+      deckCommit(before);
     });
 
     (function initMetaSettingsAutoSave() {
@@ -9165,6 +9282,12 @@
         startPresentation(e.shiftKey ? SF.currentIndex : 0);
         return;
       }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && SF.canEdit && slideShortcutContext()
+        && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        deleteSlides(shortcutSlideIndices());
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && SF.selectedNodes.length) {
         e.preventDefault();
         SF.selectedNodes.slice().forEach((node) => {
@@ -9255,8 +9378,8 @@
   }
 
   function updateUndoRedoButtons() {
-    setRibbonCommandsDisabled('undo', SF.historyIndex <= 0);
-    setRibbonCommandsDisabled('redo', SF.historyIndex >= SF.history.length - 1);
+    setRibbonCommandsDisabled('undo', SF.historyIndex <= 0 && !SF.deckUndo.length);
+    setRibbonCommandsDisabled('redo', SF.historyIndex >= SF.history.length - 1 && !SF.deckRedo.length);
   }
 
   function resetHistoryForCurrentSlide() {
@@ -9275,6 +9398,8 @@
     SF.history.push(snap);
     if (SF.history.length > 60) SF.history.shift();
     SF.historyIndex = SF.history.length - 1;
+    /* Neue Änderung: was bei den Folien-Aktionen zum Wiederholen bereitlag, gilt nicht mehr. */
+    SF.deckRedo = [];
     updateUndoRedoButtons();
   }
 
@@ -9305,16 +9430,118 @@
     scheduleSave();
   }
 
+  /* Ein Verlauf für beides: Jede Folien-Aktion setzt den Folien-Inhaltsverlauf zurück
+     (deckCommit), darum liegen Inhaltsschritte immer nach der letzten Folien-Aktion.
+     Rückgängig nimmt zuerst die Inhaltsschritte, dann die Folien-Aktionen. */
   function undo() {
-    if (!SF.canEdit || SF.historyIndex <= 0) return;
-    SF.historyIndex--;
-    restoreHistorySnapshot(SF.history[SF.historyIndex]);
+    if (!SF.canEdit) return;
+    if (SF.historyIndex > 0) {
+      SF.historyIndex--;
+      restoreHistorySnapshot(SF.history[SF.historyIndex]);
+      return;
+    }
+    if (SF.deckUndo.length) deckStep(-1);
   }
 
   function redo() {
-    if (!SF.canEdit || SF.historyIndex >= SF.history.length - 1) return;
-    SF.historyIndex++;
-    restoreHistorySnapshot(SF.history[SF.historyIndex]);
+    if (!SF.canEdit) return;
+    if (SF.historyIndex < SF.history.length - 1) {
+      SF.historyIndex++;
+      restoreHistorySnapshot(SF.history[SF.historyIndex]);
+      return;
+    }
+    if (SF.deckRedo.length) deckStep(1);
+  }
+
+  // ---------- Verlauf der Folien-Aktionen (3.7.0) ----------
+  /* Einfügen, Löschen, Ausschneiden, Duplizieren, Neue Folie, Verschieben und
+     Präsentation einfügen legen vor und nach dem Schritt die Folienliste ab.
+     Rückgängig stellt Reihenfolge und Bestand über `restore_slides` wieder her;
+     Folien, die es noch gibt, behalten ihren heutigen Inhalt, damit spätere
+     Bearbeitungen nicht verloren gehen. Medien in assets/ bleiben liegen. */
+  const DECK_HISTORY_MAX = 30;
+
+  function cloneSlides(list) {
+    return JSON.parse(JSON.stringify(list || []));
+  }
+
+  function currentSlideId() {
+    return SF.slides[SF.currentIndex] ? SF.slides[SF.currentIndex].id : null;
+  }
+
+  /** Vor einer Folien-Aktion: anstehende Änderung speichern, Stand merken. null = nicht aufzeichnen. */
+  async function deckBegin() {
+    if (!SF.canEdit || SF.deckBusy) return null;
+    if (SF.saveTimer) {
+      clearTimeout(SF.saveTimer);
+      SF.saveTimer = null;
+      await saveCurrentSlide(true);
+    }
+    return { slides: cloneSlides(SF.slides), current: currentSlideId() };
+  }
+
+  /** Nach einer gelungenen Folien-Aktion: Schritt in den Verlauf legen. */
+  function deckCommit(before) {
+    if (!before) return;
+    const afterIds = SF.slides.map((s) => s.id).join(',');
+    if (afterIds === before.slides.map((s) => s.id).join(',')) return;
+    SF.deckUndo.push({
+      before: before.slides,
+      beforeCurrent: before.current,
+      after: cloneSlides(SF.slides),
+      afterCurrent: currentSlideId(),
+    });
+    if (SF.deckUndo.length > DECK_HISTORY_MAX) SF.deckUndo.shift();
+    SF.deckRedo = [];
+    resetHistoryForCurrentSlide();
+  }
+
+  /** Folienliste neu zeichnen nach einer Folien-Aktion; Auswahl = aktuelle Folie. */
+  async function afterDeckChange(currentId) {
+    let idx = currentId ? SF.slides.findIndex((s) => s.id === currentId) : -1;
+    if (idx < 0) idx = Math.min(SF.currentIndex, SF.slides.length - 1);
+    if (idx < 0) idx = 0;
+    gridSelectedIndices.clear();
+    gridSelectedIndices.add(idx);
+    gridLastClickedIndex = idx;
+    loadSlideIntoStage(idx);
+    await renderSlideFilmstrip();
+    if (SF.editorViewMode === 'grid') renderSlideGrid();
+    reloadPreviewWindow();
+  }
+
+  /** dir -1 = Rückgängig, +1 = Wiederholen. */
+  async function deckStep(dir) {
+    const from = dir < 0 ? SF.deckUndo : SF.deckRedo;
+    const to = dir < 0 ? SF.deckRedo : SF.deckUndo;
+    const entry = from[from.length - 1];
+    if (!entry || SF.deckBusy) return;
+    try {
+      setSaveStatus('Speichere…');
+      if (SF.saveTimer) {
+        clearTimeout(SF.saveTimer);
+        SF.saveTimer = null;
+        await saveCurrentSlide(true);
+      }
+      const now = cloneSlides(SF.slides);
+      const nowById = new Map(now.map((s) => [s.id, s]));
+      const target = dir < 0 ? entry.before : entry.after;
+      const list = target.map((s) => nowById.get(s.id) || s);
+      const res = await api('restore_slides', { slides: list });
+      /* Der heutige Stand wird zum Gegenstück, damit Wiederholen auch spätere
+         Bearbeitungen zurückbringt. */
+      if (dir < 0) entry.after = now;
+      else entry.before = now;
+      from.pop();
+      to.push(entry);
+      SF.slides = res.slides;
+      await afterDeckChange(dir < 0 ? entry.beforeCurrent : entry.afterCurrent);
+      setSaveStatus('Gespeichert');
+    } catch (e) {
+      setSaveStatus('Fehler', true);
+      if (window.CfStatus) CfStatus.show('error', e.message);
+    }
+    updateUndoRedoButtons();
   }
 
   // ---------- Saving ----------
@@ -9473,10 +9700,7 @@
     /* Im Raster zählt die Mehrfachauswahl, sonst die Folie, an der gerade
        gearbeitet wird — so heisst „zum Clipboard hinzufügen" in beiden Ansichten
        dasselbe. */
-    let indices = [...gridSelectedIndices];
-    if (SF.editorViewMode !== 'grid' || !indices.length) {
-      indices = [SF.currentIndex];
-    }
+    const indices = shortcutSlideIndices();
     if (!indices.length) {
       if (window.CfStatus) CfStatus.show('info', I.clipSelectNone || '');
       return;
@@ -9689,11 +9913,10 @@
 
   /** Folien, auf die sich ein Folien-Tastenkürzel bezieht. */
   function shortcutSlideIndices() {
-    let indices = [...gridSelectedIndices];
-    if (SF.editorViewMode !== 'grid' || !indices.length) {
-      indices = [SF.currentIndex];
-    }
-    return indices.filter((i) => i >= 0 && i < SF.slides.length).sort((a, b) => a - b);
+    /* Raster und Folienleiste teilen dieselbe Auswahl (3.7.0). */
+    let indices = [...gridSelectedIndices].filter((i) => i >= 0 && i < SF.slides.length);
+    if (!indices.length) indices = [SF.currentIndex];
+    return indices.sort((a, b) => a - b);
   }
 
   async function cutSlidesToClipboard() {
@@ -9703,6 +9926,9 @@
       await SFDialog.alert('Die letzte verbleibende Folie kann nicht ausgeschnitten werden.');
       return;
     }
+    const before = await deckBegin();
+    const currentId = currentSlideId();
+    const removedIds = new Set(indices.map((i) => SF.slides[i].id));
     try {
       setSaveStatus('Speichere…');
       /* Erst in die Ablage, dann löschen — scheitert das Kopieren, bleibt alles
@@ -9717,14 +9943,9 @@
       }
       if (slides) SF.slides = slides;
       if (SF.currentIndex >= SF.slides.length) SF.currentIndex = SF.slides.length - 1;
-      gridSelectedIndices.clear();
-      gridSelectedIndices.add(SF.currentIndex);
-      gridLastClickedIndex = SF.currentIndex;
-      loadSlideIntoStage(SF.currentIndex);
-      await renderSlideFilmstrip();
-      if (SF.editorViewMode === 'grid') renderSlideGrid();
+      await afterDeckChange(removedIds.has(currentId) ? null : currentId);
+      deckCommit(before);
       renderClipList();
-      reloadPreviewWindow();
       setSaveStatus('Gespeichert');
       if (window.CfStatus) {
         CfStatus.show('ok', (I.clipCut || '{n}').replace('{n}', String(indices.length)));
@@ -9748,13 +9969,13 @@
     }
     const src = await window.SfFf.pickMedia(INSERT_PRES_ACCEPT, I.insertPresTitle || 'Präsentation einfügen');
     if (!src) return;
+    const before = await deckBegin();
     try {
       if (window.CfStatus) CfStatus.show('info', I.insertPresBusy || '…');
       const data = await api('insert_presentation_file', { ref: src.ref, after_index: SF.currentIndex });
       SF.slides = data.slides;
-      await renderSlideFilmstrip();
-      if (SF.editorViewMode === 'grid') renderSlideGrid();
-      reloadPreviewWindow();
+      await afterDeckChange(currentSlideId());
+      deckCommit(before);
       if (window.CfStatus) CfStatus.show('ok', (I.insertPresDone || '{n}').replace('{n}', String(data.inserted || 0)));
       (data.warnings || []).forEach((w) => { if (window.CfStatus) CfStatus.show('info', w); });
     } catch (e) {
@@ -9772,11 +9993,11 @@
       return;
     }
     try {
+      const before = await deckBegin();
       const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
       SF.slides = data.slides;
-      await renderSlideFilmstrip();
-      if (SF.editorViewMode === 'grid') renderSlideGrid();
-      reloadPreviewWindow();
+      await afterDeckChange(currentSlideId());
+      deckCommit(before);
       if (window.CfStatus) {
         CfStatus.show('ok', (I.clipPasted || '{n}').replace('{n}', String(ids.length)));
       }
@@ -9787,12 +10008,7 @@
   }
 
   async function duplicateSlidesShortcut() {
-    const indices = shortcutSlideIndices();
-    /* Von hinten nach vorn, damit die eingefügten Kopien die noch offenen
-       Nummern nicht verschieben. */
-    for (const i of [...indices].reverse()) {
-      await duplicateSlide(i);
-    }
+    await duplicateSlides(shortcutSlideIndices());
   }
 
   async function pasteFromClipboard() {
@@ -9802,11 +10018,11 @@
       return;
     }
     try {
+      const before = await deckBegin();
       const data = await api('clip_paste_slides', { clip_ids: ids, after_index: SF.currentIndex });
       SF.slides = data.slides;
-      await renderSlideFilmstrip();
-      if (SF.editorViewMode === "grid") renderSlideGrid();
-      reloadPreviewWindow();
+      await afterDeckChange(currentSlideId());
+      deckCommit(before);
       if (window.CfStatus) {
         CfStatus.show('ok', (I.clipPasted || '{n}').replace('{n}', String(ids.length)));
       }

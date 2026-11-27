@@ -63,7 +63,7 @@ if (!$perm) {
 $canEdit = in_array($perm, ['owner', 'edit'], true);
 
 // Alle verändernden Aktionen brauchen Edit-Recht + gültiges CSRF-Token
-$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'apply_transition_slides', 'apply_transition_all', 'notes_outline_to_path', 'notes_outline_style', 'clip_copy_slides', 'clip_paste_slides', 'insert_presentation_file', 'find_replace', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
+$mutating = ['save_slide', 'save_slide_label', 'add_slide', 'delete_slide', 'restore_slides', 'duplicate_slide', 'reorder_slides', 'apply_slide_template', 'apply_layout_from_set', 'apply_transition_slides', 'apply_transition_all', 'notes_outline_to_path', 'notes_outline_style', 'clip_copy_slides', 'clip_paste_slides', 'insert_presentation_file', 'find_replace', 'import_slide_to_layout_set', 'save_layout_set_settings', 'save_logos_zones_accordion', 'set_display_options', 'save_meta', 'delete_media_asset', 'cleanup_unused_media', 'remove_image_background'];
 if (in_array($action, $mutating, true)) {
     if (!$canEdit) {
         json_fail('Keine Bearbeitungsrechte.', 403);
@@ -75,7 +75,7 @@ if (in_array($action, $mutating, true)) {
 }
 
 // Folienvorlagen (nicht Folien-Sets) dürfen immer nur genau eine Folie haben.
-$multiSlideActions = ['add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides'];
+$multiSlideActions = ['add_slide', 'delete_slide', 'duplicate_slide', 'reorder_slides', 'restore_slides'];
 if (in_array($action, $multiSlideActions, true) && Presentation::isTemplate($id) && !LayoutSet::isLayoutSet($id)) {
     json_fail('Folienvorlagen bestehen bewusst aus nur einer Folie.', 400);
 }
@@ -383,6 +383,17 @@ switch ($action) {
     case 'delete_slide':
         $index = (int)($body['index'] ?? -1);
         $result = Presentation::deleteSlide($id, $index);
+        json_ok(['slides' => $result['slides']]);
+        break;
+
+    case 'restore_slides':
+        /* Rückgängig/Wiederholen von Folien-Aktionen (3.7.0): der Editor schickt die
+           vollständige Folienliste aus seinem Verlauf. Recht = Bearbeiten wie alle Schreibwege. */
+        $liste = $body['slides'] ?? null;
+        if (!is_array($liste) || $liste === [] || !array_is_list($liste) || count($liste) > Presentation::MAX_RESTORE_SLIDES) {
+            json_fail(t('editor.restore_invalid'), 400);
+        }
+        $result = Presentation::restoreSlides($id, $liste);
         json_ok(['slides' => $result['slides']]);
         break;
 

@@ -1,5 +1,7 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.7.0 gebaut** (`entwickler/slide-undo` auf 3.6.6 551bcbe, beim Gitwart): Rückgängig/Wiederholen für Folien-Aktionen (`restore_slides`, 30 Schritte) + Mehrfachauswahl/Mehrfachlöschen in der Folienleiste, Menüband «Folien löschen». Offen: Umschalt+Pfeil-Auswahl; ungeprüft im Browser.
+
 - **27.11. Geräte 3.6.0–3.6.6** (Zweige `entwickler/slide-geraete-gruppe` → `-dialog` → `slide-geraet-neuladen`, Worktree `_claude/entwickler/wt-slide-geraete-dialog`): Presenter-Gruppe «Geräte» (Registrieren per QR/Code, Geräte inkl. «Web»; 3.6.0 live Biel); 3.6.5 Dialoge nach Lab + Icon-Raster (braucht Hub 2.33.10), 3.6.6 «Neu laden» je Gerät (braucht Hub 2.33.11) — beide beim Gitwart. QR-Leser jsQR lokal `public/assets/js/jsqr-1.4.0.js`. Offen: Feldstile in `sf-ff.css` sind aus Hub admin.css gespiegelt (SF lädt admin.css nicht).
 - **27.11. 3.6.4 gebaut** (`entwickler/slide-ff-import`, auf 3.6.3, nach 3.6.3 einspielen): FF-Picker für «Präsentation einfügen», Import, Traktanden, Folien-Set, Logo, Medien-Seitenleiste «Aus Dateien einfügen» (`FfFile::fetchTemp`/`fieldHtml`). Offen: Schriften-Upload (Mehrfachwahl) noch lokal.
 
