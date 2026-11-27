@@ -1,0 +1,37 @@
+/* FolienSchmiede — Grundfarbe aus dem Hub (Urs 27.11.2026: «Am Hub design anpassen. Also hier müsst es bläulich sein.»).
+   Gleiche Rechnung wie FileForge ff-tokens.css bzw. hub/public/assets/css/style.css: cf-theme.js setzt data-dialog-accent
+   aufs <html>, nur der Farbton wechselt. Gilt für die Oberfläche (Startseite, Menüband, Editor-Rahmen), nie für Folieninhalte.
+   Ohne Attribut bleiben die neutralen Werte aus style.css. */
+html[data-dialog-accent="blau"] { --sf-base-hue: 239.5; }
+html[data-dialog-accent="gruen"] { --sf-base-hue: 126.6; }
+html[data-dialog-accent="indigo"] { --sf-base-hue: 276.6; }
+html[data-dialog-accent="terracotta"] { --sf-base-hue: 40.4; }
+html[data-dialog-accent="custom"] { --sf-base-hue: var(--hub-base-hue, 40.4); }
+
+html[data-theme="light"][data-dialog-accent] {
+  --bg: oklch(0.968 calc(0.008 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --surface: oklch(0.99 calc(0.005 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --surface-raised: oklch(0.94 calc(0.012 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --border: oklch(0.878 calc(0.0204 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --text: oklch(0.25 calc(0.0214 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --text-muted: oklch(0.47 calc(0.0354 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --accent: oklch(0.519 calc(0.083 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --accent-dim: oklch(0.73 calc(0.1 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --surface-2: oklch(0.25 calc(0.0214 * var(--hub-chroma, 1)) var(--sf-base-hue) / 0.05);
+  --stage-fallback: linear-gradient(160deg, oklch(0.94 calc(0.012 * var(--hub-chroma, 1)) var(--sf-base-hue)), oklch(0.9 calc(0.016 * var(--hub-chroma, 1)) var(--sf-base-hue)));
+  --ribbon-bg-active: oklch(0.519 calc(0.083 * var(--hub-chroma, 1)) var(--sf-base-hue) / 0.16);
+}
+html[data-dialog-accent]:not([data-theme="light"]) {
+  --bg: oklch(0.204 calc(0.011 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --surface: oklch(0.239 calc(0.0165 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --surface-raised: oklch(0.277 calc(0.0216 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --border: oklch(0.356 calc(0.0176 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --text-muted: oklch(0.66 calc(0.0265 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --accent: oklch(0.65 calc(0.0754 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --accent-dim: oklch(0.432 calc(0.0643 * var(--hub-chroma, 1)) var(--sf-base-hue));
+  --ribbon-bg-active: oklch(0.65 calc(0.0754 * var(--hub-chroma, 1)) var(--sf-base-hue) / 0.22);
+}
+html[data-dialog-accent] body {
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, oklch(0.511 0.0754 var(--sf-base-hue) / 0.10), transparent 60%);
+}

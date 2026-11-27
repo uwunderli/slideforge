@@ -52,27 +52,26 @@
 }
 
 html[data-theme="light"] {
-  --bg: #f4efe6;
-  --surface: #fffaf3;
-  --surface-raised: #efe6d8;
-  --border: #5c1a1a;
-  --text: #2a1f18;
-  --text-muted: #6b5648;
-  --accent: var(--brand-braun);
-  --accent-dim: #c4a35a;
-  --accent-view: var(--brand-terracotta);
-  --surface-2: rgba(92, 26, 26, 0.06);
-  --overlay-bg: rgba(42, 31, 24, 0.45);
-  --scrim: rgba(255, 250, 243, 0.88);
-  --stage-fallback: linear-gradient(160deg, #efe6d8, #e5d9c8);
-  --ribbon-bg-active: rgba(133, 97, 45, 0.16);
+  /* Hub-Grundton statt eigener Beige-Palette (Urs 27.11.: «Am Hub design anpassen»); Farbton je Hub-Design in sf-tokens.css. */
+  --bg: #f6f3ec;
+  --surface: #fdfcf9;
+  --surface-raised: #f0ece3;
+  --border: #ddd6c8;
+  --text: #22282c;
+  --text-muted: #69737a;
+  --accent: #428bbe;
+  --accent-dim: #8fb8d6;
+  --accent-view: var(--brand-gruen);
+  --surface-2: rgba(34, 40, 44, 0.05);
+  --overlay-bg: rgba(34, 40, 44, 0.45);
+  --scrim: rgba(253, 252, 249, 0.88);
+  --stage-fallback: linear-gradient(160deg, #f0ece3, #e6e1d6);
+  --ribbon-bg-active: rgba(66, 139, 190, 0.16);
   color-scheme: light;
 }
 
 html[data-theme="light"] body {
-  background-image:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(133, 97, 45, 0.10), transparent 60%),
-    radial-gradient(ellipse 700px 400px at 100% 0%, rgba(214, 125, 93, 0.08), transparent 60%);
+  background-image: none;
 }
 
 html[data-theme="light"] .slide-card .stage {

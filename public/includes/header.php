@@ -18,7 +18,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="<?= $theme === 'light' ? '#f4efe6' : '#428BBE' ?>">
+<meta name="theme-color" content="<?= $theme === 'light' ? '#f6f3ec' : '#171b1f' ?>">
 <title><?= h($pageTitle ?? $siteTitle) ?> · <?= h($siteTitle) ?></title>
 <?php if ($logoUrl): ?>
 <link rel="icon" href="<?= h($logoUrl) ?>">
@@ -28,6 +28,7 @@ $faviconSvg = $webPrefix . '/assets/icons/slides.svg';
 <?= FontLibrary::headMarkup('fonts.css.php') ?>
 <link rel="stylesheet" href="assets/css/style.css?v=<?= ASSET_VERSION ?>">
 <link rel="stylesheet" href="assets/css/mobile.css?v=<?= ASSET_VERSION ?>">
+<link rel="stylesheet" href="assets/css/sf-tokens.css?v=<?= ASSET_VERSION ?>"><?php /* Farbton aus dem Hub-Design der Person (cf-theme.js → data-dialog-accent) */ ?>
 <?php /* Hub-Bausteine: EINE Datei statt sieben mitgefuehrter Kopien (hub/docs/DESIGN.md).
          Mit Hub-Anbindung kommt sie vom Hub, ohne Anbindung aus der byte-gleichen Kopie
          unter assets/vendor/hub/css/ - beides loest hub_asset() selbst auf (Hub-Fix
