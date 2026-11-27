@@ -6,14 +6,14 @@
 data/
 
 # User uploads (keep directory structure only)
-public_html/uploads/*
-!public_html/uploads/.gitkeep
-!public_html/uploads/avatars/
-public_html/uploads/avatars/*
-!public_html/uploads/avatars/.gitkeep
-!public_html/uploads/fonts/
-public_html/uploads/fonts/*
-!public_html/uploads/fonts/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+!public/uploads/avatars/
+public/uploads/avatars/*
+!public/uploads/avatars/.gitkeep
+!public/uploads/fonts/
+public/uploads/fonts/*
+!public/uploads/fonts/.gitkeep
 
 # Local test exports in project root
 /*.html

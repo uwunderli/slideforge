@@ -1,6 +1,6 @@
 ---
 description: Einheitliche Abschnitts-Titel in der rechten Editor-Sidebar
-globs: public_html/assets/css/style.css,public_html/assets/js/editor.js,public_html/editor.php,public_html/includes/**/*.php
+globs: public/assets/css/style.css,public/assets/js/editor.js,public/editor.php,public/includes/**/*.php
 alwaysApply: false
 ---
 

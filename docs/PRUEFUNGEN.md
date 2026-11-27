@@ -7,6 +7,16 @@ auftauchen, machen wir uns wieder Gedanken über das Prüfen.»
 Diese Datei tritt an seine Stelle: Vor jeder Auslieferung steht hier in einer Zeile, **was** geprüft wurde
 und **wie**. Nach dem Muster von `officeforge/docs/PRUEFUNGEN.md`.
 
+## Seit 3.0.0 (27.11.2026): Auslieferung über den Hub-Installer
+
+SlideForge liegt im Web-Share des Hubs (`<webroot>/slideforge`). Ausgeliefert wird nur noch über den Update-Weg (Gitwart, Tag `vX.Y.Z`,
+Hub-Installer «Installieren/Aktualisieren»). Der Abschnitt darunter beschreibt die alte Handlieferung nach `slides.bkbiel.ch`
+und gilt nur noch für den Altbestand bis zur Übernahme (H6).
+
+## Prüfzeilen (neueste zuoberst)
+
+- (entwickler/slide-hubpfad, 3.0.0, 2026-11-27, auf 2.1.33) · Hub-Pfad: `public_html`→`public`, Anmeldung nur über SharedAuth (`Auth::bootstrapHub`, ID = Personenschlüssel, Admin = Hub-Gruppe `admins`), Login/Registrierung/Einladungen/Konto/Benutzerverwaltung/Theme-/Sprachumschalter/PWA/HubDock/Launcher/eigenes SharedAuth/HubPersonKey/demo-reset/.deploy/docker entfernt, `sf_base()` für Adressen · `php -l` aller geänderten PHP-Dateien; Restverweise per `git grep` (login.php, register.php, prefs.php, InviteToken, HubDock …: 0 im Code) · Liste ACL/Kommunikation: ok (kein eigenes Login/Passwort/Rollenliste mehr; Admin aus Hub-Gruppe; keine neue Schnittstelle; Altlasten entfernt) · Liste UI: ok, UI nicht im Browser geprüft (nur Wegfall von Kopfleisten-Menü und Konto-Reitern) · Liste Install: Fragen 1/2/6/10/11 ja; 4 (Schlüsselpaar/AppCall) nein, kommt mit H4; 8 AppCall default-erlaubt; 9 Deinstallation = Hub-Installer · offen: NPM-Location je Hub, PHP-CLI für Hintergrundjobs ausser Biel unbelegt, Alt-Ordner `/data/www/slideforge` auf wunder.li.
+
 ## So wird in der FolienSchmiede ausgeliefert
 
 **Achtung, hier ist es anders als bei OfficeForge:** `scripts/lint.sh` und `scripts/release.sh --rueckbau`

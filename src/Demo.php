@@ -81,7 +81,6 @@ class Demo
         }
 
         Storage::write(USERS_FILE, []);
-        Storage::write(INVITES_FILE, []);
 
         if (is_dir(EXPORT_CACHE_PATH)) {
             foreach (glob(EXPORT_CACHE_PATH . '/*') ?: [] as $f) {

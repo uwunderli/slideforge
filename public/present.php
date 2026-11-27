@@ -48,14 +48,14 @@ $publicUrl = '';
 if (!empty($acl['public']['enabled']) && !empty($acl['public']['token'])) {
     $scheme = current_scheme();
     $host = http_request_host();
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    $base = sf_base();
     $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
 }
 
 $remoteUrl = '';
 $scheme = current_scheme();
 $host = http_request_host();
-$base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+$base = sf_base();
 $remoteUrl = "$scheme://$host$base/present_remote.php?id=" . urlencode($id);
 $remoteQrSrc = ($canBroadcast && $remoteUrl !== '')
     ? ('qr.php?data=' . urlencode($remoteUrl))

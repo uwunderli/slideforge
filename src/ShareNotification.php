@@ -8,7 +8,7 @@ class ShareNotification
     {
         $scheme = current_scheme();
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+        $base = sf_base();
         return $scheme . '://' . $host . $base . '/editor.php?id=' . urlencode($presentationId);
     }
 

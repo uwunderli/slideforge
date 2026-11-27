@@ -1,140 +1,62 @@
 <?php
 /**
- * Benutzerverwaltung auf Basis von data/users.json
+ * Personen und ihre Einstellungen (data/users.json). Anmeldung nur über den Hub (Hub-Pfad, 27.11.2026):
+ * Die Sitzung kommt aus `SharedAuth` (Hub-Cookie bzw. hub_session), die Benutzer-ID ist der Personenschlüssel
+ * des Hubs (`ct:<id>` bzw. `u:<name>`). Kein eigenes Login, keine Registrierung, keine Passwörter.
+ * Administrator ist, wer im Hub in der Gruppe `admins` steht.
  */
 class Auth
 {
-    /** Zwischenspeicher: User-ID, für die nach dem Speichern (ausserhalb des Storage::update-Locks) die Standard-Folienvorlagen angelegt werden sollen. */
-    private static ?string $seedTemplatesFor = null;
+    private const HUB_SESSION_KEY = 'hub_user';
 
-    public static function register(string $username, string $email, string $password, string $inviteToken = ''): array
+    /**
+     * Sitzung vom Hub übernehmen (aus config.php, vor jeder Seite). Ohne Hub-Anmeldung bleibt niemand angemeldet.
+     */
+    public static function bootstrapHub(): void
     {
-        $username = trim($username);
-        $email = trim($email);
-
-        if (strlen($username) < 3) {
-            return [false, 'Benutzername muss mindestens 3 Zeichen lang sein.'];
+        if (!class_exists('SharedAuth')) {
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['is_admin']);
+            return;
         }
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $username)) {
-            return [false, 'Benutzername darf nur Buchstaben, Zahlen, _ - . enthalten.'];
+        $payload = SharedAuth::bootstrapModule(self::HUB_SESSION_KEY);
+        if (!is_array($payload) || $payload === []) {
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['is_admin']);
+            return;
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return [false, 'Bitte eine gültige E-Mail-Adresse angeben.'];
+        $user = self::ensureFromHubPayload($payload);
+        if ($user === null) {
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['is_admin']);
+            return;
         }
-        if (strlen($password) < 6) {
-            return [false, 'Passwort muss mindestens 6 Zeichen lang sein.'];
-        }
-
-        // Registrierung ist entweder generell offen, oder es braucht einen gültigen Einladungslink.
-        $existingCount = count(Storage::read(USERS_FILE, []));
-        if ($existingCount > 0 && !Config::registrationEnabled()) {
-            if ($inviteToken === '' || !InviteToken::isValid($inviteToken)) {
-                return [false, 'Die Registrierung ist derzeit deaktiviert. Bitte einen gültigen Einladungslink verwenden.'];
-            }
-        }
-
-        $result = [true, ''];
-        $newUserId = null;
-        Storage::update(USERS_FILE, function ($users) use ($username, $email, $password, &$result, &$newUserId) {
-            foreach ($users as $u) {
-                if (strcasecmp($u['username'], $username) === 0) {
-                    $result = [false, 'Dieser Benutzername ist bereits vergeben.'];
-                    return $users;
-                }
-                if (strcasecmp($u['email'], $email) === 0) {
-                    $result = [false, 'Diese E-Mail-Adresse wird bereits verwendet.'];
-                    return $users;
-                }
-            }
-            $newUserId = Storage::generateId(6);
-            $isFirstUser = empty($users);
-            $emailVerified = $isFirstUser;
-            $users[] = [
-                'id' => $newUserId,
-                'username' => $username,
-                'email' => $email,
-                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                // Der allererste registrierte User wird automatisch Administrator,
-                // damit überhaupt jemand Zugriff auf die Einstellungen hat.
-                'role' => $isFirstUser ? 'admin' : 'editor',
-                'theme' => 'dark',
-                'email_verified' => $emailVerified,
-                'created_at' => date('c'),
-            ];
-            if ($isFirstUser) {
-                self::$seedTemplatesFor = $newUserId;
-            }
-            return $users;
-        }, []);
-
-        if (self::$seedTemplatesFor !== null) {
-            Presentation::seedDefaultTemplates(self::$seedTemplatesFor);
-            self::$seedTemplatesFor = null;
-        }
-
-        if ($result[0] && $inviteToken !== '' && $newUserId !== null) {
-            InviteToken::consume($inviteToken, $newUserId);
-        }
-
-        if ($result[0] && $newUserId !== null) {
-            $user = self::findById($newUserId);
-            if ($user && !EmailVerification::isVerified($user)) {
-                $mail = EmailVerification::sendMail($user);
-                if (!$mail['ok']) {
-                    return [true, 'registration_pending_no_mail'];
-                }
-                return [true, 'registration_pending'];
-            }
-        }
-
-        return $result;
+        $_SESSION['user_id'] = (string)$user['id'];
+        $_SESSION['username'] = (string)($user['username'] ?? '');
+        $_SESSION['is_admin'] = self::payloadIsAdmin($payload);
     }
 
-    public static function login(string $username, string $password): array
+    /** Personenschlüssel des Hubs aus der Anmeldung (`ct:<id>` bzw. `u:<name>`), leer wenn keiner. */
+    public static function personKeyFromPayload(array $payload): string
     {
-        $users = Storage::read(USERS_FILE, []);
-        foreach ($users as $u) {
-            if (strcasecmp($u['username'], $username) === 0 || strcasecmp($u['email'], $username) === 0) {
-                if (password_verify($password, $u['password_hash'])) {
-                    if (!EmailVerification::isVerified($u)) {
-                        return [false, 'email_not_verified'];
-                    }
-                    $_SESSION['user_id'] = $u['id'];
-                    $_SESSION['username'] = $u['username'];
-                    $_SESSION['auth_via'] = 'local';
-                    if (class_exists('SharedAuth')) {
-                        $pref = self::themePref($u);
-                        SharedAuth::issueThemeCookie($pref);
-                    }
-                    return [true, ''];
-                }
-                return [false, 'Falsches Passwort.'];
+        $ct = (int)($payload['ct_person_id'] ?? 0);
+        if ($ct <= 0 && ctype_digit((string)($payload['sub'] ?? ''))) {
+            $ct = (int)$payload['sub'];
+        }
+        if (class_exists('HubPersonKey')) {
+            return HubPersonKey::fromUser(['person_id' => $ct, 'username' => (string)($payload['username'] ?? '')]);
+        }
+        $name = strtolower(trim((string)($payload['username'] ?? '')));
+        return $ct > 0 ? 'ct:' . $ct : ($name !== '' ? 'u:' . $name : '');
+    }
+
+    /** @param array<string,mixed> $payload */
+    private static function payloadIsAdmin(array $payload): bool
+    {
+        $groups = is_array($payload['groups'] ?? null) ? $payload['groups'] : [];
+        foreach ($groups as $g) {
+            if (strcasecmp(trim((string)$g), 'admins') === 0) {
+                return true;
             }
         }
-        return [false, 'Kein Benutzer mit diesem Namen gefunden.'];
-    }
-
-    public static function logout(): void
-    {
-        if (class_exists('SharedAuth')) {
-            SharedAuth::clearCookie();
-        }
-        $_SESSION = [];
-        session_destroy();
-    }
-
-    public static function logoutToHub(): void
-    {
-        if (class_exists('SharedAuth')) {
-            SharedAuth::clearCookie();
-        }
-        $_SESSION = [];
-        session_destroy();
-        if (class_exists('SharedAuth') && SharedAuth::shouldUseHubLogin()) {
-            header('Location: ' . SharedAuth::hubUrl() . '/logout.php');
-            exit;
-        }
-        redirect('login.php');
+        return false;
     }
 
     public static function isLoggedIn(): bool
@@ -142,61 +64,23 @@ class Auth
         return !empty($_SESSION['user_id']);
     }
 
-    /**
-     * Sitzung über Hub (nicht lokales Passwort).
-     * Auf Prod (Hub-Login Pflicht) gilt jeder eingeloggte User als Hub —
-     * sticky auth_via=local aus alten Sessions darf den Dock nicht blockieren.
-     */
+    /** Jede Sitzung kommt vom Hub. */
     public static function isViaHub(): bool
     {
-        if (!self::isLoggedIn()) {
-            return false;
-        }
-
-        // Hub-Cookie immer als Hub zählen (schlägt sticky local)
-        if (class_exists('SharedAuth')) {
-            $payload = SharedAuth::read();
-            if (is_array($payload) && $payload !== []) {
-                $_SESSION['auth_via'] = 'churchforge_hub';
-                return true;
-            }
-        }
-
-        // Prod / Hub-Pflicht-Hosts: lokales Login-UI gibt es nicht → immer Hub-Dock
-        if (class_exists('SharedAuth') && method_exists('SharedAuth', 'shouldUseHubLogin')
-            && SharedAuth::shouldUseHubLogin()
-        ) {
-            $_SESSION['auth_via'] = 'churchforge_hub';
-            return true;
-        }
-
-        $via = (string)($_SESSION['auth_via'] ?? '');
-        if ($via === 'churchforge_hub') {
-            return true;
-        }
-        return false;
+        return self::isLoggedIn();
     }
 
     public static function requireLogin(): void
     {
-        if (!self::isLoggedIn()) {
-            if (class_exists('SharedAuth') && SharedAuth::shouldUseHubLogin()) {
-                SharedAuth::redirectToHubLogin((string)($_SERVER['REQUEST_URI'] ?? 'index.php'));
+        if (!self::isLoggedIn() || self::currentUser() === null) {
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['is_admin']);
+            if (class_exists('SharedAuth')) {
+                SharedAuth::requireModuleLogin(self::HUB_SESSION_KEY);
             }
-            redirect('login.php');
-        }
-        // Session zeigt auf einen User, der nicht (mehr) existiert
-        // (z.B. weil data/users.json zurückgesetzt wurde) -> Session leeren.
-        // Hub-Cookie behalten, damit SharedAuth den User neu mappen kann.
-        if (self::currentUser() === null) {
-            $_SESSION = [];
-            if (class_exists('SharedAuth') && SharedAuth::shouldUseHubLogin()) {
-                $uri = (string)($_SERVER['REQUEST_URI'] ?? 'index.php');
-                header('Location: ' . (str_starts_with($uri, '/') ? $uri : '/' . $uri));
-                exit;
-            }
-            self::logout();
-            redirect('login.php?expired=1');
+            http_response_code(403);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Login erforderlich — bitte über den Hub anmelden.';
+            exit;
         }
     }
 
@@ -206,22 +90,14 @@ class Auth
         if (!self::isLoggedIn()) {
             return null;
         }
-        $user = self::findById($_SESSION['user_id']);
-        // Session-ID veraltet (z.B. nach Restore/Migration von users.json): per Benutzername neu verknüpfen.
-        if ($user === null && !empty($_SESSION['username'])) {
-            $user = self::findByUsername((string)$_SESSION['username']);
-            if ($user !== null) {
-                $_SESSION['user_id'] = $user['id'];
-            }
-        }
-        return $user;
+        return self::findById((string)$_SESSION['user_id']);
     }
 
     public static function findById(string $id): ?array
     {
         $users = Storage::read(USERS_FILE, []);
         foreach ($users as $u) {
-            if ($u['id'] === $id) {
+            if ((string)($u['id'] ?? '') === $id) {
                 return $u;
             }
         }
@@ -232,22 +108,7 @@ class Auth
     {
         $users = Storage::read(USERS_FILE, []);
         foreach ($users as $u) {
-            if (strcasecmp($u['username'], $username) === 0) {
-                return $u;
-            }
-        }
-        return null;
-    }
-
-    public static function findByEmail(string $email): ?array
-    {
-        $email = trim($email);
-        if ($email === '') {
-            return null;
-        }
-        $users = Storage::read(USERS_FILE, []);
-        foreach ($users as $u) {
-            if (strcasecmp((string)($u['email'] ?? ''), $email) === 0) {
+            if (strcasecmp((string)($u['username'] ?? ''), $username) === 0) {
                 return $u;
             }
         }
@@ -255,183 +116,67 @@ class Auth
     }
 
     /**
-     * Hub Shared Session: bestehenden User finden oder aus CT/Hub-Payload anlegen.
+     * Person aus der Hub-Anmeldung finden oder anlegen; ID = Personenschlüssel des Hubs.
+     * Anzeigename, E-Mail und Bild werden bei jeder Anmeldung vom Hub übernommen.
+     *
      * @param array<string,mixed> $payload
      * @return array<string,mixed>|null
      */
     public static function ensureFromHubPayload(array $payload): ?array
     {
-        $username = trim((string)($payload['username'] ?? ''));
-        $email = trim((string)($payload['email'] ?? ''));
-        $display = trim((string)($payload['display_name'] ?? ''));
-        $ctPersonId = (int)($payload['ct_person_id'] ?? $payload['sub'] ?? 0);
-
-        if ($username === '' && $email === '' && $ctPersonId <= 0) {
+        $key = self::personKeyFromPayload($payload);
+        if ($key === '') {
             return null;
         }
-
-        // Prefer stable CT person mapping
-        if ($ctPersonId > 0) {
-            $users = Storage::read(USERS_FILE, []);
-            foreach ($users as $u) {
-                if ((int)($u['ct_person_id'] ?? 0) === $ctPersonId) {
-                    return self::syncHubProfile($u, $payload);
+        $username = trim((string)($payload['username'] ?? ''));
+        $display = trim((string)($payload['display_name'] ?? ''));
+        $email = trim((string)($payload['email'] ?? ''));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = '';
+        }
+        $avatarUrl = trim((string)($payload['avatar_url'] ?? ''));
+        $role = self::payloadIsAdmin($payload) ? 'admin' : 'editor';
+        $firstUser = false;
+        Storage::update(USERS_FILE, function ($users) use ($key, $username, $display, $email, $avatarUrl, $role, &$firstUser) {
+            $users = is_array($users) ? $users : [];
+            foreach ($users as &$u) {
+                if ((string)($u['id'] ?? '') !== $key) {
+                    continue;
                 }
-            }
-        }
-
-        if ($username !== '') {
-            $user = self::findByUsername($username);
-            if ($user !== null) {
-                return self::syncHubProfile($user, $payload);
-            }
-        }
-
-        if ($email !== '') {
-            $user = self::findByEmail($email);
-            if ($user !== null) {
-                return self::syncHubProfile($user, $payload);
-            }
-        }
-
-        // Sanitize username for FolienSchmiede rules
-        $safeUser = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $username) ?? '';
-        $safeUser = trim($safeUser, '._-');
-        if (strlen($safeUser) < 3) {
-            $safeUser = 'ct' . ($ctPersonId > 0 ? (string)$ctPersonId : substr(bin2hex(random_bytes(4)), 0, 8));
-        }
-        if (self::findByUsername($safeUser) !== null) {
-            $safeUser .= '_' . ($ctPersonId > 0 ? (string)$ctPersonId : substr(bin2hex(random_bytes(2)), 0, 4));
-        }
-
-        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $email = $safeUser . '@churchforge.local';
-            // Avoid collision
-            if (self::findByEmail($email) !== null) {
-                $email = $safeUser . '+' . ($ctPersonId > 0 ? (string)$ctPersonId : bin2hex(random_bytes(2))) . '@churchforge.local';
-            }
-        }
-
-        $tags = is_array($payload['tags'] ?? null) ? $payload['tags'] : [];
-        $groups = is_array($payload['groups'] ?? null) ? $payload['groups'] : [];
-        $isAdmin = false;
-        foreach (array_merge($tags, $groups) as $tag) {
-            if (strcasecmp(trim((string)$tag), 'Admin') === 0) {
-                $isAdmin = true;
-                break;
-            }
-        }
-
-        $newUserId = null;
-        Storage::update(USERS_FILE, function ($users) use ($safeUser, $email, $display, $ctPersonId, $isAdmin, &$newUserId) {
-            foreach ($users as $u) {
-                if (strcasecmp((string)($u['username'] ?? ''), $safeUser) === 0
-                    || strcasecmp((string)($u['email'] ?? ''), $email) === 0
-                    || ($ctPersonId > 0 && (int)($u['ct_person_id'] ?? 0) === $ctPersonId)
-                ) {
-                    $newUserId = (string)$u['id'];
-                    return $users;
+                $u['username'] = $username !== '' ? $username : (string)($u['username'] ?? $key);
+                if ($display !== '') {
+                    $u['display_name'] = $display;
                 }
+                if ($email !== '') {
+                    $u['email'] = $email;
+                }
+                $u['avatar_url'] = $avatarUrl;
+                $u['role'] = $role;
+                return $users;
             }
-            $newUserId = Storage::generateId(6);
+            unset($u);
+            $firstUser = $users === [];
             $users[] = [
-                'id' => $newUserId,
-                'username' => $safeUser,
+                'id' => $key,
+                'username' => $username !== '' ? $username : $key,
                 'email' => $email,
-                'display_name' => $display !== '' ? $display : $safeUser,
-                'password_hash' => password_hash(bin2hex(random_bytes(24)), PASSWORD_DEFAULT),
-                'role' => $isAdmin ? 'admin' : 'editor',
-                'theme' => 'dark',
-                'email_verified' => true,
+                'display_name' => $display !== '' ? $display : ($username !== '' ? $username : $key),
+                'avatar_url' => $avatarUrl,
+                'role' => $role,
                 'auth_source' => 'churchforge_hub',
-                'ct_person_id' => $ctPersonId > 0 ? $ctPersonId : null,
                 'created_at' => date('c'),
             ];
             return $users;
         }, []);
-
-        if ($newUserId === null) {
-            return null;
+        if ($firstUser) {
+            Presentation::seedDefaultTemplates($key);
         }
-        return self::findById($newUserId);
-    }
-
-    /**
-     * @param array<string,mixed> $user
-     * @param array<string,mixed> $payload
-     * @return array<string,mixed>
-     */
-    private static function syncHubProfile(array $user, array $payload): array
-    {
-        $display = trim((string)($payload['display_name'] ?? ''));
-        $email = trim((string)($payload['email'] ?? ''));
-        $ctPersonId = (int)($payload['ct_person_id'] ?? $payload['sub'] ?? 0);
-        $userId = (string)($user['id'] ?? '');
-        if ($userId === '') {
-            return $user;
-        }
-
-        $needs = false;
-        if ($ctPersonId > 0 && (int)($user['ct_person_id'] ?? 0) !== $ctPersonId) {
-            $needs = true;
-        }
-        if ($display !== '' && (string)($user['display_name'] ?? '') !== $display) {
-            $needs = true;
-        }
-        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)
-            && strcasecmp((string)($user['email'] ?? ''), $email) !== 0
-            && self::findByEmail($email) === null
-        ) {
-            $needs = true;
-        }
-        if (($user['auth_source'] ?? '') !== 'churchforge_hub' && ($user['auth_source'] ?? '') !== 'local') {
-            $needs = true;
-        }
-
-        if (!$needs) {
-            return $user;
-        }
-
-        Storage::update(USERS_FILE, function ($users) use ($userId, $display, $email, $ctPersonId) {
-            foreach ($users as &$u) {
-                if ((string)($u['id'] ?? '') !== $userId) {
-                    continue;
-                }
-                if ($display !== '') {
-                    $u['display_name'] = $display;
-                }
-                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $conflict = false;
-                    foreach ($users as $other) {
-                        if ((string)($other['id'] ?? '') !== $userId
-                            && strcasecmp((string)($other['email'] ?? ''), $email) === 0
-                        ) {
-                            $conflict = true;
-                            break;
-                        }
-                    }
-                    if (!$conflict) {
-                        $u['email'] = $email;
-                    }
-                }
-                if ($ctPersonId > 0) {
-                    $u['ct_person_id'] = $ctPersonId;
-                }
-                if (empty($u['auth_source'])) {
-                    $u['auth_source'] = 'churchforge_hub';
-                }
-                $u['email_verified'] = true;
-            }
-            return $users;
-        }, []);
-
-        return self::findById($userId) ?? $user;
+        return self::findById($key);
     }
 
     public static function isAdmin(): bool
     {
-        $u = self::currentUser();
-        return $u !== null && ($u['role'] ?? 'editor') === 'admin';
+        return self::isLoggedIn() && !empty($_SESSION['is_admin']);
     }
 
     public static function requireAdmin(): void
@@ -441,63 +186,6 @@ class Auth
             http_response_code(403);
             die('Nur für Administratoren zugänglich.');
         }
-    }
-
-    /** Eigene Profildaten ändern (Benutzername/E-Mail). Gibt [ok, message] zurück. */
-    public static function updateProfile(string $userId, string $username, string $email): array
-    {
-        $username = trim($username);
-        $email = trim($email);
-        if (strlen($username) < 3 || !preg_match('/^[a-zA-Z0-9_\-\.]+$/', $username)) {
-            return [false, 'Ungültiger Benutzername.'];
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return [false, 'Ungültige E-Mail-Adresse.'];
-        }
-        $result = [true, 'Profil gespeichert.'];
-        Storage::update(USERS_FILE, function ($users) use ($userId, $username, $email, &$result) {
-            foreach ($users as $u) {
-                if ($u['id'] !== $userId && strcasecmp($u['username'], $username) === 0) {
-                    $result = [false, 'Dieser Benutzername ist bereits vergeben.'];
-                    return $users;
-                }
-                if ($u['id'] !== $userId && strcasecmp($u['email'], $email) === 0) {
-                    $result = [false, 'Diese E-Mail-Adresse wird bereits verwendet.'];
-                    return $users;
-                }
-            }
-            foreach ($users as &$u) {
-                if ($u['id'] === $userId) {
-                    $u['username'] = $username;
-                    $u['email'] = $email;
-                }
-            }
-            return $users;
-        }, []);
-        if ($result[0]) {
-            $_SESSION['username'] = $username;
-        }
-        return $result;
-    }
-
-    public static function changePassword(string $userId, string $currentPassword, string $newPassword): array
-    {
-        if (strlen($newPassword) < 6) {
-            return [false, 'Neues Passwort muss mindestens 6 Zeichen lang sein.'];
-        }
-        $user = self::findById($userId);
-        if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
-            return [false, 'Aktuelles Passwort ist falsch.'];
-        }
-        Storage::update(USERS_FILE, function ($users) use ($userId, $newPassword) {
-            foreach ($users as &$u) {
-                if ($u['id'] === $userId) {
-                    $u['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
-                }
-            }
-            return $users;
-        }, []);
-        return [true, 'Passwort geändert.'];
     }
 
     public static function setLanguage(string $userId, string $language): void
@@ -513,44 +201,6 @@ class Auth
             }
             return $users;
         }, []);
-    }
-
-    public static function setAvatar(string $userId, ?string $filename): void
-    {
-        Storage::update(USERS_FILE, function ($users) use ($userId, $filename) {
-            foreach ($users as &$u) {
-                if ($u['id'] === $userId) {
-                    $u['avatar'] = $filename;
-                }
-            }
-            return $users;
-        }, []);
-    }
-
-    public static function setTheme(string $userId, string $theme): void
-    {
-        $theme = class_exists('SharedAuth')
-            ? SharedAuth::normalizeThemePref($theme)
-            : (in_array($theme, ['dark', 'light', 'system'], true) ? $theme : 'dark');
-        Storage::update(USERS_FILE, function ($users) use ($userId, $theme) {
-            foreach ($users as &$u) {
-                if ($u['id'] === $userId) {
-                    $u['theme'] = $theme;
-                }
-            }
-            return $users;
-        }, []);
-    }
-
-    /** Preference dark|light|system for the user (falls back to dark). */
-    public static function themePref(?array $user = null): string
-    {
-        $user = $user ?? self::currentUser();
-        $raw = (string)($user['theme'] ?? 'dark');
-        if (class_exists('SharedAuth')) {
-            return SharedAuth::normalizeThemePref($raw);
-        }
-        return in_array($raw, ['dark', 'light', 'system'], true) ? $raw : 'dark';
     }
 
     /** Standard-Reihenfolge und Sichtbarkeit der Steuerungsleiste im Präsentationsmodus. */
@@ -780,47 +430,6 @@ class Auth
         $users = Storage::read(USERS_FILE, []);
         usort($users, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
         return $users;
-    }
-
-    public static function setRole(string $userId, string $role): void
-    {
-        $role = $role === 'admin' ? 'admin' : 'editor';
-        Storage::update(USERS_FILE, function ($users) use ($userId, $role) {
-            foreach ($users as &$u) {
-                if ($u['id'] === $userId) {
-                    $u['role'] = $role;
-                }
-            }
-            return $users;
-        }, []);
-    }
-
-    public static function countAdmins(): int
-    {
-        $count = 0;
-        foreach (Storage::read(USERS_FILE, []) as $u) {
-            if (($u['role'] ?? 'editor') === 'admin') {
-                $count++;
-            }
-        }
-        return $count;
-    }
-
-    /** Löscht einen User (Admin-Funktion). $alsoDeletePresentations löscht zusätzlich dessen eigene Präsentationen. */
-    public static function deleteUser(string $userId, bool $alsoDeletePresentations = false): void
-    {
-        if ($alsoDeletePresentations && is_dir(PRESENTATIONS_PATH)) {
-            foreach (scandir(PRESENTATIONS_PATH) as $pid) {
-                if ($pid === '.' || $pid === '..') continue;
-                $meta = Presentation::getMeta($pid);
-                if ($meta && $meta['owner_id'] === $userId) {
-                    Presentation::delete($pid);
-                }
-            }
-        }
-        Storage::update(USERS_FILE, function ($users) use ($userId) {
-            return array_values(array_filter($users, fn($u) => $u['id'] !== $userId));
-        }, []);
     }
 
     public static function spellcheckBrowserEnabled(?array $user = null): bool

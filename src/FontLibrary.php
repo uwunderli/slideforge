@@ -1,6 +1,6 @@
 <?php
 /**
- * System- und benutzerdefinierte Schriftarten (Upload in public_html/uploads/fonts/).
+ * System- und benutzerdefinierte Schriftarten (Upload in public/uploads/fonts/).
  * Metadaten in data/config.json unter custom_fonts.
  */
 class FontLibrary

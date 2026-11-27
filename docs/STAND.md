@@ -1,5 +1,8 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. in Arbeit: Umbau zum FF-Editor im Hub** (Go Urs direkt). Plan + Entscheide: `_berichte/slideforge/plan-hub-editor-2026-11-27.md`. H1/H2 (FileForge) und H3 (Hub-Pfad) laufen parallel als Unter-Agenten; H4–H6 danach.
+  - **H3 gebaut (3.0.0, Zweig `entwickler/slide-hubpfad`; Hub 2.32.1 `entwickler/hub-slide-platform`), beim Gitwart:** `public/` statt `public_html/`, Anmeldung nur über den Hub (ID = Personenschlüssel), Eigenbetrieb (Login, Konto, Dock, PWA, .deploy) entfernt. Offen: NPM-Location `/slideforge/` → `/slideforge/public/` je Hub (Server-Agenten), wunder.li hat Alt-Ordner `/data/www/slideforge` (Aug., public_html) im Zielordner, PHP-CLI für Export-/Importjobs nur in Biel belegt (clipforge/runtime), App-Schlüssel/AppCall kommt mit H4. slides.bkbiel.ch läuft weiter bis H6 (Altdaten lesbar unter `/data/slideforge` im Web-Container Biel).
+
 - **14.11. live (VERSION 2.1.33, ASSET_VERSION 698):** Editor/Präsentation ohne Kopfleiste; Vollbild (Ribbon-Icon, F, F5; im Hub-Rahmen braucht es Hub ≥ 2.6.16); Presenter/Pfeiltasten auch aus dem Beamer-Fenster und an der Tablet-Fernsteuerung. Urs: «jetzt gehts»; Stick am Tablet ungeprüft.
 - **Erledigt (alles auf Prod, 04.11., ASSET_VERSION 690):** Traktandenlisten-Import (`agenda.php`), Ribbon «Präsentation einfügen» (pptx/odp/xlsx/chs/zip/html/cfs), Excel-Import (nur erstes Blatt). Letzter Commit `7276df7` auf main (lokal, Gitwart gemeldet 05.11.).
 - **Offen:** Urs schaut Agenda-Seite und Excel-Import an, Korrekturen kommen von ihm. Excel: Pfeilspitzen/Strichelung bei Linien nicht unterstützt, Text in Ellipsen nur grob mittig. PDF-Parser mit echter Datei ungeprüft.
@@ -13,7 +16,7 @@
 - Prod `slides.bkbiel.ch` (bkb-srv10, `/data/slideforge`): Agenda-Import mit Layout-Wahl und Vorschau ausgeliefert 04.11. (`1675929`). Sicherung `.sicherung/agenda2-20261104-155115`.
 
 ## Liefer-Weg
-Von Hand, siehe `docs/PRUEFUNGEN.md` («So wird in der FolienSchmiede ausgeliefert»). Kein release.sh.
+Ab 3.0.0 über Hub-Installer/Gitwart (Web-Share). Altbestand slides.bkbiel.ch: von Hand, siehe `docs/PRUEFUNGEN.md` («So wird in der FolienSchmiede ausgeliefert»). Kein release.sh.
 
 ## Zuletzt gemacht
 - 04.11.: Ribbon «Präsentation einfügen» (PresentationInsert, ASSET_VERSION 688).

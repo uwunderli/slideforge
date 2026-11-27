@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_general') {
         Config::update([
             'site_title' => trim($_POST['site_title'] ?? '') !== '' ? trim($_POST['site_title']) : APP_NAME,
-            'registration_enabled' => isset($_POST['registration_enabled']),
         ]);
         $msg = t('admin.general_saved');
     }
@@ -107,74 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = t('admin.openclipart_saved');
     }
 
-    // ---- Tab "Benutzerverwaltung" ----
-    if ($action === 'create_invite') {
-        $inviteEmail = trim($_POST['invite_email'] ?? '');
-        $invite = InviteToken::create($me['id'], $inviteEmail);
-        $msg = t('admin.invite_created');
-
-        if ($inviteEmail !== '') {
-            if (Demo::smtpLocked()) {
-                $error = t('demo.smtp_locked');
-            } elseif (!filter_var($inviteEmail, FILTER_VALIDATE_EMAIL)) {
-                $error = t('admin.invite_invalid_email');
-            } else {
-                $smtp = Config::smtp();
-                if (empty($smtp['host'])) {
-                    $error = t('admin.invite_no_smtp');
-                } else {
-                    $scheme = current_scheme();
-                    $host = $_SERVER['HTTP_HOST'];
-                    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-                    $inviteUrl = "$scheme://$host$base/register.php?invite=" . $invite['token'];
-                    $siteTitle = Config::siteTitle();
-                    $result = SmtpMailer::send(
-                        $smtp,
-                        $inviteEmail,
-                        t('admin.invite_mail_subject', ['site' => $siteTitle]),
-                        t('admin.invite_mail_body', ['site' => $siteTitle, 'url' => $inviteUrl])
-                    );
-                    if ($result['ok']) {
-                        $msg = t('admin.invite_created_and_sent', ['email' => $inviteEmail]);
-                    } else {
-                        $error = t('admin.invite_send_failed', ['error' => $result['error'] ?? '?']);
-                    }
-                }
-            }
-        }
-    }
-
-    if ($action === 'delete_invite') {
-        InviteToken::delete($_POST['token'] ?? '');
-        $msg = t('admin.invite_deleted');
-    }
-
-    if ($action === 'set_role') {
-        $targetId = $_POST['user_id'] ?? '';
-        if ($targetId === $me['id'] && ($_POST['role'] ?? '') !== 'admin') {
-            $error = t('admin.cannot_revoke_self_admin');
-        } elseif (($_POST['role'] ?? '') !== 'admin' && Auth::countAdmins() <= 1 && (Auth::findById($targetId)['role'] ?? '') === 'admin') {
-            $error = t('admin.min_one_admin');
-        } else {
-            Auth::setRole($targetId, $_POST['role'] ?? 'editor');
-            $msg = t('admin.role_updated');
-        }
-    }
-
-    if ($action === 'delete_user') {
-        $targetId = $_POST['user_id'] ?? '';
-        if ($targetId === $me['id']) {
-            $error = t('admin.cannot_delete_self');
-        } elseif ((Auth::findById($targetId)['role'] ?? '') === 'admin' && Auth::countAdmins() <= 1) {
-            $error = t('admin.min_one_admin');
-        } else {
-            Auth::deleteUser($targetId, isset($_POST['also_delete_presentations']));
-            $msg = t('admin.user_deleted');
-        }
-    }
 }
 
-$allowedTabs = ['general', 'smtp', 'spellcheck', 'media', 'users'];
+$allowedTabs = ['general', 'smtp', 'spellcheck', 'media'];
 $tabFromAction = [
     'save_general' => 'general',
     'upload_logo' => 'general',
@@ -184,10 +118,6 @@ $tabFromAction = [
     'save_pixabay' => 'media',
     'save_iconify' => 'media',
     'save_openclipart' => 'media',
-    'create_invite' => 'users',
-    'delete_invite' => 'users',
-    'set_role' => 'users',
-    'delete_user' => 'users',
 ];
 $activeTab = $_GET['tab'] ?? 'general';
 if ($postAction !== '' && isset($tabFromAction[$postAction])) {
@@ -203,12 +133,7 @@ $languagetool = Config::languageTool();
 $pixabay = Config::pixabay();
 $iconify = Config::iconify();
 $openclipart = Config::openclipart();
-$invites = InviteToken::listAll();
-$users = Auth::listAll();
 $smtpDemoLocked = Demo::smtpLocked();
-$scheme = current_scheme();
-$host = $_SERVER['HTTP_HOST'];
-$base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
 
 $pageTitle = t('admin.heading');
 require __DIR__ . '/includes/header.php';
@@ -222,7 +147,6 @@ require __DIR__ . '/includes/header.php';
     <a href="?tab=smtp" class="page-tab-btn<?= $activeTab === 'smtp' ? ' active' : '' ?>"><?= h(t('admin.tab_smtp')) ?></a>
     <a href="?tab=spellcheck" class="page-tab-btn<?= $activeTab === 'spellcheck' ? ' active' : '' ?>"><?= h(t('admin.tab_spellcheck')) ?></a>
     <a href="?tab=media" class="page-tab-btn<?= $activeTab === 'media' ? ' active' : '' ?>"><?= h(t('admin.tab_media')) ?></a>
-    <a href="?tab=users" class="page-tab-btn<?= $activeTab === 'users' ? ' active' : '' ?>"><?= h(t('admin.tab_users')) ?></a>
   </div>
 
   <div class="profile-tab-panel"<?= $activeTab !== 'general' ? ' hidden' : '' ?> data-admin-tab="general">
@@ -235,10 +159,6 @@ require __DIR__ . '/includes/header.php';
       <input type="hidden" name="action" value="save_general">
       <label for="site_title"><?= h(t('admin.site_title')) ?></label>
       <input type="text" id="site_title" name="site_title" value="<?= h($cfg['site_title'] ?? APP_NAME) ?>">
-      <label style="display:flex; align-items:center; gap:8px; margin-top:16px;">
-        <input type="checkbox" name="registration_enabled" style="width:auto;" <?= !empty($cfg['registration_enabled']) ? 'checked' : '' ?>>
-        <?= h(t('admin.open_registration')) ?>
-      </label>
       <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm" style="margin-top:14px;"><?= h(t('common.save')) ?></button>
     </form>
 
@@ -407,82 +327,6 @@ require __DIR__ . '/includes/header.php';
 
   </div>
 
-  <div class="profile-tab-panel"<?= $activeTab !== 'users' ? ' hidden' : '' ?> data-admin-tab="users">
-    <?php if ($activeTab === 'users' && $error): ?><div class="alert alert-error"><?= h($error) ?></div><?php endif; ?>
-    <?php if ($activeTab === 'users' && $msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
-
-    <div class="section-header" style="margin-top:8px;"><h2><?= h(t('admin.invites_heading')) ?></h2></div>
-    <form method="post" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="action" value="create_invite">
-      <div style="flex:1; min-width:200px;">
-        <label for="invite_email" style="margin-top:0;"><?= h(t('admin.invite_email_label')) ?></label>
-        <input type="email" id="invite_email" name="invite_email" placeholder="max.muster@example.com">
-      </div>
-      <button type="submit" class="button button-sm hub-btn hub-btn--primary hub-btn--sm"><?= h(t('admin.create_invite_btn')) ?></button>
-    </form>
-
-    <ul class="share-list" style="margin-top:16px;">
-      <?php if (empty($invites)): ?>
-        <li style="color:var(--text-muted); background:none; border:none;"><?= h(t('admin.no_invites_yet')) ?></li>
-      <?php endif; ?>
-      <?php foreach ($invites as $inv): ?>
-        <li style="align-items:flex-start; flex-direction:column; gap:6px;">
-          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <span>
-              <?= $inv['email'] ? h($inv['email']) : '<span style="color:var(--text-muted)">' . h(t('admin.no_email_note')) . '</span>' ?>
-              <span class="perm-tag <?= $inv['used'] ? 'view' : 'edit' ?>"><?= $inv['used'] ? h(t('admin.invite_used')) : h(t('admin.invite_open')) ?></span>
-            </span>
-            <form method="post" class="inline-form">
-              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="delete_invite">
-              <input type="hidden" name="token" value="<?= h($inv['token']) ?>">
-              <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('common.delete')) ?></button>
-            </form>
-          </div>
-          <?php if (!$inv['used']): ?>
-            <input type="text" readonly value="<?= h("$scheme://$host$base/register.php?invite=" . $inv['token']) ?>" onclick="this.select()" style="font-family:var(--font-mono); font-size:0.78rem;">
-          <?php endif; ?>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-
-    <div class="section-header"><h2><?= h(t('admin.users_heading')) ?></h2></div>
-    <ul class="share-list">
-      <?php foreach ($users as $u): ?>
-        <li style="align-items:center;">
-          <span>
-            <strong><?= h($u['username']) ?></strong>
-            <span style="color:var(--text-muted); font-size:0.85rem;"> &middot; <?= h($u['email']) ?></span>
-            <?php if ($u['id'] === $me['id']): ?><span class="perm-tag view"><?= h(t('admin.you_badge')) ?></span><?php endif; ?>
-          </span>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <form method="post" class="inline-form">
-              <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-              <input type="hidden" name="action" value="set_role">
-              <input type="hidden" name="user_id" value="<?= h($u['id']) ?>">
-              <select name="role" onchange="this.form.submit()" <?= $u['id'] === $me['id'] ? 'disabled title="' . h(t('admin.own_role_locked')) . '"' : '' ?>>
-                <option value="editor" <?= ($u['role'] ?? 'editor') === 'editor' ? 'selected' : '' ?>><?= h(t('admin.role_editor')) ?></option>
-                <option value="admin" <?= ($u['role'] ?? '') === 'admin' ? 'selected' : '' ?>><?= h(t('admin.role_admin')) ?></option>
-              </select>
-            </form>
-            <?php if ($u['id'] !== $me['id']): ?>
-              <form method="post" class="inline-form" data-sf-confirm="<?= h(t('admin.delete_user_confirm', ['name' => $u['username']])) ?>" data-sf-confirm-danger>
-                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-                <input type="hidden" name="action" value="delete_user">
-                <input type="hidden" name="user_id" value="<?= h($u['id']) ?>">
-                <label style="display:flex; align-items:center; gap:4px; font-size:0.78rem; color:var(--text-muted); margin:0;">
-                  <input type="checkbox" name="also_delete_presentations" style="width:auto;"> <?= h(t('admin.also_delete_presentations')) ?>
-                </label>
-                <button type="submit" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm"><?= h(t('common.delete')) ?></button>
-              </form>
-            <?php endif; ?>
-          </div>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-
-  </div>
 </div>
 
 <div class="modal-backdrop" id="pixabayHelpModal" aria-hidden="true">

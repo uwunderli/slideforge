@@ -1,6 +1,6 @@
 ---
 description: Zahlenfelder — Mausrad ändert den Wert (globaler Standard)
-globs: public_html/**/*.{js,php}
+globs: public/**/*.{js,php}
 alwaysApply: false
 ---
 
@@ -11,7 +11,7 @@ Gilt für **alle** `input[type="number"]` in SlideForge.
 ## Pflicht
 
 - Scrollrad über dem Feld erhöht/verringert den Wert (`step`, `min`, `max`)
-- Umsetzung zentral in `public_html/assets/js/number-input-wheel.js` (über `header.php`)
+- Umsetzung zentral in `public/assets/js/number-input-wheel.js` (über `header.php`)
 - Keine ad-hoc `wheel`-Handler pro Feld
 
 ## Verhalten

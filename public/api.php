@@ -45,7 +45,7 @@ function sf_public_view_url(?string $token): ?string
     }
     $scheme = current_scheme();
     $host = $_SERVER['HTTP_HOST'];
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    $base = sf_base();
     return "$scheme://$host$base/view.php?token=" . $token;
 }
 

@@ -1,14 +1,15 @@
 <?php
 /**
  * Zentrale Konfiguration.
- * Diese Datei liegt bewusst AUSSERHALB von public_html und ist damit
- * vom Web aus nicht erreichbar (sofern nginx root = public_html).
+ * Diese Datei liegt bewusst AUSSERHALB von public/ und ist damit vom Web aus nicht
+ * erreichbar: SlideForge laeuft unter <Hub>/slideforge/ im Web-Share des Hubs, nginx
+ * liefert dort nur /slideforge/public/ aus (Hub-Pfad, 27.11.2026).
  */
 
 // Basisverzeichnisse
 define('BASE_PATH', __DIR__);
 /* Modulwurzel fuer die Hub-Bibliothek: hub_asset() sucht im Alleinbetrieb die
-   mitgefuehrte Kopie unter SLIDEFORGE_ROOT.'/public_html' (shared/bootstrap.php).
+   mitgefuehrte Kopie unter der Modulwurzel (shared/bootstrap.php).
    Ohne die Konstante faellt es auf DOCUMENT_ROOT zurueck - das stimmt hier, haengt
    aber am Webserver; mit der Konstante ist der Pfad eindeutig. */
 define('SLIDEFORGE_ROOT', __DIR__);
@@ -17,11 +18,10 @@ define('PRESENTATIONS_PATH', DATA_PATH . '/presentations');
 define('USERS_FILE', DATA_PATH . '/users.json');
 define('LANG_PATH', __DIR__ . '/lang');
 define('SITE_CONFIG_FILE', DATA_PATH . '/config.json');
-define('INVITES_FILE', DATA_PATH . '/invites.json');
 define('TEXT_TEMPLATES_FILE', DATA_PATH . '/text_templates.json');
 define('EXPORT_CACHE_PATH', DATA_PATH . '/cache');
 // Logo liegt bewusst im Web-Root (öffentlich sichtbar, auch auf der Login-Seite)
-define('PUBLIC_UPLOADS_PATH', __DIR__ . '/public_html/uploads');
+define('PUBLIC_UPLOADS_PATH', __DIR__ . '/public/uploads');
 define('FONTS_UPLOAD_PATH', PUBLIC_UPLOADS_PATH . '/fonts');
 define('MAX_LOGO_SIZE', 3 * 1024 * 1024); // 3 MB
 define('MAX_FONT_SIZE', 10 * 1024 * 1024); // 10 MB
@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '698');
+define('ASSET_VERSION', '699');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -61,9 +61,21 @@ ini_set('log_errors', '1');
 // Hinweis: `display_startup_errors` hier zu setzen waere wirkungslos — die
 // Startphase ist vorbei, wenn diese Zeile laeuft. Das gehoert in die Server-ini.
 
-// Session starten (muss vor jedem Output passieren)
+// Session: eigener Name und Pfad unter dem Hub (kein Mitlesen der Hub-Sitzung, keine Kollision mit
+// anderen Apps auf demselben Host). Muss vor jedem Output passieren.
 if (session_status() === PHP_SESSION_NONE) {
+    $__secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    session_name('SFSESSID');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/slideforge/',
+        'secure' => $__secure,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
+    unset($__secure);
 }
 
 // Autoloading der eigenen Klassen in src/
@@ -74,67 +86,30 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Shared Auth (Hub-Cookie / hub_session-Handoff)
-$authSecretFile = DATA_PATH . '/auth-secret.txt';
-if (is_readable($authSecretFile)) {
-    $hubAuthSecret = trim((string)file_get_contents($authSecretFile));
-    if ($hubAuthSecret !== '') {
-        putenv('CHURCHFORGE_AUTH_SECRET=' . $hubAuthSecret);
-        $_ENV['CHURCHFORGE_AUTH_SECRET'] = $hubAuthSecret;
+// Hub-Bibliothek (SharedAuth, hub_asset, HubPersonKey): Pflicht. SlideForge laeuft nur noch im Hub.
+$sharedPath = '';
+foreach ([(string)(getenv('CHURCHFORGE_SHARED_PATH') ?: ''), dirname(BASE_PATH) . '/shared', '/data/www/shared', '/var/www/shared'] as $__dir) {
+    $__dir = rtrim($__dir, '/');
+    if ($__dir !== '' && is_readable($__dir . '/bootstrap.php')) {
+        $sharedPath = $__dir;
+        break;
     }
 }
-
-$sharedPath = trim((string)(getenv('CHURCHFORGE_SHARED_PATH') ?: ''));
+unset($__dir);
 if ($sharedPath === '') {
-    foreach ([dirname(BASE_PATH) . '/shared', '/data/www/shared', '/var/www/shared-lib'] as $dir) {
-        if (is_dir($dir)) {
-            $sharedPath = $dir;
-            putenv('CHURCHFORGE_SHARED_PATH=' . $dir);
-            $_ENV['CHURCHFORGE_SHARED_PATH'] = $dir;
-            break;
-        }
-    }
+    error_log('SlideForge: shared/bootstrap.php nicht gefunden');
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'SlideForge ist nicht vollständig installiert (Hub-Bibliothek fehlt).';
+    exit;
 }
-if ($sharedPath !== '' && is_readable($sharedPath . '/bootstrap.php')) {
-    if (!defined('CHURCHFORGE_SHARED_PATH')) {
-        define('CHURCHFORGE_SHARED_PATH', $sharedPath);
-    }
-    require_once $sharedPath . '/bootstrap.php';
+if (!defined('CHURCHFORGE_SHARED_PATH')) {
+    define('CHURCHFORGE_SHARED_PATH', $sharedPath);
 }
+require_once $sharedPath . '/bootstrap.php';
 
-// Docker-Prod mountet oft nur SlideForge (/var/www/html) ohne ../shared —
-// dann fehlen die Bootstrap-Helpers. Fallbacks wie in shared/bootstrap.php.
-if (!function_exists('churchforge_hub_url')) {
-    function churchforge_hub_url(): string
-    {
-        $url = trim((string)(getenv('CHURCHFORGE_HUB_URL') ?: ''));
-        return $url !== '' ? rtrim($url, '/') : 'https://hub.bkbiel.ch';
-    }
-}
-if (!function_exists('churchforge_modules_file')) {
-    function churchforge_modules_file(): string
-    {
-        $custom = trim((string)(getenv('CHURCHFORGE_MODULES_JSON') ?: ''));
-        if ($custom !== '' && is_readable($custom)) {
-            return $custom;
-        }
-        $hubData = trim((string)(getenv('CHURCHFORGE_HUB_DATA') ?: ''));
-        if ($hubData === '') {
-            $hubData = dirname(BASE_PATH) . '/hub/data/gemeinde';
-        }
-        return rtrim($hubData, '/') . '/modules.json';
-    }
-}
-if (!function_exists('churchforge_shared_asset_url')) {
-    function churchforge_shared_asset_url(string $file): string
-    {
-        return churchforge_hub_url() . '/shared/' . ltrim($file, '/');
-    }
-}
-
-if (class_exists('SharedAuth')) {
-    SharedAuth::bootstrapSlideForge();
-}
+// Anmeldung nur ueber den Hub: Sitzung aus Hub-Cookie bzw. hub_session uebernehmen.
+Auth::bootstrapHub();
 
 Mobile::handleOverride();
 
@@ -149,7 +124,6 @@ if (!file_exists(SITE_CONFIG_FILE)) {
     file_put_contents(SITE_CONFIG_FILE, json_encode([
         'site_title' => APP_NAME,
         'logo' => '',
-        'registration_enabled' => true,
         'smtp' => [
             'host' => '', 'port' => 587, 'encryption' => 'tls',
             'username' => '', 'password' => '', 'from_email' => '', 'from_name' => APP_NAME,
@@ -176,9 +150,6 @@ if (!file_exists(SITE_CONFIG_FILE)) {
         ],
     ], JSON_PRETTY_PRINT));
 }
-if (!file_exists(INVITES_FILE)) {
-    file_put_contents(INVITES_FILE, json_encode([], JSON_PRETTY_PRINT));
-}
 if (!file_exists(TEXT_TEMPLATES_FILE)) {
     file_put_contents(TEXT_TEMPLATES_FILE, json_encode([
         ['id' => 'title', 'name' => 'Titel', 'fontFamily' => 'Open Sans', 'fontSize' => 120, 'fontWeight' => 'bold', 'italic' => false, 'underline' => false, 'strikethrough' => false, 'uppercase' => false, 'smallCaps' => false, 'color' => '#ffffff', 'align' => 'center', 'w' => 1270, 'h' => 90],
@@ -191,9 +162,6 @@ if (!file_exists(TEXT_TEMPLATES_FILE)) {
 }
 if (!is_dir(PUBLIC_UPLOADS_PATH)) {
     mkdir(PUBLIC_UPLOADS_PATH, 0770, true);
-}
-if (!is_dir(PUBLIC_UPLOADS_PATH . '/avatars')) {
-    mkdir(PUBLIC_UPLOADS_PATH . '/avatars', 0770, true);
 }
 if (!is_dir(FONTS_UPLOAD_PATH)) {
     mkdir(FONTS_UPLOAD_PATH, 0770, true);
@@ -227,26 +195,6 @@ if ($__needsMigration) {
 }
 unset($__existingUsers, $__needsMigration, $__u);
 
-// Migration: bestehende User gelten als E-Mail-bestätigt (Feature kam später dazu).
-$__existingUsers = Storage::read(USERS_FILE, []);
-$__emailVerifyMigration = false;
-foreach ($__existingUsers as $__u) {
-    if (!array_key_exists('email_verified', $__u)) {
-        $__emailVerifyMigration = true;
-        break;
-    }
-}
-if ($__emailVerifyMigration) {
-    Storage::update(USERS_FILE, function ($users) {
-        foreach ($users as &$u) {
-            if (!array_key_exists('email_verified', $u)) {
-                $u['email_verified'] = true;
-            }
-        }
-        return $users;
-    }, []);
-}
-unset($__existingUsers, $__emailVerifyMigration, $__u);
 
 // Migration: bestehende config.json (aus einer Version vor den Vorlagen) um
 // brand_colors nachrüsten, falls das Feld fehlt.
@@ -352,7 +300,7 @@ function h(string $s): string {
 }
 
 /**
- * Hub UI asset (V2.0a). Prefer local copies under public_html/assets/.
+ * Hub UI asset (V2.0a). Prefer local copies under public/assets/.
  * Paths: css/hub-confirm.css or shared/cf-status.js (no leading slash).
  */
 function sf_hub_asset(string $hubPath, ?string $localPath = null): string
@@ -366,7 +314,7 @@ function sf_hub_asset(string $hubPath, ?string $localPath = null): string
         }
     }
     $localPath = ltrim(str_replace('\\', '/', $localPath), '/');
-    $file = BASE_PATH . '/public_html/' . $localPath;
+    $file = BASE_PATH . '/public/' . $localPath;
     if (is_file($file)) {
         return $localPath . '?v=' . rawurlencode((string)ASSET_VERSION);
     }
@@ -374,6 +322,19 @@ function sf_hub_asset(string $hubPath, ?string $localPath = null): string
         return hub_asset($hubPath);
     }
     return $localPath . '?v=' . rawurlencode((string)ASSET_VERSION);
+}
+
+/**
+ * Basispfad im Browser. Im Web-Share des Hubs bildet NPM /slideforge/ auf /slideforge/public/ ab;
+ * SCRIPT_NAME nennt den inneren Pfad, der Browser braucht den aeusseren.
+ */
+function sf_base(): string
+{
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+    if (str_starts_with($script, '/slideforge/public/')) {
+        return '/slideforge';
+    }
+    return rtrim(str_replace('\\', '/', dirname($script)), '/');
 }
 
 function redirect(string $path): void {

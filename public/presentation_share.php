@@ -73,7 +73,7 @@ $publicUrl = '';
 if (!empty($acl['public']['token'])) {
     $scheme = current_scheme();
     $host = $_SERVER['HTTP_HOST'];
-    $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    $base = sf_base();
     $publicUrl = "$scheme://$host$base/view.php?token=" . $acl['public']['token'];
 }
 
