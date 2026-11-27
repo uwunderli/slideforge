@@ -2028,6 +2028,20 @@
     if (hatteFilmstreifenFokus && activeItem) activeItem.focus({ preventScroll: true });
   }
 
+  /** Alle Folien wählen (3.12.16, Urs 27.11.): Rasteransicht und Filmstreifen, Befehl «Alle Folien wählen» (Vorgabe Ctrl+A). */
+  function selectAllSlides() {
+    gridSelectedIndices.clear();
+    SF.slides.forEach((_, i) => gridSelectedIndices.add(i));
+    gridLastClickedIndex = SF.currentIndex;
+    window.getSelection()?.removeAllRanges();
+    if (SF.editorViewMode === 'grid') {
+      syncRibbonTransitionFieldsFromSlide(SF.currentIndex);
+      renderSlideGrid();
+    } else {
+      updateFilmstripSelection();
+    }
+  }
+
   /** Strg/Cmd- oder Umschalt-Klick in der Folienleiste: Auswahl ändern, Folie bleibt offen. */
   function filmstripSelectClick(e, index) {
     if (index < 0) return;
@@ -9968,13 +9982,7 @@
       });
     });
 
-    document.getElementById('slideGridSelectAllBtn')?.addEventListener('click', () => {
-      gridSelectedIndices.clear();
-      SF.slides.forEach((_, i) => gridSelectedIndices.add(i));
-      gridLastClickedIndex = SF.currentIndex;
-      syncRibbonTransitionFieldsFromSlide(SF.currentIndex);
-      renderSlideGrid();
-    });
+    document.getElementById('slideGridSelectAllBtn')?.addEventListener('click', () => selectAllSlides());
     document.getElementById('slideGridSelectNoneBtn')?.addEventListener('click', () => {
       gridSelectedIndices.clear();
       gridLastClickedIndex = null;
@@ -10092,6 +10100,12 @@
       }
       return true;
     };
+    /* Ctrl+A im Filmstreifen/Raster: alle Folien; sonst (Feld, Folienfläche) wie gewohnt. */
+    SFS.register('slides_select_all', (e) => {
+      if (inField(e) || !slideShortcutContext()) return 'native';
+      selectAllSlides();
+      return true;
+    });
     SFS.register('slide_prev', slideNav((i) => i - 1));
     SFS.register('slide_next', slideNav((i) => i + 1));
     SFS.register('slide_first', slideNav(() => 0));

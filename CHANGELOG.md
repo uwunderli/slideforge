@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.16] - 2026-11-27
+
+### Added
+- **Befehl «Alle Folien wählen»** (Urs 27.11.): im Filmstreifen und in der Rasteransicht, Vorgabe Ctrl+A, änderbar unter Ribbon anpassen › Weitere Befehle. In Feldern und auf der Folienfläche bleibt Ctrl+A wie gewohnt. Der Knopf «Alle» im Raster nimmt denselben Befehl.
+
 ## [3.12.15] - 2026-11-27
 
 ### Fixed

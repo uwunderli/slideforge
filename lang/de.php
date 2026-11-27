@@ -1842,6 +1842,8 @@ return [
     'shortcut.group_play' => 'Abspielen',
     'shortcut.slide_prev' => 'Vorige Folie',
     'shortcut.slide_prev_hint' => 'Im Filmstreifen die vorige Folie öffnen.',
+    'shortcut.slides_select_all' => 'Alle Folien wählen',
+    'shortcut.slides_select_all_hint' => 'Im Filmstreifen oder in der Rasteransicht alle Folien wählen (zum Verschieben, Kopieren, Löschen).',
     'shortcut.slide_next' => 'Nächste Folie',
     'shortcut.slide_next_hint' => 'Im Filmstreifen die nächste Folie öffnen.',
     'shortcut.slide_first' => 'Erste Folie',
