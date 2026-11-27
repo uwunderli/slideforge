@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.35] - 2026-11-27
+
+### Added
+- **Präsentation am Ende ausblenden** (Urs 27.11.: «Wenn man in der letzten Folie ist … dann blenden wir die Präsentation einfach aus»): Steht der Präsentationsmodus auf der letzten Folie und sind alle Schritte gezeigt, blendet «weiter» (Tasten, Knopf, Beamer-Fenster, Fernsteuerung, Auto-Weiter) sanft zu Schwarz aus; «zurück» blendet wieder ein, nochmals «weiter» tut nichts. Beamer-Fenster und Anzeige-Geräte folgen über das neue Feld `blank` im Live-Kanal; ältere Folgende ohne das Feld zeigen die Folie weiter.
+
 ## [3.12.34] - 2026-11-27
 
 ### Fixed

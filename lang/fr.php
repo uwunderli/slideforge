@@ -480,6 +480,7 @@ return [
     'present.media_collapse_hint' => 'Appuyer pour abaisser le lecteur',
     'present.media_expand_hint' => 'Appuyer pour réafficher le lecteur',
     'present.media_leave_confirm' => 'Un média est encore en lecture sur cette diapositive. Changer de diapo et arrêter la lecture ?',
+    'present.end_blank_hint' => 'Fin de la présentation – « Précédent » réaffiche.',
     'present.media_play' => 'Lecture',
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stop',

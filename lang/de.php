@@ -550,6 +550,7 @@ return [
     'present.media_collapse_hint' => 'Tippen, um den Player nach unten zu schieben',
     'present.media_expand_hint' => 'Tippen, um den Player wieder einzublenden',
     'present.media_leave_confirm' => 'Auf dieser Folie läuft noch eine Mediendatei. Wirklich wechseln und die Wiedergabe stoppen?',
+    'present.end_blank_hint' => 'Ende der Präsentation – «Zurück» blendet wieder ein.',
     'present.media_play' => 'Abspielen',
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stopp',

@@ -1195,7 +1195,8 @@ class Presentation
         ?string $clientId = null,
         ?string $userId = null,
         bool $saved = false,
-        ?bool $anim = null
+        ?bool $anim = null,
+        bool $blank = false
     ): array {
         if (!in_array($channel, ['editor', 'present'], true)) {
             $channel = 'present';
@@ -1207,7 +1208,7 @@ class Presentation
         $accepted = true;
         $leaderResult = ['is_leader' => true, 'leader_id' => null, 'leader_kind' => null];
 
-        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, $saved, $anim, &$accepted, &$leaderResult) {
+        Storage::update(self::dir($id) . '/live.json', function ($data) use ($index, $frag, $channel, $source, $clientId, $userId, $saved, $anim, $blank, &$accepted, &$leaderResult) {
             if ($channel === 'present' && $source === 'present' && $clientId !== '') {
                 self::registerControlClient($data, $clientId, 'present', $userId);
                 $leader = is_array($data['present_leader'] ?? null) ? $data['present_leader'] : null;
@@ -1255,6 +1256,10 @@ class Presentation
             $data[$channel]['frag'] = $frag;
             $data[$channel]['ts'] = time();
             $data[$channel]['source'] = $source;
+            // 3.12.x: «weiter» nach dem letzten Schritt blendet aus; jede Position ohne das Feld blendet wieder ein.
+            if ($channel === 'present') {
+                $data['present']['blank'] = $blank;
+            }
             // Mitlaufen (3.8.0): Speicherstand des Editors; Geräte laden die Folien nur neu, wenn er sich ändert.
             if ($channel === 'editor' && ($saved || !isset($data['editor']['rev']))) {
                 $data['editor']['rev'] = (int)round(microtime(true) * 1000);
@@ -1321,6 +1326,7 @@ class Presentation
                 $data['present']['frag'] = null;
                 $data['present']['ts'] = time();
                 $data['present']['source'] = 'remote';
+                $data['present']['blank'] = false;
                 $liveOut = ['index' => $newIndex, 'frag' => null];
             } else {
                 // Present-Modus aktiv: Sitzung für die Zuschauer-Ansicht am Leben halten; genaue Position kommt per Broadcast.
@@ -1510,6 +1516,9 @@ class Presentation
         }
         if ($channel === 'editor') {
             $result['anim'] = !empty($ch['anim']);
+        }
+        if ($channel === 'present' && !empty($ch['blank'])) {
+            $result['blank'] = true;
         }
         if (!empty($data['media'])) {
             $result['media'] = $data['media'];

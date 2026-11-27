@@ -498,6 +498,7 @@ return [
     'present.media_collapse_hint' => 'Tap to slide the player down',
     'present.media_expand_hint' => 'Tap to show the player again',
     'present.media_leave_confirm' => 'Media is still playing on this slide. Leave and stop playback?',
+    'present.end_blank_hint' => 'End of presentation – “Back” shows it again.',
     'present.media_play' => 'Play',
     'present.media_pause' => 'Pause',
     'present.media_stop' => 'Stop',

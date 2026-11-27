@@ -1623,6 +1623,61 @@
     return true;
   }
 
+  /* Ende der Präsentation (Urs 27.11.): «weiter» auf der letzten Folie mit allen Schritten blendet sanft
+     zu Schwarz aus wie PowerPoint, «zurück» blendet wieder ein, nochmals «weiter» tut nichts. Alle
+     Weiter-Wege (Tasten, Knopf, Beamer-Fenster, Fernsteuerung, Auto-Weiter) laufen über reveal.next(),
+     darum sitzt die Weiche hier. Beamer-Fenster und Geräte bekommen den Zustand als Feld «blank». */
+  let endBlanked = false;
+
+  function atPresentationEnd() {
+    if (!mainReveal) return false;
+    try {
+      const fr = typeof mainReveal.availableFragments === 'function'
+        ? (mainReveal.availableFragments() || {})
+        : {};
+      if (fr.next) return false;
+      const h = (mainReveal.getIndices() || {}).h || 0;
+      const total = typeof mainReveal.getTotalSlides === 'function'
+        ? mainReveal.getTotalSlides()
+        : (P.slideCount || 0);
+      for (let i = h + 1; i < total; i++) {
+        if (!isSlideDisabled(i)) return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function showEndBlank(on) {
+    let doc = null;
+    try { doc = mainFrame.contentDocument; } catch (e) { return; }
+    if (!doc || !doc.body) return;
+    let el = doc.getElementById('sfEndBlank');
+    if (!el) {
+      if (!on) return;
+      el = doc.createElement('div');
+      el.id = 'sfEndBlank';
+      el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#000;opacity:0;'
+        + 'pointer-events:none;transition:opacity .6s ease;display:flex;align-items:center;'
+        + 'justify-content:center;color:rgba(255,255,255,.4);font:16px/1.4 system-ui,sans-serif;';
+      el.textContent = (P.i18n && P.i18n.endBlankHint) || '';
+      doc.body.appendChild(el);
+      void el.offsetWidth; // Startwert setzen, damit der Übergang läuft
+    }
+    el.style.opacity = on ? '1' : '0';
+  }
+
+  function setEndBlank(on) {
+    on = !!on;
+    if (on === endBlanked) return;
+    endBlanked = on;
+    showEndBlank(on);
+    // Nach dem Aufruf senden: Fernsteuerungs-Schritte laufen mit applyingRemote, das sperrt das Senden.
+    setTimeout(() => broadcastPosition(currentIndex), 0);
+  }
+
   function wrapRevealNavigation(reveal) {
     if (!reveal || revealNavWrapped) return;
     revealNavWrapped = true;
@@ -1630,6 +1685,13 @@
       if (typeof reveal[method] !== 'function') return;
       const orig = reveal[method].bind(reveal);
       reveal[method] = function (...args) {
+        if (endBlanked && method === 'next') return undefined;
+        if (endBlanked && method === 'prev') { setEndBlank(false); return undefined; }
+        if (endBlanked && method === 'slide') setEndBlank(false);
+        if (method === 'next' && !mediaNavAllowedOnce && !mediaNavGuardPending && atPresentationEnd()) {
+          setEndBlank(true);
+          return undefined;
+        }
         if (mediaNavAllowedOnce) {
           mediaNavAllowedOnce = false;
           return orig(...args);
@@ -1882,12 +1944,19 @@
     const indices = mainReveal.getIndices() || {};
     const curH = indices.h || 0;
     const curF = typeof indices.f === 'number' ? indices.f : -1;
-    if (targetIndex === curH && (frag === null || frag === curF)) return;
-    applyingRemote = true;
-    if (frag !== null) mainReveal.slide(targetIndex, 0, frag);
-    else mainReveal.slide(targetIndex, 0);
-    applyingRemote = false;
-    currentIndex = targetIndex;
+    if (targetIndex !== curH || (frag !== null && frag !== curF)) {
+      applyingRemote = true;
+      if (frag !== null) mainReveal.slide(targetIndex, 0, frag);
+      else mainReveal.slide(targetIndex, 0);
+      applyingRemote = false;
+      currentIndex = targetIndex;
+    }
+    // Mitlesendes Pult zeigt das Ausblenden am Ende ebenfalls (ohne selbst zu senden).
+    const wantBlank = !!live.blank;
+    if (wantBlank !== endBlanked) {
+      endBlanked = wantBlank;
+      showEndBlank(wantBlank);
+    }
   }
 
   function claimPresentLeader() {
@@ -1938,6 +2007,7 @@
     livePost({
       index: h,
       frag: frag,
+      blank: endBlanked,
       channel: 'present',
       client_id: presentClientId,
     }).then((data) => {

@@ -62,6 +62,9 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 #sfPresentOverlay p{margin:0;color:rgba(255,255,255,.85);font:14px/1.45 system-ui,sans-serif;max-width:360px;}
 #sfPresentFsBtn{font:600 15px system-ui,sans-serif;padding:12px 28px;border:none;border-radius:8px;background:#3a6c8d;color:#fff;cursor:pointer;}
 #sfPresentFsBtn:hover{filter:brightness(1.12);}
+/* 3.12.x: Ende der Präsentation — sanft zu Schwarz (Feld «blank» im Live-Kanal). */
+#sfEndBlank{position:fixed;inset:0;z-index:9997;background:#000;opacity:0;pointer-events:none;transition:opacity .6s ease;}
+#sfEndBlank.on{opacity:1;}
 </style>
 <?= Exporter::mediaStatusMarkup() ?>
 </head>
@@ -74,6 +77,7 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
 <?php if ($geraetModus): ?>
 <div id="sfGeraetStart" role="button" tabindex="0" style="position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.78);color:#fff;font:600 min(4.5vh,7vw)/1.3 'Open Sans','Segoe UI',sans-serif;text-align:center;padding:4vh;cursor:pointer;outline-offset:-6px"><?= h(t('present.device_start')) ?></div>
 <?php endif; ?>
+<div id="sfEndBlank" aria-hidden="true"></div>
 <div id="sfPresentOverlay" hidden>
   <p><?= h(t('present.fullscreen_hint')) ?></p>
   <button type="button" id="sfPresentFsBtn"><?= h(t('present.fullscreen_start')) ?></button>
@@ -322,7 +326,13 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
         });
     }
     // Wechsel des Inhalts ohne Neuladen (Anzeige-Gerät): Live-Stand neu beginnen.
-    window.sfLiveReset = function () { lastIndex = null; lastFrag = undefined; lastRev = null; secHtml = null; };
+    var lastBlank = false;
+    function zeigeSchwarz(an) {
+      lastBlank = an;
+      var el = document.getElementById('sfEndBlank');
+      if (el) el.classList.toggle('on', an);
+    }
+    window.sfLiveReset = function () { lastIndex = null; lastFrag = undefined; lastRev = null; secHtml = null; zeigeSchwarz(false); };
 
     setInterval(function () {
       fetch('live.php?id=' + encodeURIComponent(window.sfLiveId) + '&channel=' + window.sfLiveChannel)
@@ -341,6 +351,8 @@ html,body{margin:0;height:100%;background:#000;} .sf-object{color:#fff;}
             if (window.sfLiveChannel === 'editor' && frag === null && folieNeu && data.live.anim) autoStart();
             // Kein lokales sfArmMediaTriggers — sonst Doppelstart mit live-Medienbefehl.
           }
+          // Ende der Präsentation: ausgeblendet, solange der Presenter «blank» meldet (fehlt das Feld: eingeblendet).
+          if (!!data.live.blank !== lastBlank) zeigeSchwarz(!!data.live.blank);
           if (window.sfLiveChannel === 'editor' && typeof data.live.rev === 'number' && data.live.rev !== lastRev) {
             var erst = lastRev === null;
             lastRev = data.live.rev;

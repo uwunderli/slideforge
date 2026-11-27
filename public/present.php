@@ -499,6 +499,7 @@ window.SF_PRESENT = {
     ghostToggleOff: <?= json_encode(t('present.ghost_toggle_off')) ?>,
     reorderPanel: <?= json_encode(t('editor.reorder_slide')) ?>,
     mediaLeaveConfirm: <?= json_encode(t('present.media_leave_confirm')) ?>,
+    endBlankHint: <?= json_encode(t('present.end_blank_hint')) ?>,
     mediaPlay: <?= json_encode(t('present.media_play')) ?>,
     mediaPause: <?= json_encode(t('present.media_pause')) ?>,
     mediaStop: <?= json_encode(t('present.media_stop')) ?>,

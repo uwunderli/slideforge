@@ -473,6 +473,7 @@ return [
     'present.media_collapse_hint' => 'Tutgar per smatter il player',
     'present.media_expand_hint' => 'Tutgar per mussar puspe il player',
     'present.media_leave_confirm' => 'Sin questa folia currà anc ina media. Midar la folia e stoppar la reproducziun?',
+    'present.end_blank_hint' => 'Fin da la preschentaziun – «Enavos» la mussa puspè.',
     'present.media_play' => 'Far ir',
     'present.media_pause' => 'Pausa',
     'present.media_stop' => 'Stop',

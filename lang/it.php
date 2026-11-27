@@ -473,6 +473,7 @@ return [
     'present.media_collapse_hint' => 'Tocca per abbassare il player',
     'present.media_expand_hint' => 'Tocca per mostrare di nuovo il player',
     'present.media_leave_confirm' => 'Su questa diapositiva è ancora in riproduzione un media. Cambiare diapositiva e interrompere la riproduzione?',
+    'present.end_blank_hint' => 'Fine della presentazione – «Indietro» la mostra di nuovo.',
     'present.media_play' => 'Play',
     'present.media_pause' => 'Pausa',
     'present.media_stop' => 'Stop',
