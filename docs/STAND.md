@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.28 gebaut** (`entwickler/slide-texte` ab 3.12.27): Übersetzungen en/fr/it/rm vollständig. Offen: rm-Durchsicht. Bei Gitwart.
 - **27.11. 3.12.27 gebaut** (`entwickler/slide-kleine-schritte` ab 3.12.26 cf62d70): Umschalt+Pfeil erweitert die Folienauswahl (Filmstreifen/Raster). Nachgesehen: Schriften laden nur benutzte Familien (usedFontFamilies) und kommen aus dem Hub (3.9.0); Farben-Reiter zeigt die Hub-Palette (3.9.2) — die alten «Offen»-Vermerke dazu sind erledigt. Bei Gitwart.
 - **27.11. 3.12.26 gebaut** (`entwickler/slide-rahmen-oben` ab 3.12.25 9882ab3): Auswahlrahmen bei jeder Auswahl zuoberst (Ziehpunkte). Ursache unbelegt. Bei Gitwart.
 - **27.11. 3.12.25 gebaut** (`entwickler/slide-tiefer-fassen` ab 3.12.24 19619c9): tiefer gewähltes Objekt fassbar (Objekte darüber ohne Maus bis zur nächsten Auswahl). Bei Gitwart.

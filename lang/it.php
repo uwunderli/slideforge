@@ -1849,4 +1849,7 @@ return [
     'shortcut.slides_select_all_hint' => 'Seleziona tutte le diapositive nel pannello o nella vista griglia (per spostare, copiare, eliminare).',
     'shortcut.objects_select_all' => 'Area della diapositiva: seleziona tutti gli oggetti',
     'shortcut.objects_select_all_hint' => 'Seleziona tutti gli oggetti della diapositiva (per spostare, copiare, eliminare).',
+    'shortcut.slides_extend_prev' => 'Estendi la selezione delle slide in alto/a sinistra',
+    'shortcut.slides_extend_next' => 'Estendi la selezione delle slide in basso/a destra',
+    'shortcut.slides_extend_hint' => 'Nella barra o nella griglia estendi la selezione dalla slide cliccata (come Maiusc+clic); nella griglia ↑/↓ di una riga.',
 ];

@@ -1853,4 +1853,7 @@ return [
     'shortcut.slides_select_all_hint' => 'Sélectionner toutes les diapositives dans le panneau ou la vue en grille (pour déplacer, copier, supprimer).',
     'shortcut.objects_select_all' => 'Surface de la diapositive : sélectionner tous les objets',
     'shortcut.objects_select_all_hint' => 'Sélectionner tous les objets de la diapositive (pour déplacer, copier, supprimer).',
+    'shortcut.slides_extend_prev' => 'Étendre la sélection de diapositives vers le haut/la gauche',
+    'shortcut.slides_extend_next' => 'Étendre la sélection de diapositives vers le bas/la droite',
+    'shortcut.slides_extend_hint' => 'Dans la bande ou la grille, étendre la sélection depuis la diapositive cliquée (comme Maj+clic) ; dans la grille ↑/↓ d’une rangée.',
 ];

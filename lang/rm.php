@@ -1849,4 +1849,7 @@ return [
     'shortcut.slides_select_all_hint' => 'Tscherner tut las folias en la trav da folias u en la vista da raster (per spustar, copiar, stizzar).',
     'shortcut.objects_select_all' => 'Surfatscha da la folia: tscherner tut ils objects',
     'shortcut.objects_select_all_hint' => 'Marcar tut ils objects da la folia (per spustar, copiar, stizzar).',
+    'shortcut.slides_extend_prev' => 'Engrondir la selecziun da folias ensi/a sanestra',
+    'shortcut.slides_extend_next' => 'Engrondir la selecziun da folias engiu/a dretga',
+    'shortcut.slides_extend_hint' => 'En la bindera u en la rasterisaziun engrondir la selecziun a partir da la folia cliccada (sco Shift+clic); en la rasterisaziun ↑/↓ per ina lingia.',
 ];

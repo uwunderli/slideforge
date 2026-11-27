@@ -1843,4 +1843,7 @@ return [
     'shortcut.slides_select_all_hint' => 'Select all slides in the filmstrip or grid view (to move, copy, delete).',
     'shortcut.objects_select_all' => 'Slide area: select all objects',
     'shortcut.objects_select_all_hint' => 'Select all objects on the slide (to move, copy, delete).',
+    'shortcut.slides_extend_prev' => 'Extend slide selection up/left',
+    'shortcut.slides_extend_next' => 'Extend slide selection down/right',
+    'shortcut.slides_extend_hint' => 'In the filmstrip or grid, extend the selection from the clicked slide (like Shift+click); in the grid ↑/↓ by one row.',
 ];
