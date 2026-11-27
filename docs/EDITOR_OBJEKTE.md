@@ -23,6 +23,16 @@ der Bedienung «der Knopf tut nichts». `node --check` sieht das nicht — die S
 einwandfrei. Vor der Lieferung also jede Konva-Methode gegen die **Klasse** prüfen, auf der sie
 aufgerufen wird.
 
+## Textobjekte: `SfRichText` (seit 3.12.33)
+
+Ein Textobjekt ist eine Unterklasse von `Konva.Text` (`SfRichText` in `editor.js`). Alle Methoden
+von `Konva.Text` bleiben, `text()` liefert weiter die **Auszeichnung** (`**fett**`, `[color=…]` …).
+Nur Zeichnen (`_sceneFunc`) und Höhe (`getHeight`) sind ersetzt: `SfMarkup.parse()`
+(`assets/js/sf-markup.js`, gleiche Regeln wie `src/Markdown.php`) → Läufe → Zeilen nach Breite.
+Neue Zeichen in der Auszeichnung also **immer an beiden Orten** nachführen (Markdown.php und
+sf-markup.js). Die Trefferfläche bleibt `Konva.Text._hitFunc` (Rechteck width × height).
+Tabellenzellen sind weiterhin einfache `Konva.Text`.
+
 ## Trefferfläche für Gruppen
 
 Kinder, die nur Darstellung sind, bekommen `listening: false` (so fängt kein Zellenrahmen den

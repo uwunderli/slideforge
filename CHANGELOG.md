@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.33] - 2026-11-27
+
+### Changed
+- **Textobjekte zeigen im Editor die Formatierung** (Urs 27.11., Texteditor Häppchen T2): Auf der Folie im Editor steht der Text jetzt so, wie ihn die Präsentation zeigt — fett, kursiv, unterstrichen, durchgestrichen, Teilfarben, Marker, Teilgrösse, Gross, Kapitälchen, Code, Links, Überschriften und Aufzählungspunkte — statt des Rohtexts mit den Zeichen. Auch «Gross» fürs ganze Objekt ist auf der Bühne sichtbar. Wie in der Präsentation geben Leerzeilen keinen zusätzlichen Abstand, und sehr lange Wörter werden nicht mehr mitten im Wort umbrochen. Bearbeitet wird vorläufig weiter im Rohtext (Doppelklick); Bearbeiten mit sichtbarer Formatierung folgt.
+
 ## [3.12.32] - 2026-11-27
 
 ### Added

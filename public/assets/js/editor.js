@@ -1237,8 +1237,205 @@
   function loadFontFamily(f, weights) {
     if (!document.fonts || !document.fonts.load || !f) return Promise.resolve();
     const fam = String(f).replace(/["\\]/g, '');
-    return Promise.all((weights || ['400', '700']).map((w) => document.fonts.load(w + ' 32px "' + fam + '"').catch(() => {})));
+    return Promise.all((weights || ['400', '700']).map((w) => document.fonts.load(w + ' 32px "' + fam + '"').catch(() => {})))
+      .then(() => { sfFontEpoch++; });   // SfRichText misst danach neu
   }
+
+  /* ---------- SfRichText: Textobjekt mit sichtbarer Formatierung (Texteditor T2, 3.12.33) ----------
+     Unterklasse von Konva.Text: alle Getter/Setter (text(), fontSize(), fill(), fontStyle(),
+     textDecoration(), align(), lineHeight(), letterSpacing(), fontFamily(), fontVariant(), width())
+     bleiben dieselben, und text() liefert weiter die Auszeichnung. Nur das Zeichnen und die Höhe
+     kommen von hier: SfMarkup.parse() (gleiche Regeln wie Markdown.php) → Läufe → Zeilen nach
+     Breite. Nachbau der CSS-Darstellung im SlideRenderer (white-space:pre-wrap, line-height ohne
+     Einheit, Überschriften 1.6em…0.9em fett, Listen mit 1.1em Einzug und immer linksbündig,
+     Leerzeilen ohne eigene Höhe wie in Markdown::render). Trefferfläche = Rechteck des Objekts
+     (Konva.Text._hitFunc mit width() × height()). Ohne SfMarkup fällt alles auf Konva.Text zurück. */
+  let sfFontEpoch = 0;
+  let sfMeasureCtx = null;
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener('loadingdone', () => { sfFontEpoch++; if (SF.layer) SF.layer.batchDraw(); });
+  }
+  function sfRichMeasureCtx() {
+    if (!sfMeasureCtx) sfMeasureCtx = document.createElement('canvas').getContext('2d');
+    return sfMeasureCtx;
+  }
+  function sfRichFamily(f) {
+    return '"' + String(f || 'Open Sans').replace(/["\\]/g, '') + '", sans-serif';
+  }
+  function sfRichFont(st, px, familyCss) {
+    return (st.italic ? 'italic ' : '') + (st.sc ? 'small-caps ' : '') + (st.bold ? 'bold ' : '') + px + 'px ' + familyCss;
+  }
+
+  function sfRichLayout(node) {
+    const ctx = sfRichMeasureCtx();
+    const hasLs = 'letterSpacing' in ctx;
+    const F = node.fontSize() || 32;
+    const LH = node.lineHeight() || 1.2;
+    const W = Math.max(1, node.width() || 1);
+    const ls = node.letterSpacing() || 0;
+    const baseStyle = String(node.fontStyle() || 'normal');
+    const baseBold = /bold|[6-9]00/.test(baseStyle);
+    const baseItalic = /italic/.test(baseStyle);
+    const baseSc = node.fontVariant() === 'small-caps' || !!node.getAttr('smallCaps');
+    const baseUpper = !!node.getAttr('uppercase');
+    const family = sfRichFamily(node.fontFamily());
+    const align = node.align() || 'left';
+    const mCache = {};
+    function metrics(font, px) {
+      if (mCache[font]) return mCache[font];
+      ctx.font = font;
+      const m = ctx.measureText('Hg');
+      const asc = (typeof m.fontBoundingBoxAscent === 'number') ? m.fontBoundingBoxAscent : px * 0.9;
+      const desc = (typeof m.fontBoundingBoxDescent === 'number') ? m.fontBoundingBoxDescent : px * 0.25;
+      return (mCache[font] = { asc: asc, desc: desc });
+    }
+    function measure(font, txt) {
+      ctx.font = font;
+      if (hasLs) ctx.letterSpacing = '0px';
+      return ctx.measureText(txt).width + ls * Array.from(txt).length;
+    }
+
+    const blocks = window.SfMarkup.parse(node.text() || '').filter((b) => b.type !== 'blank');
+    const lines = [];
+    let y = 0;
+    blocks.forEach((b) => {
+      const isH = b.type === 'h';
+      const isLi = b.type === 'li';
+      const blockPx = F * (isH ? b.scale : 1);
+      const indent = isLi ? 1.1 * F : 0;
+      const avail = Math.max(1, W - indent);
+      const lineAlign = isLi ? 'left' : align;
+      const strutFont = sfRichFont({ bold: baseBold || isH, italic: baseItalic, sc: baseSc }, blockPx, family);
+      const strutM = metrics(strutFont, blockPx);
+
+      const pieces = [];
+      b.runs.forEach((r) => {
+        const st = { bold: baseBold || isH || r.b, italic: baseItalic || r.i, sc: baseSc || r.sc };
+        const px = r.size || blockPx;
+        const font = sfRichFont(st, px, r.code ? 'monospace' : family);
+        const m = metrics(font, px);
+        const txt = (baseUpper || r.upper) ? r.text.toUpperCase() : r.text;
+        const pad = r.code ? 5 : (r.mark ? 2 : 0);
+        const parts = txt.split(/(\s+)/).filter((s) => s !== '');
+        parts.forEach((t, idx) => {
+          const padL = idx === 0 ? pad : 0;
+          const padR = idx === parts.length - 1 ? pad : 0;
+          pieces.push({ text: t, space: /^\s+$/.test(t), font: font, px: px, run: r, m: m,
+            padL: padL, w: measure(font, t) + padL + padR });
+        });
+      });
+
+      // Umbruch nur an Leerraum (wie pre-wrap); Leerraum vor dem Umbruch hängt an der alten Zeile.
+      const bl = [{ items: [], w: 0 }];
+      let i = 0;
+      while (i < pieces.length) {
+        let ln = bl[bl.length - 1];
+        if (pieces[i].space) { ln.items.push(pieces[i]); ln.w += pieces[i].w; i++; continue; }
+        let j = i, ww = 0;
+        while (j < pieces.length && !pieces[j].space) { ww += pieces[j].w; j++; }
+        if (ln.items.some((p) => !p.space) && ln.w + ww > avail + 0.01) {
+          ln = { items: [], w: 0 };
+          bl.push(ln);
+        }
+        for (let k = i; k < j; k++) { ln.items.push(pieces[k]); ln.w += pieces[k].w; }
+        i = j;
+      }
+
+      bl.forEach((ln, idx) => {
+        let above = 0, below = 0;
+        const consider = (m, px) => {
+          const hl = (LH * px - (m.asc + m.desc)) / 2;
+          above = Math.max(above, m.asc + hl);
+          below = Math.max(below, m.desc + hl);
+        };
+        consider(strutM, blockPx);
+        ln.items.forEach((p) => consider(p.m, p.px));
+        let last = ln.items.length - 1;
+        let tw = ln.w;
+        while (last >= 0 && ln.items[last].space) { tw -= ln.items[last].w; last--; }
+        const x0 = indent + (lineAlign === 'center' ? (avail - tw) / 2 : (lineAlign === 'right' ? (avail - tw) : 0));
+        lines.push({
+          y: y, baseline: y + above, x0: x0, items: ln.items, lastContent: last,
+          color: b.color || null,
+          bullet: (isLi && idx === 0) ? { font: strutFont, x: indent - measure(strutFont, '•') - 0.35 * F } : null,
+        });
+        y += above + below;
+      });
+    });
+    return { lines: lines, height: lines.length ? y : F * LH };
+  }
+
+  function sfRichDraw(node, context) {
+    const L = node._sfGetLayout();
+    const ctx = context._context || context;
+    const fill = node.fill() || '#000000';
+    const deco = String(node.textDecoration() || '');
+    const baseU = /underline/.test(deco);
+    const baseS = /line-through/.test(deco);
+    const ls = node.letterSpacing() || 0;
+    ctx.save();
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    const hasLs = 'letterSpacing' in ctx;
+    L.lines.forEach((line) => {
+      if (line.bullet) {
+        ctx.font = line.bullet.font;
+        if (hasLs) ctx.letterSpacing = '0px';
+        ctx.fillStyle = line.color || fill;
+        ctx.fillText('•', line.bullet.x, line.baseline);
+      }
+      if (hasLs) ctx.letterSpacing = ls + 'px';
+      let x = line.x0;
+      line.items.forEach((p, idx) => {
+        const r = p.run;
+        const top = line.baseline - p.m.asc;
+        const h = p.m.asc + p.m.desc;
+        if (r.mark) { ctx.fillStyle = r.mark; ctx.fillRect(x, top, p.w, h); }
+        if (r.code) { ctx.fillStyle = 'rgba(127,127,127,0.25)'; ctx.fillRect(x, top, p.w, h); }
+        const color = r.color || line.color || fill;
+        ctx.fillStyle = color;
+        ctx.font = p.font;
+        if (!p.space) ctx.fillText(p.text, x + p.padL, line.baseline);
+        if (idx <= line.lastContent) {
+          const th = Math.max(1, p.px / 16);
+          if (r.u || r.href || baseU) ctx.fillRect(x, line.baseline + p.px * 0.1, p.w, th);
+          if (r.s || baseS) ctx.fillRect(x, line.baseline - p.px * 0.28, p.w, th);
+        }
+        x += p.w;
+      });
+    });
+    ctx.restore();
+  }
+
+  const SfRichText = (window.Konva && Konva.Text && window.SfMarkup) ? class extends Konva.Text {
+    constructor(config) {
+      super(config);
+      this.on('uppercaseChange smallCapsChange', () => {
+        this._sfLayout = null;
+        const layer = this.getLayer();
+        if (layer) layer.batchDraw();
+      });
+    }
+    _setTextData() {
+      super._setTextData();
+      this._sfLayout = null;
+    }
+    _sfGetLayout() {
+      if (!this._sfLayout || this._sfLayoutEpoch !== sfFontEpoch) {
+        this._sfLayout = sfRichLayout(this);
+        this._sfLayoutEpoch = sfFontEpoch;
+      }
+      return this._sfLayout;
+    }
+    getHeight() {
+      const h = this.attrs.height;
+      if (h === undefined || h === 'auto') return this._sfGetLayout().height;
+      return h;
+    }
+    _sceneFunc(context) {
+      sfRichDraw(this, context);
+    }
+  } : null;
 
   async function ensureFontsLoaded(slides) {
     if (!document.fonts || !document.fonts.load) return;
@@ -3957,7 +4154,9 @@
       const decoParts = [];
       if (obj.underline) decoParts.push('underline');
       if (obj.strikethrough) decoParts.push('line-through');
-      const node = new Konva.Text(Object.assign({}, common, {
+      // SfRichText (3.12.33) zeichnet die Auszeichnung formatiert; ohne sf-markup.js wie bisher Konva.Text.
+      const TextClass = SfRichText || Konva.Text;
+      const node = new TextClass(Object.assign({}, common, {
         x: obj.x, y: obj.y, width: obj.w,
         text: obj.text || 'Text',
         fontVariant: obj.smallCaps ? 'small-caps' : 'normal',
@@ -5284,8 +5483,8 @@
   }
 
   /* Kapitaelchen im Canvas sichtbar machen — der HTML-Renderer setzt dafuer
-     font-variant:small-caps, Konva kann das ueber fontVariant. Grossschreibung
-     (text-transform) kann Konva nicht; das bleibt ein bekannter Unterschied. */
+     font-variant:small-caps, Konva kann das ueber fontVariant. Grossschreibung zeichnet
+     seit 3.12.33 SfRichText selbst (Attribut uppercase). */
   function refreshTextCase(node) {
     if (!node || typeof node.fontVariant !== "function") return;
     node.fontVariant(node.getAttr("smallCaps") ? "small-caps" : "normal");
