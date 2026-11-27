@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.46 gebaut** (`entwickler/slide-logos-knopf` ab 3.12.45): Startseite Knopf «Logos-Predigt …» → import.php.
 - **27.11. 3.12.45 gebaut** (`entwickler/slide-notizgriff` ab 3.12.44): Griff-Strich im linken Notizstreifen weg.
 - **27.11. 3.12.44 gebaut** (`entwickler/slide-notizstreifen` ab 3.12.43): Notizstreifen links ganz tippbar.
 - **27.11. 3.12.43 gebaut** (`entwickler/slide-notizfarbe` ab 3.12.42): Notiz-Leiste «A»/«ab» wenden Farbe direkt an.

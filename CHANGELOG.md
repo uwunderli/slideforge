@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.46] - 2026-11-27
+
+### Added
+- **Startseite: Knopf «Logos-Predigt …»** im Menüband (Gruppe Datei) öffnet die Import-Seite für Logos-HTML-Exporte (Urs 27.11.); nur sichtbar, wenn der Logos-Importer für die Person freigeschaltet ist.
+
 ## [3.12.45] - 2026-11-27
 
 ### Changed
