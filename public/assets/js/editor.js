@@ -10241,6 +10241,16 @@
       selectAllSlides();
       return true;
     });
+    SFS.register('slides_extend_prev', (e) => {
+      if (inField(e) || !slideShortcutContext()) return 'native';
+      extendSlideSelection(e, -1);
+      return true;
+    });
+    SFS.register('slides_extend_next', (e) => {
+      if (inField(e) || !slideShortcutContext()) return 'native';
+      extendSlideSelection(e, 1);
+      return true;
+    });
     SFS.register('slide_prev', slideNav((i) => i - 1));
     SFS.register('slide_next', slideNav((i) => i + 1));
     SFS.register('slide_first', slideNav(() => 0));
@@ -10956,6 +10966,39 @@
      weiterhin das angewählte Objekt. Darum haben die Einträge `tabindex`. */
 
   /* Pfeiltasten in der Rasteransicht (3.11.0): Zeilenlänge aus der Lage der Karten (gleiche Oberkante = eine Zeile). */
+  /* Auswahl mit Umschalt+Pfeil erweitern (3.12.27, Urs 27.11.): von der zuletzt angeklickten Folie (Anker) bis zum
+     wandernden Ende, im Filmstreifen ±1, im Raster ←/→ ±1 und ↑/↓ je eine Zeile. Die offene Folie bleibt. */
+  function gridPerRow() {
+    const cards = [...document.querySelectorAll('#slideGrid .editor-slide-grid-item')];
+    if (!cards.length) return 1;
+    const top0 = cards[0].offsetTop;
+    const n = cards.findIndex((c) => c.offsetTop !== top0);
+    return n < 1 ? cards.length : n;
+  }
+  function extendSlideSelection(e, richtung) {
+    const last = SF.slides.length - 1;
+    if (last < 0) return;
+    const anker = gridLastClickedIndex !== null ? gridLastClickedIndex : SF.currentIndex;
+    if (SF.selEnd === undefined || SF.selEnd === null || !gridSelectedIndices.has(SF.selEnd)) SF.selEnd = anker;
+    const zeile = SF.editorViewMode === 'grid' && (e.key === 'ArrowUp' || e.key === 'ArrowDown') ? gridPerRow() : 1;
+    SF.selEnd = Math.max(0, Math.min(last, SF.selEnd + richtung * zeile));
+    gridSelectedIndices.clear();
+    for (let i = Math.min(anker, SF.selEnd); i <= Math.max(anker, SF.selEnd); i++) gridSelectedIndices.add(i);
+    if (SF.editorViewMode === 'grid') {
+      document.querySelectorAll('.editor-slide-grid-item').forEach((el) => {
+        el.classList.toggle('selected', gridSelectedIndices.has(parseInt(el.dataset.index, 10)));
+      });
+      updateGridSelectionUi();
+      const card = document.querySelector('#slideGrid .editor-slide-grid-item[data-index="' + SF.selEnd + '"]');
+      if (card) { card.focus({ preventScroll: true }); card.scrollIntoView({ block: 'nearest' }); }
+    } else {
+      updateFilmstripSelection();
+      const items = document.querySelectorAll('#slideFilmstrip .editor-filmstrip-item');
+      const item = [...items].find((it) => SF.slides.findIndex((s) => s.id === it.dataset.id) === SF.selEnd);
+      if (item) item.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function gridArrowMove(key) {
     const cards = [...document.querySelectorAll('#slideGrid .editor-slide-grid-item')];
     if (!cards.length) return;

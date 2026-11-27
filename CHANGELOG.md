@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.27] - 2026-11-27
+
+### Added
+- **Folienauswahl mit Umschalt+Pfeil erweitern** (Urs 27.11.): Im Filmstreifen und im Raster erweitert Umschalt+↑/↓/←/→ die Auswahl ab der angeklickten Folie (im Raster ↑/↓ je eine Zeile). Befehle «Folienauswahl … erweitern» unter Weitere Befehle. Auf der Folienfläche bleibt Umschalt+Pfeil das Verschieben um 10 px.
+
 ## [3.12.26] - 2026-11-27
 
 ### Fixed
