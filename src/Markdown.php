@@ -7,7 +7,7 @@
  * [Text](https://...), Listen (- oder * pro Zeile), Überschriften (# bis ######,
  * Leerzeichen danach optional),
  * sowie für Teile des Texts: [upper]GROSS[/upper], [sc]Kapitälchen[/sc],
- * [mark=#hex]markiert[/mark], [color=#hex]farbig[/color].
+ * [mark=#hex]markiert[/mark], [color=#hex]farbig[/color], [size=NN]Grösse in px[/size].
  * WICHTIG: Escaped IMMER zuerst per h() (htmlspecialchars), bevor Markdown-Syntax
  * in HTML umgewandelt wird - der Text kommt von Nutzereingaben und landet auf
  * Zuschauer-Ansicht und Vorschau, XSS-Sicherheit hat Priorität.
@@ -109,6 +109,13 @@ class Markdown
         $escaped = preg_replace_callback(
             '/\[mark=(#[0-9a-fA-F]{6})\](.+?)\[\/mark\]/is',
             fn($m) => '<span style="background:' . h($m[1]) . '; border-radius:2px; padding:0 2px; box-decoration-break:clone; -webkit-box-decoration-break:clone;">' . $m[2] . '</span>',
+            $escaped
+        );
+        // Schriftgrösse für einen Teil des Texts: [size=NN]text[/size], NN in px (6–400, ausserhalb geklemmt).
+        // Gleiche Regel in public/assets/js/sf-markup.js (Bühne im Editor).
+        $escaped = preg_replace_callback(
+            '/\[size=(\d{1,4})\](.+?)\[\/size\]/is',
+            fn($m) => '<span style="font-size:' . max(6, min(400, (int)$m[1])) . 'px;">' . $m[2] . '</span>',
             $escaped
         );
         // Fett: **text** oder __text__

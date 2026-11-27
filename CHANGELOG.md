@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.32] - 2026-11-27
+
+### Added
+- **Text-Auszeichnung auch im Editor lesbar** (Urs 27.11., Texteditor Häppchen T1): Neue Datei `sf-markup.js` liest die Auszeichnung der Textobjekte (**fett**, *kursiv*, ++unter++, ~~durch~~, Farbe, Marker, Gross, Kapitälchen, `code`, Links, Listen, Überschriften) nach genau den Regeln der Präsentation in formatierte Abschnitte und schreibt sie aus einer Bearbeitung wieder zurück. Noch ohne sichtbare Wirkung; die Bühne nutzt es ab dem nächsten Schritt.
+- **Teilgrösse im Text** `[size=NN]…[/size]` (NN in Pixel, 6–400): Präsentation, Vorschau und Exporte über HTML zeigen den Textteil in dieser Grösse.
+
 ## [3.12.31] - 2026-11-27
 
 ### Added
