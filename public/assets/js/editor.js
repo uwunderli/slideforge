@@ -10239,6 +10239,14 @@
         if (dir && !inInput) { e.preventDefault(); gridArrowMove(dir); return; }
       }
       if (inInput) return;
+      /* Folienfläche (3.12.20, Urs 27.11.: «Wenn ich in der Folie bin macht ctrl+a die Markierung für alle Elemente»):
+         alle Objekte wählen, Vorgabe Ctrl+A (scope 'stage'; im Filmstreifen/Raster wählt Ctrl+A die Folien). */
+      if (stagePlayContext() && scopeCmd(e, 'stage') === 'objects_select_all') {
+        e.preventDefault();
+        const alle = getTopLevelNodes();
+        if (alle.length) selectNodes(alle);
+        return;
+      }
       /* Folienfläche (scope 'stage'): markierte Objekte löschen (Vorgabe Entf, Rücktaste). */
       if (SF.selectedNodes.length && scopeCmd(e, 'stage') === 'delete_objects') {
         e.preventDefault();

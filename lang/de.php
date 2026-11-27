@@ -1875,6 +1875,8 @@ return [
     'shortcut.play_close' => 'Abspielen beenden',
     'shortcut.play_hint' => 'Während «Abspielen» (Effekte und Folienübergänge). Jede andere Taste beendet.',
     'shortcut.stage_play' => 'Abspielen (Knopf über der Folie)',
+    'shortcut.objects_select_all' => 'Folienfläche: alle Objekte wählen',
+    'shortcut.objects_select_all_hint' => 'Alle Objekte der Folie markieren (zum Verschieben, Kopieren, Löschen).',
     'shortcut.stage_play_next' => 'Folienfläche: abspielen, weiter',
     'shortcut.stage_play_prev' => 'Folienfläche: abspielen, zurück',
     'shortcut.stage_play_hint' => 'Ohne markiertes Objekt: Effekte und Folienübergänge wie in der Präsentation abspielen. Klick oder andere Taste beendet.',
