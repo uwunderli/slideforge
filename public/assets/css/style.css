@@ -10889,7 +10889,10 @@ body:has(.editor-layout) > .editor-layout {
   font-size: 0.72rem; color: var(--text-muted);
 }
 .props-object-widgets .sf-grad-stop-head { display: flex; align-items: center; gap: 8px; }
-.props-object-widgets .sf-grad-stop-head > span { flex: 1 1 auto; font-weight: 600; color: var(--text); }
+/* 3.12.30 (Urs 27.11.: «bei 2 Monitoren springt das Farbwahlfeld aus dem Monitor»): Farbfeld links neben dem Namen, damit der
+   Farbwähler des Browsers nicht vom rechten Rand der Seitenspalte aus über den Bildschirm hinaus öffnet; Entfernen ganz rechts. */
+.props-object-widgets .sf-grad-stop-head > span { flex: 0 0 auto; min-width: 4.5em; font-weight: 600; color: var(--text); }
+.props-object-widgets .sf-grad-stop-head > .sf-grad-del { margin-left: auto; }
 .props-object-widgets .sf-grad-sub { font-size: 0.7rem; color: var(--text-muted); }
 .props-object-widgets .sf-grad-add { align-self: flex-start; margin: 6px 0 4px; }
 .props-object-widgets .ribbon-object-grad-angle {

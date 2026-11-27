@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.30] - 2026-11-27
+
+### Fixed
+- **Farbwähler im Verlauf bleibt auf dem Bildschirm** (Urs 27.11., zwei Monitore): Das Farbfeld jedes Verlaufspunkts steht links neben dem Namen statt am rechten Rand der Seitenspalte; der Farbwähler des Browsers öffnet so weiter innen.
+
 ## [3.12.29] - 2026-11-27
 
 ### Added
