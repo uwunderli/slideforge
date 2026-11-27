@@ -1639,6 +1639,7 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php endif; ?>
 <script src="assets/js/sf-font-select.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/sf-markup.js?v=<?= ASSET_VERSION ?>"></script>
+<script src="assets/js/sf-richedit.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/editor.js?v=<?= ASSET_VERSION ?>"></script>
 <?php $ffStatus = Workspace::status($id, (string)$me['id']); if ($ffStatus !== null): ?>
 <script src="assets/js/sf-ff.js?v=<?= ASSET_VERSION ?>"></script>

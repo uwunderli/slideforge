@@ -5231,7 +5231,154 @@
     setTimeout(() => document.addEventListener('mousedown', aussenKlick), 0);
   }
 
+  /* Bearbeiten an Ort (Texteditor T3, 3.12.36): contenteditable-Feld mit sichtbarer Formatierung statt
+     des Rohtexts. Inhalt SfMarkup.toHtml(text), Grundstil vom Objekt; Masse in Folien-px, das Feld wird
+     per transform auf die Bühne skaliert (so bleiben [size=NN]-Angaben im Feld in Folien-px). Enter und
+     Einfügen laufen über das Zeilenmodell (SfRichEdit), damit beim Speichern SfMarkup.fromHtml() sauberes
+     HTML liest. Esc verwirft, Klick daneben/Verlassen speichert. Ohne sf-markup.js/sf-richedit.js: Rohtext. */
   function editTextInline(node) {
+    if (!window.SfMarkup || !window.SfRichEdit) { editTextInlineRaw(node); return; }
+    if (SF.inlineEdit) SF.inlineEdit.finish(true);
+    selectNode(node);
+    const R = window.SfRichEdit;
+    const el = document.createElement('div');
+    el.className = 'sf-inline-rich';
+    el.contentEditable = 'true';
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('aria-multiline', 'true');
+    el.setAttribute('aria-label', I.text || 'Text');
+    el.innerHTML = window.SfMarkup.toHtml(node.text());
+    applySpellcheckAttrs(el);
+    document.body.appendChild(el);
+
+    const base = () => ({ color: node.fill(), size: node.fontSize() });
+    function restyle() {
+      const scale = SF.stage.scaleX();
+      const stageBox = SF.stage.container().getBoundingClientRect();
+      const pos = node.absolutePosition();
+      const st = String(node.fontStyle() || 'normal');
+      const fs = node.fontSize() || 32;
+      Object.assign(el.style, {
+        top: stageBox.top + pos.y + 'px',
+        left: stageBox.left + pos.x + 'px',
+        width: Math.max(1, node.width()) + 'px',
+        minHeight: Math.max(1, node.height()) + 'px',
+        padding: '0',   // SfRichText zeichnet ohne Innenabstand
+        fontFamily: sfRichFamily(node.fontFamily()),
+        fontSize: fs + 'px',
+        fontWeight: /bold|[6-9]00/.test(st) ? 'bold' : 'normal',
+        fontStyle: /italic/.test(st) ? 'italic' : 'normal',
+        textDecoration: node.textDecoration() || 'none',
+        color: node.fill(),
+        textAlign: node.align() || 'left',
+        lineHeight: String(node.lineHeight() || 1.2),
+        letterSpacing: (node.letterSpacing() || 0) + 'px',
+        textTransform: node.getAttr('uppercase') ? 'uppercase' : 'none',
+        fontVariant: (node.getAttr('smallCaps') || node.fontVariant() === 'small-caps') ? 'small-caps' : 'normal',
+        transform: (node.rotation() ? 'rotate(' + node.rotation() + 'deg) ' : '') +
+          'scale(' + (scale * node.scaleX()) + ',' + (scale * node.scaleY()) + ')',
+      });
+    }
+    restyle();
+    node.hide();
+    if (SF.transformer) SF.transformer.hide();
+    refreshCanvas();
+    el.focus();
+    try {
+      const rg = document.createRange();
+      rg.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(rg);
+    } catch (e) { /* Markierung ist Komfort */ }
+
+    let done = false;
+    let dirty = false;
+    const ie = {
+      node, el, restyle,
+      markDirty() { dirty = true; },
+      base,
+      /* T4: Format-Bedienelemente, die die Bearbeitung nicht beenden */
+      keepZone: (t) => !!(t && t.closest && inlineEditKeepZone(t)),
+      finish,
+    };
+    SF.inlineEdit = ie;
+
+    /** Modell-Eingriff an der Markierung: fn(lines, a, b) → {lines, pos} */
+    function modelEdit(fn) {
+      const cur = R.readSelection(el, base());
+      if (!cur) return false;
+      const res = fn(cur.lines, cur.a, cur.b);
+      if (!res) return false;
+      R.render(el, res.lines, res.pos, res.pos, true);
+      dirty = true;
+      return true;
+    }
+
+    function finish(save) {
+      if (done) return;
+      done = true;
+      if (SF.inlineEdit === ie) SF.inlineEdit = null;
+      if (save && dirty) node.text(window.SfMarkup.fromHtml(el, { base: base() }));
+      node.show();
+      if (SF.transformer) SF.transformer.show();
+      el.remove();
+      document.removeEventListener('mousedown', onOutsideDown, true);
+      refreshCanvas();
+      if (save && dirty) scheduleSave();
+      refreshPropsPanel();
+    }
+    function onOutsideDown(e) {
+      if (el.contains(e.target)) return;
+      if (ie.keepZone(e.target)) {
+        if (e.target.closest(INLINE_EDIT_BTN_SEL)) e.preventDefault();   // Fokus und Markierung bleiben im Feld
+        return;
+      }
+      finish(true);
+    }
+    el.addEventListener('input', () => { dirty = true; });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); return; }
+      if (e.key === 'Enter' && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        modelEdit((lines, a, b) => {
+          const d = R.deleteRange(lines, a, b);
+          return R.splitLine(d.lines, d.pos);
+        });
+      }
+    });
+    /* Einfügen nur als reiner Text, Zeilenumbrüche bleiben (neue Zeilen), Format der Schreibmarke. */
+    el.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+      if (!txt) return;
+      modelEdit((lines, a, b) => {
+        const props = R.propsAt(lines, a);
+        const d = R.deleteRange(lines, a, b);
+        return R.insertText(d.lines, d.pos, txt, props);
+      });
+    });
+    el.addEventListener('drop', (e) => { e.preventDefault(); });
+    el.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (done) return;
+        const ae = document.activeElement;
+        if (ae && (ae === el || el.contains(ae) || ie.keepZone(ae))) return;
+        if (!document.hasFocus()) return;   // Fenster gewechselt: weiter bearbeiten
+        finish(true);
+      }, 0);
+    });
+    setTimeout(() => { if (!done) document.addEventListener('mousedown', onOutsideDown, true); }, 0);
+  }
+
+  /* Bedienelemente, die eine laufende Bearbeitung an Ort nicht beenden (T4 füllt die Liste). */
+  const INLINE_EDIT_BTN_SEL = '#__sf_none__';
+  function inlineEditKeepZone(t) {
+    return false;
+  }
+
+  /* Rohtext-Bearbeitung (bis 3.12.35), nur noch ohne sf-markup.js/sf-richedit.js. */
+  function editTextInlineRaw(node) {
     selectNode(node);
     const scale = SF.stage.scaleX();
     const stageBox = SF.stage.container().getBoundingClientRect();
@@ -10623,7 +10770,8 @@
     document.addEventListener('keydown', (e) => {
       if (e.defaultPrevented) return;   // vom Menüband (HubRibbon) schon erledigt
       const tag = (document.activeElement && document.activeElement.tagName) || '';
-      const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+      /* 3.12.36: auch contenteditable (Bearbeiten an Ort) zählt als Eingabefeld — sonst Entf/Pfeile auf die Objekte. */
+      const inInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || !!(document.activeElement && document.activeElement.isContentEditable);
       /* Rasteransicht (3.11.0, Kürzel seit 3.12.1 im Katalog, scope 'grid'): Esc schliesst (auch aus einem Feld),
          ←/→ eine Folie, ↑/↓ eine Zeile; wählt die Folie wie ein Klick ohne Zusatztaste. */
       if (SF.editorViewMode === 'grid') {

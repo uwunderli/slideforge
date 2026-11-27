@@ -251,8 +251,9 @@
         if (r.color) h = '<span style="color:' + esc(r.color) + '">' + h + '</span>';
         return h;
     }
-    function toHtml(text) {
-        return parse(text).map(function (b) {
+    /** Blöcke (wie parse() sie liefert) als HTML zum Bearbeiten: je Zeile ein <div>. */
+    function blocksToHtml(blocks) {
+        return blocks.map(function (b) {
             var inner = b.runs.map(runToHtml).join('');
             if (b.type === 'blank') return '<div><br></div>';
             if (b.type === 'h') {
@@ -264,6 +265,9 @@
             }
             return '<div>' + (inner || '<br>') + '</div>';
         }).join('');
+    }
+    function toHtml(text) {
+        return blocksToHtml(parse(text));
     }
 
     /* ---------- fromHtml: zurück in die Auszeichnung ---------- */
@@ -333,7 +337,13 @@
         return ser(mergeRuns(runs), 0);
     }
 
-    function fromHtml(el) {
+    /** HTML (Element oder Text) in Zeilen lesen: [{kind:'p'|'h'|'li', level, color, runs, len}].
+     *  opts.points: [{node, offset}] — Stellen im DOM (wie Range-Grenzen); bekommen l (Zeile) und ch (Zeichen).
+     *  opts.base: {color, size} — Angaben gleich dem Grundstil des Objekts fallen weg (vom Browser kopierte Stile). */
+    function readLines(el, opts) {
+        opts = opts || {};
+        var points = opts.points || [];
+        var base = opts.base || null;
         var rootNode = (typeof el === 'string') ? lightTree(el) : el;
         var lines = [];
         var cur = null;
@@ -343,26 +353,49 @@
         function ensure() {
             if (!cur) {
                 var c = ctx();
-                cur = { kind: c.kind, level: c.level, color: c.color, runs: [] };
+                cur = { kind: c.kind, level: c.level, color: c.color, runs: [], len: 0 };
                 lines.push(cur);
             }
             return cur;
         }
-        function pushText(txt, props) {
-            var parts = String(txt).replace(/ /g, ' ').replace(/​/g, '').split(/\r\n|\r|\n/);
-            parts.forEach(function (part, idx) {
-                if (idx > 0) { ensure(); cur = null; }
-                if (part === '') return;
-                var r = emptyRun(part);
-                Object.keys(props).forEach(function (k) { r[k] = props[k]; });
-                ensure().runs.push(r);
-            });
+        function markAt(node, offset) {
+            for (var q = 0; q < points.length; q++) {
+                var pt = points[q];
+                if (pt.l === undefined && pt.node === node && pt.offset === offset) {
+                    pt.l = cur ? lines.length - 1 : lines.length;
+                    pt.ch = cur ? cur.len : 0;
+                }
+            }
+        }
+        function pushText(txt, props, node) {
+            var s = String(txt);
+            for (var i = 0; i <= s.length; i++) {
+                if (points.length) markAt(node, i);
+                if (i === s.length) break;
+                var c = s.charAt(i);
+                if (c === '\r' && s.charAt(i + 1) === '\n') continue;
+                if (c === '\r' || c === '\n') { ensure(); cur = null; continue; }
+                if (c === '​') continue;
+                if (c === ' ') c = ' ';
+                var line = ensure();
+                var last = line.runs[line.runs.length - 1];
+                if (last && last._p === props) {
+                    last.text += c;
+                } else {
+                    var r = emptyRun(c);
+                    Object.keys(props).forEach(function (k) { r[k] = props[k]; });
+                    Object.defineProperty(r, '_p', { value: props, enumerable: false, writable: true });
+                    line.runs.push(r);
+                }
+                line.len++;
+            }
         }
         function walk(node, props) {
             var kids = node.childNodes || [];
             for (var n = 0; n < kids.length; n++) {
+                if (points.length) markAt(node, n);
                 var child = kids[n];
-                if (child.nodeType === 3) { pushText(child.nodeValue || '', props); continue; }
+                if (child.nodeType === 3) { pushText(child.nodeValue || '', props, child); continue; }
                 if (child.nodeType !== 1) continue;
                 var tag = String(child.tagName || '').toLowerCase();
                 var ga = function (name) { return getAttrOf(child, name); };
@@ -391,7 +424,7 @@
                     } else if (tag === 'div' || tag === 'p' || tag === 'pre') {
                         // Fremd-HTML (eingefügt): Zeichenstil am Block wie an einem <span> übernehmen
                         if (c.kind === 'p' && !ga('data-sf-h')) {
-                            childProps = Object.assign({}, props, tagProps('span', ga));
+                            childProps = Object.assign({}, props, dropBase(tagProps('span', ga)));
                             delete childProps.size;
                         }
                     }
@@ -402,17 +435,42 @@
                     cur = null;
                     continue;
                 }
-                walk(child, Object.assign({}, props, tagProps(tag, ga)));
+                walk(child, Object.assign({}, props, dropBase(tagProps(tag, ga))));
             }
+            if (points.length) markAt(node, kids.length);
+        }
+        function dropBase(p) {
+            if (!base) return p;
+            if (p.color && base.color && p.color.toLowerCase() === String(normHex(base.color) || '').toLowerCase()) delete p.color;
+            if (p.size && base.size && p.size === clampSize(base.size)) delete p.size;
+            return p;
         }
         walk(rootNode, {});
+        lines.forEach(function (ln) { ln.runs = mergeRuns(ln.runs); });
+        return lines;
+    }
 
+    /** Zeilen aus readLines() zurück in die Auszeichnung. */
+    function linesToMarkup(lines) {
         return lines.map(function (ln) {
             var body = serializeRuns(ln.runs);
             if (ln.kind === 'h') return '#'.repeat(ln.level || 1) + ' ' + body;
             if (ln.kind === 'li') return body === '' ? '- ' : '- ' + body;
             return body;
         }).join('\n');
+    }
+
+    /** Zeilen aus readLines() als HTML zum Bearbeiten (gleiches Muster wie toHtml). */
+    function linesToHtml(lines) {
+        return blocksToHtml(lines.map(function (ln) {
+            var runs = ln.runs.filter(function (r) { return r.text !== ''; });
+            var type = ln.kind === 'h' ? 'h' : (ln.kind === 'li' ? 'li' : (runs.length ? 'p' : 'blank'));
+            return { type: type, level: ln.level || 0, scale: HEADING_SCALE[ln.level] || 1, color: ln.color || null, runs: runs };
+        }));
+    }
+
+    function fromHtml(el, opts) {
+        return linesToMarkup(readLines(el, opts));
     }
 
     function plainText(text) {
@@ -425,6 +483,13 @@
         parse: parse,
         toHtml: toHtml,
         fromHtml: fromHtml,
+        blocksToHtml: blocksToHtml,
+        readLines: readLines,
+        linesToMarkup: linesToMarkup,
+        linesToHtml: linesToHtml,
+        emptyRun: emptyRun,
+        sameProps: sameProps,
+        RUN_KEYS: RUN_KEYS,
         plainText: plainText,
         serializeRuns: serializeRuns,
         HEADING_SCALE: HEADING_SCALE

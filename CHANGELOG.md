@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.36] - 2026-11-27
+
+### Changed
+- **Texte an Ort mit sichtbarer Formatierung bearbeiten** (Urs 27.11., Texteditor Häppchen T3): Doppelklick auf ein Textobjekt öffnet jetzt ein Bearbeitungsfeld, das den Text so zeigt wie die Folie — fett, kursiv, Farben, Marker, Grössen, Überschriften und Aufzählungspunkte — statt des Rohtexts mit den Zeichen. Schrift, Grösse, Farbe, Ausrichtung, Zeilenhöhe, Zeichenabstand, Gross/Kapitälchen und Drehung kommen vom Objekt; das Feld wächst in der Höhe mit. Esc verwirft, Klick daneben speichert. Eingefügt wird nur reiner Text (Zeilenumbrüche bleiben). Enter in einem Aufzählungspunkt beginnt einen neuen Punkt, Enter auf einem leeren Punkt beendet die Aufzählung (wie Word). Gespeichert wird weiter die Auszeichnung; unveränderte Texte werden nicht angetastet. Rechtschreibprüfung wie bisher.
+
 ## [3.12.35] - 2026-11-27
 
 ### Added

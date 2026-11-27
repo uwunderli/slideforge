@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.36 gebaut** (`entwickler/slide-texteditor-t3t4` ab 3.12.35 bf5d1ec, Worktree `_claude/entwickler/wt-slide-texteditor2`): Texteditor T3 — Bearbeiten an Ort als contenteditable mit Formatierung (editTextInline, neu sf-richedit.js, sf-markup.js readLines/linesToHtml). Nicht im Browser geprüft. T4 (Menüband auf Markierung) folgt als 3.12.37.
 - **27.11. 3.12.35 gebaut** (`entwickler/slide-ende-ausblenden` ab 3.12.34 cdd4553, Worktree `_claude/entwickler/wt-slide-ende`): Präsentation am Ende ausblenden (weiter → schwarz, zurück → ein); Beamer/Geräte über Live-Feld `blank`. Ungeprüft im Browser.
 - **27.11. 3.12.33 gebaut** (gleicher Zweig nach 3.12.32): Texteditor T2 — Bühne zeichnet Textobjekte formatiert (SfRichText in editor.js). Bühne ungeprüft. Offen: T3 Bearbeiten an Ort (contenteditable), T4 Menüband auf Markierung, T5 Tabellen/Exporte.
 - **27.11. 3.12.32 gebaut** (`entwickler/slide-texteditor-t1t2` ab 3.12.31 aded284, Worktree `_claude/entwickler/wt-slide-texteditor`): Texteditor T1 — sf-markup.js (Auszeichnung ↔ Läufe ↔ HTML), [size=NN] in Markdown.php. Plan `_berichte/slideforge/plan-texteditor-2026-11-27.md`.

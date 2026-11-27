@@ -12290,3 +12290,24 @@ select.sf-fsel-native { display: none !important; }
   height: 14px;
   color: currentColor;
 }
+
+/* Bearbeiten an Ort mit sichtbarer Formatierung (Texteditor T3, 3.12.36): Feld über dem Textobjekt.
+   Schrift, Grösse, Farbe usw. setzt editor.js aus dem Objekt (Grundstil); Masse in Folien-px, skaliert per transform. */
+.sf-inline-rich {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  box-sizing: border-box;
+  background: transparent;
+  outline: 1px dashed var(--accent);
+  outline-offset: 0;
+  overflow: visible;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  transform-origin: left top;
+  cursor: text;
+  caret-color: currentColor;
+}
+.sf-inline-rich code { font-family: ui-monospace, Menlo, Consolas, monospace; background: rgba(127, 127, 127, 0.2); }
+.sf-inline-rich a { color: inherit; text-decoration: underline; }
