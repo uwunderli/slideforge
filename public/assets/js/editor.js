@@ -6530,7 +6530,7 @@
   function fieldRibbonNum(id, label, value) {
     return '<label class="ribbon-position-field" for="' + id + '">' +
       '<span class="ribbon-position-field-label">' + escapeHtml(label) + '</span>' +
-      '<input type="number" id="' + id + '" value="' + value + '">' +
+      '<input type="number" id="' + id + '" value="' + value + '" aria-label="' + escapeHtml(label) + '">' +
       '</label>';
   }
 
@@ -6567,7 +6567,7 @@
     html += fieldRibbonNum('p_rotation', rotLabel, obj.rotation || 0);
     html += '<label class="ribbon-position-field ribbon-position-field-range" for="p_opacity">' +
       '<span class="ribbon-position-field-label">%</span>' +
-      '<input type="range" id="p_opacity" min="0" max="100" value="' + Math.round((obj.opacity || 1) * 100) + '">' +
+      '<input type="range" id="p_opacity" min="0" max="100" value="' + Math.round((obj.opacity || 1) * 100) + '" data-hub-range data-hub-range-unit="%" aria-label="%">' +
       '</label>';
     html += '</div></div>';
     return html;
@@ -6644,19 +6644,10 @@
     const t = texte || {};
     const mitTitel = t.mitTitel || I.animWithPrevHint || 'Gleichzeitig mit dem letzten Schritt dieser Folie';
     const nachTitel = t.nachTitel || I.animAfterPrevHint || 'Ein Klick nach dem letzten Schritt dieser Folie';
-    /* ‹ Nummer › in einer Zeile mit grossen Knöpfen (3.12.11, Urs 27.11.: «grössere Schaltflächen um auf und ab zu klicken»). */
-    const pfeil = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + (d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7')
-      + '" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const frueher = I.animStepPrev || 'Einen Schritt früher';
-    const spaeter = I.animStepNext || 'Einen Schritt später';
+    /* ‹ Nummer › über den Hub-Baustein HubNumberStep (3.12.14, vorher Eigenbau 3.12.11). */
     return '<div><label for="' + id + '">' + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '</label>'
-      + '<div class="sf-step-field">'
-      + '<button type="button" class="hub-btn hub-btn--ghost sf-step-btn" data-step-for="' + id + '" data-step-dir="-1" title="' + escapeHtml(frueher)
-      + '" aria-label="' + escapeHtml(frueher) + '"' + ((parseInt(wert, 10) || 1) <= 1 ? ' disabled' : '') + '>' + pfeil(-1) + '</button>'
-      + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '">'
-      + '<button type="button" class="hub-btn hub-btn--ghost sf-step-btn" data-step-for="' + id + '" data-step-dir="1" title="' + escapeHtml(spaeter)
-      + '" aria-label="' + escapeHtml(spaeter) + '">' + pfeil(1) + '</button>'
-      + '</div></div>'
+      + '<input type="number" id="' + id + '" min="1" step="1" value="' + (parseInt(wert, 10) || 1) + '" data-hub-step aria-label="'
+      + escapeHtml(I.animStep || 'Schritt (Klick-Nr.)') + '"></div>'
       + '<div class="props-transfer-row props-fx-row">'
       + '<button type="button" class="button button-ghost button-sm hub-btn hub-btn--ghost hub-btn--sm" id="' + id + '_mit" title="'
       + escapeHtml(mitTitel) + '">' + hubSpriteIcon('link') + '<span>' + escapeHtml(t.mit || I.animWithPrev || 'Mit vorherigem') + '</span></button>'
@@ -6665,17 +6656,6 @@
       + '</div>';
   }
 
-  /* ‹ › neben dem Schritt-Feld: Wert ±1 (mindestens 1), dann dasselbe «change» wie bei der Eingabe von Hand. */
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest && e.target.closest('.sf-step-btn[data-step-for]');
-    if (!btn || btn.disabled) return;
-    const input = document.getElementById(btn.dataset.stepFor);
-    if (!input) return;
-    const neu = Math.max(1, (parseInt(input.value, 10) || 1) + (parseInt(btn.dataset.stepDir, 10) || 0));
-    if (String(neu) === input.value) return;
-    input.value = String(neu);
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
 
   /** Abschnitt «Ausblenden» im Effekte-Reiter. */
   function buildExitPropsHtml(node) {
@@ -7559,7 +7539,7 @@
   }
 
   function fieldNumber(id, label, value) {
-    return '<div><label for="' + id + '">' + label + '</label><input type="number" id="' + id + '" value="' + value + '"></div>';
+    return '<div><label for="' + id + '">' + label + '</label><input type="number" id="' + id + '" value="' + value + '" data-hub-step></div>';
   }
   function fieldColor(id, label, value) {
     return '<div><label for="' + id + '">' + label + '</label><input type="color" id="' + id + '" value="' + value + '"></div>';
@@ -7583,10 +7563,10 @@
       + id + '" style="flex:1;">' + escapeHtml(label) + '</button>';
   }
   function fieldRange(id, label, value) {
-    return '<div><label for="' + id + '">' + label + ' (' + value + '%)</label><input type="range" id="' + id + '" min="0" max="100" value="' + value + '"></div>';
+    return '<div><label for="' + id + '">' + label + ' (' + value + '%)</label><input type="range" id="' + id + '" min="0" max="100" value="' + value + '" data-hub-range data-hub-range-unit="%"></div>';
   }
   function fieldRangePlain(id, label, min, max, value) {
-    return '<div><label for="' + id + '">' + label + ' (' + value + '°)</label><input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + value + '"></div>';
+    return '<div><label for="' + id + '">' + label + ' (' + value + '°)</label><input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + value + '" data-hub-range data-hub-range-unit="°"></div>';
   }
   function fieldTextarea(id, label, value) {
     return '<label for="' + id + '">' + label + '</label><textarea id="' + id + '" class="props-text-autoheight" rows="1">' + escapeHtml(value) + '</textarea>';
@@ -7645,11 +7625,10 @@
   /* Regler für Pfeil-Spitze/-Schaft (3.12.10), Aufbau wie der Deckkraft-Regler im Positionsbereich. */
   function fieldArrowRange(id, label, min, max, value) {
     const v = parseInt(value, 10) || min;
-    /* Regler + Zahlenfeld (3.12.13, Urs 27.11.: «mit Werten damit man den Wert kopieren kann»); beide bleiben gleich. */
+    /* Regler + Zahlenfeld über HubNumberStep (data-hub-range, Standard seit Hub 2.37.0). */
     return '<label class="sf-arrow-slider" for="' + id + '" title="' + escapeHtml(label) + '">'
       + '<span class="sf-arrow-slider-label">' + escapeHtml(label) + '</span>'
-      + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" aria-label="' + escapeHtml(label) + '">'
-      + '<input type="number" class="sf-arrow-num" id="' + id + '_num" min="' + min + '" max="' + max + '" step="1" value="' + v + '" aria-label="' + escapeHtml(label) + ' (%)">'
+      + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" aria-label="' + escapeHtml(label) + '" data-hub-range data-hub-range-unit="%">'
       + '</label>';
   }
 
@@ -8032,21 +8011,15 @@
         });
       }
       bindIconPicker('p_arrowStyle', 'arrowStyle');
-      /* Regler und Zahlenfeld je Wert: beide setzen das Attribut und gleichen das andere an. */
-      const pfeilWert = (id, attr, min, max, vorgabe) => {
-        const setze = (roh, quelle) => {
-          const v = Math.max(min, Math.min(max, parseInt(roh, 10) || vorgabe));
-          node.setAttr(attr, v);
-          const r = document.getElementById(id), z = document.getElementById(id + '_num');
-          if (r && r !== quelle) r.value = String(v);
-          if (z && z !== quelle) z.value = String(v);
-          recomputeShapePoints(); refreshCanvas(); scheduleSave();
-        };
-        on(id, 'input', (e) => setze(e.target.value, e.target));
-        on(id + '_num', 'change', (e) => { setze(e.target.value, null); });
-      };
-      pfeilWert('p_arrowHead', 'arrowHead', 5, 95, 40);
-      pfeilWert('p_arrowShaft', 'arrowShaft', 5, 80, 30);
+      /* Zahlenfeld daneben setzt der Hub-Baustein (data-hub-range) und löst am Regler «input» aus. */
+      on('p_arrowHead', 'input', (e) => {
+        node.setAttr('arrowHead', Math.max(5, Math.min(95, parseInt(e.target.value, 10) || 40)));
+        recomputeShapePoints(); refreshCanvas(); scheduleSave();
+      });
+      on('p_arrowShaft', 'input', (e) => {
+        node.setAttr('arrowShaft', Math.max(5, Math.min(80, parseInt(e.target.value, 10) || 30)));
+        recomputeShapePoints(); refreshCanvas(); scheduleSave();
+      });
       bindIconPicker('p_bracketStyle', 'bracketStyle');
       bindIconPicker('p_bubbleStyle', 'bubbleStyle');
     } else if (type === 'table') {

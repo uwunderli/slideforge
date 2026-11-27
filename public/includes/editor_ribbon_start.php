@@ -20,7 +20,7 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
   <div class="ribbon-wcell ribbon-wcell-size">
     <label class="ribbon-field ribbon-field-num">
       <span class="sr-only"><?= h(t('props.size')) ?></span>
-      <input type="number" id="rb_fontsize" min="1" disabled title="<?= h(t('props.size')) ?>">
+      <input type="number" id="rb_fontsize" min="1" disabled aria-label="<?= h(t('props.size')) ?>" title="<?= h(t('props.size')) ?>">
     </label>
   </div>
   <div class="ribbon-wcell ribbon-wcell-icon" id="ribbonStartFormat">
@@ -95,7 +95,7 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
   <div class="ribbon-wcell ribbon-wcell-opacity">
     <div class="ribbon-field-inline ribbon-field-opacity">
       <span class="ribbon-field-icon ribbon-opacity-icon" id="rb_opacityIcon" title="<?= h(t('props.opacity')) ?>"><?= $rbIconOpacity ?></span>
-      <input type="range" id="rb_opacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled aria-label="<?= h(t('props.opacity')) ?>">
+      <input type="range" data-hub-range data-hub-range-unit="%" id="rb_opacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled aria-label="<?= h(t('props.opacity')) ?>">
       <span class="ribbon-opacity-val" id="rb_opacityVal" aria-hidden="true">100</span>
     </div>
   </div>

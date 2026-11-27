@@ -509,6 +509,7 @@ window.SF_PRESENT = {
 <?php /* Menüband = Hub-Bausteine (3.12.0): Kürzel, Anpassen, Raster/Reiter aus dem Hub; SlideForge liefert Inhalt und Ablage */ ?>
 <script src="<?= h(sf_hub_asset('js/hub-shortcuts.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-number-step.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
 <script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>

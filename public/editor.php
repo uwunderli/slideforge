@@ -997,7 +997,7 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
         </div>
         <div class="editor-grid-statusbar" id="slideGridStatusBar">
           <label class="editor-grid-statusbar-label" for="gridThumbSizeSlider"><?= h(t('editor.slide_grid_thumb_size')) ?></label>
-          <input type="range" id="gridThumbSizeSlider" class="editor-grid-thumb-slider" min="100" max="360" step="4" value="<?= (int)Auth::editorGridThumbMin($me) ?>">
+          <input type="range" data-hub-range id="gridThumbSizeSlider" class="editor-grid-thumb-slider" min="100" max="360" step="4" value="<?= (int)Auth::editorGridThumbMin($me) ?>">
           <span class="editor-grid-thumb-size-value" id="gridThumbSizeLabel"><?= (int)Auth::editorGridThumbMin($me) ?> px</span>
         </div>
       </div>
@@ -1214,7 +1214,7 @@ $sfGripSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentCol
     </div>
     <div style="margin-top:12px;">
       <label for="bgGradAngle" id="bgGradAngleLabel"><?= h(t('bg.angle')) ?> (90°)</label>
-      <input type="range" id="bgGradAngle" min="0" max="360" value="90" style="width:100%;">
+      <input type="range" id="bgGradAngle" min="0" max="360" value="90" style="width:100%;" data-hub-range data-hub-range-unit="°">
     </div>
     <div class="object-gradient-preview" id="slideBgGradientPreview" aria-hidden="true"></div>
     </div>
@@ -1626,6 +1626,7 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <?php /* Menüband = Hub-Bausteine (3.12.0): Kürzel, Anpassen, Raster/Reiter aus dem Hub; SlideForge liefert Inhalt und Ablage */ ?>
 <script src="<?= h(sf_hub_asset('js/hub-shortcuts.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon-customize.js')) ?>"></script>
+<script src="<?= h(sf_hub_asset('js/hub-number-step.js')) ?>"></script>
 <script src="<?= h(sf_hub_asset('js/hub-ribbon.js')) ?>"></script>
 <script src="assets/js/ribbon-renderer.js?v=<?= ASSET_VERSION ?>"></script>
 <script src="assets/js/ribbon.js?v=<?= ASSET_VERSION ?>"></script>

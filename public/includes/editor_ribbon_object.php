@@ -50,7 +50,7 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
       </div>
       <div class="ribbon-object-grad-angle">
         <label for="objGradAngle" id="objGradAngleLabel"><?= h(t('props.angle')) ?> (90°)</label>
-        <input type="range" id="objGradAngle" min="0" max="360" value="90" disabled>
+        <input type="range" id="objGradAngle" min="0" max="360" value="90" disabled data-hub-range data-hub-range-unit="°">
       </div>
       <div class="object-gradient-preview" id="objectGradientPreview" aria-hidden="true"></div>
     </div>
@@ -58,7 +58,7 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
     <div class="ribbon-object-farbe-opacity" id="ribbonObjectFillOpacity" hidden>
       <div class="ribbon-field-inline ribbon-field-opacity">
         <span class="ribbon-field-icon ribbon-opacity-icon" id="rb_objOpacityIcon" title="<?= h(t('props.opacity')) ?>"><?= $rbIconOpacity ?></span>
-        <input type="range" id="rb_objOpacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled aria-label="<?= h(t('props.opacity')) ?>">
+        <input type="range" id="rb_objOpacity" class="ribbon-opacity-slider" min="0" max="100" value="100" disabled data-hub-range data-hub-range-unit="%" aria-label="<?= h(t('props.opacity')) ?>">
         <span class="sr-only" id="rb_objOpacityVal">100</span>
       </div>
     </div>
@@ -75,7 +75,7 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
       </label>
       <label class="ribbon-field ribbon-field-num ribbon-object-stroke-width">
         <span class="sr-only"><?= h(t('props.border_width')) ?></span>
-        <input type="number" id="rb_objStrokeWidth" min="0" step="1" value="0" disabled title="<?= h(t('props.border_width')) ?>" aria-label="<?= h(t('props.border_width')) ?>">
+        <input type="number" id="rb_objStrokeWidth" min="0" step="1" value="0" disabled data-hub-step title="<?= h(t('props.border_width')) ?>" aria-label="<?= h(t('props.border_width')) ?>">
       </label>
     </div>
   </div>

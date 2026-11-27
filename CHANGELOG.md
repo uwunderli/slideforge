@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.14] - 2026-11-27
+
+### Changed
+- **Zahlenfelder und Schieber nach Hub-Standard** (Urs 27.11., Hub 2.37 HubNumberStep): Grosse Zahlenfelder (Kontur, Schritt, Tabelle, Medien-Verzögerung) als ‹ Zahl › mit grossen Knöpfen; kleine Felder (Menüband, Position/Grösse, Zacken) bleiben ohne Knöpfe (Urs 27.11.); alle Schieber (Deckkraft, Verlaufswinkel, Pfeil Spitze/Schaft, Laser, Rastergrösse) mit Zahlenfeld daneben. Eigenbau aus 3.12.11/3.12.13 entfernt.
+
 ## [3.12.13] - 2026-11-27
 
 ### Changed

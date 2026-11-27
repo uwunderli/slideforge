@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.14 gebaut** (`entwickler/slide-zahlfelder` ab 3.12.13 9a0cf79): alle Zahlenfelder/Schieber auf Hub HubNumberStep (braucht Hub 2.37.x). Bei Gitwart.
 - **27.11. 3.12.13 gebaut** (`entwickler/slide-pfeil-regler` ab 3.12.12 0c1e8c6): Pfeil-Regler Spitze/Schaft in einer Zeile mit Zahlenfeld. Bei Gitwart.
 - **27.11. 3.12.12 gebaut** (`entwickler/slide-abspielen-tasten` ab 3.12.11 8445255): Abspielen-Tasten wie Vorführen (Eingabe, ↓/↑), Zeitsteuerung läuft im Abspielen. Bei Gitwart.
 - **27.11. 3.12.11 gebaut** (`entwickler/slide-schritt-knoepfe` ab 3.12.10 b68b794): Schritt-Feld ‹ Nummer › mit grossen Knöpfen. Bei Gitwart.
