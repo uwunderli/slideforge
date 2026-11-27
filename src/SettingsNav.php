@@ -29,12 +29,28 @@ final class SettingsNav
         'media' => ['/admin_settings.php', 'tab=media', 'admin.tab_media', true, 'files'],
     ];
 
-    /** @return array<string,array{href:string,label:string,admin:bool}> für die Reiterleiste (Sprache der Person) */
+    /**
+     * Symbole der Reiter (3.12.47) — Abschrift der Pfade aus Hub `src/HubIcon.php` für die Namen oben, damit Reiter und
+     * Hub-Seitenleiste dasselbe Symbol zeigen. Strich/Füllung setzt `.hub-list-tab__icon svg` (hub-kit.css, Rückfall style.css).
+     */
+    private const ICONS = [
+        'grid' => '<rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/>',
+        'pencil' => '<path d="M4 20h4.2l9.1-9.1a2.3 2.3 0 0 0-3.2-3.2L5 16.8z"/><path d="m14.6 6.5 2.9 2.9"/>',
+        'box' => '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5 12 12l8-4.5M12 12v9"/>',
+        'tag' => '<path d="M20.4 13.4 13.4 20.4a1.7 1.7 0 0 1-2.4 0L3.6 13V3.6H13l7.4 7.4a1.7 1.7 0 0 1 0 2.4z"/><circle cx="7.7" cy="7.7" r="1.2"/>',
+        'palette' => '<path d="M12 21a9 9 0 1 1 9-9c0 2-1.6 2.6-3 2.6h-1.4c-1.3 0-2.1 1.5-1.3 2.5.7 1-.1 3.9-3.3 3.9z"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.8" cy="10" r="1"/>',
+        'cog' => '<circle cx="12" cy="12" r="3"/><path d="M19.9 15a1.6 1.6 0 0 0 .3 1.8 2 2 0 1 1-2.8 2.8 1.6 1.6 0 0 0-2.7 1.1 2 2 0 1 1-4 0 1.6 1.6 0 0 0-2.8-1.1 2 2 0 1 1-2.8-2.8A1.6 1.6 0 0 0 4 12.3a2 2 0 1 1 0-4 1.6 1.6 0 0 0 1.1-2.8 2 2 0 1 1 2.8-2.8A1.6 1.6 0 0 0 10.6 4a2 2 0 1 1 4 0 1.6 1.6 0 0 0 2.8 1.1 2 2 0 1 1 2.8 2.8A1.6 1.6 0 0 0 21.3 11a2 2 0 1 1 0 4z"/>',
+        'list' => '<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+        'files' => '<path d="M4 6.6A1.6 1.6 0 0 1 5.6 5h3.1l1.8 2.2h7.9A1.6 1.6 0 0 1 20 8.8v9.6A1.6 1.6 0 0 1 18.4 20H5.6A1.6 1.6 0 0 1 4 18.4z"/>',
+    ];
+
+    /** @return array<string,array{href:string,label:string,admin:bool,icon:string}> für die Reiterleiste (Sprache der Person) */
     public static function tabs(): array
     {
         $out = [];
-        foreach (self::TABS as $key => [$page, $query, $lang, $admin]) {
-            $out[$key] = ['href' => ltrim($page, '/') . '?' . $query, 'label' => t($lang), 'admin' => $admin];
+        foreach (self::TABS as $key => [$page, $query, $lang, $admin, $icon]) {
+            $out[$key] = ['href' => ltrim($page, '/') . '?' . $query, 'label' => t($lang), 'admin' => $admin,
+                'icon' => '<svg viewBox="0 0 24 24" aria-hidden="true">' . (self::ICONS[$icon] ?? self::ICONS['box']) . '</svg>'];
         }
         return $out;
     }

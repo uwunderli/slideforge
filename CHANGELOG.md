@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.47] - 2026-11-27
+
+### Changed
+- **Einstellungen als Reiter:** Die Reiterleiste (Folienvorlagen, Textvorlagen, Vorlageelemente, Schriftarten, Farben, Allgemein,
+  Rechtschreibung, Medien) steht jetzt auch im Hub-Rahmen oben auf jeder Einstellungsseite, mit denselben Symbolen wie die
+  Hub-Seitenleiste; Seitenwechsel weich (alter Inhalt unscharf bis die neue Seite da ist). Urs 27.11.: «Mach die auch in Tabs, wie
+  auch in den anderen Einstellungen der anderen Apps, damit man gleich in die verschiedenen Einstellungen springen kann.»
 ## [3.12.46] - 2026-11-27
 
 ### Added
