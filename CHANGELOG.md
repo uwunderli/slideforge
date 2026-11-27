@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.34] - 2026-11-27
+
+### Fixed
+- **Verlauf auf der Bühne wie in der Präsentation** (Urs 27.11.: Miniatur und Bühne sahen verschieden aus): Die Bühne zog den Verlauf über die Diagonale des Objekts, Präsentation und Miniaturen über Höhe/Breite (CSS). Jetzt rechnet die Bühne gleich.
+
 ## [3.12.33] - 2026-11-27
 
 ### Changed

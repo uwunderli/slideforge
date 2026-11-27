@@ -3891,7 +3891,10 @@
     }
     const rad = (angle - 90) * Math.PI / 180;
     const dx = Math.cos(rad), dy = Math.sin(rad);
-    const half = Math.sqrt(w * w + h * h) / 2;
+    /* Länge der Verlaufslinie wie CSS linear-gradient (Präsentation, Miniaturen): |w·sin α| + |h·cos α|; vorher die Diagonale,
+       dadurch lagen die Farbpunkte auf der Bühne weiter auseinander als in der Präsentation (3.12.34, Urs 27.11.). */
+    const a = angle * Math.PI / 180;
+    const half = (Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a))) / 2;
     const cx = ox + w / 2, cy = oy + h / 2;
     node.fillLinearGradientStartPoint({ x: cx - dx * half, y: cy - dy * half });
     node.fillLinearGradientEndPoint({ x: cx + dx * half, y: cy + dy * half });
