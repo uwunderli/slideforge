@@ -4621,7 +4621,7 @@ body.editor-grid-dragging .editor-slide-grid-item {
 }
 .ribbon-widget-grid--zeichen { --widget-cols: 8; }
 .ribbon-widget-grid--absatz { --widget-cols: 5; }
-.ribbon-widget-grid--farben { --widget-cols: 4; }
+.ribbon-widget-grid--farben { --widget-cols: 7; }
 .ribbon-widget-grid--templates {
   --widget-cols: 2;
   grid-template-columns: repeat(2, var(--ribbon-cell));
@@ -4845,12 +4845,12 @@ body.editor-grid-dragging .editor-slide-grid-item {
   overflow: visible;
 }
 .ribbon-widget-grid--farben {
-  --widget-cols: 4;
+  --widget-cols: 7;
   position: relative;
   overflow: visible;
 }
 .ribbon-widget-grid--farben .ribbon-wcell-color {
-  grid-area: 1 / 1 / 2 / 2;
+  grid-area: 1 / 2 / 2 / 3;
   z-index: 3;
   overflow: visible;
   padding: 2px;
@@ -4858,11 +4858,18 @@ body.editor-grid-dragging .editor-slide-grid-item {
 }
 
 /* Markerfarbe (3.12.49): neben der Schriftfarbe (Spalte 1–2 mit «▾»), «Kein Marker» rechts. */
-.ribbon-widget-grid--farben .ribbon-wcell-mark { grid-area: 1 / 3 / 2 / 4; }
-.ribbon-widget-grid--farben .ribbon-wcell-markclear { grid-area: 1 / 4 / 2 / 5; display: flex; align-items: center; justify-content: center; }
+.ribbon-widget-grid--farben .ribbon-wcell-mark { grid-area: 1 / 5 / 2 / 6; }
+.ribbon-widget-grid--farben .ribbon-wcell-markclear { grid-area: 1 / 7 / 2 / 8; display: flex; align-items: center; justify-content: center; }
+/* 3.12.52: Anwenden-Knöpfe vor den Farbfeldern; der Balken zeigt die zuletzt gewählte Farbe. */
+.ribbon-widget-grid--farben .ribbon-wcell-colorapply { grid-area: 1 / 1 / 2 / 2; }
+.ribbon-widget-grid--farben .ribbon-wcell-markapply { grid-area: 1 / 4 / 2 / 5; }
+.ribbon-color-apply { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.ribbon-color-apply-a { font-weight: 700; font-size: 0.8rem; line-height: 1; }
+.ribbon-color-apply-a--mark { font-weight: 400; font-size: 0.72rem; }
+.ribbon-color-apply-bar { display: block; width: 14px; height: 3px; border-radius: 1px; background: var(--apply-color, currentColor); }
 
 .ribbon-widget-grid--farben .ribbon-wcell-opacity {
-  grid-area: 2 / 1 / 3 / 5;
+  grid-area: 2 / 1 / 3 / 8;
   z-index: 1;
   overflow: visible;
   padding: 2px 1px;

@@ -422,6 +422,7 @@ return [
     'ribbon.align_center' => 'Zentriert',
     'ribbon.align_right' => 'Rechtsbündig',
     'ribbon.group_text_color' => 'Schriftfarbe',
+    'ribbon.color_apply' => 'Gewählte Schriftfarbe anwenden',
     'ribbon.mark_color' => 'Markerfarbe',
     'ribbon.mark_apply' => 'Markerfarbe anwenden',
     'ribbon.mark_clear' => 'Kein Marker',

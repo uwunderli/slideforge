@@ -395,6 +395,7 @@ return [
     'ribbon.align_center' => 'Centerà',
     'ribbon.align_right' => 'A dretga',
     'ribbon.group_text_color' => 'Colur da scrit',
+    'ribbon.color_apply' => 'Applitgar la colur da scrittira tschernida',
     'ribbon.mark_color' => 'Colur dal marcader',
     'ribbon.mark_apply' => 'Applitgar la colur dal marcader',
     'ribbon.mark_clear' => 'Nagin marcader',

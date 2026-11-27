@@ -2459,8 +2459,10 @@
       inp.disabled = false;
       if (document.activeElement !== inp && /^#[0-9a-f]{6}$/i.test(val || '')) inp.value = val;
     });
-    const markClear = document.getElementById('rb_mark_clear');
-    if (markClear) markClear.disabled = false;
+    ['rb_mark_clear', 'rb_color_apply', 'rb_mark_apply'].forEach((id) => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = false;
+    });
   }
   function notesRibbonOn() {
     if (notesEd.active || !notesRich()) return;
@@ -6606,7 +6608,7 @@
 
   function setRibbonStartEnabled(enabled) {
     const ids = ['rb_bold', 'rb_italic', 'rb_underline', 'rb_strikethrough', 'rb_uppercase', 'rb_smallcaps',
-      'rb_font', 'rb_fontsize', 'rb_lineheight', 'rb_letterspacing', 'rb_color', 'rb_mark', 'rb_mark_clear', 'rb_opacity',
+      'rb_font', 'rb_fontsize', 'rb_lineheight', 'rb_letterspacing', 'rb_color', 'rb_color_apply', 'rb_mark', 'rb_mark_apply', 'rb_mark_clear', 'rb_opacity',
       'rb_bullet', 'rb_number', 'rb_align_left', 'rb_align_center', 'rb_align_right'];
     ids.forEach((id) => {
       const el = document.getElementById(id);
@@ -6862,6 +6864,32 @@
       if (/^#[0-9a-f]{6}$/i.test(e.target.value)) applyRbMark(e.target.value.toLowerCase());
     });
     document.getElementById('rb_mark_clear')?.addEventListener('click', () => applyRbMark(null));
+    /* 3.12.52 (Urs 27.11.): «A»/Marker wenden die zuletzt gewählte Farbe an. Gemerkt wird jede Wahl im Farbfeld
+       (auch Markenpunkte); das Nachführen an der Schreibmarke setzt nur value ohne Ereignis und zählt nicht. */
+    const rbLastPick = { rb_color: null, rb_mark: '#fff176' };
+    const rbShowPick = (id) => {
+      const btn = document.querySelector('.ribbon-color-apply[data-apply-for="' + id + '"]');
+      const val = rbLastPick[id] || document.getElementById(id)?.value || '';
+      if (btn && /^#[0-9a-f]{6}$/i.test(val)) btn.style.setProperty('--apply-color', val);
+    };
+    ['rb_color', 'rb_mark'].forEach((id) => {
+      const inp = document.getElementById(id);
+      inp?.addEventListener('input', (e) => {
+        if (/^#[0-9a-f]{6}$/i.test(inp.value)) { rbLastPick[id] = inp.value.toLowerCase(); rbShowPick(id); }
+      });
+      rbShowPick(id);
+    });
+    document.querySelectorAll('.ribbon-color-apply[data-apply-for]').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => e.preventDefault());   // Markierung im Text/Notizfeld behalten
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.applyFor;
+        const inp = document.getElementById(id);
+        const val = rbLastPick[id] || inp?.value;
+        if (!inp || !/^#[0-9a-f]{6}$/i.test(val || '')) return;
+        inp.value = val;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
     document.getElementById('rb_opacity')?.addEventListener('input', (e) => {
       const node = ribbonStartTextNode();
       if (!node) return;

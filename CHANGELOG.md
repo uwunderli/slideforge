@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.52] - 2026-11-27
+
+### Changed
+- **Menüband: Farbe mit einem Klick** (Urs 27.11.: «Wie wähle ich eine bereits bestehende Farbe?»): Vor Schriftfarbe und Markerfarbe steht je ein Anwenden-Knopf («A» bzw. «ab» mit Farbbalken), der die zuletzt gewählte Farbe auf die Markierung (Bühne, Notizen) bzw. das gewählte Textobjekt legt; das Farbfeld daneben öffnet die Farbwahl.
+
 ## [3.12.51] - 2026-11-27
 
 ### Changed

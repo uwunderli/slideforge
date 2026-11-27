@@ -402,6 +402,7 @@ return [
     'ribbon.align_center' => 'Centrer',
     'ribbon.align_right' => 'Aligner à droite',
     'ribbon.group_text_color' => 'Couleur du texte',
+    'ribbon.color_apply' => 'Appliquer la couleur de police choisie',
     'ribbon.mark_color' => 'Couleur de surlignage',
     'ribbon.mark_apply' => 'Appliquer la couleur de surlignage',
     'ribbon.mark_clear' => 'Aucun surlignage',

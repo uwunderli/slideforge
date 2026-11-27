@@ -420,6 +420,7 @@ return [
     'ribbon.align_center' => 'Align center',
     'ribbon.align_right' => 'Align right',
     'ribbon.group_text_color' => 'Font color',
+    'ribbon.color_apply' => 'Apply selected font colour',
     'ribbon.mark_color' => 'Highlight color',
     'ribbon.mark_apply' => 'Apply highlight color',
     'ribbon.mark_clear' => 'No highlight',

@@ -395,6 +395,7 @@ return [
     'ribbon.align_center' => 'Centra',
     'ribbon.align_right' => 'Allinea a destra',
     'ribbon.group_text_color' => 'Colore testo',
+    'ribbon.color_apply' => 'Applica il colore del testo scelto',
     'ribbon.mark_color' => 'Colore evidenziatore',
     'ribbon.mark_apply' => 'Applica colore evidenziatore',
     'ribbon.mark_clear' => 'Nessun evidenziatore',

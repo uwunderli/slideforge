@@ -87,6 +87,10 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
 </div>
 
 <div class="ribbon-widget-grid ribbon-widget-grid--farben" data-widget-id="widget-text-colors" id="ribbonStartColors">
+  <?php /* 3.12.52 (Urs 27.11.): «A» bzw. Marker wenden die zuletzt gewählte Farbe mit einem Klick an (wie Office); das Farbfeld öffnet die Wahl. */ ?>
+  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-colorapply">
+    <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_color_apply" data-apply-for="rb_color" disabled aria-label="<?= h(t('ribbon.color_apply')) ?>" title="<?= h(t('ribbon.color_apply')) ?>"><span class="ribbon-color-apply-a">A</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
+  </div>
   <div class="ribbon-wcell ribbon-wcell-color">
     <label class="ribbon-color-picker-wrap">
       <span class="sr-only"><?= h(t('props.color')) ?></span>
@@ -94,6 +98,9 @@ $rbTemplateSample = h(t('ribbon.template_style_sample'));
     </label>
   </div>
   <?php /* Markerfarbe (3.12.49, Urs 27.11.): wie die Schriftfarbe, [mark=#hex] auf Markierung bzw. ganzen Text; daneben «Kein Marker». */ ?>
+  <div class="ribbon-wcell ribbon-wcell-icon ribbon-wcell-markapply">
+    <button type="button" class="ribbon-icon-btn ribbon-color-apply" id="rb_mark_apply" data-apply-for="rb_mark" disabled aria-label="<?= h(t('ribbon.mark_apply')) ?>" title="<?= h(t('ribbon.mark_apply')) ?>"><span class="ribbon-color-apply-a ribbon-color-apply-a--mark">ab</span><span class="ribbon-color-apply-bar" aria-hidden="true"></span></button>
+  </div>
   <div class="ribbon-wcell ribbon-wcell-color ribbon-wcell-mark">
     <label class="ribbon-color-picker-wrap">
       <span class="sr-only"><?= h(t('ribbon.mark_color')) ?></span>
