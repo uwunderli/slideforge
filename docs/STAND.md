@@ -1,4 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
+
+- **27.11.: 3.3.2 gebaut** (Zweig `entwickler/slide-statusleiste`, auf 3.3.1): Statusleiste unten (links Aktionen mit Uhrzeit, Mitte Datei, rechts Version), schwebender Speicher-Knopf weg. Beim Gitwart, nach 3.3.1, nur Biel.
 - **27.11. 3.3.0 «Auf Gerät zeigen»** (Zweig `entwickler/slide-auf-geraet`, Worktree `_claude/entwickler/wt-slide-geraet`, auf 3.2.6; braucht Hub 2.33.0): Menüband Präsentieren › Auf Gerät zeigen, `player.php` (Einmal-Ticket des Hubs → Gerätesitzung nur für diese Präsentation → Zuschauer-Ansicht folgt Presenter/Tablet), `geraet_api.php`, `src/Geraete.php`. Nicht gelaufen.
 
 - **27.11. in Arbeit: Umbau zum FF-Editor im Hub** (Go Urs direkt). Plan + Entscheide: `_berichte/slideforge/plan-hub-editor-2026-11-27.md`. H1/H2 (FileForge) und H3 (Hub-Pfad) laufen parallel als Unter-Agenten; H4–H6 danach.

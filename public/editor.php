@@ -1582,5 +1582,6 @@ window.SF_BOOTSTRAP = <?= json_encode($bootstrap, JSON_UNESCAPED_UNICODE) ?>;
 <script>SfFf.editor(<?= json_encode(['id' => $id, 'csrf' => csrf_token(), 'status' => $ffStatus], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);</script>
 <?php endif; ?>
 <?php endif; // canEdit-Verzweigung Modals/Skripte ?>
+<?php $sfStatusFile = is_array($ffStatus ?? null) ? (string)($ffStatus['name'] ?? '') : ''; require __DIR__ . '/includes/statusbar.php'; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>

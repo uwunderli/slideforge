@@ -13,7 +13,22 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
-  function toast(kind, text) { if (global.CfStatus && global.CfStatus.show) { global.CfStatus.show(kind, text); } else { global.alert(text); } }
+  // Statusleiste unten (links Aktionen, Mitte Datei, rechts Version; includes/statusbar.php). Fehler zusätzlich als Hub-Meldung oben.
+  function say(text, kind) {
+    var el = document.getElementById('sfStatusMsg');
+    if (!el) return false;
+    var d = new Date(), hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    el.textContent = text ? (kind === 'busy' ? text : hm + ' · ' + text) : '';
+    el.setAttribute('data-state', kind || '');
+    return true;
+  }
+  function fileName(name) { var el = document.getElementById('sfStatusFile'); if (el) el.textContent = name || ''; }
+  function toast(kind, text) {
+    var inBar = say(text, kind === 'error' ? 'error' : '');
+    if (kind === 'error' || !inBar) {
+      if (global.CfStatus && global.CfStatus.show) { global.CfStatus.show(kind, text); } else if (!inBar) { global.alert(text); }
+    }
+  }
   function post(data) {
     return fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
       body: JSON.stringify(Object.assign({ csrf_token: csrf }, data)) })
@@ -89,20 +104,15 @@
     csrf = cfg.csrf;
     var st = cfg.status || {};
     var busy = false, again = false, blocked = '';
-    var chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'sf-ff-chip hub-btn';
-    chip.title = 'In FileForge speichern (Ctrl+S)';
-    document.body.appendChild(chip);
     function show(text, kind) {
-      chip.textContent = text;
-      chip.setAttribute('data-state', kind || '');
+      say(text, kind);
+      fileName(st.name);
     }
     function idle() {
       if (st.source === 'local') { show('Noch nicht in FileForge · Speichern unter …', 'dirty'); return; }
       if (blocked) { show('Nicht gespeichert – Kopie nötig', 'error'); return; }
-      if (!st.canWrite && st.source !== 'import') { show('Nur lesen · ' + st.name, ''); return; }
-      show(st.dirty ? 'Ungespeichert · ' + st.name : 'Gespeichert · ' + st.name, st.dirty ? 'dirty' : 'ok');
+      if (!st.canWrite && st.source !== 'import') { show('Nur lesen', ''); return; }
+      show(st.dirty ? 'Ungespeichert' : 'Gespeichert', st.dirty ? 'dirty' : 'ok');
     }
     idle();
 
@@ -145,8 +155,7 @@
         show('Speichert …', 'busy');
         var flush = global.SFEditor && global.SFEditor.flush ? global.SFEditor.flush() : Promise.resolve();
         return Promise.resolve(flush).then(function () { return post({ action: 'save_copy', id: cfg.id, dir: dir, name: String(name).trim() }); }).then(function (j) {
-          if (j.ok) { blocked = ''; if (j.status) st = j.status; toast('success', 'Gespeichert als ' + j.name + '.'); } else { toast('error', j.message || 'Nicht gespeichert.'); }
-          idle();
+          if (j.ok) { blocked = ''; if (j.status) st = j.status; idle(); toast('success', 'Gespeichert als ' + j.name + '.'); } else { idle(); toast('error', j.message || 'Nicht gespeichert.'); }
         });
       }).catch(pickError);
     }
@@ -160,7 +169,6 @@
       });
     }
 
-    chip.addEventListener('click', function () { save(true); });
     document.addEventListener('click', function (e) {
       var b = e.target.closest('[data-ribbon-command="ff_save"], [data-ribbon-command="ff_save_copy"], [data-ribbon-command="ff_save_template"]');
       if (!b || b.disabled) return;

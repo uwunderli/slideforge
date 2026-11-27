@@ -53,4 +53,5 @@ require __DIR__ . '/includes/header.php';
   });
 })();
 </script>
+<?php $sfStatusFile = ''; require __DIR__ . '/includes/statusbar.php'; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>
