@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.26] - 2026-11-27
+
+### Fixed
+- **Ziehpunkte am Rahmen greifen wieder** (Urs 27.11.): Der Auswahlrahmen kommt bei jeder Auswahl ganz nach oben. Vorher konnte ein Objekt (z. B. nach Ebenen-Änderungen) über dem Rahmen liegen; ein Griff an den Ziehpunkt verschob dann das Objekt statt es zu vergrössern.
+
 ## [3.12.25] - 2026-11-27
 
 ### Fixed

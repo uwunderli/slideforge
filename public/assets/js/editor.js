@@ -5615,6 +5615,9 @@
 
   function selectNodes(nodes) {
     restoreDeepCovers();
+    /* Rahmen mit Ziehpunkten immer zuoberst (3.12.26, Urs 27.11.: «wenn ich das Objekt vergrössern möchte, verschiebe ich das Objekt»):
+       nach Ebenen-Änderungen (Vordergrund, Ebenen-Liste) lag ein Objekt über dem Rahmen und fing die Ziehpunkte ab. */
+    if (SF.transformer) SF.transformer.moveToTop();
     const list = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
     SF.selectedNodes = list;
     SF.selectedNode = list.length === 1 ? list[0] : (list.length ? list[list.length - 1] : null);

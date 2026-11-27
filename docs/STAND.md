@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.26 gebaut** (`entwickler/slide-rahmen-oben` ab 3.12.25 9882ab3): Auswahlrahmen bei jeder Auswahl zuoberst (Ziehpunkte). Ursache unbelegt. Bei Gitwart.
 - **27.11. 3.12.25 gebaut** (`entwickler/slide-tiefer-fassen` ab 3.12.24 19619c9): tiefer gewähltes Objekt fassbar (Objekte darüber ohne Maus bis zur nächsten Auswahl). Bei Gitwart.
 - **27.11. 3.12.24 gebaut** (`entwickler/slide-tiefer-waehlen` ab 3.12.23 b9e30b7): Ctrl+Klick wählt verdeckte Objekte (zyklisch). Bei Gitwart.
 - **27.11. 3.12.23 gebaut** (`entwickler/slide-verlauf-alpha` ab 3.12.22 c29a0b8): Verlauf mit Deckkraft je Farbe. Offen: PPTX/ODP-Export ohne Alpha. Bei Gitwart.
