@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. Geräte 3.6.0–3.6.6** (Zweige `entwickler/slide-geraete-gruppe` → `-dialog` → `slide-geraet-neuladen`, Worktree `_claude/entwickler/wt-slide-geraete-dialog`): Presenter-Gruppe «Geräte» (Registrieren per QR/Code, Geräte inkl. «Web»; 3.6.0 live Biel); 3.6.5 Dialoge nach Lab + Icon-Raster (braucht Hub 2.33.10), 3.6.6 «Neu laden» je Gerät (braucht Hub 2.33.11) — beide beim Gitwart. QR-Leser jsQR lokal `public/assets/js/jsqr-1.4.0.js`. Offen: Feldstile in `sf-ff.css` sind aus Hub admin.css gespiegelt (SF lädt admin.css nicht).
 - **27.11. 3.6.4 gebaut** (`entwickler/slide-ff-import`, auf 3.6.3, nach 3.6.3 einspielen): FF-Picker für «Präsentation einfügen», Import, Traktanden, Folien-Set, Logo, Medien-Seitenleiste «Aus Dateien einfügen» (`FfFile::fetchTemp`/`fieldHtml`). Offen: Schriften-Upload (Mehrfachwahl) noch lokal.
 
 - **27.11. 3.6.1 live Biel** (Farben bläulich, Urs «Halbwegs repariert»); **3.6.2 gebaut** (`entwickler/slide-farben`, auf 84502bf), beim Gitwart: Medienliste füllt die Seitenleiste (Flex-Kette, keine feste max-height).

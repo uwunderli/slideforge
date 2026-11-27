@@ -111,7 +111,9 @@
           var zeigt = g.zeigt ? 'zeigt ' + (g.zeigt.titel || g.zeigt.app) : 'zeigt nichts';
           return '<li class="sf-dev__tile"><button type="button" class="sf-dev__pick" aria-pressed="false" data-i="' + i + '">' +
             devIcon(g.symbol) + '<span class="sf-dev__name">' + esc(g.name) + '</span><span class="sf-dev__state">' + esc(zeigt) + '</span></button>' +
-            (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__clear" data-i="' + i + '" aria-label="' + esc(g.name) + ' leeren">Leeren</button>' : '') + '</li>';
+            '<div class="sf-dev__tile-act">' +
+            (g.zeigt ? '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__clear" data-i="' + i + '" aria-label="' + esc(g.name) + ' leeren">Leeren</button>' : '') +
+            '<button type="button" class="hub-btn hub-btn--sm hub-btn--ghost sf-dev__reloaddev" data-i="' + i + '" aria-label="' + esc(g.name) + ' neu laden">Neu laden</button></div></li>';
         }).join('');
         wrap.innerHTML = '<ul class="sf-dev__grid" aria-label="Geräte">' + tiles + '</ul>' +
           (list.length ? '' : '<p class="muted small">Noch kein Gerät registriert' + (opts.onRegister ? ' – mit «Registrieren …» eines hinzufügen.' : '.') + '</p>');
@@ -133,6 +135,18 @@
         }
         var pk = e.target.closest('button.sf-dev__pick');
         if (pk) { pk.setAttribute('aria-pressed', pk.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); sync(); return; }
+        var nl = e.target.closest('.sf-dev__reloaddev');
+        if (nl) {
+          var gn = list[+nl.getAttribute('data-i')];
+          if (!gn) return;
+          nl.disabled = true;
+          devMsg(msg, 'Lädt ' + gn.name + ' neu …', 'busy');
+          devSend({ action: 'neuladen', geraet: gn.id }).then(function (r) {
+            nl.disabled = false;
+            devMsg(msg, r.ok ? gn.name + ' lädt in wenigen Sekunden neu.' : (r.message || 'Das ging nicht.'), r.ok ? 'ok' : 'error');
+          });
+          return;
+        }
         var c = e.target.closest('.sf-dev__clear');
         if (c) {
           var g = list[+c.getAttribute('data-i')];

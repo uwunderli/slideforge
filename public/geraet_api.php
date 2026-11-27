@@ -6,6 +6,7 @@ declare(strict_types=1);
  *   GET  ?action=liste                         → {ok, geraete:[{id,name,dauer,ablauf,freigabe,zeigt}], anmelden:<Hub-Adresse Geräte>}
  *   POST {action:zeigen, geraet, id}           → {ok}   Präsentation (Arbeitskopie `id`) auf dem Gerät zeigen
  *   POST {action:leeren, geraet}               → {ok}
+ *   POST {action:neuladen, geraet}             → {ok}   Gerät lädt die Seite neu (3.6.6, Hub ≥ 2.33.11)
  *   POST {action:koppeln, code, name, dauer}   → {ok, geraet}   Gerät mit dem Code von device.php koppeln (3.4.0, Hub ≥ 2.33.8)
  * Nur angemeldet; zeigen nur, wer die Präsentation sehen darf. Wer das Gerät bespielen darf, prüft der Hub.
  */
@@ -32,7 +33,7 @@ $messages = [
     'zu_viele' => 'Zu viele falsche Codes. Bitte in einigen Minuten nochmals.',
     'eingabe' => 'Angaben unvollständig.',
     'unauthorized' => 'Der Hub hat den Aufruf abgelehnt.',
-    'unknown_op' => 'Der Hub kennt das Registrieren noch nicht (Hub 2.33.8 nötig).',
+    'unknown_op' => 'Der Hub kennt diese Funktion noch nicht (Hub-Update nötig).',
 ];
 $fail = static function (string $e) use ($out, $messages): never {
     $out(['ok' => false, 'error' => $e, 'message' => $messages[$e] ?? 'Das ging nicht (' . $e . ').']);
@@ -76,6 +77,10 @@ if ($action === 'zeigen') {
     }
     $meta = Presentation::getMeta($id);
     $r = Geraete::zeigen($person, $geraet, $id, (string)($meta['title'] ?? ''));
+    $r['ok'] ? $out(['ok' => true]) : $fail($r['error']);
+}
+if ($action === 'neuladen') {
+    $r = Geraete::neuladen($person, $geraet);
     $r['ok'] ? $out(['ok' => true]) : $fail($r['error']);
 }
 if ($action === 'leeren') {

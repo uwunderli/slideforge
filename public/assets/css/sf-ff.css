@@ -58,7 +58,8 @@ body:has(.editor-layout) > .sf-statusbar { position: static; flex-shrink: 0; }
 .sf-dev__pick[aria-pressed="true"] .sf-dev__icon { color: var(--accent); }
 .sf-dev__name { font-weight: 600; font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
 .sf-dev__state { font-size: .75rem; color: var(--text-muted); line-height: 1.25; overflow-wrap: anywhere; }
-.sf-dev__tile .hub-btn { justify-self: center; }
+.sf-dev__tile > .hub-btn { justify-self: center; }
+.sf-dev__tile-act { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
 /* Dateifeld in Formularen (FfFile::fieldHtml): Knopf für den FileForge-Dialog, daneben der gewählte Name. */
 .sf-ff-field { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; margin-top: 4px; }
 .sf-ff-field-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; color: var(--text); }

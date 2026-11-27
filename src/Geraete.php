@@ -26,6 +26,13 @@ final class Geraete
         return ['ok' => $r['ok'], 'error' => $r['ok'] ? '' : (string)($r['json']['error'] ?? $r['error'])];
     }
 
+    /** Gerät die Seite neu laden lassen (3.6.6, Hub ≥ 2.33.11 `op=neuladen`); Recht prüft der Hub. @return array{ok:bool,error:string} */
+    public static function neuladen(string $person, string $geraet): array
+    {
+        $r = HubApp::hub('/api/anzeige.php?op=neuladen', ['person' => $person, 'geraet' => $geraet]);
+        return ['ok' => $r['ok'], 'error' => $r['ok'] ? '' : (string)($r['json']['error'] ?? $r['error'])];
+    }
+
     /**
      * Gerät mit dem Code von `device.php` koppeln (3.4.0, Hub ≥ 2.33.8 `op=koppeln`). Wer koppeln darf, prüft der Hub.
      * @return array{ok:bool,error:string,geraet:array<string,mixed>}
