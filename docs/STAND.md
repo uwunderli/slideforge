@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.10 gebaut** (`entwickler/slide-pfeilspitze` ab 3.12.9 4ea6fce): Pfeil-Regler Spitze/Schaft (Editor + SlideRenderer). Offen: PPTX-Export ohne Spitze/Schaft. Bei Gitwart.
 - **27.11. 3.12.9 gebaut** (`entwickler/slide-fx-klick` ab 3.12.8 58d0bd2): Klick in der Effektliste wählt das Objekt, Doppelklick öffnet Einblenden. Bei Gitwart.
 - **27.11. 3.12.8 gebaut** (gleicher Zweig nach 3.12.7): Kürzel «Abspielen» im Katalog, Vorgabe Ctrl+Enter. Bei Gitwart.
 - **27.11. 3.12.7 gebaut** (`entwickler/slide-abspielen-oben` ab 3.12.6 66eb8b5): «▶ Abspielen» oben mittig über der Folie statt im Effekte-Bereich. Bei Gitwart.

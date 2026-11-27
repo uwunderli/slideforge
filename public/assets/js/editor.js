@@ -321,10 +321,20 @@
     return pts;
   }
 
-  function arrowPoints(w, h, style) {
-    const base = [[0, 0.35], [0.6, 0.35], [0.6, 0.1], [1, 0.5], [0.6, 0.9], [0.6, 0.65], [0, 0.65]];
-    const doubleH = [[0, 0.5], [0.2, 0.25], [0.2, 0.35], [0.8, 0.35], [0.8, 0.25], [1, 0.5], [0.8, 0.75], [0.8, 0.65], [0.2, 0.65], [0.2, 0.75]];
-    const doubleV = [[0.5, 0], [0.25, 0.2], [0.35, 0.2], [0.35, 0.8], [0.25, 0.8], [0.5, 1], [0.75, 0.8], [0.65, 0.8], [0.65, 0.2], [0.75, 0.2]];
+  /* Spitze und Schaft einstellbar (3.12.10, Urs 27.11.: «dass man die Grösse der Spitze verändern kann»):
+     head = Länge der Spitze in % der Pfeillänge (Vorgabe 40, beim Doppelpfeil je Spitze die Hälfte),
+     shaft = Dicke des Schafts in % der Breite (Vorgabe 30). Vorgaben ergeben genau die bisherige Form.
+     Gleiche Rechnung in src/SlideRenderer.php::arrowPoints. */
+  function arrowPoints(w, h, style, head, shaft) {
+    const L = Math.max(5, Math.min(95, Number(head) || 40)) / 100;
+    const d = L / 2;
+    const sh1 = Math.min(0.8, Math.max(0.05, (Number(shaft) || 30) / 100)) / 2;
+    const sh2 = Math.min(0.5, Math.max(0.05, (Number(shaft) || 30) / 100)) / 2;
+    const a = 1 - L;
+    const base = [[0, 0.5 - sh1], [a, 0.5 - sh1], [a, 0.1], [1, 0.5], [a, 0.9], [a, 0.5 + sh1], [0, 0.5 + sh1]];
+    const lo = 0.5 - sh2, hi = 0.5 + sh2;
+    const doubleH = [[0, 0.5], [d, 0.25], [d, lo], [1 - d, lo], [1 - d, 0.25], [1, 0.5], [1 - d, 0.75], [1 - d, hi], [d, hi], [d, 0.75]];
+    const doubleV = [[0.5, 0], [0.25, d], [lo, d], [lo, 1 - d], [0.25, 1 - d], [0.5, 1], [0.75, 1 - d], [hi, 1 - d], [hi, d], [0.75, d]];
     let tpl;
     if (style === 'left') tpl = base.map(([x, y]) => [1 - x, y]);
     else if (style === 'up') tpl = base.map(([x, y]) => [y, 1 - x]);
@@ -478,7 +488,7 @@
       const pts = []; tpl.forEach(([fx, fy]) => pts.push(fx * w, fy * h)); return pts;
     }
     if (shapeType === 'star') return starPoints(w, h, obj.starPoints || 5);
-    if (shapeType === 'arrow') return arrowPoints(w, h, obj.arrowStyle || 'right');
+    if (shapeType === 'arrow') return arrowPoints(w, h, obj.arrowStyle || 'right', obj.arrowHead, obj.arrowShaft);
     if (shapeType === 'bracket') return bracketPoints(w, h, obj.bracketStyle || 'curly-left');
     if (shapeType === 'speech-bubble') return bubblePoints(w, h, obj.bubbleStyle || 'rect-left');
     if (shapeType === 'line') { return [0, h / 2, w, h / 2]; }
@@ -492,6 +502,8 @@
     return {
       starPoints: node.getAttr('starPoints'),
       arrowStyle: node.getAttr('arrowStyle'),
+      arrowHead: node.getAttr('arrowHead'),
+      arrowShaft: node.getAttr('arrowShaft'),
       bracketStyle: node.getAttr('bracketStyle'),
       bubbleStyle: node.getAttr('bubbleStyle'),
     };
@@ -3964,6 +3976,8 @@
       node.setAttr('baseH', h);
       node.setAttr('starPoints', obj.starPoints || 5);
       node.setAttr('arrowStyle', obj.arrowStyle || 'right');
+      node.setAttr('arrowHead', obj.arrowHead || 40);
+      node.setAttr('arrowShaft', obj.arrowShaft || 30);
       node.setAttr('bracketStyle', obj.bracketStyle || 'curly-left');
       node.setAttr('bubbleStyle', obj.bubbleStyle || 'rect-left');
       if (!isOpen) setShapeFill(node, obj);
@@ -4155,6 +4169,8 @@
         shapeType: node.getAttr('shapeType') || 'triangle',
         starPoints: node.getAttr('starPoints') || 5,
         arrowStyle: node.getAttr('arrowStyle') || 'right',
+        arrowHead: node.getAttr('arrowHead') || 40,
+        arrowShaft: node.getAttr('arrowShaft') || 30,
         bracketStyle: node.getAttr('bracketStyle') || 'curly-left',
         bubbleStyle: node.getAttr('bubbleStyle') || 'rect-left',
         stroke: node.stroke() || 'transparent', strokeWidth: node.strokeWidth() || 0,
@@ -6373,6 +6389,8 @@
         html += fieldRibbonStarPoints('p_starPoints', obj.starPoints || 5);
       } else if (st === 'arrow') {
         html += fieldRibbonShapePicker('p_arrowStyle', ARROW_STYLE_OPTIONS, obj.arrowStyle || 'right');
+        html += fieldArrowRange('p_arrowHead', I.arrowHead || 'Spitze', 5, 95, obj.arrowHead || 40);
+        html += fieldArrowRange('p_arrowShaft', I.arrowShaft || 'Schaft', 5, 80, obj.arrowShaft || 30);
       } else if (st === 'speech-bubble') {
         html += fieldRibbonShapePicker('p_bubbleStyle', BUBBLE_STYLE_OPTIONS, obj.bubbleStyle || 'rect-left');
       }
@@ -7598,6 +7616,14 @@
       '</div>';
   }
 
+  /* Regler für Pfeil-Spitze/-Schaft (3.12.10), Aufbau wie der Deckkraft-Regler im Positionsbereich. */
+  function fieldArrowRange(id, label, min, max, value) {
+    return '<label class="ribbon-position-field ribbon-position-field-range" for="' + id + '" title="' + escapeHtml(label) + '">'
+      + '<span class="ribbon-position-field-label">' + escapeHtml(label) + '</span>'
+      + '<input type="range" id="' + id + '" min="' + min + '" max="' + max + '" value="' + (parseInt(value, 10) || min) + '" aria-label="' + escapeHtml(label) + '">'
+      + '</label>';
+  }
+
   function fieldRibbonStarPoints(id, value) {
     const fullLabel = I.starPoints || 'Anzahl Zacken';
     const shortLabel = I.starPointsLabel || 'Zacken';
@@ -7976,6 +8002,14 @@
         });
       }
       bindIconPicker('p_arrowStyle', 'arrowStyle');
+      on('p_arrowHead', 'input', (e) => {
+        node.setAttr('arrowHead', Math.max(5, Math.min(95, parseInt(e.target.value, 10) || 40)));
+        recomputeShapePoints(); refreshCanvas(); scheduleSave();
+      });
+      on('p_arrowShaft', 'input', (e) => {
+        node.setAttr('arrowShaft', Math.max(5, Math.min(80, parseInt(e.target.value, 10) || 30)));
+        recomputeShapePoints(); refreshCanvas(); scheduleSave();
+      });
       bindIconPicker('p_bracketStyle', 'bracketStyle');
       bindIconPicker('p_bubbleStyle', 'bubbleStyle');
     } else if (type === 'table') {

@@ -774,6 +774,8 @@ return [
     'props.fx_order' => 'Reihenfolge',
     'props.fx_pick_object' => 'Objekt wählen',
     'props.fx_pick_object_hint' => 'Objekt wählen, um Ein- und Ausblenden zu bearbeiten.',
+    'props.arrow_head' => 'Spitze',
+    'props.arrow_shaft' => 'Schaft',
     'props.anim_play' => 'Abspielen',
     'props.anim_play_hint' => 'Folie mit allen Effekten Schritt für Schritt abspielen',
     'props.anim_play_one' => 'Diesen Effekt einmal auf der Bühne zeigen',

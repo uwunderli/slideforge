@@ -60,11 +60,19 @@ class SlideRenderer
         return $pts;
     }
 
-    private static function arrowPoints(float $w, float $h, string $style): array
+    /** Spitze (Länge %, Vorgabe 40) und Schaft (Dicke %, Vorgabe 30) einstellbar (3.12.10); gleiche Rechnung wie editor.js arrowPoints. */
+    private static function arrowPoints(float $w, float $h, string $style, $head = 40, $shaft = 30): array
     {
-        $base = [[0, 0.35], [0.6, 0.35], [0.6, 0.1], [1, 0.5], [0.6, 0.9], [0.6, 0.65], [0, 0.65]];
-        $doubleH = [[0, 0.5], [0.2, 0.25], [0.2, 0.35], [0.8, 0.35], [0.8, 0.25], [1, 0.5], [0.8, 0.75], [0.8, 0.65], [0.2, 0.65], [0.2, 0.75]];
-        $doubleV = [[0.5, 0], [0.25, 0.2], [0.35, 0.2], [0.35, 0.8], [0.25, 0.8], [0.5, 1], [0.75, 0.8], [0.65, 0.8], [0.65, 0.2], [0.75, 0.2]];
+        $L = max(5, min(95, (float)$head ?: 40)) / 100;
+        $d = $L / 2;
+        $sv = (float)$shaft ?: 30;
+        $sh1 = min(0.8, max(0.05, $sv / 100)) / 2;
+        $sh2 = min(0.5, max(0.05, $sv / 100)) / 2;
+        $a = 1 - $L;
+        $base = [[0, 0.5 - $sh1], [$a, 0.5 - $sh1], [$a, 0.1], [1, 0.5], [$a, 0.9], [$a, 0.5 + $sh1], [0, 0.5 + $sh1]];
+        $lo = 0.5 - $sh2; $hi = 0.5 + $sh2;
+        $doubleH = [[0, 0.5], [$d, 0.25], [$d, $lo], [1 - $d, $lo], [1 - $d, 0.25], [1, 0.5], [1 - $d, 0.75], [1 - $d, $hi], [$d, $hi], [$d, 0.75]];
+        $doubleV = [[0.5, 0], [0.25, $d], [$lo, $d], [$lo, 1 - $d], [0.25, 1 - $d], [0.5, 1], [0.75, 1 - $d], [$hi, 1 - $d], [$hi, $d], [0.75, $d]];
         if ($style === 'left') $tpl = array_map(fn($p) => [1 - $p[0], $p[1]], $base);
         elseif ($style === 'up') $tpl = array_map(fn($p) => [$p[1], 1 - $p[0]], $base);
         elseif ($style === 'down') $tpl = array_map(fn($p) => [$p[1], $p[0]], $base);
@@ -212,7 +220,7 @@ class SlideRenderer
             return array_map(fn($p) => [$p[0] / 100 * $w, $p[1] / 100 * $h], $tpl);
         }
         if ($shapeType === 'star') return self::starPoints($w, $h, (int)($obj['starPoints'] ?? 5));
-        if ($shapeType === 'arrow') return self::arrowPoints($w, $h, $obj['arrowStyle'] ?? 'right');
+        if ($shapeType === 'arrow') return self::arrowPoints($w, $h, $obj['arrowStyle'] ?? 'right', $obj['arrowHead'] ?? 40, $obj['arrowShaft'] ?? 30);
         if ($shapeType === 'bracket') return self::bracketPoints($w, $h, $obj['bracketStyle'] ?? 'curly-left');
         if ($shapeType === 'speech-bubble') return self::bubblePoints($w, $h, $obj['bubbleStyle'] ?? 'rect-left');
         if ($shapeType === 'line') return [[0, $h / 2], [$w, $h / 2]];
