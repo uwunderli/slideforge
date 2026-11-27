@@ -94,3 +94,27 @@
     true
   );
 })(window);
+
+/* Schieberegler mit dem Mausrad (Urs 27.11.: «Wenn ich mit der Maus über so einem Feld bin, muss ich das mit dem Mausrad
+   bewegen können»): Rad über einem <input type="range"> verstellt ihn um einen Schritt (step, sonst 1/50 des Bereichs)
+   und meldet input + change wie beim Ziehen. Ctrl/Cmd+Rad bleibt beim Zoom. */
+(function () {
+  document.addEventListener('wheel', function (ev) {
+    var el = ev.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'range' || el.disabled || ev.ctrlKey || ev.metaKey) return;
+    var d = ev.deltaY || ev.deltaX;
+    if (!d) return;
+    ev.preventDefault();
+    var min = parseFloat(el.min); if (isNaN(min)) min = 0;
+    var max = parseFloat(el.max); if (isNaN(max)) max = 100;
+    var step = parseFloat(el.step);
+    if (isNaN(step) || step <= 0) step = 1;
+    var schritt = Math.max(step, Math.round((max - min) / 50 / step) * step);
+    var wert = parseFloat(el.value) || 0;
+    wert = Math.min(max, Math.max(min, wert + (d < 0 ? schritt : -schritt)));
+    if (String(wert) === el.value) return;
+    el.value = String(wert);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }, { passive: false, capture: true });
+})();
