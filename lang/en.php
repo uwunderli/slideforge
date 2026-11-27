@@ -92,7 +92,7 @@ return [
 
     'mobile.editor_unavailable_title' => 'Editor desktop only',
     'mobile.editor_unavailable_body' => 'The slide editor is not available on smartphones. Please use a laptop or tablet to edit — or use remote control from your phone.',
-    'mobile.back_dashboard' => 'Back to dashboard',
+    'mobile.back_dashboard' => 'Back to start',
     'mobile.remote_control' => 'Control',
     'mobile.dashboard_hint' => 'Open presenter mode on your laptop, then control slides from here.',
 
@@ -247,7 +247,7 @@ return [
     'editor.unnamed_slide' => 'Untitled slide',
     'editor.filmstrip_label_placeholder' => 'Layout name',
     'editor.saving' => 'Saving…',
-    'editor.dashboard' => 'Dashboard',
+    'editor.dashboard' => 'SlideForge',
     'editor.apply_template' => 'Apply Template',
     'editor.view_only_notice' => "You have view-only access to this presentation &ndash; changes are disabled.",
     'editor.template_badge' => 'Slide template',
@@ -811,7 +811,7 @@ return [
     'profile.tab_webdav' => 'WebDAV',
     'profile.tab_logos' => 'Logos import',
     'profile.tab_password' => 'Password',
-    'profile.back_to_dashboard' => 'Back to dashboard',
+    'profile.back_to_dashboard' => 'Back to start',
     'profile.role' => 'Role',
     'profile.role_admin' => 'Administrator',
     'profile.role_editor' => 'Editor',
@@ -1690,4 +1690,5 @@ return [
     'dialog.maximize' => 'Maximize',
     'dialog.restore' => 'Restore',
     'dialog.close' => 'Close',
+    'dashboard.title' => 'SlideForge',
 ];

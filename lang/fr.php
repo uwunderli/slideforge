@@ -88,7 +88,7 @@ return [
 
     'mobile.editor_unavailable_title' => 'Éditeur réservé au bureau',
     'mobile.editor_unavailable_body' => 'L\'éditeur de diapositives n\'est pas disponible sur smartphone. Utilisez un ordinateur portable ou une tablette pour éditer — ou la télécommande depuis le téléphone.',
-    'mobile.back_dashboard' => 'Retour au tableau de bord',
+    'mobile.back_dashboard' => 'Retour à l\'accueil',
     'mobile.remote_control' => 'Contrôler',
     'mobile.dashboard_hint' => 'Ouvrez le mode présentateur sur l\'ordinateur portable, puis contrôlez les diapositives d\'ici.',
 
@@ -240,7 +240,7 @@ return [
     'editor.menu_preview' => 'Aperçu',
     'editor.saved' => 'Enregistré',
     'editor.saving' => 'Enregistrement…',
-    'editor.dashboard' => 'Tableau de bord',
+    'editor.dashboard' => 'SlideForge',
     'editor.apply_template' => 'Appliquer le modèle',
     'editor.view_only_notice' => "Vous avez uniquement un accès en lecture à cette présentation &ndash; les modifications sont désactivées.",
     'editor.template_badge' => 'Modèle de diapositive',
@@ -778,7 +778,7 @@ return [
     'profile.tab_spellcheck' => 'Orthographe',
     'profile.tab_webdav' => 'WebDAV',
     'profile.tab_password' => 'Mot de passe',
-    'profile.back_to_dashboard' => 'Retour au tableau de bord',
+    'profile.back_to_dashboard' => 'Retour à l\'accueil',
     'profile.role' => 'Rôle',
     'profile.role_admin' => 'Administrateur',
     'profile.role_editor' => 'Éditeur',
@@ -1612,4 +1612,5 @@ return [
     'dialog.maximize' => 'Agrandir',
     'dialog.restore' => 'Restaurer',
     'dialog.close' => 'Fermer',
+    'dashboard.title' => 'SlideForge',
 ];

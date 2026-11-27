@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '705');
+define('ASSET_VERSION', '706');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -546,6 +546,18 @@ function sf_theme_boot(): string
         keep(v);
       } else {
         v = JSON.parse(sessionStorage.getItem(K) || 'null');
+      }
+      // Ohne Adresse und ohne Merkwert (z. B. aus FileForge «Öffnen mit» geöffnet): Farbe vom Hub-Fenster übernehmen
+      // (gleiche Herkunft hub.<domain>, also lesbar). Urs 27.11.: «dass das Design vom Hub kommt, also von der Einstellung des Users».
+      if (!ok(v)) {
+        try {
+          var tr = window.top.document.documentElement, ta = tr.getAttribute('data-dialog-accent'), r0 = document.documentElement;
+          if (ta) {
+            r0.setAttribute('data-dialog-accent', ta);
+            ['--hub-base-hue', '--hub-chroma', '--hub-dialog-accent'].forEach(function (k) { var x = tr.style.getPropertyValue(k); if (x) r0.style.setProperty(k, x); });
+          }
+          if (tr.getAttribute('data-dialog-chrome') === 'flach') r0.setAttribute('data-dialog-chrome', 'flach');
+        } catch (e2) {}
       }
       if (ok(v)) {
         var r = document.documentElement, m = (document.cookie.match(/(?:^|;\s*)cf_appearance=([a-z]+)/) || [])[1] || 'dark';

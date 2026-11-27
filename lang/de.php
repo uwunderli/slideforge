@@ -95,7 +95,7 @@ return [
     // Mobile UI (v2.0.0)
     'mobile.editor_unavailable_title' => 'Editor nur am Desktop',
     'mobile.editor_unavailable_body' => 'Der Folien-Editor ist auf Smartphones nicht verfügbar. Bitte am Laptop oder Tablet bearbeiten — oder vom Handy die Fernsteuerung nutzen.',
-    'mobile.back_dashboard' => 'Zum Dashboard',
+    'mobile.back_dashboard' => 'Zur Startseite',
     'mobile.remote_control' => 'Steuern',
     'mobile.dashboard_hint' => 'Öffne am Laptop den Präsentationsmodus, dann steuerst du von hier aus die Folien.',
 
@@ -253,7 +253,7 @@ return [
     'editor.unnamed_slide' => 'Unbenannte Folie',
     'editor.filmstrip_label_placeholder' => 'Layout-Name',
     'editor.saving' => 'Speichere…',
-    'editor.dashboard' => 'Dashboard',
+    'editor.dashboard' => 'FolienSchmiede',
     'editor.apply_template' => 'Vorlage anwenden',
     'editor.view_only_notice' => 'Du hast nur Ansehen-Rechte für diese Präsentation &ndash; Änderungen sind deaktiviert.',
     'editor.template_badge' => 'Folienvorlage',
@@ -861,7 +861,7 @@ return [
     'profile.tab_webdav' => 'WebDAV',
     'profile.tab_logos' => 'Logos-Import',
     'profile.tab_password' => 'Passwort',
-    'profile.back_to_dashboard' => 'Zurück zum Dashboard',
+    'profile.back_to_dashboard' => 'Zurück zur Startseite',
     'profile.role' => 'Rolle',
     'profile.role_admin' => 'Administrator',
     'profile.role_editor' => 'Editor',
@@ -1825,4 +1825,5 @@ return [
     'import.xlsx_shape_as_rect' => 'Excel: Die Form «{preset}» wird als Rechteck übernommen.',
     'import.xlsx_image_failed' => 'Excel: Ein Bild konnte nicht übernommen werden.',
     'import.xlsx_hint' => 'Excel-Import (.xlsx): das erste Blatt wird eine Folie. Formen, Linien und Bilder bleiben einzelne Objekte, Text in Formen ein eigenes Textfeld, Zellen mit Inhalt werden Textfelder. Zellraster, Formeln und Diagramme fehlen.',
+    'dashboard.title' => 'FolienSchmiede',
 ];

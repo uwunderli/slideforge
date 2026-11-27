@@ -80,7 +80,7 @@ return [
 
     'mobile.editor_unavailable_title' => 'Editor solo su desktop',
     'mobile.editor_unavailable_body' => 'L\'editor di slide non è disponibile sugli smartphone. Usa un portatile o un tablet per modificare — oppure il controllo remoto dal telefono.',
-    'mobile.back_dashboard' => 'Torna alla dashboard',
+    'mobile.back_dashboard' => 'Torna alla pagina iniziale',
     'mobile.remote_control' => 'Controlla',
     'mobile.dashboard_hint' => 'Apri la modalità presentatore sul portatile, poi controlla le slide da qui.',
 
@@ -232,7 +232,7 @@ return [
     'editor.menu_preview' => 'Anteprima',
     'editor.saved' => 'Salvato',
     'editor.saving' => 'Salvataggio…',
-    'editor.dashboard' => 'Dashboard',
+    'editor.dashboard' => 'SlideForge',
     'editor.apply_template' => 'Applica modello',
     'editor.view_only_notice' => 'Hai accesso in sola lettura a questa presentazione &ndash; le modifiche sono disabilitate.',
     'editor.template_badge' => 'Modello diapositiva',
@@ -770,7 +770,7 @@ return [
     'profile.tab_spellcheck' => 'Ortografia',
     'profile.tab_webdav' => 'WebDAV',
     'profile.tab_password' => 'Password',
-    'profile.back_to_dashboard' => 'Torna alla dashboard',
+    'profile.back_to_dashboard' => 'Torna alla pagina iniziale',
     'profile.role' => 'Ruolo',
     'profile.role_admin' => 'Amministratore',
     'profile.role_editor' => 'Editor',
@@ -1598,4 +1598,5 @@ return [
     'dialog.maximize' => 'Ingrandisci',
     'dialog.restore' => 'Ripristina',
     'dialog.close' => 'Chiudi',
+    'dashboard.title' => 'SlideForge',
 ];

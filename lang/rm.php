@@ -80,7 +80,7 @@ return [
 
     'mobile.editor_unavailable_title' => 'Editur mo sin desktop',
     'mobile.editor_unavailable_body' => 'L\'editur da slides na stat betg disponibel sin smartphones. Utilisescha in laptop u ina tabletta per editar — u la telecumanda dal telefonin.',
-    'mobile.back_dashboard' => 'Enavos al dashboard',
+    'mobile.back_dashboard' => 'Enavos a la pagina da partenza',
     'mobile.remote_control' => 'Controllar',
     'mobile.dashboard_hint' => 'Avra il modus da preschataziun sin il laptop, lura controlla las slides da qua.',
 
@@ -232,7 +232,7 @@ return [
     'editor.menu_preview' => 'Previsualisaziun',
     'editor.saved' => 'Guardà',
     'editor.saving' => 'Guarda…',
-    'editor.dashboard' => 'Tabellier',
+    'editor.dashboard' => 'SlideForge',
     'editor.apply_template' => 'Applitgar model',
     'editor.view_only_notice' => 'Ti has mo access da lectura a questa preschataziun &ndash; midaments èn deactivads.',
     'editor.template_badge' => 'Model da slide',
@@ -770,7 +770,7 @@ return [
     'profile.tab_spellcheck' => 'Ortografia',
     'profile.tab_webdav' => 'WebDAV',
     'profile.tab_password' => 'Pled-clav',
-    'profile.back_to_dashboard' => 'Enavos al tabellier',
+    'profile.back_to_dashboard' => 'Enavos a la pagina da partenza',
     'profile.role' => 'Rol',
     'profile.role_admin' => 'Administratur',
     'profile.role_editor' => 'Editur',
@@ -1598,4 +1598,5 @@ return [
     'dialog.maximize' => 'Maximar',
     'dialog.restore' => 'Restaurar',
     'dialog.close' => 'Serrar',
+    'dashboard.title' => 'SlideForge',
 ];

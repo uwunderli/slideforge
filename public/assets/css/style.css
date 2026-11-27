@@ -11968,7 +11968,8 @@ body:has(.editor-layout) > .editor-layout {
    als das Blau im dunklen Bild. Darum hier kräftiger, und für den Ring auf der
    dunklen Miniatur das Gold aus der Markenpalette, das darauf trägt. */
 html[data-theme="light"] {
-  --ribbon-bg-active: rgba(133, 97, 45, 0.42);
+  /* 27.11.2026: nicht mehr Braun, sondern der Akzent aus dem Hub-Design der Person. */
+  --ribbon-bg-active: color-mix(in oklch, var(--accent) 42%, transparent);
 }
 html[data-theme="light"] .layout-picker-item.selected .layout-picker-thumb {
   border-color: var(--brand-gold);
