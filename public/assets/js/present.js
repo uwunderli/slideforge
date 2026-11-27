@@ -1363,6 +1363,8 @@
 
   function updateUI(h) {
     currentIndex = h;
+    // Hub-Adresse folgt der gezeigten Folie (Ctrl+R im Hub, Urs 27.11.)
+    if (window.SFAppOrt) window.SFAppOrt.melde({ slide: h });
     const counter = document.getElementById('presCounter');
     if (counter) counter.textContent = (h + 1) + ' / ' + P.slideCount;
 

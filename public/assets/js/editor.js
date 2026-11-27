@@ -2074,6 +2074,8 @@
     SF.currentIndex = index;
     const slide = SF.slides[index];
     if (!slide) return;
+    // Hub-Adresse folgt der offenen Folie (Ctrl+R im Hub öffnet sie wieder, Urs 27.11.)
+    if (window.SFAppOrt && !SF.templateMode) window.SFAppOrt.melde({ slide: index });
 
     // Alte Objekte entfernen (ausser Hintergrund + Transformer)
     getTopLevelNodes().forEach((n) => n.destroy());

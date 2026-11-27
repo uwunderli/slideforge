@@ -4,6 +4,7 @@ Auth::requireLogin();
 $me = Auth::currentUser();
 
 $id = $_GET['id'] ?? '';
+sf_kopie_weg_umleiten((string)$id);
 $perm = Presentation::checkPermission($id, $me['id']);
 if (!$perm) {
     http_response_code(403);
@@ -94,6 +95,7 @@ $presentRibbonCatalog = PresentRibbonLayout::catalogForClient($presentRibbonCont
 $bodyClass = 'present-mode';
 $hideTopbar = true;
 require __DIR__ . '/includes/header.php';
+echo sf_app_ort_extra((string)$id);
 ?>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DSEG7+Classic:wght@700&display=swap">
 <div class="present-layout<?= $showTimebar ? '' : ' present-timebar-hidden' ?>" style="--present-slide-aspect: <?= (int)$meta['width'] ?> / <?= (int)$meta['height'] ?>;">

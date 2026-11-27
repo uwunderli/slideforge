@@ -16,6 +16,37 @@
 
   global.SFBusy = { show: busyShow, hide: busyHide };
 
+  /**
+   * App-Ort an den Hub-Rahmen (Hub ≥ 2.33.9; Urs 27.11.: «Wenn ich ctrl+r klicke lande ich auf dem Dashboard statt in der Folie»).
+   * Meldet { type:'hub-app-ort', pfad:'/editor.php?…' } (Pfad ab App-Basis); der Hub schreibt ihn als `open=` in seine Adresse.
+   * Nur direkt unter dem Hub-Fenster und nur an den geprüften Hub-Origin aus cf-theme.js, nie an '*'.
+   */
+  var ORT_WEG = ['hub_session', 'hub_origin', 'hub_theme', 'hub_accent', 'hub_chrome', 'open', 'hinweis'];
+  function hubOrigin() {
+    try {
+      if (global.ChurchForgeTheme && typeof global.ChurchForgeTheme.hubOrigin === 'function') return global.ChurchForgeTheme.hubOrigin() || '';
+    } catch (e) { /* ignore */ }
+    try { return global.sessionStorage.getItem('cf_hub_origin') || ''; } catch (e) { return ''; }
+  }
+  function meldeOrt(extra) {
+    if (global.parent === global || global.parent !== global.top) return;
+    var ziel = hubOrigin();
+    if (!/^https?:\/\/[^/]+$/.test(ziel)) return;
+    var q = new URLSearchParams(global.location.search);
+    ORT_WEG.forEach(function (k) { q.delete(k); });
+    [global.SF_APP_ORT_EXTRA, extra].forEach(function (o) {
+      if (!o || typeof o !== 'object') return;
+      Object.keys(o).forEach(function (k) { q.set(k, String(o[k])); });
+    });
+    var pfad = global.location.pathname;
+    var s = q.toString();
+    pfad = pfad.slice(pfad.lastIndexOf('/')) + (s ? '?' + s : '');
+    try { global.parent.postMessage({ type: 'hub-app-ort', pfad: pfad }, ziel); } catch (e) { /* ignore */ }
+  }
+  global.SFAppOrt = { melde: meldeOrt };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { meldeOrt(); });
+  else meldeOrt();
+
   document.addEventListener(
     'submit',
     function (e) {

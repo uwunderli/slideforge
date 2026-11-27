@@ -45,7 +45,7 @@ define('DEMO_MODE', false);
 // Versionsnummer für CSS/JS-Cache-Busting: bei jedem Deployment mit
 // geänderten assets/-Dateien hochzählen, damit Browser nicht die alte
 // gecachte Version von style.css / editor.js weiterverwenden.
-define('ASSET_VERSION', '717');
+define('ASSET_VERSION', '718');
 
 /** Seed-Ordnername des Standard-Folien-Sets (seed/layout-sets/<name>/). */
 define('DEFAULT_LAYOUT_SET_SEED', 'schlicht');
@@ -645,4 +645,34 @@ function sf_theme_boot(): string
   })();</script>
 
 HTML;
+}
+
+/**
+ * App-Ort beim Neuladen im Hub (Urs 27.11.2026: «Wenn ich ctrl+r klicke lande ich auf dem Dashboard statt in der Folie»).
+ * Die Seite meldet dem Hub-Rahmen ihren Pfad (sf-hub-boot.js → `hub-app-ort`); für FileForge-Dateien geht der Verweis `ref` mit,
+ * damit eine abgelaufene Arbeitskopie beim Neuladen wieder aus FileForge geöffnet werden kann.
+ */
+function sf_app_ort_extra(string $id): string
+{
+    $w = Presentation::exists($id) ? Workspace::forPresentation($id) : null;
+    $ref = is_array($w) && (string)($w['share'] ?? '') === '' ? (string)($w['ref'] ?? '') : '';
+    if ($ref === '' || FfFile::parseRef($ref) === null) {
+        return '';
+    }
+    return '<script>window.SF_APP_ORT_EXTRA = ' . json_encode(['ref' => $ref], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';</script>';
+}
+
+/**
+ * Arbeitskopie gibt es nicht mehr (Aufräum-Job) — statt «kein Zugriff» zurück auf die Startseite: mit gültigem FileForge-Verweis
+ * öffnet sie die Datei neu (`open=`), sonst steht dort ein Hinweis. Rechte prüft danach wie immer FileForge.
+ */
+function sf_kopie_weg_umleiten(string $id): void
+{
+    if ($id === '' || Presentation::exists($id)) {
+        return;
+    }
+    $ref = (string)($_GET['ref'] ?? '');
+    $ziel = 'index.php?hinweis=kopie' . ($ref !== '' && FfFile::parseRef($ref) !== null ? '&open=' . rawurlencode($ref) : '');
+    header('Location: ' . $ziel, true, 302);
+    exit;
 }

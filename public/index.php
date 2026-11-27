@@ -53,5 +53,16 @@ require __DIR__ . '/includes/header.php';
   });
 })();
 </script>
+<?php if (($_GET['hinweis'] ?? '') === 'kopie'): /* Arbeitskopie war weg (Neuladen im Hub nach dem Aufräumen) */ ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.CfStatus && window.CfStatus.show) {
+    window.CfStatus.show('info', <?= json_encode(!empty($_GET['open'])
+        ? 'Die Arbeitskopie gab es nicht mehr — die Präsentation wird neu aus FileForge geöffnet.'
+        : 'Die Arbeitskopie gibt es nicht mehr. Bitte die Präsentation neu öffnen.', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>);
+  }
+});
+</script>
+<?php endif; ?>
 <?php $sfStatusFile = ''; require __DIR__ . '/includes/statusbar.php'; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>

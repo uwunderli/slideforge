@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.6.3] - 2026-11-27
+
+- **Ctrl+R im Hub bleibt in der Folie** (Urs: «Wenn ich ctrl+r klicke lande ich auf dem Dashboard statt in der Folie»): Startseite, Editor und Presenter melden dem Hub-Rahmen ihren Pfad (`hub-app-ort`, Hub ≥ 2.33.9; Editor/Presenter mit `slide=` und FileForge-Verweis `ref=`). Ist die Arbeitskopie beim Neuladen schon aufgeräumt, öffnet die Startseite die Datei neu aus FileForge (mit Hinweis) statt «kein Zugriff».
+
 ## [3.6.2] - 2026-11-27
 
 - **Medien-Seitenleiste füllt die Höhe** (Urs: «Halbwegs repariert»): Die Liste reicht bis unten, Bildlauf nur in der Liste; vorher fester Kasten von ~240 px.

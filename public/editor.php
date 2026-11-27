@@ -5,6 +5,7 @@ Auth::requireLogin();
 $me = Auth::currentUser();
 
 $id = $_GET['id'] ?? '';
+sf_kopie_weg_umleiten((string)$id);
 // FileForge-Dateien: Recht kommt aus FileForge (alle 5 Min. neu gefragt), sonst aus der Präsentation
 $perm = Presentation::exists($id) ? Workspace::recheck($id, (string)$me['id']) : null;
 if (!$perm) {
@@ -772,6 +773,7 @@ if ($isLayoutSetMode && $editorCurrentSlide) {
 $pageTitle = 'Editor · ' . $headerPresentationTitle;
 $hideTopbar = true;
 require __DIR__ . '/includes/header.php';
+echo sf_app_ort_extra((string)$id);
 ?>
 <div class="editor-topbar editor-topbar-slim">
   <div class="editor-topbar-left">
