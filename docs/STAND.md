@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.53 gebaut** (gleicher Zweig): Zeitstrahl-Reiter wirklich ausgeblendet ohne Zeitstrahl.
 - **27.11. 3.12.52 gebaut** (`entwickler/slide-farbe-anwenden` ab 3.12.51): Anwenden-Knöpfe vor Schrift-/Markerfarbe im Menüband.
 - **27.11. 3.12.51 gebaut** (`entwickler/slide-notizen-menueband` ab 3.12.48 7632cde, Worktree `gemeinde/wt-slide-notizen-menueband`): Notiz-Leiste weg, Menüband Zeichen/Schriftfarbe wirkt aufs Notizfeld; neu Markerfarbe + «Kein Marker» im Menüband. Nicht im Browser geprüft.
 - **27.11. 3.12.50 gebaut** (gleicher Zweig nach 3.12.49): Zeitstrahl Schritt 2 — Abschnitt «Aussehen» (Kategorien/Legende, Blasenform inkl. Sprechblase, Rand/Deckkraft, Strahl, Schrift). Offen: Schritt 3 Animation, Schritt 4 Excel, PPTX/ODP echt. Nicht im Browser geprüft.

@@ -9615,6 +9615,8 @@ body:has(.editor-layout) > .editor-layout {
   overflow-x: auto;
   scrollbar-width: thin;
 }
+/* 3.12.53: display:inline-flex überstimmte [hidden] — der Zeitstrahl-Reiter stand immer da (Urs 27.11.). */
+.props-side-tab[hidden] { display: none; }
 .props-side-tab {
   appearance: none;
   flex: 1 1 0;

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.53] - 2026-11-27
+
+### Fixed
+- **Reiter «Zeitstrahl» nur bei markiertem Zeitstrahl** (Urs 27.11.): Er stand immer in der rechten Leiste (CSS überstimmte `hidden`) und führte ohne Zeitstrahl auf die Vorlagen.
+
 ## [3.12.52] - 2026-11-27
 
 ### Changed
