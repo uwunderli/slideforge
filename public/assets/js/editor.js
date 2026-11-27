@@ -3631,11 +3631,24 @@
     img.src = displaySrc;
   }
 
+  /* Verlaufsfarbe mit Deckkraft (0–100) als rgba; gleiche Rechnung in SlideRenderer::gradStop (3.12.23). */
+  function gradRgba(hex, alpha) {
+    const a = Math.max(0, Math.min(100, alpha === undefined || alpha === null || alpha === '' ? 100 : Number(alpha))) / 100;
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return hex;
+    const n = parseInt(m[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function gradAlpha(node, i) {
+    const v = node.getAttr('gradAlpha' + i);
+    return v === undefined || v === null ? 100 : Math.max(0, Math.min(100, parseInt(v, 10)));
+  }
+
   function applyShapeGradientVisual(node) {
     const type = node.getAttr('objType');
     const angle = node.getAttr('gradAngle') || 0;
-    const c1 = node.getAttr('gradColor1') || '#3a6c8d';
-    const c2 = node.getAttr('gradColor2') || '#87b42b';
+    const c1 = gradRgba(node.getAttr('gradColor1') || '#3a6c8d', gradAlpha(node, 1));
+    const c2 = gradRgba(node.getAttr('gradColor2') || '#87b42b', gradAlpha(node, 2));
     let w, h, ox = 0, oy = 0;
     if (type === 'ellipse') {
       w = node.radiusX() * 2; h = node.radiusY() * 2;
@@ -3661,6 +3674,8 @@
       node.setAttr('gradColor1', obj.gradColor1 || '#3a6c8d');
       node.setAttr('gradColor2', obj.gradColor2 || '#87b42b');
       node.setAttr('gradAngle', obj.gradAngle !== undefined ? obj.gradAngle : 90);
+      node.setAttr('gradAlpha1', obj.gradAlpha1 !== undefined ? obj.gradAlpha1 : 100);
+      node.setAttr('gradAlpha2', obj.gradAlpha2 !== undefined ? obj.gradAlpha2 : 100);
       node.fillEnabled(true);
       applyShapeGradientVisual(node);
     } else if (obj.fillType === 'none') {
@@ -4073,6 +4088,8 @@
         gradColor1: node.getAttr('gradColor1') || '#3a6c8d',
         gradColor2: node.getAttr('gradColor2') || '#87b42b',
         gradAngle: node.getAttr('gradAngle') || 90,
+        gradAlpha1: gradAlpha(node, 1),
+        gradAlpha2: gradAlpha(node, 2),
       };
     }
     if (fillType === 'none') {
@@ -6179,8 +6196,8 @@
   }
 
   function updateObjectGradientPreview() {
-    const c1 = document.getElementById('objGradColor1')?.value || '#3a6c8d';
-    const c2 = document.getElementById('objGradColor2')?.value || '#87b42b';
+    const c1 = gradRgba(document.getElementById('objGradColor1')?.value || '#3a6c8d', document.getElementById('objGradAlpha1')?.value);
+    const c2 = gradRgba(document.getElementById('objGradColor2')?.value || '#87b42b', document.getElementById('objGradAlpha2')?.value);
     const angle = parseInt(document.getElementById('objGradAngle')?.value, 10) || 0;
     const preview = document.getElementById('objectGradientPreview');
     const label = document.getElementById('objGradAngleLabel');
@@ -6210,11 +6227,15 @@
     const c1 = document.getElementById('objGradColor1');
     const c2 = document.getElementById('objGradColor2');
     const angle = document.getElementById('objGradAngle');
-    [c1, c2, angle].forEach((el) => {
+    const a1 = document.getElementById('objGradAlpha1');
+    const a2 = document.getElementById('objGradAlpha2');
+    [c1, c2, angle, a1, a2].forEach((el) => {
       if (el) el.disabled = !isGrad;
     });
 
     if (isGrad && node) {
+      if (a1) a1.value = String(gradAlpha(node, 1));
+      if (a2) a2.value = String(gradAlpha(node, 2));
       if (c1) c1.value = node.getAttr('gradColor1') || '#3a6c8d';
       if (c2) c2.value = node.getAttr('gradColor2') || '#87b42b';
       if (angle) angle.value = String(node.getAttr('gradAngle') !== undefined ? node.getAttr('gradAngle') : 90);
@@ -6227,6 +6248,10 @@
     const c1 = document.getElementById('objGradColor1')?.value || '#3a6c8d';
     const c2 = document.getElementById('objGradColor2')?.value || '#87b42b';
     const angle = parseInt(document.getElementById('objGradAngle')?.value, 10) || 0;
+    ['objGradAlpha1', 'objGradAlpha2'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) node.setAttr('gradAlpha' + (i + 1), Math.max(0, Math.min(100, parseInt(el.value, 10) || 0)));
+    });
     updateObjectGradientPreview();
     applyObjectFillGradient(node, c1, c2, angle);
   }
@@ -6328,7 +6353,7 @@
       scheduleSave();
     });
 
-    ['objGradColor1', 'objGradColor2', 'objGradAngle'].forEach((id) => {
+    ['objGradColor1', 'objGradColor2', 'objGradAngle', 'objGradAlpha1', 'objGradAlpha2'].forEach((id) => {
       document.getElementById(id)?.addEventListener('input', () => {
         const node = ribbonObjectColorNode();
         if (!node || !shapeSupportsRibbonFill(node)) {

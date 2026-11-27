@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.23] - 2026-11-27
+
+### Added
+- **Verlauf mit Deckkraft je Farbe** (Urs 27.11.: «Alpha Kanal wählen», harter Schnitt): Unter Farbe 1 und Farbe 2 je ein Regler «Deckkraft» mit Zahl (0–100 %). Mit Farbe 2 auf 0 % läuft der Verlauf weich ins Durchsichtige aus. Editor, Vorschau und Präsentation gleich; bestehende Verläufe bleiben deckend (100 %).
+
 ## [3.12.22] - 2026-11-27
 
 ### Changed

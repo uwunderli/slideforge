@@ -39,6 +39,8 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
             <span class="sr-only"><?= h(t('props.color1')) ?></span>
             <input type="color" id="objGradColor1" value="#3a6c8d" disabled title="<?= h(t('props.color1')) ?>">
           </label>
+          <?php /* Deckkraft je Verlaufsfarbe (3.12.23, Urs 27.11.: «Alpha Kanal wählen»): 0 % = durchsichtig, weicher Auslauf. */ ?>
+          <input type="range" id="objGradAlpha1" min="0" max="100" step="1" value="100" disabled data-hub-range data-hub-range-unit="%" aria-label="<?= h(t('props.color1')) ?>: <?= h(t('props.grad_alpha')) ?>" title="<?= h(t('props.grad_alpha')) ?>">
         </div>
         <div class="ribbon-object-grad-field">
           <span><?= h(t('props.color2')) ?></span>
@@ -46,6 +48,7 @@ $rbIconOpacity = '<svg class="ribbon-type-icon" viewBox="0 0 24 24" fill="none" 
             <span class="sr-only"><?= h(t('props.color2')) ?></span>
             <input type="color" id="objGradColor2" value="#87b42b" disabled title="<?= h(t('props.color2')) ?>">
           </label>
+          <input type="range" id="objGradAlpha2" min="0" max="100" step="1" value="100" disabled data-hub-range data-hub-range-unit="%" aria-label="<?= h(t('props.color2')) ?>: <?= h(t('props.grad_alpha')) ?>" title="<?= h(t('props.grad_alpha')) ?>">
         </div>
       </div>
       <div class="ribbon-object-grad-angle">

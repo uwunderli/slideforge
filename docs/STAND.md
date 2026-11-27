@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.23 gebaut** (`entwickler/slide-verlauf-alpha` ab 3.12.22 c29a0b8): Verlauf mit Deckkraft je Farbe. Offen: PPTX/ODP-Export ohne Alpha. Bei Gitwart.
 - **27.11. 3.12.22 gebaut** (`entwickler/slide-raster-sync` ab 3.12.21 068fca0): Raster/Filmstreifen synchron, Einfügen nach Auswahl. Bei Gitwart (nach Hub 2.37.2).
 - **27.11. 3.12.21 gebaut** (`entwickler/slide-play-leiste` ab 3.12.20 206bdb3): Abspiel-Anzeige in der Notizen-Leiste. Bei Gitwart.
 - **27.11. 3.12.20 gebaut** (gleicher Zweig nach 3.12.19): Ctrl+A auf der Folienfläche wählt alle Objekte. Bei Gitwart.

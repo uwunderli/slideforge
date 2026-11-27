@@ -684,6 +684,7 @@ return [
     'props.fill_solid' => 'Farbe',
     'props.fill_gradient' => 'Verlauf',
     'props.color1' => 'Farbe 1',
+    'props.grad_alpha' => 'Deckkraft',
     'props.color2' => 'Farbe 2',
     'props.angle' => 'Winkel',
     'props.fill_color' => 'Füllfarbe',
