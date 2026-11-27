@@ -7166,7 +7166,15 @@
     el.innerHTML = '<span class="sf-play-step" role="status" aria-live="polite">' + escapeHtml(I.animPlayLoading || 'Folie wird geladen…') + '</span>'
       + '<button type="button" class="hub-icon-btn sf-play-close" title="' + escapeHtml(closeTip + (helpTip ? ' · ' + helpTip : '')) + '" aria-label="' + escapeHtml(closeTip) + '">'
       + '<span aria-hidden="true">✕</span></button>';
-    host.appendChild(el);
+    /* 3.12.21 (Urs 27.11.: «Mach das auch in die Liste hier»): Anzeige in der Notizen-Leiste an Stelle des Abspielen-Knopfs;
+       ohne Notizen-Leiste (nur lesen) oben über der Folie wie bisher. */
+    const playBtn = document.getElementById('stagePlayBtn');
+    if (playBtn && playBtn.closest('.notes-panel-header')) {
+      el.classList.add('sf-play-hint--bar');
+      playBtn.after(el);
+    } else {
+      host.appendChild(el);
+    }
     const frame = document.createElement('iframe');
     frame.className = 'sf-play-frame';
     frame.title = I.animPlay || 'Abspielen';

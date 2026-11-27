@@ -12140,6 +12140,17 @@ select.sf-fsel-native { display: none !important; }
   letter-spacing: normal;
 }
 .canvas-area:has(> .sf-play-hint) .sf-stage-play { visibility: hidden; }
+/* Anzeige beim Abspielen in der Notizen-Leiste (3.12.21): ersetzt den Knopf in der Mitte. */
+.notes-panel-header:has(> .sf-play-hint--bar) .sf-stage-play { display: none; }
+.sf-play-hint.sf-play-hint--bar {
+  position: static;
+  transform: none;
+  justify-self: center;
+  max-width: 100%;
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: normal;
+}
 /* Abspielen (3.12.3): Bild genau über der Folie, klick-durchlässig; kleiner Hinweis oben, nur ✕ ist anklickbar. */
 .sf-play-frame {
   position: absolute;

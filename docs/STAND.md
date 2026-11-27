@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **27.11. 3.12.21 gebaut** (`entwickler/slide-play-leiste` ab 3.12.20 206bdb3): Abspiel-Anzeige in der Notizen-Leiste. Bei Gitwart.
 - **27.11. 3.12.20 gebaut** (gleicher Zweig nach 3.12.19): Ctrl+A auf der Folienfläche wählt alle Objekte. Bei Gitwart.
 - **27.11. 3.12.19 gebaut** (gleicher Zweig nach 3.12.18): Notizen ein-/ausklappbar, Abspielen bleibt in der Leiste. Bei Gitwart.
 - **27.11. 3.12.18 gebaut** (gleicher Zweig nach 3.12.17): Abspielen mittig in der Notizen-Leiste. Bei Gitwart.

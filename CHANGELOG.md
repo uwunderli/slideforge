@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [3.12.21] - 2026-11-27
+
+### Changed
+- **Abspiel-Anzeige in der Notizen-Leiste** (Urs 27.11.): «Abspielen · Folie x · Schritt y/z ✕» steht beim Abspielen mittig in der Notizen-Leiste an Stelle des Knopfs, nicht mehr über der Folie.
+
 ## [3.12.20] - 2026-11-27
 
 ### Added
