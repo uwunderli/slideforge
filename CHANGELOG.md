@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Neu
 - **Render-Haken für SignForge:** `POST hooks/render.php` (signierter App-Aufruf, jede eingetragene App) macht aus `slides.json` die Reveal-Abschnitte wie im Presenter, dazu die Schriften (`fontsCss`, `fontsHead`) und das Medien-Laufzeitskript (`runtimeJs`). Reine Darstellung, kein Datenzugriff; Rumpf höchstens 8 MB.
 
+### Sicherheit
+- **Folienwerte abgesichert (Controller-Befund SignForge B1):** Alle Werte aus `slides.json`, die in `style="…"`, SVG- oder andere Attribute gelangen, laufen durch feste Filter: Zahlen gecastet (Drehung, Deckkraft, Strichstärken, Verlaufswinkel, Masse), Farben nur als #hex, rgb()/rgba()/hsl()/hsla() mit Zahlen oder Farbname, sonst Vorgabe; Schriftfamilie, Schriftstärke, Ausrichtung und Animationstyp nach Positivliste; Hintergrund-Verlauf nur als *-gradient() ohne url(); Adressen ohne fremde Schemata, in CSS-url() prozentkodiert; eingebettete Medien nur mit echtem Base64. Gültige Folien sehen gleich aus.
+- **Render-Haken ohne Inline-Skript:** Das Übergangs-Skript steckt nicht mehr in `sections`, sondern am Ende von `runtimeJs` (Apps mit CSP-Nonce). Presenter, Export und Vorschau von SlideForge selbst unverändert.
+
 ## [4.0.0] - 2026-11-27
 
 ### Neu in 4.0

@@ -25,7 +25,9 @@ class SlideRenderer
         if (strpos($src, 'data:') !== 0) {
             return null;
         }
-        if (!preg_match('/^data:([^;]+);base64,(.+)$/s', $src, $m)) {
+        /* Nur echtes Base64 und ein schlichter MIME-Typ: der Inhalt landet als Text in
+           <script type="text/plain">; ein «</script>» darin würde ausbrechen (4.1.0, B1). */
+        if (!preg_match('/^data:([a-zA-Z0-9.+\/-]+);base64,([A-Za-z0-9+\/=\s]++)$/', $src, $m)) {
             return null;
         }
         $mime = $m[1];
@@ -40,6 +42,99 @@ class SlideRenderer
         self::$inlineMedia[$ref] = ['mime' => $mime, 'b64' => $m[2]];
         return $ref;
     }
+
+    /*
+     * Absicherung der Ausgabe (4.1.0, Controller-Befund SignForge B1, 28.11.2026):
+     * Jeder Wert aus slides.json, der in style="…", ein SVG-Attribut oder ein anderes
+     * Attribut gelangt, geht durch einen dieser Filter. Zahlen werden gecastet, Farben
+     * und CSS-Schlüsselwörter nur nach festem Muster bzw. Positivliste übernommen,
+     * sonst gilt die Vorgabe. Gültige Werte kommen unverändert heraus.
+     */
+
+    /** Endliche Zahl als Text (höchstens 4 Nachkommastellen), sonst Rückfall. */
+    private static function num($v, float $fallback = 0.0): string
+    {
+        $f = (is_int($v) || is_float($v) || (is_string($v) && is_numeric(trim($v)))) ? (float)$v : $fallback;
+        if (!is_finite($f)) {
+            $f = $fallback;
+        }
+        $s = rtrim(rtrim(number_format($f, 4, '.', ''), '0'), '.');
+        return ($s === '' || $s === '-0') ? '0' : $s;
+    }
+
+    /** CSS-/SVG-Farbe: #hex (3/4/6/8), rgb()/rgba()/hsl()/hsla() nur mit Zahlen, Farbnamen nur aus Buchstaben. */
+    private static function color($v, string $fallback): string
+    {
+        if (!is_string($v)) {
+            return $fallback;
+        }
+        $c = trim($v);
+        if (preg_match('/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $c)
+            || preg_match('/^(?:rgba?|hsla?)\(\s*-?[0-9.]+(?:deg|%)?(?:\s*[,\s]\s*-?[0-9.]+%?){2}(?:\s*[,\/]\s*[0-9.]+%?)?\s*\)$/i', $c)
+            || preg_match('/^[a-zA-Z]{3,24}$/', $c)) {
+            return $c;
+        }
+        return $fallback;
+    }
+
+    /** Hintergrund-Verlauf (CSS): nur *-gradient(…) aus Zahlen, Farben, Schlüsselwörtern; kein url()/var(). */
+    private static function cssGradient($v): ?string
+    {
+        if (!is_string($v)) {
+            return null;
+        }
+        $g = trim($v);
+        if (preg_match('/^(?:repeating-)?(?:linear|radial|conic)-gradient\([#%.,()\sa-zA-Z0-9-]*\)$/', $g)
+            && !preg_match('/url|var|expression|image|attr/i', $g)) {
+            return $g;
+        }
+        return null;
+    }
+
+    /** Schriftfamilie: Buchstaben, Ziffern, Leerzeichen, _ . -; sonst Open Sans. */
+    private static function fontFamily($v): string
+    {
+        return (is_string($v) && preg_match('/^[\p{L}\p{N} _.\-]{1,80}$/u', $v)) ? $v : 'Open Sans';
+    }
+
+    /** Schriftstärke aus Positivliste. */
+    private static function fontWeight($v): string
+    {
+        $v = is_scalar($v) ? strtolower(trim((string)$v)) : '';
+        return preg_match('/^(?:normal|bold|bolder|lighter|[1-9]00)$/', $v) ? $v : 'normal';
+    }
+
+    /** Textausrichtung aus Positivliste. */
+    private static function textAlign($v): string
+    {
+        return in_array($v, ['left', 'right', 'center', 'justify', 'start', 'end'], true) ? $v : 'left';
+    }
+
+    /** Klassennamen-Teil (Animationstyp): nur [A-Za-z0-9_-]. */
+    private static function classToken($v): string
+    {
+        return is_scalar($v) ? preg_replace('/[^A-Za-z0-9_-]/', '', (string)$v) : '';
+    }
+
+    /** Adresse für Attribute: keine fremden Schemata (javascript:, vbscript: …); erlaubt relativ, http(s), data:, blob:. */
+    private static function safeUrl($v): string
+    {
+        if (!is_string($v)) {
+            return '';
+        }
+        $u = trim($v);
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $u, $m) && !in_array(strtolower($m[1]), ['http', 'https', 'data', 'blob'], true)) {
+            return '';
+        }
+        return $u;
+    }
+
+    /** Adresse für CSS url(…): wie safeUrl, dazu Anführungszeichen, Klammern, Backslash und Leerraum prozentkodiert. */
+    private static function cssUrl($v): string
+    {
+        return strtr(self::safeUrl($v), ["'" => '%27', '"' => '%22', '(' => '%28', ')' => '%29', '\\' => '%5C', ' ' => '%20', "\t" => '%09', "\n" => '%0A', "\r" => '%0D']);
+    }
+
     // Muss exakt zu den Formel-Funktionen in editor.js passen (buildShapePoints() dort),
     // damit Editor-Vorschau und exportierter Foliensatz identisch aussehen.
     private const SHAPE_POINTS = [
@@ -111,7 +206,7 @@ class SlideRenderer
     {
         $a = max(0, min(100, $alpha === null || $alpha === '' ? 100 : (float)$alpha)) / 100;
         if (!preg_match('/^#?([0-9a-f]{6})$/i', trim($hex), $m)) {
-            return h($hex);
+            return self::color($hex, '#3a6c8d');
         }
         $n = hexdec($m[1]);
         return sprintf('rgba(%d,%d,%d,%s)', ($n >> 16) & 255, ($n >> 8) & 255, $n & 255, rtrim(rtrim(number_format($a, 3, '.', ''), '0'), '.') ?: '0');
@@ -494,7 +589,7 @@ class SlideRenderer
      * Die hereinkommende Folie (Zustand present) nimmt data-sf-enter: vorwärts ihr -in, rückwärts ihr -out.
      * Das Skript setzt data-sf-enter nach jedem Wechsel für den nächsten (Folien davor: out, danach: in).
      */
-    private static function transitionCss(): string
+    private static function transitionCss(bool $withScript = true): string
     {
         $s = '.reveal .slides>section';
         return '<style>'
@@ -505,21 +600,33 @@ class SlideRenderer
             . $s . '[data-sf-enter=none].present'
             . '{transform:none;transition:none;}'
             . '</style>'
-            . '<script>(function(){function mark(){var R=window.Reveal;if(!R||!R.getIndices)return;'
+            . ($withScript ? '<script>' . self::transitionJs() . '</script>' : '');
+    }
+
+    /**
+     * Laufzeit-Skript zu transitionCss() (setzt data-sf-enter nach jedem Wechsel). Öffentlich, damit der
+     * Render-Haken es in runtimeJs statt als Inline-Skript in den Abschnitten liefert (Apps mit CSP-Nonce, 4.1.0).
+     * Läuft auch, wenn es erst nach dem load-Ereignis eingesetzt wird.
+     */
+    public static function transitionJs(): string
+    {
+        return '(function(){function mark(){var R=window.Reveal;if(!R||!R.getIndices)return;'
             . 'var c=R.getIndices().h;'
             . 'document.querySelectorAll(".reveal .slides>section").forEach(function(s,i){'
             . 'var v=s.getAttribute(i<c?"data-sf-out":"data-sf-in");if(v)s.setAttribute("data-sf-enter",v);});}'
-            . 'window.addEventListener("load",function(){var R=window.Reveal;if(!R||!R.on)return;'
-            . 'R.on("ready",mark);R.on("slidechanged",mark);if(R.isReady&&R.isReady())mark();});})();</script>';
+            . 'function init(){var R=window.Reveal;if(!R||!R.on)return;'
+            . 'R.on("ready",mark);R.on("slidechanged",mark);if(R.isReady&&R.isReady())mark();}'
+            . 'if(document.readyState==="complete")init();else window.addEventListener("load",init);})();';
     }
 
-    public static function renderSections(array $slidesData, ?string $publicToken = null): string
+    /** @param bool $withScript false: ohne Inline-<script> (Render-Haken; das Skript kommt dann über transitionJs()). */
+    public static function renderSections(array $slidesData, ?string $publicToken = null, bool $withScript = true): string
     {
         $html = '';
         $slidesList = array_values($slidesData['slides'] ?? []);
         $transitionPairs = self::transitionPairs($slidesList);
         if ($slidesList) {
-            $html .= self::transitionCss() . "\n";
+            $html .= self::transitionCss($withScript) . "\n";
         }
         foreach ($slidesList as $slideIdx => $slide) {
             $objects = $slide['objects'] ?? [];
@@ -561,13 +668,14 @@ class SlideRenderer
         }
         switch ($bg['type'] ?? 'color') {
             case 'color':
-                return ' data-background-color="' . h($bg['value'] ?? '#111111') . '"';
+                return ' data-background-color="' . h(self::color($bg['value'] ?? '#111111', '#111111')) . '"';
             case 'gradient':
-                return ' data-background-gradient="' . h($bg['value'] ?? '') . '"';
+                $grad = self::cssGradient($bg['value'] ?? '');
+                return $grad === null ? '' : ' data-background-gradient="' . h($grad) . '"';
             case 'image':
-                return ' data-background-image="' . h(self::assetUrl($bg['value'] ?? '', $publicToken)) . '"';
+                return ' data-background-image="' . h(self::cssUrl(self::assetUrl((string)($bg['value'] ?? ''), $publicToken))) . '"';
             case 'video':
-                return ' data-background-video="' . h(self::assetUrl($bg['value'] ?? '', $publicToken)) . '" data-background-video-loop data-background-video-muted';
+                return ' data-background-video="' . h(self::safeUrl(self::assetUrl((string)($bg['value'] ?? ''), $publicToken))) . '" data-background-video-loop data-background-video-muted';
             default:
                 return '';
         }
@@ -620,11 +728,11 @@ class SlideRenderer
 
     private static function renderTextPerLine(array $obj, string $outerStyle, string $animType, array $plan, string $objIndex): string
     {
-        $fontFamily = $obj['fontFamily'] ?? 'Open Sans';
-        $fontSize = $obj['fontSize'] ?? 32;
-        $fontWeight = $obj['fontWeight'] ?? 'normal';
-        $color = $obj['color'] ?? '#ffffff';
-        $align = $obj['align'] ?? 'left';
+        $fontFamily = self::fontFamily($obj['fontFamily'] ?? 'Open Sans');
+        $fontSize = (int)(is_numeric($obj['fontSize'] ?? null) ? $obj['fontSize'] : 32);
+        $fontWeight = self::fontWeight($obj['fontWeight'] ?? 'normal');
+        $color = self::color($obj['color'] ?? '#ffffff', '#ffffff');
+        $align = self::textAlign($obj['align'] ?? 'left');
         $fontStyleCss = !empty($obj['italic']) ? 'italic' : 'normal';
         $decoParts = [];
         if (!empty($obj['underline'])) $decoParts[] = 'underline';
@@ -656,7 +764,7 @@ class SlideRenderer
             $linesHtml .= '<div class="sf-text-line fragment ' . h($animType) . '" data-fragment-index="' . $order . '"' . self::fragmentAutoSlideAttr($plan, $order) . ' style="' . $baseTextStyle . $durationCss . '">' . $rendered . '</div>';
         }
 
-        $opacity = $obj['opacity'] ?? 1;
+        $opacity = self::num($obj['opacity'] ?? 1, 1.0);
         return '<div style="' . $outerStyle . '"><div class="sf-object sf-text" style="width:100%; height:100%; box-sizing:border-box; opacity:' . $opacity . ';">' . $linesHtml . '</div></div>' . "\n";
     }
 
@@ -692,10 +800,13 @@ class SlideRenderer
         $y = $obj['y'] ?? 0;
         $w = $obj['w'] ?? 100;
         $h = $obj['h'] ?? 100;
-        $rotation = $obj['rotation'] ?? 0;
-        $opacity = $obj['opacity'] ?? 1;
+        $rotation = self::num($obj['rotation'] ?? 0, 0.0);
+        $opacity = self::num($obj['opacity'] ?? 1, 1.0);
         $type = $obj['type'] ?? 'rect';
-        $animType = $obj['animType'] ?? 'none';
+        $animType = self::classToken($obj['animType'] ?? 'none');
+        if ($animType === '') {
+            $animType = 'none';
+        }
 
         if ($type === 'group') {
             $childrenHtml = '';
@@ -771,11 +882,11 @@ class SlideRenderer
         $content = '';
 
         if ($type === 'text') {
-            $fontFamily = $obj['fontFamily'] ?? 'Open Sans';
-            $fontSize = $obj['fontSize'] ?? 32;
-            $fontWeight = $obj['fontWeight'] ?? 'normal';
-            $color = $obj['color'] ?? '#ffffff';
-            $align = $obj['align'] ?? 'left';
+            $fontFamily = self::fontFamily($obj['fontFamily'] ?? 'Open Sans');
+            $fontSize = (int)(is_numeric($obj['fontSize'] ?? null) ? $obj['fontSize'] : 32);
+            $fontWeight = self::fontWeight($obj['fontWeight'] ?? 'normal');
+            $color = self::color($obj['color'] ?? '#ffffff', '#ffffff');
+            $align = self::textAlign($obj['align'] ?? 'left');
             $fontStyleCss = !empty($obj['italic']) ? 'italic' : 'normal';
             $decoParts = [];
             if (!empty($obj['underline'])) $decoParts[] = 'underline';
@@ -792,13 +903,13 @@ class SlideRenderer
             $content = Markdown::render($obj['text'] ?? '', false);
             $extraClass = ' sf-text';
         } elseif ($type === 'image') {
-            $src = self::assetUrl($obj['src'] ?? '', $publicToken);
+            $src = self::safeUrl(self::assetUrl((string)($obj['src'] ?? ''), $publicToken));
             if (!empty($obj['iconColor']) && SvgHelper::normalizeHex((string)$obj['iconColor']) !== null) {
                 $src .= (strpos($src, '?') !== false ? '&' : '?') . 'color=' . rawurlencode($obj['iconColor']);
             }
             $innerStyle .= 'overflow:visible; box-sizing:border-box;';
-            $stroke = $obj['stroke'] ?? 'transparent';
-            $strokeWidth = (float)($obj['strokeWidth'] ?? 0);
+            $stroke = self::color($obj['stroke'] ?? 'transparent', 'transparent');
+            $strokeWidth = (float)self::num($obj['strokeWidth'] ?? 0, 0.0);
             $viewW = max(1, (int)$w);
             $viewH = max(1, (int)$h);
             $rectStroke = '';
@@ -809,7 +920,7 @@ class SlideRenderer
                     $viewW,
                     $viewH,
                     h($stroke),
-                    $strokeWidth
+                    self::num($strokeWidth)
                 );
             }
             $content = sprintf(
@@ -823,12 +934,12 @@ class SlideRenderer
                 $rectStroke
             );
         } elseif ($type === 'video' || $type === 'audio') {
-            $src = self::assetUrl($obj['src'] ?? '', $publicToken);
+            $src = self::safeUrl(self::assetUrl((string)($obj['src'] ?? ''), $publicToken));
             $trigger = $obj['playTrigger'] ?? 'manual';
             if (!in_array($trigger, ['manual', 'click', 'timed'], true)) {
                 $trigger = 'manual';
             }
-            $mediaId = 'data-media-id="' . h($obj['id'] ?? '') . '"';
+            $mediaId = 'data-media-id="' . h(is_scalar($obj['id'] ?? '') ? (string)($obj['id'] ?? '') : '') . '"';
             $extraAttrs = ' preload="auto"' . (!empty($obj['hideControls']) ? '' : ' controls')
                 . (!empty($obj['loop']) ? ' loop' : '') . ' ' . $mediaId
                 . ' data-play-trigger="' . h($trigger) . '"';
@@ -836,7 +947,7 @@ class SlideRenderer
                 $delay = max(0, (int)($obj['playDelay'] ?? 0));
                 $extraAttrs .= ' data-play-delay="' . $delay . '"';
             }
-            $mediaRef = self::registerInlineMedia($src, (string)($obj['id'] ?? 'media'));
+            $mediaRef = self::registerInlineMedia($src, is_scalar($obj['id'] ?? 'media') ? (string)($obj['id'] ?? 'media') : 'media');
             if ($mediaRef) {
                 $extraAttrs .= ' data-sf-media-ref="' . h($mediaRef) . '"';
                 $srcAttr = '';
@@ -861,19 +972,19 @@ class SlideRenderer
             if ($fillType === 'gradient') {
                 $c1 = $obj['gradColor1'] ?? '#3a6c8d';
                 $c2 = $obj['gradColor2'] ?? '#87b42b';
-                $angle = $obj['gradAngle'] ?? 90;
+                $angle = self::num($obj['gradAngle'] ?? 90, 90.0);
                 $teile = [];
                 foreach (self::gradStopsOf($obj) as $st) {
                     $teile[] = self::gradRgba($st['c'], $st['a']) . ' ' . $st['p'] . '%';
                 }
-                $fillCss = sprintf('linear-gradient(%sdeg, %s)', h((string)$angle), implode(', ', $teile));
+                $fillCss = sprintf('linear-gradient(%sdeg, %s)', $angle, implode(', ', $teile));
             } elseif ($fillType === 'none') {
                 $fillCss = 'transparent';
             } else {
-                $fillCss = h($obj['fill'] ?? '#cccccc');
+                $fillCss = h(self::color($obj['fill'] ?? '#cccccc', '#cccccc'));
             }
-            $stroke = $obj['stroke'] ?? 'transparent';
-            $strokeWidth = $obj['strokeWidth'] ?? 0;
+            $stroke = self::color($obj['stroke'] ?? 'transparent', 'transparent');
+            $strokeWidth = (int)(is_numeric($obj['strokeWidth'] ?? null) ? $obj['strokeWidth'] : 0);
             $selfStyle .= sprintf('background:%s; border:%dpx solid %s;', $fillCss, $strokeWidth, h($stroke));
             if ($type === 'ellipse') {
                 $selfStyle .= 'border-radius:50%;';
@@ -928,20 +1039,20 @@ class SlideRenderer
         }
 
         $schrift = (float)($obj['fontSize'] ?? 32);
-        $familie = (string)($obj['fontFamily'] ?? 'Open Sans');
-        $farbe = (string)($obj['color'] ?? '#ffffff');
-        $ausrichtung = (string)($obj['align'] ?? 'left');
-        $rahmen = (string)($obj['borderColor'] ?? '#ffffff');
+        $familie = self::fontFamily($obj['fontFamily'] ?? 'Open Sans');
+        $farbe = self::color($obj['color'] ?? '#ffffff', '#ffffff');
+        $ausrichtung = self::textAlign($obj['align'] ?? 'left');
+        $rahmen = self::color($obj['borderColor'] ?? '#ffffff', '#ffffff');
         $rahmenBreite = max(0.0, (float)($obj['borderWidth'] ?? 2));
         $innen = max(0.0, (float)($obj['cellPadding'] ?? 10));
         $zeilenhoehe = (float)($obj['lineHeight'] ?? 1.25);
         $kopfzeile = !empty($obj['headerRow']);
-        $kopfSchrift = (string)($obj['headerColor'] ?? '');
+        $kopfSchrift = self::color($obj['headerColor'] ?? '', '');
         $kopfFuellung = $kopfzeile
-            ? self::tabellenFuellung((string)($obj['headerFill'] ?? 'transparent'), $obj['headerFillOpacity'] ?? 1)
+            ? self::tabellenFuellung(self::color($obj['headerFill'] ?? 'transparent', 'transparent'), $obj['headerFillOpacity'] ?? 1)
             : null;
         $streifenFuellung = !empty($obj['stripeRows'])
-            ? self::tabellenFuellung((string)($obj['stripeFill'] ?? 'transparent'), $obj['stripeOpacity'] ?? 0.15)
+            ? self::tabellenFuellung(self::color($obj['stripeFill'] ?? 'transparent', 'transparent'), $obj['stripeOpacity'] ?? 0.15)
             : null;
 
         $breiten = [];
@@ -1019,7 +1130,7 @@ class SlideRenderer
         if ($farbe === '' || $farbe === 'transparent') {
             return null;
         }
-        $a = max(0.0, min(1.0, (float)($anteil ?? 1)));
+        $a = max(0.0, min(1.0, is_numeric($anteil) ? (float)$anteil : 1.0));
         if ($a <= 0.0) {
             return null;
         }
@@ -1040,13 +1151,13 @@ class SlideRenderer
         $points = self::shapePoints($shapeType, 100, 100, $obj);
         $pointsAttr = implode(' ', array_map(fn($p) => round($p[0], 3) . ',' . round($p[1], 3), $points));
 
-        $stroke = $obj['stroke'] ?? 'transparent';
-        $strokeWidth = $obj['strokeWidth'] ?? 0;
-        $gradId = 'sfgrad-' . preg_replace('/[^a-zA-Z0-9]/', '', $obj['id'] ?? uniqid());
+        $stroke = self::color($obj['stroke'] ?? 'transparent', 'transparent');
+        $strokeWidth = (float)self::num($obj['strokeWidth'] ?? 0, 0.0);
+        $gradId = 'sfgrad-' . preg_replace('/[^a-zA-Z0-9]/', '', is_scalar($obj['id'] ?? null) ? (string)$obj['id'] : uniqid());
 
         if ($isOpen) {
-            $lineColor = h(($obj['stroke'] ?? '') !== 'transparent' && !empty($obj['stroke']) ? $obj['stroke'] : '#ffffff');
-            $lineWidth = $strokeWidth > 0 ? (float)$strokeWidth : 3;
+            $lineColor = h(($obj['stroke'] ?? '') !== 'transparent' && !empty($obj['stroke']) ? self::color($obj['stroke'], '#ffffff') : '#ffffff');
+            $lineWidth = $strokeWidth > 0 ? self::num($strokeWidth) : '3';
             /* Offene Formen im ECHTEN Pixelraster des Objekts zeichnen, nicht in einem
                100x100-viewBox: Bei einer 1720x2-Linie streckt "preserveAspectRatio=none"
                die Achsen um 17.2 bzw. 0.02, die Strichstärke wird dadurch unbrauchbar.
@@ -1054,8 +1165,8 @@ class SlideRenderer
                GERÄTE-Pixel - die Linie blieb beim Herunterskalieren der Folie gleich dick
                und war in der Vorschau doppelt so breit wie im Editor. Mit echtem viewBox
                skaliert der Strich wie bei Konva mit der Folie mit. */
-            $vbW = max(1.0, (float)($obj['w'] ?? 100));
-            $vbH = max(1.0, (float)($obj['h'] ?? 100));
+            $vbW = max(1.0, (float)self::num($obj['w'] ?? 100, 100.0));
+            $vbH = max(1.0, (float)self::num($obj['h'] ?? 100, 100.0));
             $pts = self::shapePoints($shapeType, $vbW, $vbH, $obj);
             $ptsAttr = implode(' ', array_map(fn($p) => round($p[0], 3) . ',' . round($p[1], 3), $pts));
             return '<svg viewBox="0 0 ' . $vbW . ' ' . $vbH . '" preserveAspectRatio="none" style="width:100%; height:100%; display:block; overflow:visible;">'
@@ -1066,9 +1177,7 @@ class SlideRenderer
         $defs = '';
         $fillType = $obj['fillType'] ?? 'solid';
         if ($fillType === 'gradient') {
-            $c1 = h($obj['gradColor1'] ?? '#3a6c8d');
-            $c2 = h($obj['gradColor2'] ?? '#87b42b');
-            $angle = (float)($obj['gradAngle'] ?? 90);
+            $angle = (float)self::num($obj['gradAngle'] ?? 90, 90.0);
             $rad = deg2rad($angle - 90);
             $dx = cos($rad); $dy = sin($rad);
             $x1 = 0.5 - $dx * 0.5; $y1 = 0.5 - $dy * 0.5;
@@ -1079,13 +1188,13 @@ class SlideRenderer
         } elseif ($fillType === 'none') {
             $fillAttr = 'none';
         } else {
-            $fillAttr = h($obj['fill'] ?? '#cccccc');
+            $fillAttr = h(self::color($obj['fill'] ?? '#cccccc', '#cccccc'));
         }
 
         return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="width:100%; height:100%; display:block; overflow:visible;">'
             . $defs
             . '<polygon points="' . $pointsAttr . '" fill="' . $fillAttr . '"'
-            . ($strokeWidth > 0 ? ' stroke="' . h($stroke) . '" stroke-width="' . (float)$strokeWidth . '" vector-effect="non-scaling-stroke"' : '')
+            . ($strokeWidth > 0 ? ' stroke="' . h($stroke) . '" stroke-width="' . self::num($strokeWidth) . '" vector-effect="non-scaling-stroke"' : '')
             . '/></svg>';
     }
 
@@ -1099,10 +1208,11 @@ class SlideRenderer
         $bgStyle = 'background:#161a12;';
         if ($bg) {
             if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
-                $bgStyle = 'background:' . h($bg['value'] ?? '#161a12') . ';';
+                $bgWert = ($bg['type'] ?? '') === 'gradient' ? self::cssGradient($bg['value'] ?? '') : self::color($bg['value'] ?? '#161a12', '#161a12');
+                $bgStyle = 'background:' . h($bgWert ?? '#161a12') . ';';
             } elseif (($bg['type'] ?? '') === 'image' && !empty($bg['value'])) {
-                $src = self::assetUrl($bg['value'], $publicToken);
-                $bgStyle = 'background-image:url(\'' . h($src) . '\'); background-size:cover; background-position:center;';
+                $src = self::assetUrl((string)$bg['value'], $publicToken);
+                $bgStyle = 'background-image:url(\'' . h(self::cssUrl($src)) . '\'); background-size:cover; background-position:center;';
             }
         }
         $objects = $slide['objects'] ?? [];
@@ -1133,7 +1243,8 @@ class SlideRenderer
         $bgStyle = 'background:#161a12;';
         if ($bg) {
             if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
-                $bgStyle = 'background:' . h($bg['value'] ?? '#161a12') . ';';
+                $bgWert = ($bg['type'] ?? '') === 'gradient' ? self::cssGradient($bg['value'] ?? '') : self::color($bg['value'] ?? '#161a12', '#161a12');
+                $bgStyle = 'background:' . h($bgWert ?? '#161a12') . ';';
             } elseif (($bg['type'] ?? '') === 'image' && !empty($bg['value'])) {
                 $bgStyle = 'background:#222;';
             }
@@ -1223,10 +1334,11 @@ class SlideRenderer
         $bgStyle = 'background:#161a12;';
         if ($bg) {
             if (($bg['type'] ?? '') === 'color' || ($bg['type'] ?? '') === 'gradient') {
-                $bgStyle = 'background:' . h($bg['value'] ?? '#161a12') . ';';
+                $bgWert = ($bg['type'] ?? '') === 'gradient' ? self::cssGradient($bg['value'] ?? '') : self::color($bg['value'] ?? '#161a12', '#161a12');
+                $bgStyle = 'background:' . h($bgWert ?? '#161a12') . ';';
             } elseif (($bg['type'] ?? '') === 'image' && !empty($bg['value'])) {
-                $src = self::assetUrl($bg['value'], $publicToken);
-                $bgStyle = 'background-image:url(\'' . h($src) . '\'); background-size:cover; background-position:center;';
+                $src = self::assetUrl((string)$bg['value'], $publicToken);
+                $bgStyle = 'background-image:url(\'' . h(self::cssUrl($src)) . '\'); background-size:cover; background-position:center;';
             }
         }
         $objects = $slide['objects'] ?? [];

@@ -57,14 +57,15 @@ $fontsCss = $origin . $appPath . '/fonts.css.php?v=' . ASSET_VERSION;
 
 try {
     SlideRenderer::resetInlineMedia();
-    $sections = SlideRenderer::renderSections($slides, null);
+    // Ohne Inline-Skript in den Abschnitten: das Übergangs-Skript kommt mit runtimeJs (Apps setzen es mit CSP-Nonce ein, 4.1.0).
+    $sections = SlideRenderer::renderSections($slides, null, false);
     // Eingebettete Medien (data:-URIs) liegen als Textblöcke neben den Abschnitten und brauchen die Hydrierung im Laufzeit-Skript.
     $inline = SlideRenderer::getInlineMedia();
     foreach ($inline as $ref => $data) {
         $sections .= '<script type="text/plain" id="' . h((string)$ref) . '" data-mime="' . h((string)$data['mime']) . '">' . $data['b64'] . "</script>\n";
     }
     $hydrate = $inline !== [];
-    $runtimeJs = Exporter::mediaRuntimeJs($hydrate) . "\n" . Exporter::mediaSlideBootJs($hydrate);
+    $runtimeJs = Exporter::mediaRuntimeJs($hydrate) . "\n" . Exporter::mediaSlideBootJs($hydrate) . "\n" . SlideRenderer::transitionJs();
     $fontsHead = FontLibrary::googleFontsLinkTag() . "\n"
         . '<link rel="stylesheet" href="' . h(FontLibrary::hubCssUrl()) . '" crossorigin="anonymous">' . "\n"
         . '<link rel="stylesheet" href="' . h($fontsCss) . '">' . "\n";
