@@ -1,5 +1,6 @@
 # STAND SlideForge (FolienSchmiede)
 
+- **28.11. 4.1.0 gebaut** (`entwickler/sf-signage-render` ab 4.0.0 5b07170, Worktree `gemeinde/wt-sf-signage`): Render-Haken `public/hooks/render.php` für SignForge (S1, `_berichte/signage/schnittstellen-signforge-0.1-2026-11-28.md`); `fonts.css.php` und `reveal-autoslide.js` laufen ohne Anmeldung und ohne Presenter-Globale, unverändert. Nicht ausgeliefert.
 - **27.11. 4.0.0 gebaut** (gleicher Zweig nach 3.12.55): übrige Menüband-Blöcke aus Einzelbefehlen (Übergänge, Hintergrundfarbe, Automatisch weiter, Einstellungen, Zoom); CHANGELOG «Neu in 4.0», docs/RELEASE_v4.0.0.md. Nicht im Browser geprüft.
 - **27.11. 3.12.55 gebaut** (`entwickler/slide-start-einzeln` ab 3.12.54 639f1d9, Worktree `gemeinde/wt-slide-start-einzeln`): Start-Menüband aus Einzelbefehlen (kind 'field', Vorrat je Element in editor_ribbon_start.php, IDs rb_* bleiben); alte Layouts mit widget:zeichen/absatz/text_colors werden beim Laden ersetzt. Nicht im Browser geprüft.
 - **27.11. 3.12.54 gebaut** (`entwickler/slide-farben-breite` ab 3.12.53): Farben-Gruppe im Menüband 7 Felder breit.

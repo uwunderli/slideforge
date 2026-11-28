@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.1.0] - 2026-11-28
+
+### Neu
+- **Render-Haken für SignForge:** `POST hooks/render.php` (signierter App-Aufruf, jede eingetragene App) macht aus `slides.json` die Reveal-Abschnitte wie im Presenter, dazu die Schriften (`fontsCss`, `fontsHead`) und das Medien-Laufzeitskript (`runtimeJs`). Reine Darstellung, kein Datenzugriff; Rumpf höchstens 8 MB.
+
 ## [4.0.0] - 2026-11-27
 
 ### Neu in 4.0
